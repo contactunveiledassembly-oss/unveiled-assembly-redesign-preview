@@ -81,7 +81,7 @@ img{max-width:100%;display:block}
 
 .nav-mobile-panel{display:contents}
 
-.links{display:flex;align-items:center;justify-content:center;gap:19px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;flex-wrap:nowrap}
+.links{display:flex;align-items:center;justify-content:center;gap:16px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;flex-wrap:nowrap}
 .links a{color:var(--ivory);opacity:.8;transition:.2s;padding-bottom:3px;border-bottom:1px solid transparent;white-space:nowrap}
 .links a:hover,.links a.current{opacity:1;border-color:currentColor}
 
@@ -114,14 +114,14 @@ img{max-width:100%;display:block}
 .shop-link:focus-visible{outline:2px solid var(--ivory);outline-offset:3px}
 
 .account-btn{
-  width:30px;height:30px;border-radius:50%;border:1px solid var(--nav-control-border);color:var(--ivory);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;flex:0 0 auto;padding:0;
+  height:30px;padding:0 13px 0 10px;border-radius:100px;border:1px solid var(--nav-control-border);color:var(--ivory);
+  display:flex;align-items:center;gap:7px;cursor:pointer;transition:.2s;flex:0 0 auto;white-space:nowrap;
 }
-.account-btn svg{stroke:currentColor;width:14px;height:14px}
+.account-btn svg{stroke:currentColor;width:14px;height:14px;flex:0 0 auto}
 .account-btn:hover{border-color:var(--nav-control-border-hover)}
-.account-btn:active{transform:scale(.94)}
+.account-btn:active{transform:scale(.97)}
 .account-btn:focus-visible{outline:2px solid var(--ivory);outline-offset:2px}
-.account-btn-label{display:none;color:inherit}
+.account-btn-label{display:inline;color:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
 .cart-btn{
   display:flex;align-items:center;gap:7px;height:30px;padding:0 12px;color:var(--ivory);
   border:1px solid var(--nav-control-border);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
@@ -559,3 +559,78 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 .on-light-section{background:var(--ivory);color:var(--black)}
 .on-light-section .eyebrow{color:var(--ink-muted)}
 .on-light-section p{color:var(--ink-muted)}
+
+/* ============================================================
+   Member Portal auth system (Sign In / Create Account / Forgot
+   Password / Verify). All of this lives inside .portal-login, which
+   sits on the light/white side of the modal (.portal-dialog is
+   color:black on a white/ivory background) — every color below is
+   chosen explicitly for THAT light context, not inherited blindly.
+   ============================================================ */
+.auth-mode-tabs{display:flex;gap:4px;margin:18px 0 20px;border-bottom:1px solid var(--line-light)}
+.auth-mode-tab{
+  flex:1;padding:10px 4px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-dim);background:transparent;border-bottom:2px solid transparent;cursor:pointer;transition:.2s;
+}
+.auth-mode-tab.active{color:var(--black);border-bottom-color:var(--black)}
+.auth-mode-tab:hover{color:var(--black)}
+.auth-mode-tab:focus-visible{outline:2px solid var(--black);outline-offset:2px}
+
+.auth-panel{margin-top:4px}
+.auth-panel-intro{color:var(--ink-muted);font-size:13px;line-height:1.6;margin-bottom:16px}
+
+.auth-method-tabs{display:flex;gap:8px;margin-bottom:16px}
+.auth-method-tab{
+  flex:1;min-height:38px;border:1px solid var(--line-light);color:var(--ink-muted);background:var(--white);
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:.2s;
+}
+.auth-method-tab.active{background:var(--black);color:var(--ivory);border-color:var(--black)}
+.auth-method-tab:hover:not(.active){border-color:var(--ink-dim)}
+.auth-method-tab:focus-visible{outline:2px solid var(--black);outline-offset:2px}
+
+.portal-field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.password-field{position:relative;display:flex;align-items:center}
+.password-field input{padding-right:44px}
+.password-toggle{
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  color:var(--ink-dim);cursor:pointer;border-radius:50%;transition:.2s;
+}
+.password-toggle:hover{color:var(--black);background:rgba(10,10,10,.06)}
+.password-toggle:focus-visible{outline:2px solid var(--black);outline-offset:2px}
+
+.phone-input-row{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.phone-input-row select{
+  border:1px solid var(--line-light);background:var(--white);color:var(--black);
+  padding:0 6px;font:inherit;font-size:11px;min-height:46px;max-width:118px;
+}
+
+.link-btn{
+  color:var(--black);font-size:11px;letter-spacing:.04em;text-decoration:underline;
+  text-underline-offset:3px;cursor:pointer;padding:6px 0;display:inline-block;background:none;border:0;
+}
+.link-btn:hover{opacity:.65}
+.link-btn:focus-visible{outline:2px solid var(--black);outline-offset:2px}
+
+.auth-switch-line{font-size:12px;color:var(--ink-muted);margin-top:16px}
+.auth-switch-line .link-btn{font-size:inherit;padding:0;color:var(--black)}
+
+.verify-options{display:flex;gap:10px;margin:20px 0;flex-wrap:wrap}
+
+/* Verify-status banner on the member dashboard. Uses only tokens already
+   validated elsewhere (var(--black) on a light background) rather than
+   introducing a new color for this one element. */
+.verify-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  background:#f3ede0;border:1px solid var(--line-light);color:var(--black);
+  padding:12px 16px;margin-bottom:16px;font-size:13px;
+}
+.verify-banner .link-btn{font-weight:600}
+
+@media(max-width:560px){
+  .portal-field-row{grid-template-columns:1fr}
+  .phone-input-row{grid-template-columns:1fr}
+  .phone-input-row select{max-width:none}
+  .auth-method-tabs{flex-direction:column}
+}
