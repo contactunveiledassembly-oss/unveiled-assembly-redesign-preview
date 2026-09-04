@@ -634,3 +634,21 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
   .phone-input-row select{max-width:none}
   .auth-method-tabs{flex-direction:column}
 }
+
+/* ---------- Account Settings + verify-flow additions ----------
+   Deliberately monochrome (black/white/ivory), matching the rest of the
+   site, rather than introducing green/amber for verified-state — the
+   "Verified" badge uses a solid black fill for emphasis instead. */
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--line-light)}
+.settings-row:first-of-type{border-top:0}
+.settings-row-main{display:flex;flex-direction:column;gap:2px}
+.settings-row-main strong{font-size:13px}
+.settings-row-main small{color:var(--ink-muted);font-size:12px}
+.verify-badge{
+  font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;
+  border:1px solid var(--ink-dim);color:var(--ink-muted);white-space:nowrap;flex:0 0 auto;background:transparent;
+}
+.verify-badge.is-verified{background:var(--black);border-color:var(--black);color:var(--ivory)}
+.settings-subform{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line-light)}
+.verify-panel-links{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.verify-panel-links .link-btn{padding:4px 0}
