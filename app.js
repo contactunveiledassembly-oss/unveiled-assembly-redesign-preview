@@ -63,23 +63,23 @@ function navHtml(){
       <span class="brand-text"><span class="line1">The Unveiled</span><span class="line2">Assembly of Christ Jesus</span></span>
     </a>
 
-    <div class="nav-primary" id="navPrimary">
+    <div class="nav-mobile-panel" id="navMobilePanel">
       <div class="links" id="links">${links}</div>
-      <div class="nav-utility">
+      <div class="nav-right-controls" id="navRightControls">
         <div class="social-links" aria-label="Social media">${socialIconsHtml()}</div>
         <a class="shop-link" href="${BASE}shop/" data-page="shop">Shop</a>
-        <button class="account-btn" id="navMemberPortal" type="button">
+        <button class="account-btn" id="navMemberPortal" type="button" aria-label="Sign In" title="Sign In">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          <span id="navAccountLabel">Sign In</span>
+          <span class="account-btn-label">Sign In</span>
         </button>
         <button class="cart-btn" id="cartBtn" type="button" title="Shop — coming soon" aria-disabled="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="width:13px;height:13px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6"/></svg>
           <span>Cart 0</span>
         </button>
       </div>
     </div>
 
-    <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navPrimary">☰</button>
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navMobilePanel">☰</button>
   </nav>`;
 }
 
@@ -414,7 +414,7 @@ document.body.insertAdjacentHTML('beforeend', dialogsHtml() + footerHtml());
 // Mark the current page's nav link, driven by <body data-page="...">.
 const currentPage = document.body.dataset.page;
 if(currentPage){
-  const match = document.querySelector('#navPrimary [data-page="' + currentPage + '"]');
+  const match = document.querySelector('#navMobilePanel [data-page="' + currentPage + '"]');
   if(match) match.classList.add('current');
 }
 
@@ -444,8 +444,18 @@ let currentProfile = null;
 const nav = document.getElementById('nav');
 const btn = document.getElementById('menuBtn');
 const links = document.getElementById('links');
-const navPrimary = document.getElementById('navPrimary');
-const navAccountLabel = document.getElementById('navAccountLabel');
+const navMobilePanel = document.getElementById('navMobilePanel');
+const navAccountBtn = document.getElementById('navMemberPortal');
+const navAccountBtnLabel = navAccountBtn.querySelector('.account-btn-label');
+
+// The account control is icon-only on desktop (accessible name via
+// aria-label/title) and shows a visible text label only inside the
+// mobile menu, where the icon-only circle would be ambiguous.
+function setAccountControlLabel(text){
+  navAccountBtn.setAttribute('aria-label', text);
+  navAccountBtn.setAttribute('title', text);
+  navAccountBtnLabel.textContent = text;
+}
 
 window.addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', window.scrollY > 30);
@@ -458,7 +468,8 @@ function setMenuOpen(isOpen){
   btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
 }
 btn.addEventListener('click', () => setMenuOpen(!nav.classList.contains('open')));
-navPrimary.querySelectorAll('a:not(.is-placeholder)').forEach(a => a.addEventListener('click', () => setMenuOpen(false)));
+navMobilePanel.querySelectorAll('a:not(.is-placeholder)').forEach(a => a.addEventListener('click', () => setMenuOpen(false)));
+document.getElementById('cartBtn').addEventListener('click', () => setMenuOpen(false));
 
 // Social icons without a confirmed URL yet (Facebook, YouTube) are inert —
 // prevent the "#" href from jumping the page.
@@ -1222,10 +1233,10 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById('memberAccountEmail').textContent = currentProfile.email || user.email;
     const ownerEmailEl = document.getElementById('ownerAccountEmail');
     if(ownerEmailEl) ownerEmailEl.textContent = currentProfile.email || user.email;
-    navAccountLabel.textContent = currentProfile.role === 'admin' ? 'Ministry' : 'My Account';
+    setAccountControlLabel(currentProfile.role === 'admin' ? 'Ministry' : 'My Account');
   } else {
     currentProfile = null;
-    navAccountLabel.textContent = 'Sign In';
+    setAccountControlLabel('Sign In');
   }
   refreshPortalTabs();
   if(memberPortalDialog.open){
