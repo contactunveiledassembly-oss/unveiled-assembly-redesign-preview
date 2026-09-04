@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Member/admin profiles. A user can only ever create/read their own
+    // profile (or an admin can read/manage any profile). Nobody can grant
+    // themselves the 'admin' role except the one hardcoded ministry email,
+    // and only at account-creation time.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+        (request.resource.data.role == 'member' ||
+         (request.resource.data.role == 'admin' &&
+          request.auth.token.email == 'contactunveiledassembly@gmail.com'));
+      allow update: if isAdmin() ||
+        (isSignedIn() && request.auth.uid == userId &&
+         request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    // A slot doc just marks a date+time as taken (no personal data), so it's
+    // safe for anyone to read (to see availability) and create (to book).
+    // An admin can always delete one (freeing the time back up); a signed-in
+    // user can delete their own slot too (self-service cancel/reschedule).
+    match /slots/{slotId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if false;
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // Dates the ministry has marked unavailable (holidays, travel, etc).
+    // Public read so the booking form can grey them out; only an admin
+    // can add/remove one.
+    match /blockouts/{date} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Booking requests hold personal data (name/email), so only the admin
+    // or the booker themself (if signed in) can read them back. Anyone can
+    // create one (guest booking is allowed), but a non-admin's request must
+    // start 'pending' — only an admin can create one already 'confirmed'
+    // (used by the manual "Add An Appointment" panel in Ministry View).
+    // A signed-in booker may update their OWN booking, but only to flip its
+    // status to 'cancelled' — no other field, and not to any other status.
+    // Admin can update anything (confirm/decline/reschedule).
+    match /bookings/{bookingId} {
+      allow create: if request.resource.data.keys().hasAll(
+                        ['name','email','sessionType','date','time','status']) &&
+                      (request.resource.data.status == 'pending' || isAdmin());
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin() ||
+        (isSignedIn() && resource.data.uid == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+         request.resource.data.status == 'cancelled');
+      allow delete: if isAdmin();
+    }
+  }
+}
