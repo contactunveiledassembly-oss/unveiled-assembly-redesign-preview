@@ -11,7 +11,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/fireba
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail,
-  sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, linkWithPhoneNumber
+  sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, linkWithPhoneNumber,
+  reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, unlink
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
@@ -135,6 +136,70 @@ const COUNTRY_CODES = [
   { code: 'other', label: 'Other (type full number with +country code)' },
 ];
 const COUNTRY_OPTIONS = COUNTRY_CODES.map(c => `<option value="${c.code}">${c.label}</option>`).join('');
+
+// Account Settings block — identical markup used inside both the member
+// and admin dashboards (they coexist in the DOM, just one hidden at a
+// time), so every id is prefixed to stay unique. wireAccountSettings(p)
+// below attaches the exact same JS logic to whichever prefix is used,
+// so this isn't duplicated in two places.
+function accountSettingsHtml(p){
+  return `
+        <article class="portal-panel">
+          <span class="portal-label">Account Settings</span>
+          <div class="settings-row">
+            <div class="settings-row-main">
+              <strong>Email</strong>
+              <small id="${p}AccountEmail">—</small>
+            </div>
+            <span class="verify-badge" id="${p}EmailBadge">Not Verified</span>
+          </div>
+          <button class="link-btn" type="button" id="${p}ChangeEmailBtn">Change Email</button>
+          <div class="settings-subform" id="${p}ChangeEmailForm" hidden>
+            <div class="portal-field">
+              <label for="${p}ReauthPassword">Confirm your current password</label>
+              <div class="password-field">
+                <input id="${p}ReauthPassword" type="password" autocomplete="current-password" />
+                <button type="button" class="password-toggle" data-toggle-for="${p}ReauthPassword" aria-label="Show password">${EYE_ICON}</button>
+              </div>
+            </div>
+            <div class="portal-field">
+              <label for="${p}NewEmail">New email address</label>
+              <input id="${p}NewEmail" type="email" autocomplete="email" />
+            </div>
+            <button class="portal-primary" type="button" id="${p}SubmitChangeEmailBtn">Send Verification To New Email</button>
+          </div>
+
+          <div class="settings-row" style="margin-top:18px">
+            <div class="settings-row-main">
+              <strong>Phone</strong>
+              <small id="${p}AccountPhone">Not added</small>
+            </div>
+            <span class="verify-badge" id="${p}PhoneBadge">Not Verified</span>
+          </div>
+          <button class="link-btn" type="button" id="${p}ChangePhoneBtn">Add / Change Phone</button>
+          <div class="settings-subform" id="${p}ChangePhoneForm" hidden>
+            <div class="portal-field phone-field">
+              <label for="${p}NewPhoneNumber">New phone number</label>
+              <div class="phone-input-row">
+                <select id="${p}NewPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
+                <input id="${p}NewPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" />
+              </div>
+            </div>
+            <button class="portal-primary" type="button" id="${p}SendPhoneCodeBtn">Send Verification Code</button>
+            <div id="${p}PhoneCodeStep" hidden>
+              <div class="portal-field">
+                <label for="${p}PhoneCode">6-digit code</label>
+                <input id="${p}PhoneCode" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" />
+              </div>
+              <button class="portal-primary" type="button" id="${p}ConfirmPhoneCodeBtn">Confirm Code</button>
+            </div>
+            <div id="recaptcha-container-${p}settings"></div>
+          </div>
+
+          <div class="portal-status" id="${p}SettingsStatus" role="status" aria-live="polite"></div>
+          <button class="portal-secondary" type="button" id="${p}SignOut" style="margin-top:16px">Sign Out</button>
+        </article>`;
+}
 
 function dialogsHtml(){
   return `
@@ -280,24 +345,55 @@ function dialogsHtml(){
 
           <!-- ===== POST-REGISTRATION VERIFICATION ===== -->
           <div class="auth-panel" data-auth-panel="verify" hidden>
-            <h4>Verify your account</h4>
-            <p class="auth-panel-intro">Your account was created. Verify by email or text to unlock full access — you can also do this later from My Assembly.</p>
-            <div class="verify-options">
-              <button class="portal-secondary" type="button" id="verifyByEmailBtn">Verify by Email</button>
-              <button class="portal-secondary" type="button" id="verifyByTextBtn">Verify by Text</button>
-            </div>
-            <div id="verifyPhoneStep" hidden>
+            <!-- Step 1: phone (mandatory, blocking — shown first) -->
+            <div data-verify-step="phone">
+              <h4>Verify your phone number</h4>
+              <p class="auth-panel-intro">We sent a 6-digit code to <strong id="verifyPhoneNumberLabel"></strong>. Enter it below to continue.</p>
               <div class="portal-field">
                 <label for="verifyPhoneCode">6-digit code</label>
                 <input id="verifyPhoneCode" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" />
               </div>
               <div class="portal-actions">
-                <button class="portal-primary" type="button" id="confirmVerifyPhoneBtn">Confirm Code</button>
+                <button class="portal-primary" type="button" id="confirmVerifyPhoneBtn">Verify Code</button>
+              </div>
+              <div class="verify-panel-links">
+                <button type="button" class="link-btn" id="resendVerifyPhoneBtn">Resend Code</button>
+                <button type="button" class="link-btn" id="changePhoneBtn">Wrong number? Change it</button>
+              </div>
+              <div id="changePhoneStep" hidden>
+                <div class="portal-field phone-field">
+                  <label for="changePhoneNumber">New phone number</label>
+                  <div class="phone-input-row">
+                    <select id="changePhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
+                    <input id="changePhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" />
+                  </div>
+                </div>
+                <button class="portal-primary" type="button" id="sendToNewPhoneBtn">Send Code To This Number</button>
+              </div>
+              <div id="recaptcha-container-verify"></div>
+            </div>
+
+            <!-- Step 2: email (shown once phone is verified) -->
+            <div data-verify-step="email" hidden>
+              <h4>Check your email</h4>
+              <p class="auth-panel-intro">We sent a verification link to <strong id="verifyEmailLabel"></strong>. Click it, then continue below — your current email stays active until then.</p>
+              <div class="portal-actions">
+                <button class="portal-primary" type="button" id="checkEmailVerifiedBtn">I've Verified — Continue</button>
+              </div>
+              <div class="verify-panel-links">
+                <button type="button" class="link-btn" id="resendVerifyEmailBtn">Resend Verification Email</button>
+                <button type="button" class="link-btn" id="changeEmailInVerifyBtn">Wrong email? Change it</button>
+              </div>
+              <div id="changeEmailInVerifyStep" hidden>
+                <div class="portal-field">
+                  <label for="changeEmailNewAddress">New email address</label>
+                  <input id="changeEmailNewAddress" type="email" placeholder="you@example.com" autocomplete="email" />
+                </div>
+                <button class="portal-primary" type="button" id="sendToNewEmailBtn">Send Verification To This Address</button>
               </div>
             </div>
-            <div id="recaptcha-container-verify"></div>
+
             <div class="portal-status" id="verifyStatus" role="status" aria-live="polite"></div>
-            <button type="button" class="link-btn" id="skipVerifyBtn">Continue to My Assembly →</button>
           </div>
 
           <div class="portal-open-note">No account is needed to browse the website, give, request prayer, submit a testimony, or book an initial session.</div>
@@ -330,11 +426,7 @@ function dialogsHtml(){
           <span class="portal-label">Classes &amp; Materials</span>
           <p style="color:#656565">Class scheduling, Zoom links, and materials aren't connected yet — this is next on the build list. Your live bookings above are fully real.</p>
         </article>
-        <article class="portal-panel">
-          <span class="portal-label">Account</span>
-          <div class="portal-row"><div><strong>Signed in as</strong><small id="memberAccountEmail">—</small></div></div>
-          <button class="portal-secondary" type="button" id="memberSignOut" style="margin-top:16px">Sign Out</button>
-        </article>
+        ${accountSettingsHtml('member')}
       </div>
       <div class="portal-status" id="portalMemberStatus" role="status" aria-live="polite"></div>
     </div>
@@ -415,11 +507,7 @@ function dialogsHtml(){
           <span class="portal-label">Classes &amp; Materials</span>
           <p style="color:#656565">Publishing Zoom links, materials, and class recordings isn't connected yet — this panel is next on the build list.</p>
         </article>
-        <article class="portal-panel">
-          <span class="portal-label">Account</span>
-          <div class="portal-row"><div><strong>Signed in as</strong><small id="ownerAccountEmail">—</small></div></div>
-          <button class="portal-secondary" type="button" id="ownerSignOut" style="margin-top:16px">Sign Out</button>
-        </article>
+        ${accountSettingsHtml('owner')}
       </div>
       <div class="portal-status" id="portalOwnerStatus" role="status" aria-live="polite"></div>
       <div class="portal-mockup-note">This ministry view only appears to accounts marked as admin in the database, and is enforced by Firestore security rules — not just hidden in the page.</div>
@@ -742,10 +830,10 @@ const portalSignInBtn = document.getElementById('portalSignInBtn');
 // dashboard the instant createUserWithEmailAndPassword signs the new
 // account in underneath it.
 let awaitingVerifyChoice = false;
-// The E.164 phone number captured at registration (or loaded from the
-// signed-in profile when re-entering verification later), used by
-// "Verify by Text".
+// The phone number / email captured at registration (or loaded from the
+// signed-in profile when re-entering verification later via the banner).
 let pendingVerifyPhone = null;
+let pendingVerifyEmail = null;
 
 function showPortalView(name){
   portalViews.forEach(view => { view.hidden = view.dataset.portalView !== name; });
@@ -1034,14 +1122,13 @@ registerForm.addEventListener('submit', async event => {
       firstName, lastName, name: fullName, email, phone, role,
       emailVerified: false, phoneVerified: false, createdAt: serverTimestamp()
     });
-    try { await sendEmailVerification(cred.user); } catch (err) { /* non-fatal — they can resend from the verify panel */ }
     pendingVerifyPhone = phone;
+    pendingVerifyEmail = email;
     awaitingVerifyChoice = true;
     registerForm.reset();
     registerStatus.textContent = '';
-    document.getElementById('verifyStatus').textContent = '';
-    document.getElementById('verifyPhoneStep').hidden = true;
     showAuthPanel('verify');
+    await startPhoneVerifyStep(); // auto-sends the SMS code — no extra click required
   } catch (err) {
     registerStatus.textContent = friendlyAuthError(err);
   } finally {
@@ -1050,38 +1137,64 @@ registerForm.addEventListener('submit', async event => {
 });
 
 /* ---------------------------------------------------------------
-   Post-registration (and re-entered, via "Verify Now") verification
+   Post-registration verification — mandatory phone step first
+   (blocking: cannot proceed without the correct code), then email
+   (real, non-fakeable: only proceeds once Firebase's own reload()
+   confirms emailVerified is actually true).
    --------------------------------------------------------------- */
-document.getElementById('verifyByEmailBtn').addEventListener('click', async () => {
-  const statusEl = document.getElementById('verifyStatus');
-  if(!currentUser){ statusEl.textContent = 'Please sign in again.'; return; }
-  statusEl.textContent = 'Sending verification email…';
-  try {
-    await sendEmailVerification(currentUser);
-    statusEl.textContent = 'Verification email sent — check your inbox, then continue below.';
-  } catch (err) {
-    statusEl.textContent = friendlyAuthError(err);
-  }
-});
+function showVerifyStep(step){
+  memberPortalDialog.querySelectorAll('[data-verify-step]').forEach(el => {
+    el.hidden = el.dataset.verifyStep !== step;
+  });
+  document.getElementById('verifyStatus').textContent = '';
+}
 
 let verifyRecaptcha = null;
 let verifyConfirmationResult = null;
+let verifyPhoneResendTimer = null;
 
-document.getElementById('verifyByTextBtn').addEventListener('click', async () => {
+async function startPhoneVerifyStep(){
   const statusEl = document.getElementById('verifyStatus');
   const phone = pendingVerifyPhone || currentProfile?.phone;
-  if(!currentUser || !phone){ statusEl.textContent = 'No phone number on file — add one from My Assembly first.'; return; }
+  if(!currentUser || !phone){ statusEl.textContent = 'No phone number on file.'; return; }
+  document.getElementById('verifyPhoneNumberLabel').textContent = phone;
   statusEl.textContent = 'Sending code…';
   try {
     if(!verifyRecaptcha){
       verifyRecaptcha = new RecaptchaVerifier(auth, 'recaptcha-container-verify', { size: 'invisible' });
     }
     verifyConfirmationResult = await linkWithPhoneNumber(currentUser, phone, verifyRecaptcha);
-    document.getElementById('verifyPhoneStep').hidden = false;
     statusEl.textContent = 'Code sent to ' + phone + '.';
+    startResendCooldown(document.getElementById('resendVerifyPhoneBtn'), 60);
   } catch (err) {
+    // A phone already linked to this account (e.g. re-entering after a
+    // partial signup) isn't an error the person needs to see — it just
+    // means this step is already done; move on to email.
+    if(err.code === 'auth/provider-already-linked'){
+      await updateDoc(doc(db, 'users', currentUser.uid), { phoneVerified: true });
+      currentProfile.phoneVerified = true;
+      startEmailVerifyStep();
+      return;
+    }
     statusEl.textContent = friendlyAuthError(err);
   }
+}
+
+document.getElementById('resendVerifyPhoneBtn').addEventListener('click', startPhoneVerifyStep);
+
+document.getElementById('changePhoneBtn').addEventListener('click', () => {
+  document.getElementById('changePhoneStep').hidden = false;
+});
+document.getElementById('sendToNewPhoneBtn').addEventListener('click', async () => {
+  const phone = toE164(document.getElementById('changePhoneCountry'), document.getElementById('changePhoneNumber'));
+  const statusEl = document.getElementById('verifyStatus');
+  if(!phone){ statusEl.textContent = 'Enter a valid phone number, including country code.'; return; }
+  pendingVerifyPhone = phone;
+  await updateDoc(doc(db, 'users', currentUser.uid), { phone });
+  currentProfile.phone = phone;
+  document.getElementById('changePhoneStep').hidden = true;
+  document.getElementById('changePhoneNumber').value = '';
+  await startPhoneVerifyStep();
 });
 
 document.getElementById('confirmVerifyPhoneBtn').addEventListener('click', async () => {
@@ -1092,33 +1205,104 @@ document.getElementById('confirmVerifyPhoneBtn').addEventListener('click', async
   try {
     await verifyConfirmationResult.confirm(code);
     await updateDoc(doc(db, 'users', currentUser.uid), { phoneVerified: true });
-    if(currentProfile) currentProfile.phoneVerified = true;
-    statusEl.textContent = 'Phone verified.';
+    currentProfile.phoneVerified = true;
     updateVerifyBanner();
+    updateAccountSettingsDisplay('member');
+    updateAccountSettingsDisplay('owner');
+    document.getElementById('verifyPhoneCode').value = '';
+    startEmailVerifyStep();
+  } catch (err) {
+    statusEl.textContent = friendlyAuthError(err); // covers incorrect/expired/quota/etc — see friendlyAuthError
+  }
+});
+
+async function startEmailVerifyStep(){
+  const statusEl = document.getElementById('verifyStatus');
+  const email = pendingVerifyEmail || currentProfile?.email || currentUser?.email;
+  document.getElementById('verifyEmailLabel').textContent = email;
+  showVerifyStep('email');
+  try {
+    await sendEmailVerification(currentUser);
+    statusEl.textContent = 'Verification email sent.';
+    startResendCooldown(document.getElementById('resendVerifyEmailBtn'), 60);
+  } catch (err) {
+    statusEl.textContent = friendlyAuthError(err);
+  }
+}
+document.getElementById('resendVerifyEmailBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('verifyStatus');
+  try {
+    await sendEmailVerification(currentUser);
+    statusEl.textContent = 'Verification email re-sent.';
+    startResendCooldown(document.getElementById('resendVerifyEmailBtn'), 60);
   } catch (err) {
     statusEl.textContent = friendlyAuthError(err);
   }
 });
 
-document.getElementById('skipVerifyBtn').addEventListener('click', () => {
-  awaitingVerifyChoice = false;
-  if(currentUser && currentProfile){
-    enterDashboard();
-  } else {
-    showAuthPanel('signin');
-    showPortalView('prospect');
+document.getElementById('changeEmailInVerifyBtn').addEventListener('click', () => {
+  document.getElementById('changeEmailInVerifyStep').hidden = false;
+});
+document.getElementById('sendToNewEmailBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('verifyStatus');
+  const newEmail = document.getElementById('changeEmailNewAddress').value.trim();
+  if(!isValidEmail(newEmail)){ statusEl.textContent = 'Enter a valid email address.'; return; }
+  statusEl.textContent = 'Sending…';
+  try {
+    // At this point in registration the account's own email hasn't been
+    // verified yet, so Firebase doesn't require reauthentication here —
+    // it does for changing an already-verified email later (see
+    // Account Settings, which does reauthenticate).
+    await verifyBeforeUpdateEmail(currentUser, newEmail);
+    await updateDoc(doc(db, 'users', currentUser.uid), { email: newEmail });
+    currentProfile.email = newEmail;
+    pendingVerifyEmail = newEmail;
+    document.getElementById('verifyEmailLabel').textContent = newEmail;
+    document.getElementById('changeEmailInVerifyStep').hidden = true;
+    statusEl.textContent = 'Verification link sent to ' + newEmail + '.';
+  } catch (err) {
+    statusEl.textContent = friendlyAuthError(err);
   }
 });
 
-// Reopens the verify panel for an already-signed-in member from the
-// dashboard banner (see updateVerifyBanner / the banner button below).
-document.getElementById('verifyBannerBtn').addEventListener('click', () => {
+document.getElementById('checkEmailVerifiedBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('verifyStatus');
+  statusEl.textContent = 'Checking…';
+  try {
+    await currentUser.reload();
+    if(currentUser.emailVerified){
+      await updateDoc(doc(db, 'users', currentUser.uid), { emailVerified: true });
+      currentProfile.emailVerified = true;
+      awaitingVerifyChoice = false;
+      updateVerifyBanner();
+      updateAccountSettingsDisplay('member');
+      updateAccountSettingsDisplay('owner');
+      enterDashboard();
+    } else {
+      statusEl.textContent = "We haven't detected your email verification yet — click the link in your inbox, then try again.";
+    }
+  } catch (err) {
+    statusEl.textContent = friendlyAuthError(err);
+  }
+});
+
+// Reopens the verify flow for an already-signed-in member from the
+// dashboard banner (see updateVerifyBanner). Resumes at whichever step
+// still isn't verified.
+document.getElementById('verifyBannerBtn').addEventListener('click', async () => {
   pendingVerifyPhone = currentProfile?.phone || null;
+  pendingVerifyEmail = currentProfile?.email || null;
   awaitingVerifyChoice = true;
-  document.getElementById('verifyStatus').textContent = '';
-  document.getElementById('verifyPhoneStep').hidden = true;
   showPortalView('prospect');
   showAuthPanel('verify');
+  document.getElementById('changePhoneStep').hidden = true;
+  document.getElementById('changeEmailInVerifyStep').hidden = true;
+  if(currentProfile?.phoneVerified !== true){
+    showVerifyStep('phone');
+    await startPhoneVerifyStep();
+  } else {
+    await startEmailVerifyStep();
+  }
 });
 
 // Grandfathers every pre-upgrade account (emailVerified/phoneVerified were
@@ -1128,16 +1312,143 @@ document.getElementById('verifyBannerBtn').addEventListener('click', () => {
 function updateVerifyBanner(){
   const banner = document.getElementById('verifyBanner');
   if(!banner || !currentProfile) return;
-  const needsVerification = currentProfile.emailVerified === false && currentProfile.phoneVerified === false;
+  // Grandfathers pre-upgrade accounts (fields never set at all — both read
+  // `undefined`). Any account that has these fields (went through the new
+  // registration flow) needs BOTH email and phone verified, not just one.
+  const hasVerificationFields = currentProfile.emailVerified !== undefined || currentProfile.phoneVerified !== undefined;
+  const needsVerification = hasVerificationFields &&
+    !(currentProfile.emailVerified === true && currentProfile.phoneVerified === true);
   banner.hidden = !needsVerification;
 }
 
-document.getElementById('memberSignOut').addEventListener('click', () => signOut(auth));
-document.getElementById('ownerSignOut').addEventListener('click', () => signOut(auth));
 document.getElementById('memberBookNew').addEventListener('click', () => {
   memberPortalDialog.close();
   openBooking('30-minute');
 });
+
+/* ---------------------------------------------------------------
+   Account Settings — identical wiring for the 'member' and 'owner'
+   dashboard copies of the settings panel (see accountSettingsHtml above).
+   --------------------------------------------------------------- */
+function updateAccountSettingsDisplay(p){
+  if(!currentProfile) return;
+  const emailEl = document.getElementById(p + 'AccountEmail');
+  const phoneEl = document.getElementById(p + 'AccountPhone');
+  const emailBadge = document.getElementById(p + 'EmailBadge');
+  const phoneBadge = document.getElementById(p + 'PhoneBadge');
+  if(emailEl) emailEl.textContent = currentProfile.email || (currentUser && currentUser.email) || '—';
+  if(phoneEl) phoneEl.textContent = currentProfile.phone || 'Not added';
+  if(emailBadge){
+    const verified = currentProfile.emailVerified === true;
+    emailBadge.textContent = verified ? 'Verified' : 'Not Verified';
+    emailBadge.classList.toggle('is-verified', verified);
+  }
+  if(phoneBadge){
+    const verified = currentProfile.phoneVerified === true;
+    phoneBadge.textContent = currentProfile.phone ? (verified ? 'Verified' : 'Not Verified') : 'Not Added';
+    phoneBadge.classList.toggle('is-verified', verified);
+  }
+}
+
+function wireAccountSettings(p){
+  document.getElementById(p + 'SignOut').addEventListener('click', () => signOut(auth));
+
+  // ---- Change email (requires reauthentication) ----
+  const changeEmailBtn = document.getElementById(p + 'ChangeEmailBtn');
+  const changeEmailForm = document.getElementById(p + 'ChangeEmailForm');
+  changeEmailBtn.addEventListener('click', () => { changeEmailForm.hidden = !changeEmailForm.hidden; });
+
+  document.getElementById(p + 'SubmitChangeEmailBtn').addEventListener('click', async () => {
+    const statusEl = document.getElementById(p + 'SettingsStatus');
+    const password = document.getElementById(p + 'ReauthPassword').value;
+    const newEmail = document.getElementById(p + 'NewEmail').value.trim();
+    if(!password){ statusEl.textContent = 'Enter your current password to confirm this change.'; return; }
+    if(!isValidEmail(newEmail)){ statusEl.textContent = 'Enter a valid new email address.'; return; }
+    const btn = document.getElementById(p + 'SubmitChangeEmailBtn');
+    btn.disabled = true;
+    statusEl.textContent = 'Confirming your identity…';
+    try {
+      const credential = EmailAuthProvider.credential(currentUser.email, password);
+      await reauthenticateWithCredential(currentUser, credential);
+      statusEl.textContent = 'Sending verification to the new address…';
+      await verifyBeforeUpdateEmail(currentUser, newEmail);
+      statusEl.textContent = 'Check ' + newEmail + ' for a verification link. Your current email stays active until you confirm it.';
+      document.getElementById(p + 'ReauthPassword').value = '';
+      document.getElementById(p + 'NewEmail').value = '';
+      changeEmailForm.hidden = true;
+    } catch (err) {
+      statusEl.textContent = friendlyAuthError(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ---- Add / change phone ----
+  const changePhoneBtn = document.getElementById(p + 'ChangePhoneBtn');
+  const changePhoneForm = document.getElementById(p + 'ChangePhoneForm');
+  changePhoneBtn.addEventListener('click', () => { changePhoneForm.hidden = !changePhoneForm.hidden; });
+
+  let settingsRecaptcha = null;
+  let settingsConfirmationResult = null;
+
+  async function linkNewPhone(phone){
+    if(!settingsRecaptcha){
+      settingsRecaptcha = new RecaptchaVerifier(auth, 'recaptcha-container-' + p + 'settings', { size: 'invisible' });
+    }
+    try {
+      return await linkWithPhoneNumber(currentUser, phone, settingsRecaptcha);
+    } catch (err) {
+      // A phone is already linked — unlink it first, then link the new one.
+      if(err.code === 'auth/provider-already-linked'){
+        await unlink(currentUser, 'phone');
+        return await linkWithPhoneNumber(currentUser, phone, settingsRecaptcha);
+      }
+      throw err;
+    }
+  }
+
+  document.getElementById(p + 'SendPhoneCodeBtn').addEventListener('click', async () => {
+    const statusEl = document.getElementById(p + 'SettingsStatus');
+    const phone = toE164(document.getElementById(p + 'NewPhoneCountry'), document.getElementById(p + 'NewPhoneNumber'));
+    if(!phone){ statusEl.textContent = 'Enter a valid phone number, including country code.'; return; }
+    const btn = document.getElementById(p + 'SendPhoneCodeBtn');
+    btn.disabled = true;
+    statusEl.textContent = 'Sending code…';
+    try {
+      settingsConfirmationResult = await linkNewPhone(phone);
+      document.getElementById(p + 'PhoneCodeStep').hidden = false;
+      statusEl.textContent = 'Code sent to ' + phone + '.';
+    } catch (err) {
+      statusEl.textContent = friendlyAuthError(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById(p + 'ConfirmPhoneCodeBtn').addEventListener('click', async () => {
+    const statusEl = document.getElementById(p + 'SettingsStatus');
+    const code = document.getElementById(p + 'PhoneCode').value.trim();
+    const phone = toE164(document.getElementById(p + 'NewPhoneCountry'), document.getElementById(p + 'NewPhoneNumber'));
+    if(!settingsConfirmationResult || !code){ statusEl.textContent = 'Enter the 6-digit code.'; return; }
+    statusEl.textContent = 'Verifying…';
+    try {
+      await settingsConfirmationResult.confirm(code);
+      await updateDoc(doc(db, 'users', currentUser.uid), { phone, phoneVerified: true });
+      currentProfile.phone = phone;
+      currentProfile.phoneVerified = true;
+      statusEl.textContent = 'Phone verified and updated.';
+      updateAccountSettingsDisplay(p);
+      updateVerifyBanner();
+      changePhoneForm.hidden = true;
+      document.getElementById(p + 'PhoneCodeStep').hidden = true;
+      document.getElementById(p + 'PhoneCode').value = '';
+    } catch (err) {
+      statusEl.textContent = friendlyAuthError(err);
+    }
+  });
+}
+wireAccountSettings('member');
+wireAccountSettings('owner');
 
 /* ---------------------------------------------------------------
    Booking: availability + Firestore-backed scheduling
@@ -1676,9 +1987,8 @@ onAuthStateChanged(auth, async (user) => {
     }
     document.getElementById('memberWelcomeName').textContent = currentProfile.name ? ', ' + currentProfile.name.split(' ')[0] : '';
     document.getElementById('memberAccountLabel').textContent = currentProfile.role === 'admin' ? 'Admin Account' : 'Student Account';
-    document.getElementById('memberAccountEmail').textContent = currentProfile.email || user.email;
-    const ownerEmailEl = document.getElementById('ownerAccountEmail');
-    if(ownerEmailEl) ownerEmailEl.textContent = currentProfile.email || user.email;
+    updateAccountSettingsDisplay('member');
+    updateAccountSettingsDisplay('owner');
     setAccountControlLabel(currentProfile.role === 'admin' ? 'Ministry' : 'My Account');
   } else {
     currentProfile = null;
