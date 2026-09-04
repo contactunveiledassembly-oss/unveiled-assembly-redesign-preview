@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Connect with The Unveiled Assembly of Christ Jesus — contact, ministry inquiries, and ways to join the community." />
+  <title>Connect | The Unveiled Assembly</title>
+  <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="connect">
+  <div class="grain"></div>
+
+  <header class="inner-hero">
+    <div class="ghost-word" style="top:10px;right:-2vw">Connect</div>
+    <div class="eyebrow reveal">Reach The Assembly</div>
+    <h1 class="display reveal">Let's<br>Connect.</h1>
+    <p class="hero-sub reveal">Questions, ministry inquiries, prayer requests, testimonies, or simply wanting to join the community — this is the place to start.</p>
+  </header>
+
+  <section id="prayer-request" style="padding-top:80px">
+    <div class="discover-list reveal">
+      <a class="discover-row" href="mailto:contactunveiledassembly@gmail.com?subject=Prayer%20Request">
+        <span class="discover-num">01</span>
+        <span class="discover-label serif-heading">Prayer Requests &amp; General Questions</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </a>
+      <button class="discover-row" type="button" id="connectOpenStoryForm" style="width:100%;text-align:left;border:0;background:none;cursor:pointer">
+        <span class="discover-num">02</span>
+        <span class="discover-label serif-heading">Share A Testimony</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </button>
+      <button class="discover-row" type="button" id="connectOpenPortal" style="width:100%;text-align:left;border:0;background:none;cursor:pointer">
+        <span class="discover-num">03</span>
+        <span class="discover-label serif-heading">Join The Community</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </button>
+      <a class="discover-row" href="https://www.instagram.com/unveiledassembly?igsi=Y2RhZXdmcTRneHJn&amp;utm_source=qr" target="_blank" rel="noopener noreferrer">
+        <span class="discover-num">04</span>
+        <span class="discover-label serif-heading">Instagram</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </a>
+      <a class="discover-row" href="mailto:contactunveiledassembly@gmail.com">
+        <span class="discover-num">05</span>
+        <span class="discover-label serif-heading">Email</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <script type="module" src="app.js"></script>
+  <script type="module">
+    document.getElementById('connectOpenStoryForm').addEventListener('click', () => {
+      document.getElementById('storyDialog').showModal();
+    });
+    document.getElementById('connectOpenPortal').addEventListener('click', () => {
+      document.getElementById('navMemberPortal').click();
+    });
+  </script>
+</body>
+</html>
