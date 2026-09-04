@@ -20,6 +20,11 @@ import {
 /* ---------------------------------------------------------------
    Shared markup injection
    --------------------------------------------------------------- */
+// Pages nested in a subdirectory (currently just /shop/) set
+// <body data-base="../"> so every root-relative link/asset the injected
+// nav/footer/dialogs use still resolves correctly from that depth.
+const BASE = document.body.dataset.base || '';
+
 const NAV_LINKS = [
   { page: 'story', href: 'story.html', label: 'Our Story' },
   { page: 'beliefs', href: 'beliefs.html', label: 'Beliefs' },
@@ -29,27 +34,52 @@ const NAV_LINKS = [
   { page: 'connect', href: 'connect.html', label: 'Connect' },
 ];
 
+// Real URL on file. Facebook/YouTube have no confirmed URL yet — marked
+// coming-soon rather than guessed, per instruction not to invent links.
+const SOCIAL_LINKS = [
+  { name: 'Instagram', href: 'https://www.instagram.com/unveiledassembly?igsi=Y2RhZXdmcTRneHJn&amp;utm_source=qr', ready: true,
+    icon: '<path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/>' },
+  { name: 'Facebook', href: '#', ready: false,
+    icon: '<path d="M15 3h-2a5 5 0 0 0-5 5v2H6v4h2v7h4v-7h3l1-4h-4V8a1 1 0 0 1 1-1h3z"/>' },
+  { name: 'YouTube', href: '#', ready: false,
+    icon: '<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l6 3-6 3z" fill="#0a0a0a" stroke="none"/>' },
+];
+
+function socialIconsHtml(extraClass){
+  return SOCIAL_LINKS.map(s => {
+    const common = s.ready
+      ? `href="${s.href}" target="_blank" rel="noopener noreferrer" aria-label="${s.name}"`
+      : `href="#" class="is-placeholder" data-social-placeholder="1" aria-label="${s.name} — coming soon" title="Coming soon" aria-disabled="true"`;
+    return `<a class="icon-btn ${extraClass || ''}" ${common}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">${s.icon}</svg></a>`;
+  }).join('');
+}
+
 function navHtml(){
-  const links = NAV_LINKS.map(l => `<a href="${l.href}" data-page="${l.page}">${l.label}</a>`).join('');
+  const links = NAV_LINKS.map(l => `<a href="${BASE}${l.href}" data-page="${l.page}">${l.label}</a>`).join('');
   return `
   <nav class="nav" id="nav">
-    <a href="index.html" class="brand" aria-label="The Unveiled Assembly home">
-      <span class="brand-badge"><img class="brand-logo" src="assets/ua-logo-tight.png" alt="Unveiled Assembly logo" /></span>
+    <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
+      <span class="brand-badge"><img class="brand-logo" src="${BASE}assets/ua-logo-tight.png" alt="Unveiled Assembly logo" /></span>
       <span class="brand-text"><span class="line1">The Unveiled</span><span class="line2">Assembly of Christ Jesus</span></span>
     </a>
-    <div class="links" id="links">${links}</div>
-    <div class="nav-right">
-      <div class="nav-controls">
-        <button class="icon-btn" id="navMemberPortal" type="button" aria-label="Member account">
+
+    <div class="nav-primary" id="navPrimary">
+      <div class="links" id="links">${links}</div>
+      <div class="nav-utility">
+        <div class="social-links" aria-label="Social media">${socialIconsHtml()}</div>
+        <a class="shop-link" href="${BASE}shop/" data-page="shop">Shop</a>
+        <button class="account-btn" id="navMemberPortal" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          <span id="navAccountLabel">Sign In</span>
         </button>
         <button class="cart-btn" id="cartBtn" type="button" title="Shop — coming soon" aria-disabled="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6"/></svg>
           <span>Cart 0</span>
         </button>
       </div>
-      <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="links">☰</button>
     </div>
+
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navPrimary">☰</button>
   </nav>`;
 }
 
@@ -59,18 +89,19 @@ function footerHtml(){
     <div class="footer-top">
       <div>
         <div class="footer-wordmark">THE<br>UNVEILED<br>ASSEMBLY</div>
+        <div class="footer-social" aria-label="Social media">${socialIconsHtml('on-footer')}</div>
       </div>
       <div class="footer-identity">
         <p>Christ Revealed.<br>A People Unveiled.</p>
         <div class="copyright">© ${new Date().getFullYear()} The Unveiled Assembly of Christ Jesus</div>
       </div>
       <div class="footer-links">
-        <a href="story.html">Story</a>
-        <a href="beliefs.html">Beliefs</a>
-        <a href="prayer.html">Prayer</a>
-        <a href="connect.html">Contact</a>
+        <a href="${BASE}story.html">Our Story</a>
+        <a href="${BASE}beliefs.html">Beliefs</a>
+        <a href="${BASE}prayer.html">Prayer</a>
+        <a href="${BASE}connect.html">Contact</a>
+        <a href="${BASE}shop/">Shop</a>
         <a href="https://www.instagram.com/unveiledassembly?igsi=Y2RhZXdmcTRneHJn&amp;utm_source=qr" target="_blank" rel="noopener noreferrer">Instagram</a>
-        <a href="#" aria-disabled="true" title="Coming soon">TikTok</a>
       </div>
     </div>
     <div class="footer-bottom">Preview build — not the live site</div>
@@ -82,7 +113,7 @@ function dialogsHtml(){
   <dialog class="portal-dialog" id="memberPortalDialog" aria-label="My Assembly">
     <div class="portal-bar">
       <div class="portal-brand">
-        <img src="assets/ua-logo-tight.png" alt="" />
+        <img src="${BASE}assets/ua-logo-tight.png" alt="" />
         <span>The Unveiled Assembly<br>of Christ Jesus</span>
       </div>
       <div class="portal-switch" aria-label="My Assembly navigation">
@@ -383,7 +414,7 @@ document.body.insertAdjacentHTML('beforeend', dialogsHtml() + footerHtml());
 // Mark the current page's nav link, driven by <body data-page="...">.
 const currentPage = document.body.dataset.page;
 if(currentPage){
-  const match = document.querySelector('.links a[data-page="' + currentPage + '"]');
+  const match = document.querySelector('#navPrimary [data-page="' + currentPage + '"]');
   if(match) match.classList.add('current');
 }
 
@@ -413,6 +444,8 @@ let currentProfile = null;
 const nav = document.getElementById('nav');
 const btn = document.getElementById('menuBtn');
 const links = document.getElementById('links');
+const navPrimary = document.getElementById('navPrimary');
+const navAccountLabel = document.getElementById('navAccountLabel');
 
 window.addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', window.scrollY > 30);
@@ -425,7 +458,14 @@ function setMenuOpen(isOpen){
   btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
 }
 btn.addEventListener('click', () => setMenuOpen(!nav.classList.contains('open')));
-links.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setMenuOpen(false)));
+navPrimary.querySelectorAll('a:not(.is-placeholder)').forEach(a => a.addEventListener('click', () => setMenuOpen(false)));
+
+// Social icons without a confirmed URL yet (Facebook, YouTube) are inert —
+// prevent the "#" href from jumping the page.
+document.addEventListener('click', event => {
+  const placeholder = event.target.closest('.is-placeholder');
+  if(placeholder) event.preventDefault();
+});
 
 /* ---------------------------------------------------------------
    Story / testimony dialog (not connected to storage — known gap,
@@ -1182,8 +1222,10 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById('memberAccountEmail').textContent = currentProfile.email || user.email;
     const ownerEmailEl = document.getElementById('ownerAccountEmail');
     if(ownerEmailEl) ownerEmailEl.textContent = currentProfile.email || user.email;
+    navAccountLabel.textContent = currentProfile.role === 'admin' ? 'Ministry' : 'My Account';
   } else {
     currentProfile = null;
+    navAccountLabel.textContent = 'Sign In';
   }
   refreshPortalTabs();
   if(memberPortalDialog.open){
