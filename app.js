@@ -10,7 +10,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, updateProfile
+  onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail,
+  sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, linkWithPhoneNumber
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
@@ -32,6 +33,7 @@ const NAV_LINKS = [
   { page: 'teachings', href: 'teachings.html', label: 'Teachings' },
   { page: 'prayer', href: 'prayer.html', label: 'Prayer' },
   { page: 'connect', href: 'connect.html', label: 'Connect' },
+  { page: 'shop', href: 'shop/', label: 'Shop' },
 ];
 
 // Real URL on file. Facebook/YouTube have no confirmed URL yet — marked
@@ -72,7 +74,6 @@ function navHtml(){
       <div class="links" id="links">${links}</div>
       <div class="nav-right-controls" id="navRightControls">
         <div class="social-links" aria-label="Social media">${socialIconsHtml()}</div>
-        <a class="shop-link" href="${BASE}shop/" data-page="shop">Shop</a>
         <button class="account-btn" id="navMemberPortal" type="button" aria-label="Sign In" title="Sign In">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
           <span class="account-btn-label">Sign In</span>
@@ -113,6 +114,28 @@ function footerHtml(){
   </footer>`;
 }
 
+// Shared "eye" icon for password show/hide toggles.
+const EYE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="width:16px;height:16px"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="width:16px;height:16px"><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.9 4.24A11 11 0 0 1 12 4c7 0 11 8 11 8a17.7 17.7 0 0 1-3.15 4.15M6.5 6.5C3.6 8.3 2 12 2 12s2.5 5 7 6.6"/></svg>';
+
+// A short, deliberately non-exhaustive list of common country codes. "Other"
+// lets someone type a full E.164 number (+<country code><number>) directly
+// if their country isn't listed, so no one is locked out.
+const COUNTRY_CODES = [
+  { code: '+1', label: 'US/CA +1' },
+  { code: '+44', label: 'UK +44' },
+  { code: '+234', label: 'Nigeria +234' },
+  { code: '+91', label: 'India +91' },
+  { code: '+254', label: 'Kenya +254' },
+  { code: '+233', label: 'Ghana +233' },
+  { code: '+27', label: 'South Africa +27' },
+  { code: '+61', label: 'Australia +61' },
+  { code: '+33', label: 'France +33' },
+  { code: '+49', label: 'Germany +49' },
+  { code: 'other', label: 'Other (type full number with +country code)' },
+];
+const COUNTRY_OPTIONS = COUNTRY_CODES.map(c => `<option value="${c.code}">${c.label}</option>`).join('');
+
 function dialogsHtml(){
   return `
   <dialog class="portal-dialog" id="memberPortalDialog" aria-label="My Assembly">
@@ -143,27 +166,140 @@ function dialogsHtml(){
         </div>
         <div class="portal-login">
           <div class="kicker on-light">Join or Sign In</div>
-          <h4>Enter My Assembly</h4>
-          <p>Students and ministry participants use one private account.</p>
-          <form id="portalLoginForm">
-            <div class="portal-field" id="portalNameField" hidden>
-              <label for="portalName">Full name</label>
-              <input id="portalName" type="text" placeholder="First and last name" autocomplete="name" />
+
+          <div class="auth-mode-tabs" role="tablist" aria-label="Sign in or create an account">
+            <button type="button" class="auth-mode-tab active" data-auth-mode="signin" id="authTabSignIn" role="tab" aria-selected="true">Sign In</button>
+            <button type="button" class="auth-mode-tab" data-auth-mode="register" id="authTabRegister" role="tab" aria-selected="false">Create Account</button>
+          </div>
+
+          <!-- ===== SIGN IN ===== -->
+          <div class="auth-panel" data-auth-panel="signin">
+            <div class="auth-method-tabs" role="tablist" aria-label="Sign-in method">
+              <button type="button" class="auth-method-tab active" data-auth-method="email" id="signinMethodEmail" role="tab" aria-selected="true">Email</button>
+              <button type="button" class="auth-method-tab" data-auth-method="phone" id="signinMethodPhone" role="tab" aria-selected="false">Phone Number</button>
             </div>
-            <div class="portal-field">
-              <label for="portalEmail">Email address</label>
-              <input id="portalEmail" type="email" placeholder="you@example.com" autocomplete="email" required />
+
+            <form id="emailSignInForm" data-auth-method-panel="email">
+              <div class="portal-field">
+                <label for="signinEmail">Email address</label>
+                <input id="signinEmail" type="email" placeholder="you@example.com" autocomplete="email" required />
+              </div>
+              <div class="portal-field">
+                <label for="signinPassword">Password</label>
+                <div class="password-field">
+                  <input id="signinPassword" type="password" placeholder="Enter your password" autocomplete="current-password" minlength="6" required />
+                  <button type="button" class="password-toggle" data-toggle-for="signinPassword" aria-label="Show password">${EYE_ICON}</button>
+                </div>
+              </div>
+              <button type="button" class="link-btn" id="showForgotPassword">Forgot Password?</button>
+              <div class="portal-actions">
+                <button class="portal-primary" type="submit" id="portalSignInBtn">Sign In</button>
+              </div>
+              <p class="auth-switch-line">Don't have an account? <button type="button" class="link-btn" data-switch-to="register">Create Account</button></p>
+            </form>
+
+            <div data-auth-method-panel="phone" hidden>
+              <div class="portal-field phone-field">
+                <label for="signinPhoneNumber">Phone number</label>
+                <div class="phone-input-row">
+                  <select id="signinPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
+                  <input id="signinPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" />
+                </div>
+              </div>
+              <button class="portal-primary" type="button" id="sendSigninCodeBtn">Send Verification Code</button>
+              <div id="signinCodeStep" hidden>
+                <div class="portal-field">
+                  <label for="signinCode">6-digit code</label>
+                  <input id="signinCode" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" />
+                </div>
+                <div class="portal-actions">
+                  <button class="portal-primary" type="button" id="verifySigninCodeBtn">Verify and Sign In</button>
+                </div>
+                <button type="button" class="link-btn" id="resendSigninCodeBtn">Resend Code</button>
+              </div>
+              <p class="auth-switch-line"><a class="link-btn" href="${BASE}connect.html">Trouble Signing In?</a></p>
+              <div id="recaptcha-container-signin"></div>
             </div>
+
+            <div class="portal-status" id="portalLoginStatus" role="status" aria-live="polite"></div>
+          </div>
+
+          <!-- ===== FORGOT PASSWORD ===== -->
+          <div class="auth-panel" data-auth-panel="forgot" hidden>
+            <p class="auth-panel-intro">Enter your email and we'll send a link to reset your password.</p>
             <div class="portal-field">
-              <label for="portalPassword">Password</label>
-              <input id="portalPassword" type="password" placeholder="Enter your password" autocomplete="current-password" minlength="6" required />
+              <label for="forgotEmail">Email address</label>
+              <input id="forgotEmail" type="email" placeholder="you@example.com" autocomplete="email" />
             </div>
             <div class="portal-actions">
-              <button class="portal-primary" type="submit" id="portalSignInBtn">Sign In</button>
-              <button class="portal-secondary" id="portalCreateAccount" type="button">Create an Account</button>
+              <button class="portal-primary" type="button" id="sendResetBtn">Send Reset Link</button>
             </div>
-          </form>
-          <div class="portal-status" id="portalLoginStatus" role="status" aria-live="polite"></div>
+            <button type="button" class="link-btn" data-switch-to="signin">← Back to Sign In</button>
+            <div class="portal-status" id="forgotPasswordStatus" role="status" aria-live="polite"></div>
+          </div>
+
+          <!-- ===== CREATE ACCOUNT ===== -->
+          <div class="auth-panel" data-auth-panel="register" hidden>
+            <form id="registerForm">
+              <div class="portal-field-row">
+                <div class="portal-field"><label for="regFirstName">First name</label><input id="regFirstName" type="text" autocomplete="given-name" required /></div>
+                <div class="portal-field"><label for="regLastName">Last name</label><input id="regLastName" type="text" autocomplete="family-name" required /></div>
+              </div>
+              <div class="portal-field">
+                <label for="regEmail">Email address</label>
+                <input id="regEmail" type="email" placeholder="you@example.com" autocomplete="email" required />
+              </div>
+              <div class="portal-field phone-field">
+                <label for="regPhoneNumber">Phone number</label>
+                <div class="phone-input-row">
+                  <select id="regPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
+                  <input id="regPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required />
+                </div>
+              </div>
+              <div class="portal-field">
+                <label for="regPassword">Password</label>
+                <div class="password-field">
+                  <input id="regPassword" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required />
+                  <button type="button" class="password-toggle" data-toggle-for="regPassword" aria-label="Show password">${EYE_ICON}</button>
+                </div>
+              </div>
+              <div class="portal-field">
+                <label for="regConfirmPassword">Confirm password</label>
+                <div class="password-field">
+                  <input id="regConfirmPassword" type="password" placeholder="Re-enter your password" autocomplete="new-password" minlength="8" required />
+                  <button type="button" class="password-toggle" data-toggle-for="regConfirmPassword" aria-label="Show password">${EYE_ICON}</button>
+                </div>
+              </div>
+              <div class="portal-actions">
+                <button class="portal-primary" type="submit" id="registerSubmitBtn">Create Account</button>
+              </div>
+              <p class="auth-switch-line">Already have an account? <button type="button" class="link-btn" data-switch-to="signin">Sign In</button></p>
+            </form>
+            <div class="portal-status" id="registerStatus" role="status" aria-live="polite"></div>
+          </div>
+
+          <!-- ===== POST-REGISTRATION VERIFICATION ===== -->
+          <div class="auth-panel" data-auth-panel="verify" hidden>
+            <h4>Verify your account</h4>
+            <p class="auth-panel-intro">Your account was created. Verify by email or text to unlock full access — you can also do this later from My Assembly.</p>
+            <div class="verify-options">
+              <button class="portal-secondary" type="button" id="verifyByEmailBtn">Verify by Email</button>
+              <button class="portal-secondary" type="button" id="verifyByTextBtn">Verify by Text</button>
+            </div>
+            <div id="verifyPhoneStep" hidden>
+              <div class="portal-field">
+                <label for="verifyPhoneCode">6-digit code</label>
+                <input id="verifyPhoneCode" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" />
+              </div>
+              <div class="portal-actions">
+                <button class="portal-primary" type="button" id="confirmVerifyPhoneBtn">Confirm Code</button>
+              </div>
+            </div>
+            <div id="recaptcha-container-verify"></div>
+            <div class="portal-status" id="verifyStatus" role="status" aria-live="polite"></div>
+            <button type="button" class="link-btn" id="skipVerifyBtn">Continue to My Assembly →</button>
+          </div>
+
           <div class="portal-open-note">No account is needed to browse the website, give, request prayer, submit a testimony, or book an initial session.</div>
         </div>
       </div>
@@ -177,6 +313,10 @@ function dialogsHtml(){
           <p>Your bookings and ministry resources in one place.</p>
         </div>
         <span class="portal-account" id="memberAccountLabel">Student Account</span>
+      </div>
+      <div class="verify-banner" id="verifyBanner" hidden>
+        <span>Your account isn't verified yet — some features are limited.</span>
+        <button type="button" class="link-btn" id="verifyBannerBtn">Verify Now</button>
       </div>
       <div class="portal-dashboard-grid">
         <article class="portal-panel wine">
@@ -570,6 +710,13 @@ function friendlyAuthError(err){
   if(code.includes('weak-password')) return 'Password should be at least 6 characters.';
   if(code.includes('invalid-email')) return 'Enter a valid email address.';
   if(code.includes('too-many-requests')) return 'Too many attempts — please wait a moment and try again.';
+  if(code.includes('invalid-phone-number') || code.includes('missing-phone-number')) return 'Enter a valid phone number, including country code.';
+  if(code.includes('invalid-verification-code')) return 'That code is incorrect — check it and try again.';
+  if(code.includes('code-expired')) return 'That code expired — request a new one.';
+  if(code.includes('credential-already-in-use') || code.includes('phone-number-already-exists')) return 'That phone number is already linked to another account.';
+  if(code.includes('quota-exceeded')) return 'Too many verification attempts right now — please try again later.';
+  if(code.includes('captcha-check-failed')) return 'Verification check failed — please try again.';
+  if(code.includes('requires-recent-login')) return 'Please sign in again to complete this action.';
   return 'Something went wrong. Please try again.';
 }
 
@@ -588,13 +735,17 @@ const portalTabs = [tabProspect, tabMember, tabOwner];
 const portalMemberStatus = document.getElementById('portalMemberStatus');
 const portalOwnerStatus = document.getElementById('portalOwnerStatus');
 const portalLoginStatus = document.getElementById('portalLoginStatus');
-const portalLoginForm = document.getElementById('portalLoginForm');
-const portalNameInput = document.getElementById('portalName');
-const portalEmailInput = document.getElementById('portalEmail');
-const portalPasswordInput = document.getElementById('portalPassword');
 const portalSignInBtn = document.getElementById('portalSignInBtn');
-const portalCreateAccountBtn = document.getElementById('portalCreateAccount');
-const portalNameField = document.getElementById('portalNameField');
+
+// Set while the post-registration "verify your account" panel is showing,
+// so the auth-state listener doesn't yank the dialog straight to the
+// dashboard the instant createUserWithEmailAndPassword signs the new
+// account in underneath it.
+let awaitingVerifyChoice = false;
+// The E.164 phone number captured at registration (or loaded from the
+// signed-in profile when re-entering verification later), used by
+// "Verify by Text".
+let pendingVerifyPhone = null;
 
 function showPortalView(name){
   portalViews.forEach(view => { view.hidden = view.dataset.portalView !== name; });
@@ -618,14 +769,24 @@ function refreshPortalTabs(){
   }
 }
 
+// Shows the correct dashboard (member or admin) for the current session.
+// Shared by the initial dialog open, the auth-state listener, and
+// "Continue to My Assembly" at the end of the verify flow — one place
+// that knows how to route a signed-in user, rather than duplicating it.
+function enterDashboard(){
+  showPortalView(currentProfile.role === 'admin' ? 'owner' : 'member');
+  loadMemberBookings();
+  if(currentProfile.role === 'admin') loadOwnerData();
+  updateVerifyBanner();
+}
+
 function openPortal(){
   setMenuOpen(false);
   refreshPortalTabs();
   if(currentUser && currentProfile){
-    showPortalView(currentProfile.role === 'admin' ? 'owner' : 'member');
-    loadMemberBookings();
-    if(currentProfile.role === 'admin') loadOwnerData();
+    enterDashboard();
   } else {
+    showAuthPanel('signin');
     showPortalView('prospect');
   }
   memberPortalDialog.showModal();
@@ -645,15 +806,88 @@ portalTabs.forEach(tabButton => {
   });
 });
 
-portalLoginForm.addEventListener('submit', async event => {
+/* ---------------------------------------------------------------
+   Auth panel/tab switching (Sign In / Create Account / Forgot / Verify,
+   and the Email/Phone method tabs within Sign In)
+   --------------------------------------------------------------- */
+const authModeTabs = memberPortalDialog.querySelectorAll('.auth-mode-tab');
+const authPanels = memberPortalDialog.querySelectorAll('.auth-panel');
+function showAuthPanel(name){
+  authPanels.forEach(p => { p.hidden = p.dataset.authPanel !== name; });
+  authModeTabs.forEach(t => {
+    const selected = t.dataset.authMode === name;
+    t.classList.toggle('active', selected);
+    t.setAttribute('aria-selected', selected ? 'true' : 'false');
+  });
+}
+authModeTabs.forEach(t => t.addEventListener('click', () => showAuthPanel(t.dataset.authMode)));
+memberPortalDialog.querySelectorAll('[data-switch-to]').forEach(btn => {
+  btn.addEventListener('click', () => showAuthPanel(btn.dataset.switchTo));
+});
+
+const authMethodTabs = memberPortalDialog.querySelectorAll('.auth-method-tab');
+const authMethodPanels = memberPortalDialog.querySelectorAll('[data-auth-method-panel]');
+function showAuthMethod(name){
+  authMethodPanels.forEach(p => { p.hidden = p.dataset.authMethodPanel !== name; });
+  authMethodTabs.forEach(t => {
+    const selected = t.dataset.authMethod === name;
+    t.classList.toggle('active', selected);
+    t.setAttribute('aria-selected', selected ? 'true' : 'false');
+  });
+}
+authMethodTabs.forEach(t => t.addEventListener('click', () => showAuthMethod(t.dataset.authMethod)));
+
+// Password show/hide — delegated, works for every .password-toggle button.
+memberPortalDialog.addEventListener('click', event => {
+  const toggle = event.target.closest('.password-toggle');
+  if(!toggle) return;
+  const input = document.getElementById(toggle.dataset.toggleFor);
+  if(!input) return;
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  toggle.innerHTML = showing ? EYE_ICON : EYE_OFF_ICON;
+  toggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+});
+
+/* ---------------------------------------------------------------
+   Validation helpers
+   --------------------------------------------------------------- */
+function isValidEmail(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+// At least 8 characters with a letter and a number — deliberately stricter
+// than Firebase's own 6-character minimum.
+function isValidPassword(pw){
+  return pw.length >= 8 && /[a-zA-Z]/.test(pw) && /[0-9]/.test(pw);
+}
+// Combines a country-code <select> and a national-number <input> into an
+// E.164 string Firebase Phone Auth requires (e.g. "+15551234567"). The
+// "other" option lets someone type the full +<country><number> themselves
+// if their country isn't in the short list.
+function toE164(countrySelectEl, numberInputEl){
+  const country = countrySelectEl.value;
+  const raw = numberInputEl.value.trim();
+  if(!raw) return null;
+  if(country === 'other') return raw.startsWith('+') ? raw : null;
+  const digits = raw.replace(/[^0-9]/g, '');
+  return digits ? country + digits : null;
+}
+
+/* ---------------------------------------------------------------
+   Email sign-in
+   --------------------------------------------------------------- */
+const emailSignInForm = document.getElementById('emailSignInForm');
+const signinEmailInput = document.getElementById('signinEmail');
+const signinPasswordInput = document.getElementById('signinPassword');
+
+emailSignInForm.addEventListener('submit', async event => {
   event.preventDefault();
   portalLoginStatus.textContent = 'Signing in…';
   portalSignInBtn.disabled = true;
   try {
-    await signInWithEmailAndPassword(auth, portalEmailInput.value.trim(), portalPasswordInput.value);
+    await signInWithEmailAndPassword(auth, signinEmailInput.value.trim(), signinPasswordInput.value);
     portalLoginStatus.textContent = '';
-    portalLoginForm.reset();
-    portalNameField.hidden = true;
+    emailSignInForm.reset();
   } catch (err) {
     portalLoginStatus.textContent = friendlyAuthError(err);
   } finally {
@@ -661,35 +895,242 @@ portalLoginForm.addEventListener('submit', async event => {
   }
 });
 
-portalCreateAccountBtn.addEventListener('click', async () => {
-  if(portalNameField.hidden){
-    portalNameField.hidden = false;
-    portalNameInput.focus();
-    portalLoginStatus.textContent = 'Enter your name, then click Create an Account again.';
-    return;
-  }
-  const name = portalNameInput.value.trim();
-  const email = portalEmailInput.value.trim();
-  const password = portalPasswordInput.value;
-  if(!name){ portalLoginStatus.textContent = 'Enter your full name to create an account.'; portalNameInput.focus(); return; }
-  if(!email || !password){ portalLoginStatus.textContent = 'Enter an email and password to create an account.'; return; }
-  if(password.length < 6){ portalLoginStatus.textContent = 'Password should be at least 6 characters.'; return; }
-  portalLoginStatus.textContent = 'Creating your account…';
-  portalCreateAccountBtn.disabled = true;
+/* ---------------------------------------------------------------
+   Forgot password — always shows the same neutral confirmation,
+   regardless of whether the email is actually registered.
+   --------------------------------------------------------------- */
+document.getElementById('showForgotPassword').addEventListener('click', () => {
+  document.getElementById('forgotEmail').value = signinEmailInput.value.trim();
+  document.getElementById('forgotPasswordStatus').textContent = '';
+  showAuthPanel('forgot');
+});
+
+document.getElementById('sendResetBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('forgotPasswordStatus');
+  const btn = document.getElementById('sendResetBtn');
+  const email = document.getElementById('forgotEmail').value.trim();
+  if(!isValidEmail(email)){ statusEl.textContent = 'Enter a valid email address.'; return; }
+  btn.disabled = true;
+  statusEl.textContent = 'Sending…';
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName: name });
-    const role = email.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'member';
-    await setDoc(doc(db, 'users', cred.user.uid), { name, email, role, createdAt: serverTimestamp() });
-    portalLoginStatus.textContent = '';
-    portalLoginForm.reset();
-    portalNameField.hidden = true;
+    await sendPasswordResetEmail(auth, email);
+  } catch (err) {
+    // auth/user-not-found is deliberately swallowed — surfacing it would
+    // reveal whether an email is registered. Every other error still shows.
+    if(err.code !== 'auth/user-not-found'){
+      statusEl.textContent = friendlyAuthError(err);
+      btn.disabled = false;
+      return;
+    }
+  }
+  statusEl.textContent = 'If an account exists for that email, a reset link has been sent.';
+  btn.disabled = false;
+});
+
+/* ---------------------------------------------------------------
+   Phone sign-in (existing, already-linked accounts only — see the
+   duplicate-account guard in the confirm handler below)
+   --------------------------------------------------------------- */
+let signinRecaptcha = null;
+let signinConfirmationResult = null;
+let resendCooldownTimer = null;
+
+function startResendCooldown(button, seconds){
+  let remaining = seconds;
+  button.disabled = true;
+  button.textContent = 'Resend Code (' + remaining + 's)';
+  if(resendCooldownTimer) clearInterval(resendCooldownTimer);
+  resendCooldownTimer = setInterval(() => {
+    remaining -= 1;
+    if(remaining <= 0){
+      clearInterval(resendCooldownTimer);
+      button.disabled = false;
+      button.textContent = 'Resend Code';
+    } else {
+      button.textContent = 'Resend Code (' + remaining + 's)';
+    }
+  }, 1000);
+}
+
+async function sendSigninCode(){
+  const phone = toE164(document.getElementById('signinPhoneCountry'), document.getElementById('signinPhoneNumber'));
+  if(!phone){ portalLoginStatus.textContent = 'Enter a valid phone number.'; return; }
+  const sendBtn = document.getElementById('sendSigninCodeBtn');
+  sendBtn.disabled = true;
+  portalLoginStatus.textContent = 'Sending code…';
+  try {
+    if(!signinRecaptcha){
+      signinRecaptcha = new RecaptchaVerifier(auth, 'recaptcha-container-signin', { size: 'invisible' });
+    }
+    signinConfirmationResult = await signInWithPhoneNumber(auth, phone, signinRecaptcha);
+    document.getElementById('signinCodeStep').hidden = false;
+    portalLoginStatus.textContent = 'Code sent to ' + phone + '.';
+    startResendCooldown(document.getElementById('resendSigninCodeBtn'), 60);
   } catch (err) {
     portalLoginStatus.textContent = friendlyAuthError(err);
   } finally {
-    portalCreateAccountBtn.disabled = false;
+    sendBtn.disabled = false;
+  }
+}
+document.getElementById('sendSigninCodeBtn').addEventListener('click', sendSigninCode);
+document.getElementById('resendSigninCodeBtn').addEventListener('click', sendSigninCode);
+
+document.getElementById('verifySigninCodeBtn').addEventListener('click', async () => {
+  const code = document.getElementById('signinCode').value.trim();
+  if(!signinConfirmationResult || !code){ portalLoginStatus.textContent = 'Enter the 6-digit code.'; return; }
+  portalLoginStatus.textContent = 'Verifying…';
+  try {
+    const result = await signinConfirmationResult.confirm(code);
+    // A phone credential with no matching Firestore profile means this
+    // number was never linked to a real account (e.g. someone who never
+    // registered trying phone sign-in cold). Rather than silently create
+    // a blank membership record — a duplicate/orphan account — sign back
+    // out and point them to registration instead.
+    const profileSnap = await getDoc(doc(db, 'users', result.user.uid));
+    if(!profileSnap.exists()){
+      await signOut(auth);
+      portalLoginStatus.textContent = "We don't have an account linked to that phone number yet. Use Create Account, or sign in by email and verify by text from My Assembly.";
+      return;
+    }
+    portalLoginStatus.textContent = '';
+  } catch (err) {
+    portalLoginStatus.textContent = friendlyAuthError(err);
   }
 });
+
+/* ---------------------------------------------------------------
+   Create Account — collects the full profile, creates the Firebase
+   Auth account, writes the Firestore profile, then hands off to the
+   verify panel. Phone is stored as data immediately; it isn't linked
+   as a sign-in method until the person actually verifies by text.
+   --------------------------------------------------------------- */
+const registerForm = document.getElementById('registerForm');
+const registerStatus = document.getElementById('registerStatus');
+const registerSubmitBtn = document.getElementById('registerSubmitBtn');
+
+registerForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const lastName = document.getElementById('regLastName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const phone = toE164(document.getElementById('regPhoneCountry'), document.getElementById('regPhoneNumber'));
+  const password = document.getElementById('regPassword').value;
+  const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+  if(!firstName || !lastName){ registerStatus.textContent = 'Enter your first and last name.'; return; }
+  if(!isValidEmail(email)){ registerStatus.textContent = 'Enter a valid email address.'; return; }
+  if(!phone){ registerStatus.textContent = 'Enter a valid phone number, including country code.'; return; }
+  if(!isValidPassword(password)){ registerStatus.textContent = 'Password must be at least 8 characters and include a letter and a number.'; return; }
+  if(password !== confirmPassword){ registerStatus.textContent = 'Passwords do not match.'; return; }
+
+  registerSubmitBtn.disabled = true;
+  registerStatus.textContent = 'Creating your account…';
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const fullName = firstName + ' ' + lastName;
+    await updateProfile(cred.user, { displayName: fullName });
+    const role = email.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'member';
+    await setDoc(doc(db, 'users', cred.user.uid), {
+      firstName, lastName, name: fullName, email, phone, role,
+      emailVerified: false, phoneVerified: false, createdAt: serverTimestamp()
+    });
+    try { await sendEmailVerification(cred.user); } catch (err) { /* non-fatal — they can resend from the verify panel */ }
+    pendingVerifyPhone = phone;
+    awaitingVerifyChoice = true;
+    registerForm.reset();
+    registerStatus.textContent = '';
+    document.getElementById('verifyStatus').textContent = '';
+    document.getElementById('verifyPhoneStep').hidden = true;
+    showAuthPanel('verify');
+  } catch (err) {
+    registerStatus.textContent = friendlyAuthError(err);
+  } finally {
+    registerSubmitBtn.disabled = false;
+  }
+});
+
+/* ---------------------------------------------------------------
+   Post-registration (and re-entered, via "Verify Now") verification
+   --------------------------------------------------------------- */
+document.getElementById('verifyByEmailBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('verifyStatus');
+  if(!currentUser){ statusEl.textContent = 'Please sign in again.'; return; }
+  statusEl.textContent = 'Sending verification email…';
+  try {
+    await sendEmailVerification(currentUser);
+    statusEl.textContent = 'Verification email sent — check your inbox, then continue below.';
+  } catch (err) {
+    statusEl.textContent = friendlyAuthError(err);
+  }
+});
+
+let verifyRecaptcha = null;
+let verifyConfirmationResult = null;
+
+document.getElementById('verifyByTextBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('verifyStatus');
+  const phone = pendingVerifyPhone || currentProfile?.phone;
+  if(!currentUser || !phone){ statusEl.textContent = 'No phone number on file — add one from My Assembly first.'; return; }
+  statusEl.textContent = 'Sending code…';
+  try {
+    if(!verifyRecaptcha){
+      verifyRecaptcha = new RecaptchaVerifier(auth, 'recaptcha-container-verify', { size: 'invisible' });
+    }
+    verifyConfirmationResult = await linkWithPhoneNumber(currentUser, phone, verifyRecaptcha);
+    document.getElementById('verifyPhoneStep').hidden = false;
+    statusEl.textContent = 'Code sent to ' + phone + '.';
+  } catch (err) {
+    statusEl.textContent = friendlyAuthError(err);
+  }
+});
+
+document.getElementById('confirmVerifyPhoneBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('verifyStatus');
+  const code = document.getElementById('verifyPhoneCode').value.trim();
+  if(!verifyConfirmationResult || !code){ statusEl.textContent = 'Enter the 6-digit code.'; return; }
+  statusEl.textContent = 'Verifying…';
+  try {
+    await verifyConfirmationResult.confirm(code);
+    await updateDoc(doc(db, 'users', currentUser.uid), { phoneVerified: true });
+    if(currentProfile) currentProfile.phoneVerified = true;
+    statusEl.textContent = 'Phone verified.';
+    updateVerifyBanner();
+  } catch (err) {
+    statusEl.textContent = friendlyAuthError(err);
+  }
+});
+
+document.getElementById('skipVerifyBtn').addEventListener('click', () => {
+  awaitingVerifyChoice = false;
+  if(currentUser && currentProfile){
+    enterDashboard();
+  } else {
+    showAuthPanel('signin');
+    showPortalView('prospect');
+  }
+});
+
+// Reopens the verify panel for an already-signed-in member from the
+// dashboard banner (see updateVerifyBanner / the banner button below).
+document.getElementById('verifyBannerBtn').addEventListener('click', () => {
+  pendingVerifyPhone = currentProfile?.phone || null;
+  awaitingVerifyChoice = true;
+  document.getElementById('verifyStatus').textContent = '';
+  document.getElementById('verifyPhoneStep').hidden = true;
+  showPortalView('prospect');
+  showAuthPanel('verify');
+});
+
+// Grandfathers every pre-upgrade account (emailVerified/phoneVerified were
+// never set, so both read as `undefined`, not `false`) — only accounts
+// that went through the new registration flow and explicitly haven't
+// verified yet (both fields present and false) see the banner.
+function updateVerifyBanner(){
+  const banner = document.getElementById('verifyBanner');
+  if(!banner || !currentProfile) return;
+  const needsVerification = currentProfile.emailVerified === false && currentProfile.phoneVerified === false;
+  banner.hidden = !needsVerification;
+}
 
 document.getElementById('memberSignOut').addEventListener('click', () => signOut(auth));
 document.getElementById('ownerSignOut').addEventListener('click', () => signOut(auth));
@@ -1246,10 +1687,13 @@ onAuthStateChanged(auth, async (user) => {
   refreshPortalTabs();
   if(memberPortalDialog.open){
     if(currentUser && currentProfile){
-      showPortalView(currentProfile.role === 'admin' ? 'owner' : 'member');
-      loadMemberBookings();
-      if(currentProfile.role === 'admin') loadOwnerData();
+      // Right after registration, createUserWithEmailAndPassword signs the
+      // account in and fires this listener immediately — without this
+      // guard it would yank the dialog straight to the dashboard before
+      // the person ever sees the verify-by-email/text choice.
+      if(!awaitingVerifyChoice) enterDashboard();
     } else {
+      showAuthPanel('signin');
       showPortalView('prospect');
     }
   }
