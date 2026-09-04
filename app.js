@@ -41,8 +41,13 @@ const SOCIAL_LINKS = [
     icon: '<path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/>' },
   { name: 'Facebook', href: '#', ready: false,
     icon: '<path d="M15 3h-2a5 5 0 0 0-5 5v2H6v4h2v7h4v-7h3l1-4h-4V8a1 1 0 0 1 1-1h3z"/>' },
+  // The play triangle previously used a hardcoded dark fill as a
+  // "cutout" against a filled background — but this icon has no fill
+  // (matches the other outlined icons), so a hardcoded dark fill was
+  // invisible against the dark nav. Uses currentColor like every other
+  // icon here so it's always correctly visible against its background.
   { name: 'YouTube', href: '#', ready: false,
-    icon: '<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l6 3-6 3z" fill="#0a0a0a" stroke="none"/>' },
+    icon: '<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l6 3-6 3z" fill="currentColor" stroke="none"/>' },
 ];
 
 function socialIconsHtml(extraClass){
