@@ -21,7 +21,7 @@ import {
    Shared markup injection
    --------------------------------------------------------------- */
 const NAV_LINKS = [
-  { page: 'story', href: 'story.html', label: 'Story' },
+  { page: 'story', href: 'story.html', label: 'Our Story' },
   { page: 'beliefs', href: 'beliefs.html', label: 'Beliefs' },
   { page: 'gather', href: 'gather.html', label: 'Gather' },
   { page: 'teachings', href: 'teachings.html', label: 'Teachings' },
