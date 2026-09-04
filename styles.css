@@ -14,9 +14,9 @@
   --ivory:#f5f3ee;
   --white:#ffffff;
   --stone:#a7a7a7;      /* secondary text on dark */
-  --stone-dim:#7a7a7a;  /* tertiary text on dark */
+  --stone-dim:#8f8f8f;  /* tertiary text on dark */
   --ink-muted:#525252;  /* secondary text on light */
-  --ink-dim:#7a7a7a;    /* tertiary text on light */
+  --ink-dim:#6b6b6b;    /* tertiary text on light */
   --line-dark:rgba(245,243,238,.14);
   --line-light:rgba(10,10,10,.14);
   --silver:#d6d6d6;
@@ -37,7 +37,11 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 a{color:inherit;text-decoration:none}
-button{font:inherit;background:none;border:0}
+/* Browsers apply their own default text color to <button> — unlike <a>
+   or <span>, it does NOT automatically inherit the page's color. Every
+   button on this site must inherit explicitly or it silently renders
+   with the browser's default (often black), invisible on dark sections. */
+button{font:inherit;background:none;border:0;color:inherit;cursor:pointer}
 h1,h2,h3,h4,p{margin-top:0}
 img{max-width:100%;display:block}
 
@@ -78,33 +82,54 @@ img{max-width:100%;display:block}
 .nav-mobile-panel{display:contents}
 
 .links{display:flex;align-items:center;justify-content:center;gap:19px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;flex-wrap:nowrap}
-.links a{opacity:.8;transition:.2s;padding-bottom:3px;border-bottom:1px solid transparent;white-space:nowrap}
+.links a{color:var(--ivory);opacity:.8;transition:.2s;padding-bottom:3px;border-bottom:1px solid transparent;white-space:nowrap}
 .links a:hover,.links a.current{opacity:1;border-color:currentColor}
 
-/* Right column: social + shop + account + cart, all in the bar itself. */
+/* Right column: social + shop + account + cart, all in the bar itself.
+   Every control below sets color AND border explicitly — do not rely on
+   inheritance here, since <button> does not inherit color from the page
+   by default (see the global `button` reset above) and a missed override
+   silently renders invisible black-on-black. --nav-control-border is a
+   stronger, more visible border than the site's general --line-dark
+   divider token, per the explicit "give these borders enough contrast"
+   requirement. */
+:root{ --nav-control-border:rgba(245,243,238,.45); --nav-control-border-hover:rgba(245,243,238,.85); }
+
 .nav-right-controls{display:flex;align-items:center;gap:12px;grid-column:3;justify-self:end;flex:0 0 auto}
 .social-links{display:flex;align-items:center;gap:6px}
 .icon-btn{
-  width:27px;height:27px;border-radius:50%;border:1px solid var(--line-dark);
+  width:27px;height:27px;border-radius:50%;border:1px solid var(--nav-control-border);color:var(--ivory);
   display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;flex:0 0 auto;
 }
-.icon-btn:hover{border-color:rgba(245,243,238,.6)}
-.icon-btn.is-placeholder{opacity:.35;cursor:default}
-.icon-btn.is-placeholder:hover{border-color:var(--line-dark)}
-.icon-btn svg{width:12px;height:12px}
-.shop-link{font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.9;transition:.2s;white-space:nowrap}
+.icon-btn svg{stroke:currentColor;width:12px;height:12px}
+.icon-btn:hover{border-color:var(--nav-control-border-hover)}
+.icon-btn:active{transform:scale(.94)}
+.icon-btn:focus-visible{outline:2px solid var(--ivory);outline-offset:2px}
+.icon-btn.is-placeholder{color:var(--stone);opacity:.55;cursor:default}
+.icon-btn.is-placeholder:hover{border-color:var(--nav-control-border)}
+.icon-btn.is-placeholder:active{transform:none}
+
+.shop-link{display:inline-block;color:var(--ivory);font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.9;transition:.2s;white-space:nowrap}
 .shop-link:hover,.shop-link.current{opacity:1}
+.shop-link:focus-visible{outline:2px solid var(--ivory);outline-offset:3px}
+
 .account-btn{
-  width:30px;height:30px;border-radius:50%;border:1px solid var(--line-dark);
+  width:30px;height:30px;border-radius:50%;border:1px solid var(--nav-control-border);color:var(--ivory);
   display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;flex:0 0 auto;padding:0;
 }
-.account-btn:hover{border-color:rgba(245,243,238,.6)}
-.account-btn svg{width:14px;height:14px}
-.account-btn-label{display:none}
+.account-btn svg{stroke:currentColor;width:14px;height:14px}
+.account-btn:hover{border-color:var(--nav-control-border-hover)}
+.account-btn:active{transform:scale(.94)}
+.account-btn:focus-visible{outline:2px solid var(--ivory);outline-offset:2px}
+.account-btn-label{display:none;color:inherit}
 .cart-btn{
-  display:flex;align-items:center;gap:7px;height:30px;padding:0 12px;
-  border:1px solid var(--line-dark);font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap;
+  display:flex;align-items:center;gap:7px;height:30px;padding:0 12px;color:var(--ivory);
+  border:1px solid var(--nav-control-border);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  cursor:default;white-space:nowrap;transition:.2s;
 }
+.cart-btn svg{stroke:currentColor}
+.cart-btn:hover{border-color:var(--nav-control-border-hover)}
+.cart-btn:focus-visible{outline:2px solid var(--ivory);outline-offset:2px}
 .menu-btn{display:none;background:none;border:0;color:var(--ivory);font-size:24px;cursor:pointer;flex:0 0 auto;grid-column:3;justify-self:end}
 
 @media(max-width:1040px){
@@ -286,18 +311,25 @@ section{padding:130px 5vw; position:relative; overflow:hidden}
 .preview-card p{color:var(--ink-muted);font-size:14px;line-height:1.65}
 @media(max-width:820px){ .preview-cards{grid-template-columns:1fr} }
 
-/* ---------- Numbered "discover more" list ---------- */
+/* ---------- Numbered "discover more" list ----------
+   Defaults are dark-context (this list is reused as-is on Connect,
+   which has no light-section wrapper); .discover on the homepage is
+   the light/ivory context and overrides border + number color below. */
 .discover{background:var(--ivory);color:var(--black)}
 .discover h2{font-family:var(--serif);font-size:clamp(40px,6vw,68px);margin-bottom:60px}
-.discover-list{border-top:1px solid var(--line-light)}
+.discover-list{border-top:1px solid var(--line-dark)}
 .discover-row{
-  display:flex;align-items:center;justify-content:space-between;gap:20px;
-  padding:26px 0;border-bottom:1px solid var(--line-light);transition:.2s;
+  display:flex;align-items:center;justify-content:space-between;gap:20px;color:inherit;
+  padding:26px 0;border-bottom:1px solid var(--line-dark);transition:.2s;
 }
 .discover-row:hover{padding-left:10px}
-.discover-num{font-size:11px;color:var(--ink-dim);flex:0 0 30px}
+.discover-num{font-size:11px;color:var(--stone-dim);flex:0 0 30px}
 .discover-label{font-family:var(--serif);font-size:clamp(24px,3vw,38px);flex:1}
-.discover-row svg{width:20px;height:20px;flex:0 0 auto}
+.discover-row svg{width:20px;height:20px;flex:0 0 auto;stroke:currentColor}
+
+.discover .discover-list{border-top-color:var(--line-light)}
+.discover .discover-row{border-bottom-color:var(--line-light)}
+.discover .discover-num{color:var(--ink-dim)}
 
 /* ---------- Footer ---------- */
 footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--line-dark)}
@@ -429,6 +461,18 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 .portal-request p{margin:3px 0;color:var(--ink-dim);font-size:12px}
 .portal-status{min-height:20px;margin-top:18px;color:var(--ink-muted);font-size:12px}
 .portal-mockup-note{font-size:10px;letter-spacing:.08em;color:var(--ink-dim);margin-top:14px}
+
+/* .portal-row / .portal-request / .portal-access are reused as dynamic,
+   JS-rendered content (My Bookings, Pending Requests) inside BOTH the
+   default light .portal-panel AND the dark .portal-panel.wine variant.
+   Their light-context colors/borders above are correct for the former
+   but were unreadable in the latter — scope dark-appropriate overrides
+   here rather than special-casing it in the JS that renders them. */
+.portal-panel.wine .portal-row,
+.portal-panel.wine .portal-request{border-top-color:var(--line-dark)}
+.portal-panel.wine .portal-row small{color:var(--stone-dim)}
+.portal-panel.wine .portal-request p{color:var(--stone)}
+.portal-panel.wine .portal-access{color:var(--stone)}
 
 @media(max-width:900px){
   .portal-dashboard-grid,.portal-owner-grid,.portal-two{grid-template-columns:1fr}
