@@ -9,15 +9,163 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
-  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail,
-  sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, linkWithPhoneNumber,
-  reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, unlink
+  getAuth,
+  createUserWithEmailAndPassword as _createUserWithEmailAndPassword,
+  signInWithEmailAndPassword as _signInWithEmailAndPassword,
+  onAuthStateChanged as _onAuthStateChanged,
+  signOut as _signOut,
+  updateProfile as _updateProfile,
+  sendPasswordResetEmail as _sendPasswordResetEmail,
+  sendEmailVerification as _sendEmailVerification,
+  RecaptchaVerifier as _RecaptchaVerifier,
+  signInWithPhoneNumber as _signInWithPhoneNumber,
+  linkWithPhoneNumber as _linkWithPhoneNumber,
+  reauthenticateWithCredential as _reauthenticateWithCredential,
+  EmailAuthProvider, verifyBeforeUpdateEmail as _verifyBeforeUpdateEmail, unlink as _unlink
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+/* ---------------------------------------------------------------
+   Preview-mode safety lock. Only the real production domain may
+   perform actual Firebase sign-ins or database writes. Every other
+   host (the GitHub preview, localhost, etc.) runs in DEMO_MODE: the
+   auth functions below are replaced with sample, in-memory-only
+   equivalents so the preview site can never touch the real
+   ministry's users, bookings, or Firestore data. All the real
+   sign-in/booking/admin logic further down is unchanged — these
+   wrappers are the only interception point, and only take effect
+   off the production domain.
+   --------------------------------------------------------------- */
+const PRODUCTION_HOSTS = ['theunveiledassembly.com', 'www.theunveiledassembly.com'];
+const DEMO_MODE = !PRODUCTION_HOSTS.includes(window.location.hostname);
+// Matches the real ADMIN_EMAIL constant declared further down (used here
+// only so demo sign-in can show what the admin Ministry View looks like).
+const DEMO_ADMIN_EMAIL = 'contactunveiledassembly@gmail.com';
+
+let demoAuthCallback = null;
+function demoUser(overrides){
+  return Object.assign({
+    uid: 'demo-' + Math.random().toString(36).slice(2, 10),
+    email: 'demo@example.com',
+    displayName: '',
+    phoneNumber: null,
+    emailVerified: true,
+    role: 'member',
+    reload: async () => {},
+  }, overrides);
+}
+function demoSetUser(user){
+  if(demoAuthCallback) demoAuthCallback(user);
+}
+
+async function createUserWithEmailAndPassword(authArg, email, password){
+  if(DEMO_MODE){
+    const user = demoUser({ email, role: email.toLowerCase() === DEMO_ADMIN_EMAIL ? 'admin' : 'member' });
+    demoSetUser(user);
+    return { user };
+  }
+  return _createUserWithEmailAndPassword(authArg, email, password);
+}
+async function signInWithEmailAndPassword(authArg, email, password){
+  if(DEMO_MODE){
+    const user = demoUser({ email, displayName: 'Demo Member', role: email.toLowerCase() === DEMO_ADMIN_EMAIL ? 'admin' : 'member' });
+    demoSetUser(user);
+    return { user };
+  }
+  return _signInWithEmailAndPassword(authArg, email, password);
+}
+function onAuthStateChanged(authArg, callback){
+  if(DEMO_MODE){
+    demoAuthCallback = callback;
+    callback(null);
+    return () => { demoAuthCallback = null; };
+  }
+  return _onAuthStateChanged(authArg, callback);
+}
+async function signOut(authArg){
+  if(DEMO_MODE){ demoSetUser(null); return; }
+  return _signOut(authArg);
+}
+async function updateProfile(user, data){
+  if(DEMO_MODE){ Object.assign(user, data); return; }
+  return _updateProfile(user, data);
+}
+async function sendPasswordResetEmail(authArg, email){
+  if(DEMO_MODE) return;
+  return _sendPasswordResetEmail(authArg, email);
+}
+async function sendEmailVerification(user){
+  if(DEMO_MODE){ if(user) user.emailVerified = true; return; }
+  return _sendEmailVerification(user);
+}
+function RecaptchaVerifier(...args){
+  if(DEMO_MODE){
+    return { render: async () => 'demo-widget', clear(){}, verify: async () => 'demo-token' };
+  }
+  return new _RecaptchaVerifier(...args);
+}
+async function signInWithPhoneNumber(authArg, phone, verifier){
+  if(DEMO_MODE){
+    return { confirm: async (code) => {
+      const user = demoUser({ phoneNumber: phone, displayName: 'Demo Member' });
+      demoSetUser(user);
+      return { user };
+    } };
+  }
+  return _signInWithPhoneNumber(authArg, phone, verifier);
+}
+async function linkWithPhoneNumber(user, phone, verifier){
+  if(DEMO_MODE){
+    return { confirm: async (code) => { user.phoneNumber = phone; return { user }; } };
+  }
+  return _linkWithPhoneNumber(user, phone, verifier);
+}
+async function reauthenticateWithCredential(user, credential){
+  if(DEMO_MODE) return { user };
+  return _reauthenticateWithCredential(user, credential);
+}
+async function verifyBeforeUpdateEmail(user, newEmail){
+  if(DEMO_MODE){ user.email = newEmail; return; }
+  return _verifyBeforeUpdateEmail(user, newEmail);
+}
+async function unlink(user, providerId){
+  if(DEMO_MODE){ user.phoneNumber = null; return user; }
+  return _unlink(user, providerId);
+}
+
+/* ---------------------------------------------------------------
+   Demo-mode sample data. Only ever read/written when DEMO_MODE is
+   true — the real booking/admin/member functions below read and
+   write Firestore exactly as before on the production domain, and
+   fall into these in-memory-only sample lists everywhere else. None
+   of this persists past a page refresh, and none of it is real.
+   --------------------------------------------------------------- */
+function demoNextWeekdayStr(targetDow, weeksAhead){
+  const d = new Date();
+  d.setDate(d.getDate() + ((targetDow + 7 - d.getDay()) % 7 || 7) + (weeksAhead || 0) * 7);
+  return d.toISOString().slice(0, 10);
+}
+const DEMO_TUE1 = demoNextWeekdayStr(2, 0);
+const DEMO_THU1 = demoNextWeekdayStr(4, 0);
+const DEMO_TUE2 = demoNextWeekdayStr(2, 1);
+let DEMO_BOOKING_SEQ = 1;
+const DEMO_BOOKINGS = [
+  { id: 'demo-1', slotId: DEMO_TUE1 + '_14:00', date: DEMO_TUE1, time: '14:00', sessionType: '30-minute', name: 'Jordan Lee', email: 'jordan@example.com', uid: null, status: 'pending' },
+  { id: 'demo-2', slotId: DEMO_THU1 + '_15:00', date: DEMO_THU1, time: '15:00', sessionType: '15-minute', name: 'Amara Okafor', email: 'amara@example.com', uid: null, status: 'confirmed' },
+  { id: 'demo-3', slotId: DEMO_TUE2 + '_16:00', date: DEMO_TUE2, time: '16:00', sessionType: '30-minute', name: 'Sam Rivera', email: 'sam@example.com', uid: null, status: 'confirmed' },
+];
+const DEMO_MEMBERS = [
+  { id: 'demo-m1', name: 'Jordan Lee', email: 'jordan@example.com', role: 'member' },
+  { id: 'demo-m2', name: 'Amara Okafor', email: 'amara@example.com', role: 'member' },
+  { id: 'demo-m3', name: 'Sam Rivera', email: 'sam@example.com', role: 'member' },
+];
+const DEMO_BLOCKED_DATES = [demoNextWeekdayStr(4, 2)];
+// Temporary slot holds (Phase 6) — in demo mode these just live in this
+// array; in real mode the equivalent lives in the bookingHolds collection.
+let DEMO_HOLDS = [];
 
 /* ---------------------------------------------------------------
    Shared markup injection
@@ -75,6 +223,7 @@ function navHtml(){
       <div class="links" id="links">${links}</div>
       <div class="nav-right-controls" id="navRightControls">
         <div class="social-links" aria-label="Social media">${socialIconsHtml()}</div>
+        <button class="nav-book-btn book-session" type="button" data-service="" aria-label="Book a session">Book A Session</button>
         <button class="account-btn" id="navMemberPortal" type="button" aria-label="Sign In" title="Sign In">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
           <span class="account-btn-label">Sign In</span>
@@ -478,12 +627,10 @@ function dialogsHtml(){
               <div class="form-field">
                 <label for="adminBookType">Session</label>
                 <select id="adminBookType" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                  <option value="30-minute">30-Minute One-on-One</option>
-                  <option value="15-minute">15-Minute Pop-Up</option>
                 </select>
               </div>
               <div class="form-field">
-                <label for="adminBookDate">Date (Tue or Thu)</label>
+                <label for="adminBookDate">Date</label>
                 <input id="adminBookDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
               </div>
               <div class="form-field full">
@@ -498,6 +645,104 @@ function dialogsHtml(){
               <div class="form-status" id="adminBookStatus" role="status" aria-live="polite" style="color:#6d6d6d"></div>
             </div>
           </form>
+        </article>
+        <article class="portal-panel" style="grid-column:1/-1">
+          <span class="portal-label">Scheduling Settings</span>
+          <p style="color:#656565;margin-bottom:14px">Controls what visitors see on the booking form — time zone, whether booking is open, the services offered, and when sessions can be requested. On the preview site this only edits sample data; on the live site it's real and applies immediately.</p>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px">
+            <div class="form-field" style="min-width:260px">
+              <label for="schedTimezone">Ministry time zone</label>
+              <select id="schedTimezone" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                <option value="America/New_York">Eastern (America/New_York)</option>
+                <option value="America/Chicago">Central (America/Chicago)</option>
+                <option value="America/Denver">Mountain (America/Denver)</option>
+                <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
+                <option value="America/Anchorage">Alaska (America/Anchorage)</option>
+                <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
+              </select>
+            </div>
+            <div class="form-field" style="flex:0 0 150px"><label for="schedMaxPerDay">Max bookings/day</label><input id="schedMaxPerDay" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+            <div class="form-field" style="flex:0 0 150px"><label for="schedMinNotice">Min notice (hours)</label><input id="schedMinNotice" type="number" min="0" placeholder="None" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+            <div class="form-field" style="flex:0 0 150px"><label for="schedMaxAdvance">Max advance (days)</label><input id="schedMaxAdvance" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+            <label style="display:flex;align-items:center;gap:8px;color:#3a3a3a;font-size:13px;padding-bottom:8px">
+              <input id="schedBookingPaused" type="checkbox" style="accent-color:var(--black)" />
+              Pause all new booking requests
+            </label>
+            <button class="portal-secondary" type="button" id="schedSettingsSaveBtn">Save Settings</button>
+          </div>
+          <div class="form-status" id="schedSettingsStatus" style="color:#6d6d6d;margin-bottom:20px"></div>
+
+          <div style="border-top:1px dashed #c7c7c7;padding-top:16px;margin-bottom:20px">
+            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Session Types</strong>
+            <div id="schedTypesList" style="margin-bottom:14px"></div>
+            <form id="schedTypeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-field" style="flex:1;min-width:130px"><label for="schedTypeId">ID</label><input id="schedTypeId" type="text" placeholder="e.g. 30-minute" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:1;min-width:170px"><label for="schedTypeName">Display name</label><input id="schedTypeName" type="text" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 100px"><label for="schedTypeDuration">Minutes</label><input id="schedTypeDuration" type="number" min="5" step="5" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 120px"><label for="schedTypePrice">Price</label><input id="schedTypePrice" type="number" min="0" step="0.01" placeholder="No charge" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferBefore">Buffer before</label><input id="schedTypeBufferBefore" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferAfter">Buffer after</label><input id="schedTypeBufferAfter" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:1;min-width:200px"><label for="schedTypeDescription">Description</label><input id="schedTypeDescription" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <button class="portal-secondary" type="submit">Add / Update Type</button>
+            </form>
+            <div class="form-status" id="schedTypeStatus" style="color:#6d6d6d;margin-top:8px"></div>
+            <p style="color:#8a8a8a;font-size:11px;margin-top:8px">Using an existing ID updates that type instead of creating a new one. Prices, descriptions, and policies here are placeholders until you provide the real Calendly information.</p>
+          </div>
+
+          <div style="border-top:1px dashed #c7c7c7;padding-top:16px;margin-bottom:20px">
+            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Weekly Availability Windows</strong>
+            <div id="schedRulesList" style="margin-bottom:14px"></div>
+            <form id="schedRuleForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-field" style="flex:1;min-width:130px">
+                <label for="schedRuleDay">Day</label>
+                <select id="schedRuleDay" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                  <option value="0">Sunday</option><option value="1">Monday</option><option value="2" selected>Tuesday</option>
+                  <option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option>
+                </select>
+              </div>
+              <div class="form-field" style="flex:0 0 120px"><label for="schedRuleStart">Start</label><input id="schedRuleStart" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 120px"><label for="schedRuleEnd">End</label><input id="schedRuleEnd" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 110px"><label for="schedRuleCapacity">Capacity</label><input id="schedRuleCapacity" type="number" min="1" value="1" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <button class="portal-secondary" type="submit">Add Window</button>
+            </form>
+            <div class="form-status" id="schedRuleStatus" style="color:#6d6d6d;margin-top:8px"></div>
+            <p style="color:#8a8a8a;font-size:11px;margin-top:8px">A new window applies to all session types, with the capacity you set (how many people can book the same exact time). Remove and re-add a window to change it.</p>
+          </div>
+
+          <div style="border-top:1px dashed #c7c7c7;padding-top:16px;margin-bottom:20px">
+            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Block A Date Range</strong>
+            <p style="color:#656565;margin-bottom:12px">For vacations, holidays, or multi-day closures. Single individual dates can still be blocked from the "Block A Date" panel above.</p>
+            <div id="schedRangesList" style="margin-bottom:14px"></div>
+            <form id="schedRangeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-field" style="flex:1;min-width:150px"><label for="schedRangeStart">Start date</label><input id="schedRangeStart" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:1;min-width:150px"><label for="schedRangeEnd">End date</label><input id="schedRangeEnd" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:1;min-width:160px"><label for="schedRangeReason">Reason (optional)</label><input id="schedRangeReason" type="text" placeholder="e.g. Vacation" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <button class="portal-secondary" type="submit">Block Range</button>
+            </form>
+            <div class="form-status" id="schedRangeStatus" style="color:#6d6d6d;margin-top:8px"></div>
+          </div>
+
+          <div style="border-top:1px dashed #c7c7c7;padding-top:16px">
+            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Special Availability For A Specific Date</strong>
+            <p style="color:#656565;margin-bottom:12px">Overrides the normal weekly windows for just one date — extra hours, reduced hours, or fully closed that day.</p>
+            <div id="schedOverridesList" style="margin-bottom:14px"></div>
+            <form id="schedOverrideForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-field" style="flex:1;min-width:150px"><label for="schedOverrideDate">Date</label><input id="schedOverrideDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideStart">Start</label><input id="schedOverrideStart" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideEnd">End</label><input id="schedOverrideEnd" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#3a3a3a;padding-bottom:8px">
+                <input id="schedOverrideClosed" type="checkbox" style="accent-color:var(--black)" /> Fully closed this date
+              </label>
+              <button class="portal-secondary" type="submit">Save Override</button>
+            </form>
+            <div class="form-status" id="schedOverrideStatus" style="color:#6d6d6d;margin-top:8px"></div>
+            <p style="color:#8a8a8a;font-size:11px;margin-top:8px">Leave start/end blank and check "Fully closed" to close a date entirely; otherwise set a start and end to replace that date's normal hours.</p>
+          </div>
+        </article>
+        <article class="portal-panel">
+          <span class="portal-label">Notification Center <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></span>
+          <p style="color:#656565;margin-bottom:14px">A preview of what admin alerts will look like once real email/SMS notifications are connected. These are sample entries, not live activity.</p>
+          <div id="ownerNotificationsList"></div>
         </article>
         <article class="portal-panel">
           <span class="portal-label">Member Accounts</span>
@@ -523,25 +768,20 @@ function dialogsHtml(){
       <button class="booking-close" id="closeBooking" type="button" aria-label="Close scheduling">×</button>
     </div>
     <div class="booking-body">
-      <p class="booking-intro">Choose a date and an open time below. Sessions are held Tuesdays &amp; Thursdays, 2:00–6:00 PM ET. Your request is sent for confirmation — you'll be contacted at the email you provide.</p>
+      <p class="booking-intro" id="bookingIntro">Choose a date and an open time below.</p>
       <form id="bookingForm">
         <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
           <label for="bookingWebsite">Leave this field blank</label>
           <input id="bookingWebsite" name="website" type="text" tabindex="-1" autocomplete="off" />
         </div>
-        <div class="booking-options" aria-label="Choose a one-on-one service">
-          <label class="booking-option">
-            <input type="radio" name="sessionType" value="30-minute" checked />
-            <span><strong>30-Minute One-on-One</strong><small>More time for conversation, guidance, and focused ministry.</small></span>
-          </label>
-          <label class="booking-option">
-            <input type="radio" name="sessionType" value="15-minute" />
-            <span><strong>15-Minute Pop-Up</strong><small>A shorter personal session for one focused need or question.</small></span>
-          </label>
-        </div>
+        <div class="booking-options" id="bookingOptions" aria-label="Choose a one-on-one service"></div>
         <div class="booking-grid">
+          <div class="booking-field full">
+            <label for="bookingTimeZone">Your time zone</label>
+            <select id="bookingTimeZone" name="timeZone"></select>
+          </div>
           <div class="booking-field">
-            <label for="bookingDate">Choose a date (Tue or Thu)</label>
+            <label for="bookingDate">Choose a date</label>
             <input id="bookingDate" name="date" type="date" required />
           </div>
           <div class="booking-field">
@@ -558,7 +798,37 @@ function dialogsHtml(){
             <label for="bookingEmail">Email address</label>
             <input id="bookingEmail" name="email" type="email" placeholder="For confirmation and reminders" autocomplete="email" required />
           </div>
+          <div class="booking-field">
+            <label for="bookingPhoneNumber">Phone number</label>
+            <div style="display:flex;gap:8px">
+              <select id="bookingPhoneCountry" aria-label="Country code" style="flex:0 0 auto">${COUNTRY_OPTIONS}</select>
+              <input id="bookingPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required style="flex:1" />
+            </div>
+          </div>
+          <div class="booking-field full">
+            <label for="bookingReason">What are you trusting God to reveal or do?</label>
+            <input id="bookingReason" name="reason" type="text" placeholder="A brief note on what you'd like to talk through" required />
+          </div>
         </div>
+        <fieldset class="payment-demo" disabled>
+          <legend>Payment <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></legend>
+          <div class="booking-grid">
+            <div class="booking-field full">
+              <label>Card number</label>
+              <input type="text" value="4242 4242 4242 4242" readonly />
+            </div>
+            <div class="booking-field">
+              <label>Expiry</label>
+              <input type="text" value="12 / 29" readonly />
+            </div>
+            <div class="booking-field">
+              <label>CVC</label>
+              <input type="text" value="123" readonly />
+            </div>
+          </div>
+          <p class="payment-demo-note">This is a preview of what payment will look like once a real processor is connected. No card details are collected and no charge occurs today.</p>
+        </fieldset>
+        <div class="booking-hold-notice" id="bookingHoldNotice" role="status" aria-live="polite"></div>
         <div class="booking-actions">
           <button class="btn on-light fill" type="submit" id="bookingSubmitBtn">Request This Time</button>
           <div class="booking-status" id="bookingStatus" role="status" aria-live="polite"></div>
@@ -636,6 +906,36 @@ function dialogsHtml(){
         </div>
       </form>
     </div>
+  </dialog>
+
+  <dialog class="booking-dialog" id="classRegisterDialog" aria-labelledby="classRegisterTitle">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0">Class Registration <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></div>
+        <h3 id="classRegisterTitle">Reserve your seat.</h3>
+      </div>
+      <button class="booking-close" id="closeClassRegister" type="button" aria-label="Close registration">×</button>
+    </div>
+    <div class="booking-body">
+      <p class="booking-intro" id="classRegisterIntro">This is a visual preview of class registration — no seat is actually reserved and nothing is sent yet.</p>
+      <form id="classRegisterForm">
+        <div class="booking-grid">
+          <div class="booking-field">
+            <label for="classRegisterName">Your name</label>
+            <input id="classRegisterName" type="text" placeholder="First and last name" autocomplete="name" required />
+          </div>
+          <div class="booking-field">
+            <label for="classRegisterEmail">Email address</label>
+            <input id="classRegisterEmail" type="email" placeholder="For class updates" autocomplete="email" required />
+          </div>
+        </div>
+        <div class="booking-actions">
+          <button class="btn on-light fill" type="submit" id="classRegisterSubmitBtn">Register (Demo)</button>
+          <div class="booking-status" id="classRegisterStatus" role="status" aria-live="polite"></div>
+        </div>
+        <div class="booking-note">Class registration isn't connected to a real system yet — this shows what it will look like once it is.</div>
+      </form>
+    </div>
   </dialog>`;
 }
 
@@ -643,6 +943,11 @@ function dialogsHtml(){
 // anything below tries to query them.
 document.body.insertAdjacentHTML('afterbegin', navHtml());
 document.body.insertAdjacentHTML('beforeend', dialogsHtml() + footerHtml());
+if(DEMO_MODE){
+  document.body.classList.add('demo-mode');
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div class="preview-banner">Preview Site — Sign-in, booking, and account activity here use sample data only. Nothing is saved to the real ministry database.</div>');
+}
 
 // Mark the current page's nav link, driven by <body data-page="...">.
 const currentPage = document.body.dataset.page;
@@ -670,6 +975,83 @@ const db = getFirestore(fbApp);
 
 let currentUser = null;
 let currentProfile = null;
+// Ministry's scheduling timezone. The Scheduling Settings panel (below)
+// can change this in-memory for preview purposes; loadSchedulingConfig()
+// would also assign it once that panel is reconnected to Firestore.
+let BUSINESS_TZ = 'America/New_York';
+
+/* ---------------------------------------------------------------
+   Admin-controlled scheduling configuration (Firestore-backed).
+   These defaults exactly match today's hardcoded behavior (Tue/Thu
+   2-6PM ET, 30/15-minute sessions) — so until an admin actually opens
+   Scheduling Settings and saves something, the booking system behaves
+   identically to before. Nothing regresses if the collections are
+   still empty on first load.
+   --------------------------------------------------------------- */
+let SCHEDULING_SETTINGS = {
+  ministryTimeZone: 'America/New_York',
+  bookingPaused: false,
+  defaultCapacityPerSlot: 1,
+  minNoticeHours: null,
+  maxAdvanceDays: null,
+  maxBookingsPerDay: null,
+  backToBackAllowed: true
+};
+let SESSION_TYPES = {
+  '30-minute': { name: '30-Minute One-on-One', durationMinutes: 30, price: null, description: 'More time for conversation, guidance, and focused ministry.', active: true, order: 1, bufferBeforeMin: 0, bufferAfterMin: 0 },
+  '15-minute': { name: '15-Minute Pop-Up', durationMinutes: 15, price: null, description: 'A shorter personal session for one focused need or question.', active: true, order: 2, bufferBeforeMin: 0, bufferAfterMin: 0 }
+};
+let AVAILABILITY_RULES = [
+  { id: 'default-tue', dayOfWeek: 2, startTime: '14:00', endTime: '18:00', sessionTypeIds: [], capacity: 1 },
+  { id: 'default-thu', dayOfWeek: 4, startTime: '14:00', endTime: '18:00', sessionTypeIds: [], capacity: 1 }
+];
+// Vacations/holidays spanning multiple days (single-day blocks still use
+// the existing `blockouts` collection/DEMO_BLOCKED_DATES unchanged).
+let BLOCKOUT_RANGES = [];
+// One-off overrides: a date present here replaces that date's normal
+// weekly windows entirely — used for "special availability for a
+// specific date" (extra hours, or reduced/closed for part of a day).
+let AVAILABILITY_OVERRIDES = {};
+
+async function loadSchedulingConfig(){
+  try {
+    const settingsSnap = await getDoc(doc(db, 'schedulingSettings', 'global'));
+    if(settingsSnap.exists()) SCHEDULING_SETTINGS = { ...SCHEDULING_SETTINGS, ...settingsSnap.data() };
+  } catch (err) { /* keep defaults */ }
+  try {
+    const typesSnap = await getDocs(collection(db, 'sessionTypes'));
+    if(!typesSnap.empty){
+      const types = {};
+      typesSnap.forEach(d => { types[d.id] = d.data(); });
+      SESSION_TYPES = types;
+    }
+  } catch (err) { /* keep defaults */ }
+  try {
+    const rulesSnap = await getDocs(collection(db, 'availabilityRules'));
+    if(!rulesSnap.empty){
+      const rules = [];
+      rulesSnap.forEach(d => rules.push({ id: d.id, ...d.data() }));
+      AVAILABILITY_RULES = rules;
+    }
+  } catch (err) { /* keep defaults */ }
+  try {
+    const rangesSnap = await getDocs(collection(db, 'blockoutRanges'));
+    const ranges = [];
+    rangesSnap.forEach(d => ranges.push({ id: d.id, ...d.data() }));
+    BLOCKOUT_RANGES = ranges;
+  } catch (err) { /* keep defaults */ }
+  try {
+    const overridesSnap = await getDocs(collection(db, 'availabilityOverrides'));
+    const overrides = {};
+    overridesSnap.forEach(d => { overrides[d.id] = d.data(); });
+    AVAILABILITY_OVERRIDES = overrides;
+  } catch (err) { /* keep defaults */ }
+  BUSINESS_TZ = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
+}
+// Only ever reads real Firestore on the production domain — the preview
+// safety lock (DEMO_MODE) keeps this panel fully local/sample on every
+// other host, same as every other admin feature.
+if(!DEMO_MODE) await loadSchedulingConfig();
 
 /* ---------------------------------------------------------------
    Nav / mobile menu
@@ -733,6 +1115,45 @@ testimonyForm.addEventListener('submit', event => {
 });
 
 /* ---------------------------------------------------------------
+   Class registration — visual demonstration only, on every host
+   including production. Nothing here is persisted or sent anywhere;
+   it exists purely to show what registering for a class will look
+   like once a real class system is built and approved.
+   --------------------------------------------------------------- */
+const classRegisterDialog = document.getElementById('classRegisterDialog');
+const closeClassRegister = document.getElementById('closeClassRegister');
+const classRegisterForm = document.getElementById('classRegisterForm');
+const classRegisterStatus = document.getElementById('classRegisterStatus');
+const classRegisterIntro = document.getElementById('classRegisterIntro');
+let demoSeatsRemaining = { discern: 6 };
+
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('.class-register-btn');
+  if(!trigger) return;
+  const classId = trigger.dataset.class || 'discern';
+  const className = trigger.dataset.className || 'this class';
+  const seats = demoSeatsRemaining[classId] ?? 6;
+  classRegisterForm.reset();
+  classRegisterStatus.textContent = '';
+  classRegisterForm.dataset.classId = classId;
+  classRegisterIntro.textContent = seats > 0
+    ? 'Sample seat count: ' + seats + ' remaining for ' + className + '. This is a visual preview — no seat is actually reserved yet.'
+    : 'Sample seat count: full for ' + className + ' (this is only a visual preview).';
+  classRegisterDialog.showModal();
+});
+closeClassRegister.addEventListener('click', () => classRegisterDialog.close());
+classRegisterDialog.addEventListener('click', event => {
+  if(event.target === classRegisterDialog) classRegisterDialog.close();
+});
+classRegisterForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const classId = classRegisterForm.dataset.classId || 'discern';
+  if((demoSeatsRemaining[classId] ?? 0) > 0) demoSeatsRemaining[classId]--;
+  classRegisterStatus.textContent = 'Demo only — this is what a confirmed registration will look like. No seat was actually reserved and no email was sent.';
+  classRegisterForm.reset();
+});
+
+/* ---------------------------------------------------------------
    Helpers
    --------------------------------------------------------------- */
 function escapeHtml(str){
@@ -753,7 +1174,6 @@ function hhmmToMinutes(hhmm){
   return h * 60 + m;
 }
 
-const BUSINESS_TZ = 'America/New_York';
 function etWallTimeToDate(dateStr, minutes){
   const [y, mo, d] = dateStr.split('-').map(Number);
   const hh = Math.floor(minutes / 60), mm = minutes % 60;
@@ -772,20 +1192,24 @@ function etWallTimeToDate(dateStr, minutes){
   }
   return guess;
 }
-function formatLocalDateTime(dateStr, hhmm){
+// `tz` is optional everywhere it's used elsewhere in the file — when
+// omitted, Intl falls back to the browser's own local time zone exactly
+// as before. The booking dialog is the one place that passes an explicit
+// (possibly visitor-overridden) zone.
+function formatLocalDateTime(dateStr, hhmm, tz){
   try {
     const d = etWallTimeToDate(dateStr, hhmmToMinutes(hhmm));
-    const datePart = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(d);
-    const timePart = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(d);
+    const datePart = new Intl.DateTimeFormat(undefined, { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric' }).format(d);
+    const timePart = new Intl.DateTimeFormat(undefined, { timeZone: tz, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(d);
     return datePart + ' · ' + timePart;
   } catch (err) {
     return dateStr + ' · ' + minutesToLabel(hhmmToMinutes(hhmm)) + ' ET';
   }
 }
-function formatLocalTime(dateStr, hhmm){
+function formatLocalTime(dateStr, hhmm, tz){
   try {
     const d = etWallTimeToDate(dateStr, hhmmToMinutes(hhmm));
-    return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(d);
+    return new Intl.DateTimeFormat(undefined, { timeZone: tz, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(d);
   } catch (err) {
     return minutesToLabel(hhmmToMinutes(hhmm)) + ' ET';
   }
@@ -1073,12 +1497,15 @@ document.getElementById('verifySigninCodeBtn').addEventListener('click', async (
     // number was never linked to a real account (e.g. someone who never
     // registered trying phone sign-in cold). Rather than silently create
     // a blank membership record — a duplicate/orphan account — sign back
-    // out and point them to registration instead.
-    const profileSnap = await getDoc(doc(db, 'users', result.user.uid));
-    if(!profileSnap.exists()){
-      await signOut(auth);
-      portalLoginStatus.textContent = "We don't have an account linked to that phone number yet. Use Create Account, or sign in by email and verify by text from My Assembly.";
-      return;
+    // out and point them to registration instead. Demo mode has no real
+    // profile database to check, so it always treats the code as valid.
+    if(!DEMO_MODE){
+      const profileSnap = await getDoc(doc(db, 'users', result.user.uid));
+      if(!profileSnap.exists()){
+        await signOut(auth);
+        portalLoginStatus.textContent = "We don't have an account linked to that phone number yet. Use Create Account, or sign in by email and verify by text from My Assembly.";
+        return;
+      }
     }
     portalLoginStatus.textContent = '';
   } catch (err) {
@@ -1118,10 +1545,12 @@ registerForm.addEventListener('submit', async event => {
     const fullName = firstName + ' ' + lastName;
     await updateProfile(cred.user, { displayName: fullName });
     const role = email.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'member';
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      firstName, lastName, name: fullName, email, phone, role,
-      emailVerified: false, phoneVerified: false, createdAt: serverTimestamp()
-    });
+    if(!DEMO_MODE){
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        firstName, lastName, name: fullName, email, phone, role,
+        emailVerified: false, phoneVerified: false, createdAt: serverTimestamp()
+      });
+    }
     pendingVerifyPhone = phone;
     pendingVerifyEmail = email;
     awaitingVerifyChoice = true;
@@ -1171,7 +1600,7 @@ async function startPhoneVerifyStep(){
     // partial signup) isn't an error the person needs to see — it just
     // means this step is already done; move on to email.
     if(err.code === 'auth/provider-already-linked'){
-      await updateDoc(doc(db, 'users', currentUser.uid), { phoneVerified: true });
+      if(!DEMO_MODE) await updateDoc(doc(db, 'users', currentUser.uid), { phoneVerified: true });
       currentProfile.phoneVerified = true;
       startEmailVerifyStep();
       return;
@@ -1190,7 +1619,7 @@ document.getElementById('sendToNewPhoneBtn').addEventListener('click', async () 
   const statusEl = document.getElementById('verifyStatus');
   if(!phone){ statusEl.textContent = 'Enter a valid phone number, including country code.'; return; }
   pendingVerifyPhone = phone;
-  await updateDoc(doc(db, 'users', currentUser.uid), { phone });
+  if(!DEMO_MODE) await updateDoc(doc(db, 'users', currentUser.uid), { phone });
   currentProfile.phone = phone;
   document.getElementById('changePhoneStep').hidden = true;
   document.getElementById('changePhoneNumber').value = '';
@@ -1204,7 +1633,7 @@ document.getElementById('confirmVerifyPhoneBtn').addEventListener('click', async
   statusEl.textContent = 'Verifying…';
   try {
     await verifyConfirmationResult.confirm(code);
-    await updateDoc(doc(db, 'users', currentUser.uid), { phoneVerified: true });
+    if(!DEMO_MODE) await updateDoc(doc(db, 'users', currentUser.uid), { phoneVerified: true });
     currentProfile.phoneVerified = true;
     updateVerifyBanner();
     updateAccountSettingsDisplay('member');
@@ -1254,7 +1683,7 @@ document.getElementById('sendToNewEmailBtn').addEventListener('click', async () 
     // it does for changing an already-verified email later (see
     // Account Settings, which does reauthenticate).
     await verifyBeforeUpdateEmail(currentUser, newEmail);
-    await updateDoc(doc(db, 'users', currentUser.uid), { email: newEmail });
+    if(!DEMO_MODE) await updateDoc(doc(db, 'users', currentUser.uid), { email: newEmail });
     currentProfile.email = newEmail;
     pendingVerifyEmail = newEmail;
     document.getElementById('verifyEmailLabel').textContent = newEmail;
@@ -1271,7 +1700,7 @@ document.getElementById('checkEmailVerifiedBtn').addEventListener('click', async
   try {
     await currentUser.reload();
     if(currentUser.emailVerified){
-      await updateDoc(doc(db, 'users', currentUser.uid), { emailVerified: true });
+      if(!DEMO_MODE) await updateDoc(doc(db, 'users', currentUser.uid), { emailVerified: true });
       currentProfile.emailVerified = true;
       awaitingVerifyChoice = false;
       updateVerifyBanner();
@@ -1433,7 +1862,7 @@ function wireAccountSettings(p){
     statusEl.textContent = 'Verifying…';
     try {
       await settingsConfirmationResult.confirm(code);
-      await updateDoc(doc(db, 'users', currentUser.uid), { phone, phoneVerified: true });
+      if(!DEMO_MODE) await updateDoc(doc(db, 'users', currentUser.uid), { phone, phoneVerified: true });
       currentProfile.phone = phone;
       currentProfile.phoneVerified = true;
       statusEl.textContent = 'Phone verified and updated.';
@@ -1453,10 +1882,64 @@ wireAccountSettings('owner');
 /* ---------------------------------------------------------------
    Booking: availability + Firestore-backed scheduling
    --------------------------------------------------------------- */
-const AVAILABILITY_DAYS = [2, 4]; // Tue, Thu (Sunday = 0)
-const AVAILABILITY_START_MIN = 14 * 60; // 2:00 PM
-const AVAILABILITY_END_MIN = 18 * 60;   // 6:00 PM
-const SESSION_MINUTES = { '30-minute': 30, '15-minute': 15 };
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function sessionTypeName(id){
+  return (SESSION_TYPES[id] && SESSION_TYPES[id].name) || id;
+}
+// Admin views always show the ministry's own time zone explicitly (not
+// just whatever zone the admin's own browser happens to be in), plus the
+// booker's selected zone when it's on record and different.
+function ownerBookingTimeLine(b){
+  let line = formatLocalDateTime(b.date, b.time, BUSINESS_TZ) + ' (Ministry time)';
+  if(b.clientTimeZone && b.clientTimeZone !== BUSINESS_TZ){
+    line += ' · ' + formatLocalDateTime(b.date, b.time, b.clientTimeZone) + ' (' + tzAbbrFor(b.clientTimeZone) + ', booker’s time zone)';
+  }
+  return line;
+}
+function tzAbbrFor(tz){
+  try {
+    const part = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
+      .formatToParts(new Date()).find(p => p.type === 'timeZoneName');
+    return part ? part.value : '';
+  } catch (err) { return ''; }
+}
+function businessTzAbbr(){ return tzAbbrFor(BUSINESS_TZ); }
+
+// A short, common-case list (like the country-code list above) rather
+// than every IANA zone — "Other" lets someone type any valid IANA name
+// directly so nobody is locked out.
+const COMMON_TIMEZONES = [
+  { tz: 'America/New_York', label: 'Eastern Time (US & Canada)' },
+  { tz: 'America/Chicago', label: 'Central Time (US & Canada)' },
+  { tz: 'America/Denver', label: 'Mountain Time (US & Canada)' },
+  { tz: 'America/Phoenix', label: 'Arizona (no DST)' },
+  { tz: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
+  { tz: 'America/Anchorage', label: 'Alaska Time' },
+  { tz: 'Pacific/Honolulu', label: 'Hawaii Time' },
+  { tz: 'America/Puerto_Rico', label: 'Atlantic Time (Puerto Rico)' },
+  { tz: 'Europe/London', label: 'London' },
+  { tz: 'Europe/Paris', label: 'Central Europe' },
+  { tz: 'Africa/Lagos', label: 'West Africa (Lagos)' },
+  { tz: 'Africa/Nairobi', label: 'East Africa (Nairobi)' },
+  { tz: 'Africa/Johannesburg', label: 'South Africa' },
+  { tz: 'Asia/Kolkata', label: 'India' },
+  { tz: 'Asia/Dubai', label: 'Gulf (Dubai)' },
+  { tz: 'Australia/Sydney', label: 'Sydney' },
+];
+function availabilitySummaryText(){
+  if(AVAILABILITY_RULES.length === 0) return 'Please contact us to schedule a session.';
+  const byWindow = {};
+  AVAILABILITY_RULES.forEach(r => {
+    const key = r.startTime + '-' + r.endTime;
+    (byWindow[key] = byWindow[key] || []).push(DAY_NAMES[r.dayOfWeek]);
+  });
+  const tzAbbr = businessTzAbbr();
+  const parts = Object.keys(byWindow).map(key => {
+    const [start, end] = key.split('-');
+    return byWindow[key].join(' & ') + ', ' + minutesToLabel(hhmmToMinutes(start)) + '–' + minutesToLabel(hhmmToMinutes(end)) + (tzAbbr ? ' ' + tzAbbr : '');
+  });
+  return 'Sessions are held ' + parts.join('; ') + '. Your request is sent for confirmation — you\'ll be contacted at the email you provide.';
+}
 
 const bookingDialog = document.getElementById('bookingDialog');
 const closeBooking = document.getElementById('closeBooking');
@@ -1465,47 +1948,194 @@ const bookingStatus = document.getElementById('bookingStatus');
 const bookingSubmitBtn = document.getElementById('bookingSubmitBtn');
 const bookingDateInput = document.getElementById('bookingDate');
 const bookingTimeSelect = document.getElementById('bookingTime');
+const bookingOptionsEl = document.getElementById('bookingOptions');
+const bookingIntroEl = document.getElementById('bookingIntro');
+const bookingTimeZoneSelect = document.getElementById('bookingTimeZone');
 
 bookingDateInput.min = new Date().toISOString().slice(0, 10);
 
+if(bookingTimeZoneSelect){
+  bookingTimeZoneSelect.innerHTML = COMMON_TIMEZONES.map(z =>
+    '<option value="' + z.tz + '">' + escapeHtml(z.label) + ' (' + tzAbbrFor(z.tz) + ')</option>'
+  ).join('') + '<option value="__other__">Other — type your time zone</option>';
+}
+function setDetectedTimeZoneDefault(){
+  if(!bookingTimeZoneSelect) return;
+  let detected = 'America/New_York';
+  try { detected = Intl.DateTimeFormat().resolvedOptions().timeZone || detected; } catch (err) { /* keep default */ }
+  const match = COMMON_TIMEZONES.find(z => z.tz === detected);
+  bookingTimeZoneSelect.value = match ? detected : '__other__';
+  if(!match){
+    const opt = bookingTimeZoneSelect.querySelector('option[value="__other__"]');
+    if(opt) opt.textContent = detected + ' (detected)';
+    bookingTimeZoneSelect.dataset.otherTz = detected;
+  }
+}
+function selectedBookingTimeZone(){
+  if(!bookingTimeZoneSelect) return undefined;
+  if(bookingTimeZoneSelect.value === '__other__') return bookingTimeZoneSelect.dataset.otherTz || undefined;
+  return bookingTimeZoneSelect.value;
+}
+if(bookingTimeZoneSelect){
+  bookingTimeZoneSelect.addEventListener('change', () => {
+    if(bookingTimeZoneSelect.value === '__other__' && !bookingTimeZoneSelect.dataset.otherTz){
+      const typed = window.prompt('Type your time zone (example: Europe/Berlin):', 'America/New_York');
+      if(typed){
+        try {
+          new Intl.DateTimeFormat('en-US', { timeZone: typed }); // throws if invalid
+          bookingTimeZoneSelect.dataset.otherTz = typed;
+          const opt = bookingTimeZoneSelect.querySelector('option[value="__other__"]');
+          if(opt) opt.textContent = typed;
+        } catch (err) {
+          bookingStatus.textContent = "That doesn't look like a valid time zone — try a format like Europe/Berlin.";
+        }
+      }
+    }
+    loadTimeSlots();
+  });
+}
+
+function renderBookingOptions(){
+  if(!bookingOptionsEl) return;
+  const types = Object.keys(SESSION_TYPES)
+    .map(id => ({ id, ...SESSION_TYPES[id] }))
+    .filter(t => t.active !== false)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  bookingOptionsEl.innerHTML = types.map((t, i) => (
+    '<label class="booking-option">' +
+      '<input type="radio" name="sessionType" value="' + escapeHtml(t.id) + '"' + (i === 0 ? ' checked' : '') + ' />' +
+      '<span><strong>' + escapeHtml(t.name) + '</strong><small>' + escapeHtml(t.description || '') +
+      (t.price ? ' — $' + Number(t.price).toFixed(2) : '') + '</small></span>' +
+    '</label>'
+  )).join('');
+  bookingOptionsEl.querySelectorAll('input[name="sessionType"]').forEach(radio => {
+    radio.addEventListener('change', loadTimeSlots);
+  });
+}
+renderBookingOptions();
+if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
+
+// Returns one entry per active (non-declined/cancelled) booking on that
+// date: { time, start, end, bufferBefore, bufferAfter }. Buffer minutes
+// come from THAT booking's own session type, so a booked session keeps
+// its configured breathing room regardless of what's being checked
+// against it.
 async function bookedIntervalsForDate(dateStr){
+  function toInterval(b){
+    const start = hhmmToMinutes(b.time);
+    const type = SESSION_TYPES[b.sessionType] || {};
+    const dur = type.durationMinutes || 30;
+    return { time: b.time, start, end: start + dur, bufferBefore: type.bufferBeforeMin || 0, bufferAfter: type.bufferAfterMin || 0 };
+  }
+  if(DEMO_MODE){
+    return DEMO_BOOKINGS.filter(b => b.date === dateStr && b.status !== 'declined' && b.status !== 'cancelled').map(toInterval);
+  }
   const snap = await getDocs(query(collection(db, 'bookings'), where('date', '==', dateStr)));
   const intervals = [];
   snap.forEach(docSnap => {
     const b = docSnap.data();
-    if(b.status === 'declined') return;
-    const start = hhmmToMinutes(b.time);
-    const dur = SESSION_MINUTES[b.sessionType] || 30;
-    intervals.push([start, start + dur]);
+    if(b.status === 'declined' || b.status === 'cancelled') return;
+    intervals.push(toInterval(b));
   });
   return intervals;
 }
 
-async function computeOpenSlots(dateStr, duration){
+// Active (non-expired) temporary holds for a date — see "Temporary slot
+// holds" below. A hold occupies its exact slot the same way a booking
+// occupies it for capacity purposes, but carries no buffer of its own.
+async function activeHoldsForDate(dateStr){
+  const now = Date.now();
+  if(DEMO_MODE){
+    return DEMO_HOLDS.filter(h => h.date === dateStr && h.expiresAt > now);
+  }
+  try {
+    const snap = await getDocs(query(collection(db, 'bookingHolds'), where('date', '==', dateStr)));
+    const holds = [];
+    snap.forEach(d => { const h = d.data(); if((h.expiresAt || 0) > now) holds.push({ id: d.id, ...h }); });
+    return holds;
+  } catch (err) { return []; }
+}
+
+function dateInAnyBlockoutRange(dateStr){
+  return BLOCKOUT_RANGES.some(r => dateStr >= r.startDate && dateStr <= r.endDate);
+}
+
+async function computeOpenSlots(dateStr, duration, sessionTypeId){
   if(!dateStr) return { ok: false, reason: 'Choose a date first' };
-  const weekday = new Date(dateStr + 'T12:00:00').getDay();
-  if(!AVAILABILITY_DAYS.includes(weekday)) return { ok: false, reason: 'No sessions on that day — pick a Tue or Thu' };
+  if(SCHEDULING_SETTINGS.bookingPaused) return { ok: false, reason: 'Booking is temporarily paused — please check back soon' };
+  if(SCHEDULING_SETTINGS.minNoticeHours){
+    const earliestDateStr = new Date(Date.now() + SCHEDULING_SETTINGS.minNoticeHours * 3600000).toISOString().slice(0, 10);
+    if(dateStr < earliestDateStr) return { ok: false, reason: 'That date is too soon — please choose a later date' };
+  }
+  if(SCHEDULING_SETTINGS.maxAdvanceDays){
+    const maxDateStr = new Date(Date.now() + SCHEDULING_SETTINGS.maxAdvanceDays * 86400000).toISOString().slice(0, 10);
+    if(dateStr > maxDateStr) return { ok: false, reason: 'That date is too far out — please choose a closer date' };
+  }
+  // Single-date blocks (existing mechanism) and multi-day blockout ranges
+  // (vacations/holidays) both rule a date out entirely.
+  if(DEMO_MODE){
+    if(DEMO_BLOCKED_DATES.includes(dateStr)) return { ok: false, reason: 'Not available on that date — please choose another' };
+  } else {
+    try {
+      const blockSnap = await getDoc(doc(db, 'blockouts', dateStr));
+      if(blockSnap.exists()) return { ok: false, reason: 'Not available on that date — please choose another' };
+    } catch (err) { /* fall through */ }
+  }
+  if(dateInAnyBlockoutRange(dateStr)) return { ok: false, reason: 'Not available on that date — please choose another' };
+
+  // A one-off override for this exact date replaces the normal weekly
+  // windows entirely (extra hours, reduced hours, or fully closed).
+  const override = AVAILABILITY_OVERRIDES[dateStr];
+  let windows;
+  if(override){
+    if(override.closed) return { ok: false, reason: 'Not available on that date — please choose another' };
+    windows = (override.windows || []).filter(w => !w.sessionTypeIds || w.sessionTypeIds.length === 0 || !sessionTypeId || w.sessionTypeIds.includes(sessionTypeId));
+  } else {
+    const weekday = new Date(dateStr + 'T12:00:00').getDay();
+    windows = AVAILABILITY_RULES.filter(r => r.dayOfWeek === weekday &&
+      (!r.sessionTypeIds || r.sessionTypeIds.length === 0 || !sessionTypeId || r.sessionTypeIds.includes(sessionTypeId)));
+  }
+  if(windows.length === 0) return { ok: false, reason: 'No sessions available on that day — please try another date' };
+
+  let booked, holds;
   try {
-    const blockSnap = await getDoc(doc(db, 'blockouts', dateStr));
-    if(blockSnap.exists()) return { ok: false, reason: 'Not available on that date — please choose another' };
-  } catch (err) { /* fall through */ }
-  let booked;
-  try {
-    booked = await bookedIntervalsForDate(dateStr);
+    [booked, holds] = await Promise.all([bookedIntervalsForDate(dateStr), activeHoldsForDate(dateStr)]);
   } catch (err) {
     return { ok: false, reason: 'Could not load availability — try again' };
   }
-  const openStarts = [];
-  for(let start = AVAILABILITY_START_MIN; start + duration <= AVAILABILITY_END_MIN; start += duration){
-    const end = start + duration;
-    const overlaps = booked.some(([bStart, bEnd]) => start < bEnd && end > bStart);
-    if(!overlaps) openStarts.push(start);
+  if(SCHEDULING_SETTINGS.maxBookingsPerDay && booked.length >= SCHEDULING_SETTINGS.maxBookingsPerDay){
+    return { ok: false, reason: 'No open times on that date — the daily appointment limit has been reached' };
   }
-  if(openStarts.length === 0) return { ok: false, reason: 'No open times on that date' };
-  return { ok: true, openStarts };
+  const heldTimes = new Set(holds.map(h => h.time));
+  const sameSlotCounts = {};
+  booked.forEach(b => { sameSlotCounts[b.time] = (sameSlotCounts[b.time] || 0) + 1; });
+
+  const openStarts = new Set();
+  windows.forEach(win => {
+    const capacity = win.capacity || SCHEDULING_SETTINGS.defaultCapacityPerSlot || 1;
+    const winStart = hhmmToMinutes(win.startTime);
+    const winEnd = hhmmToMinutes(win.endTime);
+    for(let start = winStart; start + duration <= winEnd; start += duration){
+      const end = start + duration;
+      const hhmm = minutesToHHMM(start);
+      if(heldTimes.has(hhmm)) continue;
+      const atCapacity = (sameSlotCounts[hhmm] || 0) >= capacity;
+      if(atCapacity) continue;
+      const bufferConflict = booked.some(b => {
+        if(b.time === hhmm) return false; // same-slot sharing is governed by capacity, not buffer
+        const bStart = b.start - b.bufferBefore;
+        const bEnd = b.end + b.bufferAfter;
+        return start < bEnd && end > bStart;
+      });
+      if(bufferConflict) continue;
+      openStarts.add(start);
+    }
+  });
+  if(openStarts.size === 0) return { ok: false, reason: 'No open times on that date' };
+  return { ok: true, openStarts: Array.from(openStarts).sort((a, b) => a - b) };
 }
 
-async function populateTimeSelect(selectEl, dateStr, duration){
+async function populateTimeSelect(selectEl, dateStr, duration, sessionTypeId, tz){
   selectEl.innerHTML = '';
   selectEl.disabled = true;
   if(!dateStr){
@@ -1513,24 +2143,28 @@ async function populateTimeSelect(selectEl, dateStr, duration){
     return;
   }
   selectEl.appendChild(new Option('Loading available times…', ''));
-  const result = await computeOpenSlots(dateStr, duration);
+  const result = await computeOpenSlots(dateStr, duration, sessionTypeId);
   selectEl.innerHTML = '';
   if(!result.ok){
     selectEl.appendChild(new Option(result.reason, ''));
     return;
   }
   selectEl.appendChild(new Option('Choose a time', ''));
+  const tzAbbr = tz ? tzAbbrFor(tz) : businessTzAbbr();
   result.openStarts.forEach(start => {
     const hhmm = minutesToHHMM(start);
-    selectEl.appendChild(new Option(formatLocalTime(dateStr, hhmm) + ' (' + minutesToLabel(start) + ' ET)', hhmm));
+    selectEl.appendChild(new Option(formatLocalTime(dateStr, hhmm, tz) + ' (' + minutesToLabel(start) + (tzAbbr ? ' ' + tzAbbr : '') + ')', hhmm));
   });
   selectEl.disabled = false;
 }
 
 async function loadTimeSlots(){
+  await releaseCurrentHold();
   const dateStr = bookingDateInput.value;
-  const service = bookingForm.querySelector('input[name="sessionType"]:checked').value;
-  await populateTimeSelect(bookingTimeSelect, dateStr, SESSION_MINUTES[service]);
+  const checkedInput = bookingForm.querySelector('input[name="sessionType"]:checked');
+  if(!checkedInput) return;
+  const service = checkedInput.value;
+  await populateTimeSelect(bookingTimeSelect, dateStr, SESSION_TYPES[service] && SESSION_TYPES[service].durationMinutes, service, selectedBookingTimeZone());
 }
 
 function openBooking(service){
@@ -1544,6 +2178,7 @@ function openBooking(service){
     document.getElementById('bookingName').value = currentProfile.name || '';
     document.getElementById('bookingEmail').value = currentProfile.email || '';
   }
+  setDetectedTimeZoneDefault();
   loadTimeSlots();
   bookingDialog.showModal();
 }
@@ -1557,21 +2192,127 @@ closeBooking.addEventListener('click', () => bookingDialog.close());
 bookingDialog.addEventListener('click', event => {
   if(event.target === bookingDialog) bookingDialog.close();
 });
+// Fires on the X button, backdrop click, and Esc — one place to always
+// release whatever slot hold this visitor was sitting on.
+bookingDialog.addEventListener('close', () => { releaseCurrentHold(); });
 bookingDateInput.addEventListener('change', loadTimeSlots);
-bookingForm.querySelectorAll('input[name="sessionType"]').forEach(radio => {
-  radio.addEventListener('change', loadTimeSlots);
+
+/* ---------------------------------------------------------------
+   Temporary slot holds — while someone has an open time selected in
+   the booking dialog, nobody else can take it. Released automatically
+   when they pick a different time/date, close the dialog, finish
+   booking, or after HOLD_DURATION_MS with no action. This is real
+   (Firestore-backed) on the production domain and demo-only (in
+   memory) everywhere else, same split as the rest of the system.
+   --------------------------------------------------------------- */
+const HOLD_DURATION_MS = 10 * 60 * 1000;
+let currentHoldDate = null;
+let currentHoldTime = null;
+let holdCountdownTimer = null;
+const bookingHoldNotice = document.getElementById('bookingHoldNotice');
+
+function holdIdFor(dateStr, time){ return dateStr + '_' + time + '_hold'; }
+
+async function createHold(dateStr, time, sessionTypeId){
+  const expiresAt = Date.now() + HOLD_DURATION_MS;
+  const holdId = holdIdFor(dateStr, time);
+  if(DEMO_MODE){
+    const existing = DEMO_HOLDS.find(h => h.id === holdId && h.expiresAt > Date.now());
+    if(existing) throw new Error('slot-taken');
+    DEMO_HOLDS = DEMO_HOLDS.filter(h => h.id !== holdId);
+    DEMO_HOLDS.push({ id: holdId, date: dateStr, time, sessionTypeId, expiresAt });
+    return { expiresAt };
+  }
+  const holdRef = doc(db, 'bookingHolds', holdId);
+  await runTransaction(db, async (tx) => {
+    const holdSnap = await tx.get(holdRef);
+    if(holdSnap.exists() && (holdSnap.data().expiresAt || 0) > Date.now()) throw new Error('slot-taken');
+    const slotSnap = await tx.get(doc(db, 'slots', dateStr + '_' + time));
+    if(slotSnap.exists()) throw new Error('slot-taken');
+    tx.set(holdRef, { date: dateStr, time, sessionTypeId, expiresAt, createdAt: serverTimestamp() });
+  });
+  return { expiresAt };
+}
+
+async function releaseHold(dateStr, time){
+  const holdId = holdIdFor(dateStr, time);
+  if(DEMO_MODE){
+    DEMO_HOLDS = DEMO_HOLDS.filter(h => h.id !== holdId);
+    return;
+  }
+  try { await deleteDoc(doc(db, 'bookingHolds', holdId)); } catch (err) { /* ok if already gone */ }
+}
+
+function clearHoldCountdown(){
+  if(holdCountdownTimer){ clearInterval(holdCountdownTimer); holdCountdownTimer = null; }
+  if(bookingHoldNotice) bookingHoldNotice.textContent = '';
+}
+
+function startHoldCountdown(expiresAt){
+  clearHoldCountdown();
+  if(!bookingHoldNotice) return;
+  const tick = () => {
+    const secondsLeft = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+    if(secondsLeft <= 0){
+      clearHoldCountdown();
+      currentHoldDate = null; currentHoldTime = null;
+      bookingStatus.textContent = 'Your hold on that time expired — please choose a time again.';
+      loadTimeSlots();
+      return;
+    }
+    const m = Math.floor(secondsLeft / 60), s = secondsLeft % 60;
+    bookingHoldNotice.textContent = 'This time is held for you: ' + m + ':' + String(s).padStart(2, '0');
+  };
+  tick();
+  holdCountdownTimer = setInterval(tick, 1000);
+}
+
+async function releaseCurrentHold(){
+  clearHoldCountdown();
+  if(currentHoldDate && currentHoldTime){
+    const d = currentHoldDate, t = currentHoldTime;
+    currentHoldDate = null; currentHoldTime = null;
+    try { await releaseHold(d, t); } catch (err) { /* ignore */ }
+  }
+}
+
+bookingTimeSelect.addEventListener('change', async () => {
+  await releaseCurrentHold();
+  const dateStr = bookingDateInput.value;
+  const time = bookingTimeSelect.value;
+  if(!dateStr || !time) return;
+  const checkedInput = bookingForm.querySelector('input[name="sessionType"]:checked');
+  const sessionTypeId = checkedInput ? checkedInput.value : null;
+  try {
+    const hold = await createHold(dateStr, time, sessionTypeId);
+    currentHoldDate = dateStr; currentHoldTime = time;
+    startHoldCountdown(hold.expiresAt);
+  } catch (err) {
+    bookingStatus.textContent = 'That time was just taken by someone else — please choose another.';
+    loadTimeSlots();
+  }
 });
 
-async function createBooking({ name, email, sessionType, date, time, status, uid }){
+async function createBooking({ name, email, phone, reason, sessionType, date, time, status, uid, clientTimeZone }){
   const slotId = date + '_' + time;
+  const startAtUTC = etWallTimeToDate(date, hhmmToMinutes(time));
+  if(DEMO_MODE){
+    if(DEMO_BOOKINGS.some(b => b.slotId === slotId && b.status !== 'declined' && b.status !== 'cancelled')){
+      throw new Error('slot-taken');
+    }
+    DEMO_BOOKINGS.push({ id: 'demo-' + (++DEMO_BOOKING_SEQ), slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone });
+    DEMO_HOLDS = DEMO_HOLDS.filter(h => h.id !== holdIdFor(date, time));
+    return;
+  }
   await runTransaction(db, async (tx) => {
     const slotRef = doc(db, 'slots', slotId);
     const slotSnap = await tx.get(slotRef);
     if(slotSnap.exists()) throw new Error('slot-taken');
     tx.set(slotRef, { date, time, sessionType, uid: uid || null, createdAt: serverTimestamp() });
     const bookingRef = doc(collection(db, 'bookings'));
-    tx.set(bookingRef, { slotId, date, time, sessionType, name, email, uid: uid || null, status, createdAt: serverTimestamp() });
+    tx.set(bookingRef, { slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone: clientTimeZone || null, createdAt: serverTimestamp() });
   });
+  try { await deleteDoc(doc(db, 'bookingHolds', holdIdFor(date, time))); } catch (err) { /* ok if already gone */ }
 }
 
 const BOOKING_COOLDOWN_MS = 60000;
@@ -1602,20 +2343,27 @@ bookingForm.addEventListener('submit', async event => {
   const time = bookingTimeSelect.value;
   const name = document.getElementById('bookingName').value.trim();
   const email = document.getElementById('bookingEmail').value.trim();
+  const phone = toE164(document.getElementById('bookingPhoneCountry'), document.getElementById('bookingPhoneNumber'));
+  const reason = document.getElementById('bookingReason').value.trim();
   if(!dateStr || !time){
     bookingStatus.textContent = 'Choose a date and an available time.';
     return;
   }
+  if(!phone){
+    bookingStatus.textContent = 'Enter a valid phone number, including country code.';
+    return;
+  }
   bookingSubmitBtn.disabled = true;
   bookingStatus.textContent = 'Requesting your session…';
+  const clientTimeZone = selectedBookingTimeZone();
   try {
     await createBooking({
-      name, email, sessionType: service, date: dateStr, time,
-      status: 'pending', uid: currentUser ? currentUser.uid : null
+      name, email, phone, reason, sessionType: service, date: dateStr, time,
+      status: 'pending', uid: currentUser ? currentUser.uid : null, clientTimeZone
     });
     markThrottled('lastBookingSubmit');
-    bookingStatus.textContent = 'Request received — your ' + (service === '30-minute' ? '30-minute' : '15-minute') +
-      ' session on ' + formatLocalDateTime(dateStr, time) + ' is pending confirmation. You will be contacted at ' + email + '.';
+    bookingStatus.textContent = 'Request received — your ' + sessionTypeName(service) +
+      ' session on ' + formatLocalDateTime(dateStr, time, clientTimeZone) + ' is pending confirmation. You will be contacted at ' + email + '.';
     bookingForm.reset();
     loadTimeSlots();
     if(currentUser) loadMemberBookings();
@@ -1642,8 +2390,17 @@ const adminBookSubmitBtn = document.getElementById('adminBookSubmitBtn');
 const adminBookStatus = document.getElementById('adminBookStatus');
 adminBookDateInput.min = new Date().toISOString().slice(0, 10);
 
+function populateAdminBookTypeSelect(){
+  const current = adminBookTypeSelect.value;
+  const ids = Object.keys(SESSION_TYPES).filter(id => SESSION_TYPES[id].active !== false)
+    .sort((a, b) => (SESSION_TYPES[a].order || 0) - (SESSION_TYPES[b].order || 0));
+  adminBookTypeSelect.innerHTML = ids.map(id => '<option value="' + escapeHtml(id) + '">' + escapeHtml(SESSION_TYPES[id].name) + '</option>').join('');
+  if(ids.includes(current)) adminBookTypeSelect.value = current;
+}
+
 async function loadAdminTimeSlots(){
-  await populateTimeSelect(adminBookTimeSelect, adminBookDateInput.value, SESSION_MINUTES[adminBookTypeSelect.value]);
+  const service = adminBookTypeSelect.value;
+  await populateTimeSelect(adminBookTimeSelect, adminBookDateInput.value, SESSION_TYPES[service] && SESSION_TYPES[service].durationMinutes, service);
 }
 adminBookDateInput.addEventListener('change', loadAdminTimeSlots);
 adminBookTypeSelect.addEventListener('change', loadAdminTimeSlots);
@@ -1679,12 +2436,332 @@ adminBookForm.addEventListener('submit', async event => {
 });
 
 /* ---------------------------------------------------------------
+   Admin: scheduling settings (timezone, pause, session types,
+   weekly availability windows). This panel is a VISUAL DEMONSTRATION
+   ONLY for now, on every host including production — it is not yet
+   approved to write to Firestore. Every save/add/delete below only
+   mutates the in-memory SESSION_TYPES/AVAILABILITY_RULES/
+   SCHEDULING_SETTINGS state that already drives the real booking
+   system's defaults; nothing here is ever persisted, and a page
+   refresh resets it back to the shipped defaults (Tue/Thu 2-6pm,
+   30/15-minute sessions) — so the real booking system's behavior
+   can never drift from what it is today. Reconnecting this panel to
+   Firestore is a later, separately-approved phase.
+   --------------------------------------------------------------- */
+const schedTimezoneSelect = document.getElementById('schedTimezone');
+const schedBookingPausedInput = document.getElementById('schedBookingPaused');
+const schedMaxPerDayInput = document.getElementById('schedMaxPerDay');
+const schedMinNoticeInput = document.getElementById('schedMinNotice');
+const schedMaxAdvanceInput = document.getElementById('schedMaxAdvance');
+const schedSettingsStatus = document.getElementById('schedSettingsStatus');
+const schedTypesList = document.getElementById('schedTypesList');
+const schedTypeForm = document.getElementById('schedTypeForm');
+const schedTypeStatus = document.getElementById('schedTypeStatus');
+const schedRulesList = document.getElementById('schedRulesList');
+const schedRuleForm = document.getElementById('schedRuleForm');
+const schedRuleStatus = document.getElementById('schedRuleStatus');
+const schedRangesList = document.getElementById('schedRangesList');
+const schedRangeForm = document.getElementById('schedRangeForm');
+const schedRangeStatus = document.getElementById('schedRangeStatus');
+const schedOverridesList = document.getElementById('schedOverridesList');
+const schedOverrideForm = document.getElementById('schedOverrideForm');
+const schedOverrideStatus = document.getElementById('schedOverrideStatus');
+// A short "saved where" note so it's always clear whether an edit is
+// real (production) or sample-only (every other host).
+const SCHED_SAVE_NOTE = DEMO_MODE ? 'Saved to this preview only — sample data, not connected to the live scheduling system.' : 'Saved.';
+
+function renderSchedSettingsForm(){
+  if(!schedTimezoneSelect) return;
+  schedTimezoneSelect.value = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
+  schedBookingPausedInput.checked = !!SCHEDULING_SETTINGS.bookingPaused;
+  schedMaxPerDayInput.value = SCHEDULING_SETTINGS.maxBookingsPerDay || '';
+  schedMinNoticeInput.value = SCHEDULING_SETTINGS.minNoticeHours || '';
+  schedMaxAdvanceInput.value = SCHEDULING_SETTINGS.maxAdvanceDays || '';
+}
+
+function renderSchedTypesList(){
+  if(!schedTypesList) return;
+  const ids = Object.keys(SESSION_TYPES);
+  if(ids.length === 0){
+    schedTypesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No session types yet — add one below.</p>';
+    return;
+  }
+  schedTypesList.innerHTML = ids.map(id => {
+    const t = SESSION_TYPES[id];
+    const buffer = (t.bufferBeforeMin || t.bufferAfterMin) ? ' · buffer ' + (t.bufferBeforeMin || 0) + '/' + (t.bufferAfterMin || 0) + ' min' : '';
+    return '<div class="portal-row" data-type-id="' + escapeHtml(id) + '" style="padding:8px 0">' +
+      '<div><strong>' + escapeHtml(t.name) + '</strong><small>' + t.durationMinutes + ' min' +
+      (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · no charge') + buffer + (t.active === false ? ' · inactive' : '') + '</small></div>' +
+      '<div style="display:flex;gap:8px">' +
+      '<button class="portal-secondary sched-type-toggle" type="button" style="min-height:28px;padding:0 10px;font-size:9px">' +
+        (t.active === false ? 'Activate' : 'Deactivate') + '</button>' +
+      '<button class="portal-secondary sched-type-delete" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Delete</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+function renderSchedRulesList(){
+  if(!schedRulesList) return;
+  if(AVAILABILITY_RULES.length === 0){
+    schedRulesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No availability windows yet — booking is effectively closed until you add one.</p>';
+    return;
+  }
+  schedRulesList.innerHTML = AVAILABILITY_RULES.map(r => {
+    return '<div class="portal-row" data-rule-id="' + escapeHtml(r.id || '') + '" style="padding:8px 0">' +
+      '<div><strong>' + DAY_NAMES[r.dayOfWeek] + '</strong><small>' + minutesToLabel(hhmmToMinutes(r.startTime)) + '–' + minutesToLabel(hhmmToMinutes(r.endTime)) +
+      ' · capacity ' + (r.capacity || 1) + '</small></div>' +
+      '<button class="portal-secondary sched-rule-delete" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Remove</button>' +
+      '</div>';
+  }).join('');
+}
+
+function renderSchedRangesList(){
+  if(!schedRangesList) return;
+  if(BLOCKOUT_RANGES.length === 0){
+    schedRangesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No blocked date ranges.</p>';
+    return;
+  }
+  schedRangesList.innerHTML = BLOCKOUT_RANGES.map(r =>
+    '<div class="portal-row" data-range-id="' + escapeHtml(r.id || '') + '" style="padding:8px 0">' +
+    '<div><strong>' + escapeHtml(r.startDate) + ' – ' + escapeHtml(r.endDate) + '</strong>' +
+    (r.reason ? '<small>' + escapeHtml(r.reason) + '</small>' : '') + '</div>' +
+    '<button class="portal-secondary sched-range-delete" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Remove</button></div>'
+  ).join('');
+}
+
+function renderSchedOverridesList(){
+  if(!schedOverridesList) return;
+  const dates = Object.keys(AVAILABILITY_OVERRIDES).sort();
+  if(dates.length === 0){
+    schedOverridesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No special-date overrides.</p>';
+    return;
+  }
+  schedOverridesList.innerHTML = dates.map(d => {
+    const o = AVAILABILITY_OVERRIDES[d];
+    const desc = o.closed ? 'Fully closed' : (o.windows || []).map(w => minutesToLabel(hhmmToMinutes(w.startTime)) + '–' + minutesToLabel(hhmmToMinutes(w.endTime))).join(', ');
+    return '<div class="portal-row" data-override-date="' + escapeHtml(d) + '" style="padding:8px 0">' +
+      '<div><strong>' + escapeHtml(d) + '</strong><small>' + escapeHtml(desc) + '</small></div>' +
+      '<button class="portal-secondary sched-override-delete" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Remove</button></div>';
+  }).join('');
+}
+
+if(schedTimezoneSelect){
+  let schedRuleSeq = 1, schedRangeSeq = 1;
+
+  document.getElementById('schedSettingsSaveBtn').addEventListener('click', async () => {
+    const updated = {
+      ...SCHEDULING_SETTINGS,
+      ministryTimeZone: schedTimezoneSelect.value,
+      bookingPaused: schedBookingPausedInput.checked,
+      maxBookingsPerDay: schedMaxPerDayInput.value ? Number(schedMaxPerDayInput.value) : null,
+      minNoticeHours: schedMinNoticeInput.value ? Number(schedMinNoticeInput.value) : null,
+      maxAdvanceDays: schedMaxAdvanceInput.value ? Number(schedMaxAdvanceInput.value) : null
+    };
+    schedSettingsStatus.textContent = 'Saving…';
+    if(DEMO_MODE){
+      SCHEDULING_SETTINGS = updated;
+    } else {
+      try { await setDoc(doc(db, 'schedulingSettings', 'global'), updated); await loadSchedulingConfig(); }
+      catch (err) { schedSettingsStatus.textContent = 'Could not save settings.'; return; }
+    }
+    BUSINESS_TZ = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
+    if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
+    schedSettingsStatus.textContent = SCHED_SAVE_NOTE;
+  });
+
+  schedTypeForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const id = document.getElementById('schedTypeId').value.trim();
+    const name = document.getElementById('schedTypeName').value.trim();
+    const duration = Number(document.getElementById('schedTypeDuration').value);
+    const priceRaw = document.getElementById('schedTypePrice').value;
+    const bufferBeforeMin = Number(document.getElementById('schedTypeBufferBefore').value || 0);
+    const bufferAfterMin = Number(document.getElementById('schedTypeBufferAfter').value || 0);
+    const description = document.getElementById('schedTypeDescription').value.trim();
+    if(!id || !name || !duration){ schedTypeStatus.textContent = 'ID, name, and minutes are required.'; return; }
+    const existing = SESSION_TYPES[id] || {};
+    const data = {
+      name, durationMinutes: duration,
+      price: priceRaw ? Number(priceRaw) : null,
+      bufferBeforeMin, bufferAfterMin,
+      description, active: existing.active !== false,
+      order: existing.order || (Object.keys(SESSION_TYPES).length + 1)
+    };
+    schedTypeStatus.textContent = 'Saving…';
+    if(DEMO_MODE){
+      SESSION_TYPES[id] = data;
+    } else {
+      try { await setDoc(doc(db, 'sessionTypes', id), data); await loadSchedulingConfig(); }
+      catch (err) { schedTypeStatus.textContent = 'Could not save that session type.'; return; }
+    }
+    renderSchedTypesList();
+    renderBookingOptions();
+    populateAdminBookTypeSelect();
+    schedTypeForm.reset();
+    schedTypeStatus.textContent = SCHED_SAVE_NOTE;
+  });
+
+  schedTypesList.addEventListener('click', async event => {
+    const toggleBtn = event.target.closest('.sched-type-toggle');
+    const deleteBtn = event.target.closest('.sched-type-delete');
+    if(!toggleBtn && !deleteBtn) return;
+    const row = event.target.closest('[data-type-id]');
+    const id = row.dataset.typeId;
+    if(DEMO_MODE){
+      if(toggleBtn) SESSION_TYPES[id].active = SESSION_TYPES[id].active === false;
+      else delete SESSION_TYPES[id];
+    } else {
+      try {
+        if(toggleBtn) await setDoc(doc(db, 'sessionTypes', id), { ...SESSION_TYPES[id], active: SESSION_TYPES[id].active === false });
+        else await deleteDoc(doc(db, 'sessionTypes', id));
+        await loadSchedulingConfig();
+      } catch (err) { return; }
+    }
+    renderSchedTypesList();
+    renderBookingOptions();
+    populateAdminBookTypeSelect();
+  });
+
+  schedRuleForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const dayOfWeek = Number(document.getElementById('schedRuleDay').value);
+    const startTime = document.getElementById('schedRuleStart').value;
+    const endTime = document.getElementById('schedRuleEnd').value;
+    const capacity = Math.max(1, Number(document.getElementById('schedRuleCapacity').value || 1));
+    if(!startTime || !endTime || endTime <= startTime){ schedRuleStatus.textContent = 'Choose a valid start and end time.'; return; }
+    const data = { dayOfWeek, startTime, endTime, sessionTypeIds: [], capacity };
+    schedRuleStatus.textContent = 'Saving…';
+    if(DEMO_MODE){
+      AVAILABILITY_RULES.push({ id: 'preview-rule-' + (schedRuleSeq++), ...data });
+    } else {
+      try { await setDoc(doc(collection(db, 'availabilityRules')), data); await loadSchedulingConfig(); }
+      catch (err) { schedRuleStatus.textContent = 'Could not add that window.'; return; }
+    }
+    renderSchedRulesList();
+    if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
+    schedRuleForm.reset();
+    schedRuleStatus.textContent = SCHED_SAVE_NOTE;
+  });
+
+  schedRulesList.addEventListener('click', async event => {
+    const deleteBtn = event.target.closest('.sched-rule-delete');
+    if(!deleteBtn) return;
+    const row = event.target.closest('[data-rule-id]');
+    if(DEMO_MODE){
+      const idx = AVAILABILITY_RULES.findIndex(r => r.id === row.dataset.ruleId);
+      if(idx !== -1) AVAILABILITY_RULES.splice(idx, 1);
+    } else {
+      try { await deleteDoc(doc(db, 'availabilityRules', row.dataset.ruleId)); await loadSchedulingConfig(); }
+      catch (err) { return; }
+    }
+    renderSchedRulesList();
+    if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
+  });
+
+  schedRangeForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const startDate = document.getElementById('schedRangeStart').value;
+    const endDate = document.getElementById('schedRangeEnd').value;
+    const reason = document.getElementById('schedRangeReason').value.trim();
+    if(!startDate || !endDate || endDate < startDate){ schedRangeStatus.textContent = 'Choose a valid date range.'; return; }
+    const data = { startDate, endDate, reason };
+    schedRangeStatus.textContent = 'Saving…';
+    if(DEMO_MODE){
+      BLOCKOUT_RANGES.push({ id: 'preview-range-' + (schedRangeSeq++), ...data });
+    } else {
+      try { await setDoc(doc(collection(db, 'blockoutRanges')), data); await loadSchedulingConfig(); }
+      catch (err) { schedRangeStatus.textContent = 'Could not save that range.'; return; }
+    }
+    renderSchedRangesList();
+    schedRangeForm.reset();
+    schedRangeStatus.textContent = SCHED_SAVE_NOTE;
+  });
+
+  schedRangesList.addEventListener('click', async event => {
+    const deleteBtn = event.target.closest('.sched-range-delete');
+    if(!deleteBtn) return;
+    const row = event.target.closest('[data-range-id]');
+    if(DEMO_MODE){
+      const idx = BLOCKOUT_RANGES.findIndex(r => r.id === row.dataset.rangeId);
+      if(idx !== -1) BLOCKOUT_RANGES.splice(idx, 1);
+    } else {
+      try { await deleteDoc(doc(db, 'blockoutRanges', row.dataset.rangeId)); await loadSchedulingConfig(); }
+      catch (err) { return; }
+    }
+    renderSchedRangesList();
+  });
+
+  schedOverrideForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const date = document.getElementById('schedOverrideDate').value;
+    const start = document.getElementById('schedOverrideStart').value;
+    const end = document.getElementById('schedOverrideEnd').value;
+    const closed = document.getElementById('schedOverrideClosed').checked;
+    if(!date){ schedOverrideStatus.textContent = 'Choose a date.'; return; }
+    let data;
+    if(closed){
+      data = { closed: true, windows: [] };
+    } else {
+      if(!start || !end || end <= start){ schedOverrideStatus.textContent = 'Set a valid start and end time, or check "Fully closed".'; return; }
+      data = { closed: false, windows: [{ startTime: start, endTime: end, capacity: 1, sessionTypeIds: [] }] };
+    }
+    schedOverrideStatus.textContent = 'Saving…';
+    if(DEMO_MODE){
+      AVAILABILITY_OVERRIDES[date] = data;
+    } else {
+      try { await setDoc(doc(db, 'availabilityOverrides', date), data); await loadSchedulingConfig(); }
+      catch (err) { schedOverrideStatus.textContent = 'Could not save that override.'; return; }
+    }
+    renderSchedOverridesList();
+    schedOverrideForm.reset();
+    schedOverrideStatus.textContent = SCHED_SAVE_NOTE;
+  });
+
+  schedOverridesList.addEventListener('click', async event => {
+    const deleteBtn = event.target.closest('.sched-override-delete');
+    if(!deleteBtn) return;
+    const row = event.target.closest('[data-override-date]');
+    const date = row.dataset.overrideDate;
+    if(DEMO_MODE){
+      delete AVAILABILITY_OVERRIDES[date];
+    } else {
+      try { await deleteDoc(doc(db, 'availabilityOverrides', date)); await loadSchedulingConfig(); }
+      catch (err) { return; }
+    }
+    renderSchedOverridesList();
+  });
+}
+
+/* ---------------------------------------------------------------
    Member dashboard: real bookings
    --------------------------------------------------------------- */
+function memberBookingRowHtml(b, today){
+  const label = sessionTypeName(b.sessionType);
+  const statusLabel = b.status === 'confirmed' ? 'Confirmed' : b.status === 'declined' ? 'Declined' : b.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  const canCancel = (b.status === 'pending' || b.status === 'confirmed') && b.date >= today;
+  const tzNote = b.clientTimeZone ? ' (' + tzAbbrFor(b.clientTimeZone) + ')' : '';
+  return '<div class="portal-row" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
+    '<div><strong>' + escapeHtml(label) + '</strong><small>' + escapeHtml(formatLocalDateTime(b.date, b.time, b.clientTimeZone) + tzNote) + '</small></div>' +
+    '<div style="display:flex;align-items:center;gap:10px">' +
+    '<span class="portal-access">' + statusLabel + '</span>' +
+    (canCancel ? '<button class="portal-secondary member-reschedule-booking" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Reschedule</button>' +
+      '<button class="portal-secondary member-cancel-booking" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Cancel</button>' : '') +
+    '</div></div>';
+}
+
 async function loadMemberBookings(){
   const container = document.getElementById('memberBookingsList');
   if(!currentUser){ container.innerHTML = ''; return; }
   container.innerHTML = '<p style="color:#d7d7d7">Loading your bookings…</p>';
+  const today = new Date().toISOString().slice(0, 10);
+  if(DEMO_MODE){
+    const rows = DEMO_BOOKINGS.filter(b => b.uid === null || b.uid === currentUser.uid)
+      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    container.innerHTML = rows.length === 0
+      ? '<p style="color:#d7d7d7">No bookings yet — request a session below.</p>'
+      : rows.map(b => memberBookingRowHtml(b, today)).join('');
+    return;
+  }
   try {
     const snap = await getDocs(query(collection(db, 'bookings'), where('uid', '==', currentUser.uid)));
     if(snap.empty){
@@ -1694,25 +2771,18 @@ async function loadMemberBookings(){
     const rows = [];
     snap.forEach(docSnap => rows.push({ id: docSnap.id, ...docSnap.data() }));
     rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-    const today = new Date().toISOString().slice(0, 10);
-    container.innerHTML = rows.map(b => {
-      const label = b.sessionType === '30-minute' ? '30-Minute One-on-One' : '15-Minute Pop-Up';
-      const statusLabel = b.status === 'confirmed' ? 'Confirmed' : b.status === 'declined' ? 'Declined' : b.status === 'cancelled' ? 'Cancelled' : 'Pending';
-      const canCancel = (b.status === 'pending' || b.status === 'confirmed') && b.date >= today;
-      return '<div class="portal-row" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
-        '<div><strong>' + escapeHtml(label) + '</strong><small>' + escapeHtml(formatLocalDateTime(b.date, b.time)) + '</small></div>' +
-        '<div style="display:flex;align-items:center;gap:10px">' +
-        '<span class="portal-access">' + statusLabel + '</span>' +
-        (canCancel ? '<button class="portal-secondary member-reschedule-booking" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Reschedule</button>' +
-          '<button class="portal-secondary member-cancel-booking" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Cancel</button>' : '') +
-        '</div></div>';
-    }).join('');
+    container.innerHTML = rows.map(b => memberBookingRowHtml(b, today)).join('');
   } catch (err) {
     container.innerHTML = '<p style="color:#d7d7d7">Could not load your bookings.</p>';
   }
 }
 
 async function cancelOwnBooking(bookingId, slotId){
+  if(DEMO_MODE){
+    const b = DEMO_BOOKINGS.find(x => x.id === bookingId);
+    if(b) b.status = 'cancelled';
+    return;
+  }
   await updateDoc(doc(db, 'bookings', bookingId), { status: 'cancelled' });
   if(slotId){
     try { await deleteDoc(doc(db, 'slots', slotId)); } catch (err) { /* admin can clean up if this ever fails */ }
@@ -1745,33 +2815,106 @@ document.getElementById('memberBookingsList').addEventListener('click', async ev
 });
 
 /* ---------------------------------------------------------------
+   Admin Notification Center — visual demonstration only, on every
+   host including production. Sample entries only; real email/SMS
+   alerts are a later, separately-approved phase (SMS specifically
+   needs a real provider like Twilio — Firebase Phone Auth is only
+   ever for sign-in verification, never general notifications).
+   --------------------------------------------------------------- */
+const DEMO_NOTIFICATIONS = [
+  { id: 'n1', title: 'New booking request', detail: 'Jordan Lee requested a 30-Minute One-on-One.', read: false },
+  { id: 'n2', title: 'Payment received (sample)', detail: "Sample payment confirmation for Amara Okafor's session.", read: false },
+  { id: 'n3', title: 'Class registration (sample)', detail: 'Sam Rivera registered for Learning to Discern.', read: true },
+];
+function renderOwnerNotifications(){
+  const container = document.getElementById('ownerNotificationsList');
+  if(!container) return;
+  container.innerHTML = DEMO_NOTIFICATIONS.map(n =>
+    '<div class="portal-row" data-notif-id="' + n.id + '" style="opacity:' + (n.read ? '.55' : '1') + '">' +
+    '<div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + '</small></div>' +
+    '<button class="portal-secondary owner-notif-toggle" type="button" style="min-height:28px;padding:0 10px;font-size:9px">' +
+    (n.read ? 'Mark Unread' : 'Mark Read') + '</button></div>'
+  ).join('');
+}
+document.addEventListener('click', event => {
+  const btn = event.target.closest('.owner-notif-toggle');
+  if(!btn) return;
+  const row = event.target.closest('[data-notif-id]');
+  const n = DEMO_NOTIFICATIONS.find(x => x.id === row.dataset.notifId);
+  if(n) n.read = !n.read;
+  renderOwnerNotifications();
+});
+
+/* ---------------------------------------------------------------
    Ministry (admin) view: pending bookings, roster, blockouts
    --------------------------------------------------------------- */
 async function loadOwnerData(){
   if(!currentProfile || currentProfile.role !== 'admin') return;
+  if(!DEMO_MODE){ try { await loadSchedulingConfig(); } catch (err) { /* keep whatever is already loaded */ } }
+  renderSchedSettingsForm();
+  renderSchedTypesList();
+  renderSchedRulesList();
+  renderSchedRangesList();
+  renderSchedOverridesList();
+  populateAdminBookTypeSelect();
+  renderOwnerNotifications();
   await Promise.all([loadOwnerBookings(), loadOwnerConfirmed(), loadOwnerMembers(), loadBlockedDates()]);
 }
 
 async function rescheduleBooking(bookingId, oldSlotId, newDate, newTime, sessionType, uid){
   const newSlotId = newDate + '_' + newTime;
   if(newSlotId === oldSlotId) return;
+  const startAtUTC = etWallTimeToDate(newDate, hhmmToMinutes(newTime));
+  if(DEMO_MODE){
+    if(DEMO_BOOKINGS.some(b => b.slotId === newSlotId && b.id !== bookingId && b.status !== 'declined' && b.status !== 'cancelled')){
+      throw new Error('slot-taken');
+    }
+    const b = DEMO_BOOKINGS.find(x => x.id === bookingId);
+    if(b){ b.date = newDate; b.time = newTime; b.slotId = newSlotId; b.startAtUTC = startAtUTC; }
+    return;
+  }
   await runTransaction(db, async (tx) => {
     const newSlotRef = doc(db, 'slots', newSlotId);
     const newSlotSnap = await tx.get(newSlotRef);
     if(newSlotSnap.exists()) throw new Error('slot-taken');
     if(oldSlotId) tx.delete(doc(db, 'slots', oldSlotId));
     tx.set(newSlotRef, { date: newDate, time: newTime, sessionType, uid: uid || null, createdAt: serverTimestamp() });
-    tx.update(doc(db, 'bookings', bookingId), { date: newDate, time: newTime, slotId: newSlotId });
+    tx.update(doc(db, 'bookings', bookingId), { date: newDate, time: newTime, slotId: newSlotId, startAtUTC });
   });
+}
+
+function ownerConfirmedRowHtml(b){
+  const label = sessionTypeName(b.sessionType);
+  return '<div class="portal-request" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') +
+    '" data-uid="' + escapeHtml(b.uid || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
+    '<div style="flex:1;min-width:0">' +
+    '<div style="display:flex;justify-content:space-between;gap:14px">' +
+    '<div><strong>' + escapeHtml(b.name) + '</strong><p>' + escapeHtml(label) + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
+    ' · ' + escapeHtml(b.email) + (b.phone ? ' · ' + escapeHtml(b.phone) : '') + (b.reason ? '<br>“' + escapeHtml(b.reason) + '”' : '') + '</p></div>' +
+    '<button class="portal-secondary owner-reschedule-toggle" type="button" style="min-height:32px;padding:0 10px;font-size:9px;flex:0 0 auto">Reschedule</button>' +
+    '</div>' +
+    '<div class="owner-reschedule-panel" hidden style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed #c7c7c7">' +
+    '<div class="form-field" style="flex:1;min-width:140px"><label>New date</label><input type="date" class="owner-resched-date" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>' +
+    '<div class="form-field" style="flex:1;min-width:160px"><label>New time</label><select class="owner-resched-time" disabled style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"><option value="">Choose a date first</option></select></div>' +
+    '<button class="portal-secondary owner-resched-save" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Save</button>' +
+    '</div></div></div>';
 }
 
 async function loadOwnerConfirmed(){
   const container = document.getElementById('ownerConfirmedList');
   if(!container) return;
   container.innerHTML = '<p style="color:#656565">Loading appointments…</p>';
+  const today = new Date().toISOString().slice(0, 10);
+  if(DEMO_MODE){
+    const items = DEMO_BOOKINGS.filter(b => b.status === 'confirmed' && b.date >= today)
+      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    container.innerHTML = items.length === 0
+      ? '<p style="color:#656565">No upcoming confirmed appointments.</p>'
+      : items.map(ownerConfirmedRowHtml).join('');
+    return;
+  }
   try {
     const snap = await getDocs(query(collection(db, 'bookings'), where('status', '==', 'confirmed')));
-    const today = new Date().toISOString().slice(0, 10);
     const items = [];
     snap.forEach(docSnap => {
       const b = docSnap.data();
@@ -1782,22 +2925,7 @@ async function loadOwnerConfirmed(){
       return;
     }
     items.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-    container.innerHTML = items.map(b => {
-      const label = b.sessionType === '30-minute' ? '30-Minute One-on-One' : '15-Minute Pop-Up';
-      return '<div class="portal-request" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') +
-        '" data-uid="' + escapeHtml(b.uid || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
-        '<div style="flex:1;min-width:0">' +
-        '<div style="display:flex;justify-content:space-between;gap:14px">' +
-        '<div><strong>' + escapeHtml(b.name) + '</strong><p>' + escapeHtml(label) + ' · ' + escapeHtml(formatLocalDateTime(b.date, b.time)) +
-        ' · ' + escapeHtml(b.email) + '</p></div>' +
-        '<button class="portal-secondary owner-reschedule-toggle" type="button" style="min-height:32px;padding:0 10px;font-size:9px;flex:0 0 auto">Reschedule</button>' +
-        '</div>' +
-        '<div class="owner-reschedule-panel" hidden style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed #c7c7c7">' +
-        '<div class="form-field" style="flex:1;min-width:140px"><label>New date</label><input type="date" class="owner-resched-date" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>' +
-        '<div class="form-field" style="flex:1;min-width:160px"><label>New time</label><select class="owner-resched-time" disabled style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"><option value="">Choose a date first</option></select></div>' +
-        '<button class="portal-secondary owner-resched-save" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Save</button>' +
-        '</div></div></div>';
-    }).join('');
+    container.innerHTML = items.map(ownerConfirmedRowHtml).join('');
   } catch (err) {
     container.innerHTML = '<p style="color:#656565">Could not load appointments.</p>';
   }
@@ -1807,7 +2935,8 @@ document.getElementById('ownerConfirmedList').addEventListener('change', async e
   if(!event.target.classList.contains('owner-resched-date')) return;
   const row = event.target.closest('[data-booking-id]');
   const timeSelect = row.querySelector('.owner-resched-time');
-  await populateTimeSelect(timeSelect, event.target.value, SESSION_MINUTES[row.dataset.sessionType]);
+  const sType = row.dataset.sessionType;
+  await populateTimeSelect(timeSelect, event.target.value, SESSION_TYPES[sType] && SESSION_TYPES[sType].durationMinutes, sType);
 });
 
 document.getElementById('ownerConfirmedList').addEventListener('click', async event => {
@@ -1836,9 +2965,27 @@ document.getElementById('ownerConfirmedList').addEventListener('click', async ev
   }
 });
 
+function ownerPendingRowHtml(b){
+  const label = sessionTypeName(b.sessionType);
+  return '<div class="portal-request" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') + '">' +
+    '<div><strong>' + escapeHtml(b.name) + '</strong><p>' + escapeHtml(label) + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
+    ' · ' + escapeHtml(b.email) + (b.phone ? ' · ' + escapeHtml(b.phone) : '') + (b.reason ? '<br>“' + escapeHtml(b.reason) + '”' : '') + '</p></div>' +
+    '<div class="portal-inline-actions">' +
+    '<button class="portal-secondary owner-confirm-booking" type="button">Confirm</button>' +
+    '<button class="portal-secondary owner-decline-booking" type="button">Decline</button>' +
+    '</div></div>';
+}
+
 async function loadOwnerBookings(){
   const container = document.getElementById('ownerBookingsList');
   container.innerHTML = '<p style="color:#d7d7d7">Loading booking requests…</p>';
+  if(DEMO_MODE){
+    const items = DEMO_BOOKINGS.filter(b => b.status === 'pending').sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    container.innerHTML = items.length === 0
+      ? '<p style="color:#d7d7d7">No pending booking requests.</p>'
+      : items.map(ownerPendingRowHtml).join('');
+    return;
+  }
   try {
     const snap = await getDocs(query(collection(db, 'bookings'), where('status', '==', 'pending')));
     if(snap.empty){
@@ -1848,16 +2995,7 @@ async function loadOwnerBookings(){
     const items = [];
     snap.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
     items.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-    container.innerHTML = items.map(b => {
-      const label = b.sessionType === '30-minute' ? '30-Minute One-on-One' : '15-Minute Pop-Up';
-      return '<div class="portal-request" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') + '">' +
-        '<div><strong>' + escapeHtml(b.name) + '</strong><p>' + escapeHtml(label) + ' · ' + escapeHtml(formatLocalDateTime(b.date, b.time)) +
-        ' · ' + escapeHtml(b.email) + '</p></div>' +
-        '<div class="portal-inline-actions">' +
-        '<button class="portal-secondary owner-confirm-booking" type="button">Confirm</button>' +
-        '<button class="portal-secondary owner-decline-booking" type="button">Decline</button>' +
-        '</div></div>';
-    }).join('');
+    container.innerHTML = items.map(ownerPendingRowHtml).join('');
   } catch (err) {
     container.innerHTML = '<p style="color:#d7d7d7">Could not load booking requests.</p>';
   }
@@ -1872,6 +3010,19 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
   const slotId = row.dataset.slotId;
   event.target.disabled = true;
   try {
+    if(DEMO_MODE){
+      const b = DEMO_BOOKINGS.find(x => x.id === bookingId);
+      if(confirmBtn){
+        if(b) b.status = 'confirmed';
+        portalOwnerStatus.textContent = 'Booking confirmed.';
+        loadOwnerConfirmed();
+      } else {
+        if(b) b.status = 'declined';
+        portalOwnerStatus.textContent = 'Booking declined and the time was freed up.';
+      }
+      loadOwnerBookings();
+      return;
+    }
     if(confirmBtn){
       await updateDoc(doc(db, 'bookings', bookingId), { status: 'confirmed' });
       portalOwnerStatus.textContent = 'Booking confirmed.';
@@ -1897,13 +3048,25 @@ const blockDateStatus = document.getElementById('blockDateStatus');
 const blockDateSubmitBtn = document.getElementById('blockDateSubmitBtn');
 blockDateInput.min = new Date().toISOString().slice(0, 10);
 
+function blockedDateRowHtml(d){
+  return '<div class="portal-row" data-blocked-date="' + escapeHtml(d) + '"><div><strong>' + escapeHtml(d) + '</strong></div>' +
+    '<button class="portal-secondary owner-unblock-date" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Unblock</button></div>';
+}
+
 async function loadBlockedDates(){
   const container = document.getElementById('blockedDatesList');
   if(!container) return;
   container.innerHTML = '<p style="color:#656565">Loading blocked dates…</p>';
+  const today = new Date().toISOString().slice(0, 10);
+  if(DEMO_MODE){
+    const dates = DEMO_BLOCKED_DATES.filter(d => d >= today).sort();
+    container.innerHTML = dates.length === 0
+      ? '<p style="color:#656565">No upcoming dates are blocked.</p>'
+      : dates.map(blockedDateRowHtml).join('');
+    return;
+  }
   try {
     const snap = await getDocs(collection(db, 'blockouts'));
-    const today = new Date().toISOString().slice(0, 10);
     const dates = [];
     snap.forEach(docSnap => { if(docSnap.id >= today) dates.push(docSnap.id); });
     dates.sort();
@@ -1911,10 +3074,7 @@ async function loadBlockedDates(){
       container.innerHTML = '<p style="color:#656565">No upcoming dates are blocked.</p>';
       return;
     }
-    container.innerHTML = dates.map(d =>
-      '<div class="portal-row" data-blocked-date="' + escapeHtml(d) + '"><div><strong>' + escapeHtml(d) + '</strong></div>' +
-      '<button class="portal-secondary owner-unblock-date" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Unblock</button></div>'
-    ).join('');
+    container.innerHTML = dates.map(blockedDateRowHtml).join('');
   } catch (err) {
     container.innerHTML = '<p style="color:#656565">Could not load blocked dates.</p>';
   }
@@ -1927,7 +3087,11 @@ blockDateForm.addEventListener('submit', async event => {
   blockDateSubmitBtn.disabled = true;
   blockDateStatus.textContent = 'Blocking…';
   try {
-    await setDoc(doc(db, 'blockouts', dateStr), { date: dateStr, createdAt: serverTimestamp() });
+    if(DEMO_MODE){
+      if(!DEMO_BLOCKED_DATES.includes(dateStr)) DEMO_BLOCKED_DATES.push(dateStr);
+    } else {
+      await setDoc(doc(db, 'blockouts', dateStr), { date: dateStr, createdAt: serverTimestamp() });
+    }
     blockDateStatus.textContent = 'Blocked.';
     blockDateForm.reset();
     loadBlockedDates();
@@ -1944,7 +3108,12 @@ document.getElementById('blockedDatesList').addEventListener('click', async even
   const row = event.target.closest('[data-blocked-date]');
   btn.disabled = true;
   try {
-    await deleteDoc(doc(db, 'blockouts', row.dataset.blockedDate));
+    if(DEMO_MODE){
+      const idx = DEMO_BLOCKED_DATES.indexOf(row.dataset.blockedDate);
+      if(idx !== -1) DEMO_BLOCKED_DATES.splice(idx, 1);
+    } else {
+      await deleteDoc(doc(db, 'blockouts', row.dataset.blockedDate));
+    }
     loadBlockedDates();
   } catch (err) {
     blockDateStatus.textContent = 'Could not unblock that date.';
@@ -1955,6 +3124,14 @@ document.getElementById('blockedDatesList').addEventListener('click', async even
 async function loadOwnerMembers(){
   const container = document.getElementById('ownerMembersList');
   container.innerHTML = '<p style="color:#656565">Loading member accounts…</p>';
+  if(DEMO_MODE){
+    const items = [...DEMO_MEMBERS].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    container.innerHTML = items.map(u =>
+      '<div class="portal-row"><div><strong>' + escapeHtml(u.name || u.email) + '</strong><small>' + escapeHtml(u.email) +
+      '</small></div><span class="portal-access">' + (u.role === 'admin' ? 'Admin' : 'Member') + '</span></div>'
+    ).join('');
+    return;
+  }
   try {
     const snap = await getDocs(collection(db, 'users'));
     if(snap.empty){
@@ -1979,11 +3156,17 @@ async function loadOwnerMembers(){
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   if(user){
-    try {
-      const profileSnap = await getDoc(doc(db, 'users', user.uid));
-      currentProfile = profileSnap.exists() ? profileSnap.data() : { name: user.displayName || '', email: user.email, role: 'member' };
-    } catch (err) {
-      currentProfile = { name: user.displayName || '', email: user.email, role: 'member' };
+    if(DEMO_MODE){
+      // Never touch real Firestore in demo mode — the profile is built
+      // straight from the sample user object the demo sign-in created.
+      currentProfile = { name: user.displayName || '', email: user.email, role: user.role || 'member' };
+    } else {
+      try {
+        const profileSnap = await getDoc(doc(db, 'users', user.uid));
+        currentProfile = profileSnap.exists() ? profileSnap.data() : { name: user.displayName || '', email: user.email, role: 'member' };
+      } catch (err) {
+        currentProfile = { name: user.displayName || '', email: user.email, role: 'member' };
+      }
     }
     document.getElementById('memberWelcomeName').textContent = currentProfile.name ? ', ' + currentProfile.name.split(' ')[0] : '';
     document.getElementById('memberAccountLabel').textContent = currentProfile.role === 'admin' ? 'Admin Account' : 'Student Account';
