@@ -43,6 +43,39 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admin-controlled scheduling configuration (Phase 3-6). Public read
+    // (the booking page must be able to compute availability before anyone
+    // signs in); only an admin can change what services/hours/policies exist.
+    match /schedulingSettings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /sessionTypes/{sessionTypeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /availabilityRules/{ruleId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /blockoutRanges/{rangeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /availabilityOverrides/{date} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // Temporary holds while someone is mid-checkout. Public create/read/
+    // delete (any visitor can hold or release an open slot); only an
+    // admin can change an existing hold's contents.
+    match /bookingHolds/{holdId} {
+      allow read: if true;
+      allow create: if true;
+      allow delete: if true;
+      allow update: if false;
+    }
+
     // Booking requests hold personal data (name/email), so only the admin
     // or the booker themself (if signed in) can read them back. Anyone can
     // create one (guest booking is allowed), but a non-admin's request must
@@ -55,6 +88,58 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasAll(
                         ['name','email','sessionType','date','time','status']) &&
                       (request.resource.data.status == 'pending' || isAdmin());
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin() ||
+        (isSignedIn() && resource.data.uid == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+         request.resource.data.status == 'cancelled');
+      allow delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // Teaching Manager (recurring paid classes).
+    // ---------------------------------------------------------------
+
+    // Public teaching info only — title, description, date/time, price,
+    // artwork URLs, status, etc. Drafts are hidden from everyone except
+    // an admin; anything else (published/registration-open/sold-out/
+    // completed/cancelled) is publicly readable. Only an admin can write.
+    match /teachings/{teachingId} {
+      allow read: if resource.data.status != 'draft' || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Private Zoom URL/meeting ID/passcode for a teaching. Deliberately a
+    // SEPARATE collection from the public `teachings` doc above (not just
+    // a field on it) so a public read of a teaching can never expose this
+    // — Firestore rules can't redact individual fields of a readable doc,
+    // only whole documents, so the private data has to live in its own
+    // document with its own stricter rule. Admin-only for now; expand to
+    // "isAdmin() || confirmed registrant" later when real attendee access
+    // is built — that's a rules change only, not a redesign.
+    match /teachingZoomInfo/{teachingId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Sitewide Teaching page settings (featured teaching, section
+    // visibility toggles, etc). Public read so the page can render;
+    // only an admin can change it.
+    match /teachingPageSettings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Teaching registrations hold personal data, so the same pattern as
+    // `bookings` above: only the admin or the registrant themself (if
+    // signed in) can read one back; anyone can create one (guest
+    // registration allowed) but it must start 'pending_payment' unless
+    // an admin is creating it directly; a signed-in registrant may only
+    // ever update their own registration to cancel it.
+    match /teachingRegistrations/{regId} {
+      allow create: if request.resource.data.keys().hasAll(
+                        ['teachingId','firstName','lastName','email','status']) &&
+                      (request.resource.data.status == 'pending_payment' || isAdmin());
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin() ||
         (isSignedIn() && resource.data.uid == request.auth.uid &&
