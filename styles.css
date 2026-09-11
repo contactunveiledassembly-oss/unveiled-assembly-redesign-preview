@@ -400,7 +400,7 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 .form-actions .btn{background:var(--ivory);color:var(--black);border-color:var(--ivory);cursor:pointer}
 .form-status{color:var(--silver);font-size:13px;line-height:1.5;max-width:420px}
 
-.booking-dialog{width:min(760px,calc(100% - 28px));max-height:92vh;background:var(--ivory);color:var(--black)}
+.booking-dialog{width:min(760px,calc(100% - 28px));max-height:92vh;overflow-y:auto;background:var(--ivory);color:var(--black)}
 .booking-head{display:flex;justify-content:space-between;gap:22px;padding:27px 30px 22px;background:var(--black);color:var(--ivory)}
 .booking-head h3{font-family:var(--serif);font-size:36px;font-weight:400;margin:7px 0 0}
 .booking-close{width:42px;height:42px;border:1px solid var(--line-dark);border-radius:50%;background:transparent;color:var(--ivory);font-size:22px;cursor:pointer}
@@ -678,3 +678,106 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 .settings-subform{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line-light)}
 .verify-panel-links{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
 .verify-panel-links .link-btn{padding:4px 0}
+
+/* =================================================================
+   Teaching Manager — public hero, cards, detail page, scripture
+   section, and the admin manager it's all driven from.
+   ================================================================= */
+
+/* ---------- Featured Teaching hero (cinematic) ---------- */
+.teaching-hero{
+  position:relative;min-height:86vh;display:flex;align-items:flex-end;overflow:hidden;
+  background-color:var(--black);background-size:cover;background-repeat:no-repeat;
+  padding:0 5vw 90px;
+}
+.teaching-hero::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 75% 20%, rgba(255,255,255,.05), transparent 55%);
+  pointer-events:none;
+}
+.teaching-hero-overlay{position:absolute;inset:0;background:var(--black);pointer-events:none;transition:opacity .3s}
+.teaching-hero-inner{position:relative;z-index:1;max-width:720px}
+.teaching-hero-inner .eyebrow{color:var(--stone)}
+.teaching-hero-inner h1{font-size:clamp(46px,7.4vw,110px);color:var(--ivory);margin:14px 0 10px}
+.teaching-hero-subtitle{font-size:clamp(18px,2vw,26px);color:var(--ivory);opacity:.88;margin-bottom:18px}
+.teaching-hero-desc{max-width:52ch;color:var(--stone);font-size:15.5px;line-height:1.75;margin-bottom:30px}
+.teaching-hero-meta{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:34px}
+.teaching-hero-meta span{
+  font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ivory);
+  padding-bottom:8px;border-bottom:1px solid var(--line-dark);
+}
+.teaching-hero-actions{display:flex;gap:14px;flex-wrap:wrap}
+.teaching-register-btn:disabled{opacity:.4;cursor:not-allowed}
+
+@media(max-width:760px){
+  .teaching-hero{min-height:78vh;align-items:flex-end;padding:0 6vw 60px}
+  .teaching-hero-inner{max-width:none}
+}
+
+/* ---------- Upcoming teaching cards ---------- */
+.teaching-cards-section{padding-top:120px}
+.teaching-cards-subhead{font-family:var(--serif);font-style:italic;font-size:17px}
+.teaching-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-dark);border:1px solid var(--line-dark)}
+.teaching-card{
+  position:relative;display:block;min-height:420px;background-color:var(--panel);background-size:cover;background-position:center;
+  color:var(--ivory);overflow:hidden;
+}
+.teaching-card-body{position:absolute;left:0;right:0;bottom:0;padding:26px 24px;z-index:1}
+.teaching-card-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--stone);display:block;margin-bottom:10px}
+.teaching-card h3{font-family:var(--display);text-transform:uppercase;font-size:clamp(24px,2.4vw,32px);line-height:.98;margin-bottom:10px}
+.teaching-card p{font-size:12.5px;letter-spacing:.04em;color:var(--stone);margin-bottom:14px}
+.teaching-card-arrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:0;transform:translateY(4px);transition:.25s;display:inline-block}
+.teaching-card:hover .teaching-card-arrow{opacity:1;transform:translateY(0)}
+.teaching-card:hover{outline:1px solid rgba(245,243,238,.35);outline-offset:-1px}
+@media(max-width:900px){.teaching-cards-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.teaching-cards-grid{grid-template-columns:1fr}.teaching-card{min-height:320px}}
+
+/* ---------- Teaching Library (reuses the card grid look) ---------- */
+.teaching-library-section .teaching-cards-grid{margin-top:10px}
+
+/* ---------- Scripture / editorial split ---------- */
+.teaching-scripture-section{padding:0}
+.teaching-scripture-grid{display:grid;grid-template-columns:1fr 1fr;min-height:70vh}
+.teaching-scripture-art{background:radial-gradient(circle at 30% 40%, rgba(255,255,255,.05), transparent 60%), var(--charcoal);border-right:1px solid var(--line-dark)}
+.teaching-scripture-copy{display:flex;flex-direction:column;justify-content:center;padding:80px 6vw}
+.teaching-scripture-verse{font-size:clamp(24px,2.6vw,36px);line-height:1.4;font-style:italic;max-width:20ch;margin-bottom:22px}
+.teaching-scripture-ref{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--stone)}
+@media(max-width:820px){
+  .teaching-scripture-grid{grid-template-columns:1fr}
+  .teaching-scripture-art{min-height:280px;border-right:0;border-bottom:1px solid var(--line-dark)}
+  .teaching-scripture-copy{padding:56px 6vw}
+}
+
+/* ---------- Teaching detail page ---------- */
+.teaching-detail-hero{
+  position:relative;min-height:64vh;display:flex;align-items:flex-end;overflow:hidden;
+  background-color:var(--black);background-size:cover;background-repeat:no-repeat;padding:0 5vw 70px;
+}
+.teaching-detail-grid{display:grid;grid-template-columns:280px 1fr;gap:70px}
+.teaching-detail-facts{display:flex;flex-direction:column;gap:16px;padding-right:20px;border-right:1px solid var(--line-light);height:fit-content}
+.teaching-detail-facts div{display:flex;flex-direction:column;gap:3px}
+.teaching-detail-facts span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.teaching-detail-facts strong{font-family:var(--serif);font-size:19px;font-weight:400}
+.teaching-detail-facts .btn{margin-top:10px}
+.teaching-detail-copy h2{font-size:clamp(22px,2.4vw,30px);margin-bottom:16px}
+.teaching-detail-copy p{color:var(--ink-muted);line-height:1.8;max-width:62ch}
+.teaching-learn-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+.teaching-learn-list li{padding-left:26px;position:relative;color:var(--ink-muted);line-height:1.6}
+.teaching-learn-list li::before{content:"";position:absolute;left:0;top:9px;width:14px;height:1px;background:var(--black)}
+@media(max-width:820px){
+  .teaching-detail-hero{min-height:52vh}
+  .teaching-detail-grid{grid-template-columns:1fr;gap:36px}
+  .teaching-detail-facts{border-right:0;border-bottom:1px solid var(--line-light);padding-bottom:24px;flex-direction:row;flex-wrap:wrap}
+  .teaching-detail-facts div{min-width:130px}
+}
+
+/* ---------- Admin: Teaching Manager tabs + edit form sections ---------- */
+.teaching-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.teaching-tab{
+  font-family:var(--sans);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  padding:7px 13px;border:1px solid #d6d2c6;background:transparent;color:#6d6d6d;cursor:pointer;transition:.15s;
+}
+.teaching-tab.active{background:var(--black);color:var(--ivory);border-color:var(--black)}
+.teaching-tab:not(.active):hover{border-color:var(--black);color:var(--black)}
+.teaching-edit-section-label{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#8a8a8a;margin:22px 0 10px}
+.teaching-edit-section-label:first-of-type{margin-top:4px}

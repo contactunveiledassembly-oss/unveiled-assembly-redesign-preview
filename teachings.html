@@ -15,45 +15,44 @@
 <body data-page="teachings">
   <div class="grain"></div>
 
-  <header class="inner-hero">
-    <div class="ghost-word" style="top:10px;right:-2vw">Formation</div>
-    <div class="eyebrow reveal">Teaching &amp; Formation</div>
-    <h1 class="display reveal">The<br><span style="color:var(--stone)">Unveiling.</span></h1>
-    <p class="hero-sub reveal">A growing library of teaching for those who desire to see Christ clearly, know Him deeply, understand Scripture with maturity, and recognize the reality of the new creation. Classes, resources, and spiritual formation content all live here.</p>
+  <header class="teaching-hero" id="teachingHero">
+    <div class="section-inner reveal"><div class="eyebrow">Teachings</div><h1 class="display">Loading…</h1></div>
   </header>
 
-  <section style="padding-top:80px">
+  <section class="teaching-cards-section" id="teachingCardsSection">
     <div class="section-inner">
-      <div class="eyebrow reveal" style="margin-bottom:24px">Featured Class / 01</div>
-      <div class="feature-card reveal">
-        <div class="feature-card-visual">
-          <div class="orb"><div class="feature-card-label">Discern</div></div>
-        </div>
-        <div class="feature-card-body">
-          <h3 class="serif-heading">Learning to Discern</h3>
-          <p>Recognize the difference between instinct, emotion, assumption, and spiritual discernment through a clear and practical framework.</p>
-          <a class="text-link" href="https://calendly.com/unveiledassembly/new-meeting" target="_blank" rel="noopener noreferrer">See Schedule →</a>
-        </div>
+      <div class="eyebrow reveal" style="margin-bottom:6px">Thursday Teachings</div>
+      <h2 class="display reveal" style="font-size:clamp(34px,4.6vw,64px);margin-bottom:8px">Upcoming Teachings.</h2>
+      <p class="reveal teaching-cards-subhead" id="teachingCardsSubhead" style="color:var(--stone);margin-bottom:44px">Every Thursday</p>
+      <div class="teaching-cards-grid reveal" id="teachingCardsList"></div>
+    </div>
+  </section>
+
+  <section class="teaching-library-section" id="teachingLibrarySection" hidden>
+    <div class="section-inner">
+      <div class="eyebrow reveal" style="margin-bottom:24px">Teaching Library</div>
+      <h2 class="display reveal" style="font-size:clamp(34px,4.6vw,64px);margin-bottom:40px">Watch &amp; Revisit.</h2>
+      <div class="teaching-cards-grid reveal" id="teachingLibraryList"></div>
+    </div>
+  </section>
+
+  <section class="teaching-scripture-section" id="teachingScriptureSection">
+    <div class="teaching-scripture-grid reveal">
+      <div class="teaching-scripture-art"></div>
+      <div class="teaching-scripture-copy">
+        <div class="eyebrow on-light" style="margin-bottom:20px">The Foundation</div>
+        <p class="serif-heading teaching-scripture-verse">"Strong meat belongeth to them that are of full age, even those who by reason of use have their senses exercised to discern both good and evil."</p>
+        <span class="teaching-scripture-ref">Hebrews 5:14</span>
       </div>
     </div>
   </section>
 
-  <section style="padding-top:0">
-    <div class="section-inner">
-      <div class="eyebrow reveal" style="margin-bottom:30px">More In Formation</div>
-      <div class="belief-grid reveal">
-        <div class="belief-card">
-          <h4>Dream Interpretation</h4>
-          <p>Understanding the language of dreams and how God speaks through them.</p>
-          <span class="coming-soon">Coming Soon</span>
-        </div>
-        <div class="belief-card">
-          <h4>Prophetic Formation</h4>
-          <p>Developing spiritual sensitivity and maturity in prophetic gifting.</p>
-          <span class="coming-soon">Coming Soon</span>
-        </div>
-      </div>
-      <p class="reveal" style="color:var(--stone);margin-top:30px;max-width:600px">Additional written teachings, video teachings, and future courses will appear here as they're published. Current class scheduling runs through Calendly until My Assembly's class portal is connected.</p>
+  <section class="on-light-section teaching-newsletter-section" id="teachingNewsletterSection">
+    <div class="section-inner reveal" style="text-align:center;max-width:640px">
+      <div class="eyebrow on-light" style="margin-bottom:20px">Stay Connected</div>
+      <h2 class="serif-heading" style="font-size:clamp(28px,3.6vw,42px);margin-bottom:20px">Never miss a Thursday teaching.</h2>
+      <p style="margin-bottom:30px">New teachings are announced first on Instagram and by email — reach out on Connect to be added.</p>
+      <a class="btn on-light fill" href="connect.html">Get Notified →</a>
     </div>
   </section>
 

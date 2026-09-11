@@ -168,6 +168,55 @@ const DEMO_BLOCKED_DATES = [demoNextWeekdayStr(4, 2)];
 let DEMO_HOLDS = [];
 
 /* ---------------------------------------------------------------
+   Teaching Manager sample data. Same shape as the real `teachings`
+   collection's public-safe fields (no Zoom info ever lives here or
+   in the real public collection — see loadTeachingPageConfig below).
+   --------------------------------------------------------------- */
+function demoTeachingDefaults(){
+  return {
+    subtitle: '', shortDescription: '', fullDescription: '', whatYouWillLearn: [],
+    instructor: 'The Unveiled Assembly', category: '', endTime: null,
+    timeZone: 'America/New_York', isFree: false, capacity: null, unlimitedCapacity: true,
+    format: 'zoom', location: null, featured: false, archived: false,
+    artwork: { hero: '', heroMobile: '', card: '', social: '', instagramStory: '', focalPosition: 'center', overlay: true, overlayStrength: 55 }
+  };
+}
+const DEMO_TEACHINGS = {
+  'demo-discernment': { id: 'demo-discernment', ...demoTeachingDefaults(),
+    title: 'Discernment', subtitle: 'The Ability to See Clearly', category: 'Discernment',
+    shortDescription: 'A deep dive into spiritual discernment — what it is, how to recognize it, and how to sharpen it in a world full of confusion.',
+    fullDescription: 'A deep dive into spiritual discernment — what it is, how to recognize it, and how to sharpen it in a world full of confusion.',
+    whatYouWillLearn: ['What spiritual discernment is', 'Types of discernment', 'How to recognize what you are perceiving', 'Biblical examples', 'Discernment vs. assumption', 'Practical exercises'],
+    date: demoNextWeekdayStr(4, 0), startTime: '19:30', price: 25, capacity: 50, unlimitedCapacity: false,
+    status: 'registration-open', featured: true },
+  'demo-prophetic': { id: 'demo-prophetic', ...demoTeachingDefaults(),
+    title: 'The Prophetic', subtitle: 'Developing Prophetic Sensitivity', category: 'Prophetic',
+    shortDescription: 'Understanding the prophetic gift and how to grow in spiritual sensitivity and maturity.',
+    fullDescription: 'Understanding the prophetic gift and how to grow in spiritual sensitivity and maturity.',
+    whatYouWillLearn: ['What the prophetic gift is', 'How prophetic sensitivity develops', 'Testing and confirming what you sense'],
+    date: demoNextWeekdayStr(4, 1), startTime: '19:30', price: 25,
+    status: 'published' },
+  'demo-voice': { id: 'demo-voice', ...demoTeachingDefaults(),
+    title: 'Hearing the Voice of God', subtitle: 'Recognizing How He Speaks', category: 'Prayer',
+    shortDescription: 'Learning to recognize and respond to the voice of God in everyday life.',
+    fullDescription: 'Learning to recognize and respond to the voice of God in everyday life.',
+    date: demoNextWeekdayStr(4, 2), startTime: '19:30', price: 25,
+    status: 'draft' },
+  'demo-dreams': { id: 'demo-dreams', ...demoTeachingDefaults(),
+    title: 'Dream Interpretation', subtitle: 'The Language of the Night', category: 'Dreams',
+    shortDescription: 'Understanding the language of dreams and how God speaks through them.',
+    fullDescription: 'Understanding the language of dreams and how God speaks through them.',
+    date: demoNextWeekdayStr(4, 3), startTime: '19:30', price: 25,
+    status: 'draft' },
+};
+let DEMO_TEACHING_ZOOM = {
+  'demo-discernment': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '000 000 0000', passcode: 'demo' }
+};
+let DEMO_TEACHING_REGISTRATIONS = [];
+let DEMO_TEACHING_REG_SEQ = 1;
+let DEMO_TEACHING_SEQ = 1;
+
+/* ---------------------------------------------------------------
    Shared markup injection
    --------------------------------------------------------------- */
 // Pages nested in a subdirectory (currently just /shop/) set
@@ -748,9 +797,54 @@ function dialogsHtml(){
           <span class="portal-label">Member Accounts</span>
           <div id="ownerMembersList"><p style="color:#656565">Loading member accounts…</p></div>
         </article>
-        <article class="portal-panel">
-          <span class="portal-label">Classes &amp; Materials</span>
-          <p style="color:#656565">Publishing Zoom links, materials, and class recordings isn't connected yet — this panel is next on the build list.</p>
+        <article class="portal-panel" style="grid-column:1/-1">
+          <span class="portal-label">Teaching Manager</span>
+          <p style="color:#656565;margin-bottom:16px">Create and run the weekly Teaching classes — the public Teaching page updates automatically from what's here. On the preview site this edits sample data only; on the live site it's real.</p>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+            <div class="teaching-tabs" id="teachingMgrTabs" role="tablist">
+              <button type="button" class="teaching-tab active" data-teaching-tab="upcoming">Upcoming</button>
+              <button type="button" class="teaching-tab" data-teaching-tab="drafts">Drafts</button>
+              <button type="button" class="teaching-tab" data-teaching-tab="completed">Completed</button>
+              <button type="button" class="teaching-tab" data-teaching-tab="cancelled">Cancelled</button>
+              <button type="button" class="teaching-tab" data-teaching-tab="all">All</button>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="portal-secondary" type="button" id="teachingMgrViewList">List</button>
+              <button class="portal-secondary" type="button" id="teachingMgrViewCalendar">Calendar</button>
+              <button class="portal-secondary" type="button" id="teachingMgrNewBtn" style="background:var(--black);color:var(--ivory)">+ New Teaching</button>
+            </div>
+          </div>
+          <div id="teachingMgrList"></div>
+          <div id="teachingMgrCalendar" hidden></div>
+
+          <div style="border-top:1px dashed #c7c7c7;padding-top:16px;margin-top:20px">
+            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Teaching Page Settings</strong>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+              <div class="form-field" style="min-width:220px">
+                <label for="teachingSettingsFeatured">Featured Teaching</label>
+                <select id="teachingSettingsFeatured" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"></select>
+              </div>
+              <div class="form-field" style="flex:0 0 140px">
+                <label for="teachingSettingsUpcomingCount">Upcoming count</label>
+                <select id="teachingSettingsUpcomingCount" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                  <option value="3">3</option><option value="6">6</option><option value="9">9</option>
+                </select>
+              </div>
+              <div class="form-field" style="flex:0 0 160px">
+                <label for="teachingSettingsDefaultTime">Default Thursday time</label>
+                <input id="teachingSettingsDefaultTime" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+              </div>
+            </div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowUpcoming" type="checkbox" /> Show Upcoming Teachings</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowLibrary" type="checkbox" /> Show Teaching Library</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowScripture" type="checkbox" /> Show Scripture Section</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowNewsletter" type="checkbox" /> Show Stay Connected</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsAutoArchive" type="checkbox" /> Auto-archive completed teachings</label>
+            </div>
+            <button class="portal-secondary" type="button" id="teachingSettingsSaveBtn">Save Teaching Page Settings</button>
+            <div class="form-status" id="teachingSettingsStatus" style="color:#6d6d6d;margin-top:8px"></div>
+          </div>
         </article>
         ${accountSettingsHtml('owner')}
       </div>
@@ -908,33 +1002,175 @@ function dialogsHtml(){
     </div>
   </dialog>
 
-  <dialog class="booking-dialog" id="classRegisterDialog" aria-labelledby="classRegisterTitle">
+  <dialog class="booking-dialog" id="teachingRegisterDialog" aria-labelledby="teachingRegisterTitle">
     <div class="booking-head">
       <div>
-        <div class="kicker" style="margin-bottom:0">Class Registration <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></div>
-        <h3 id="classRegisterTitle">Reserve your seat.</h3>
+        <div class="kicker" style="margin-bottom:0" id="teachingRegisterKicker">Teaching Registration</div>
+        <h3 id="teachingRegisterTitle">Reserve your seat.</h3>
       </div>
-      <button class="booking-close" id="closeClassRegister" type="button" aria-label="Close registration">×</button>
+      <button class="booking-close" id="closeTeachingRegister" type="button" aria-label="Close registration">×</button>
     </div>
     <div class="booking-body">
-      <p class="booking-intro" id="classRegisterIntro">This is a visual preview of class registration — no seat is actually reserved and nothing is sent yet.</p>
-      <form id="classRegisterForm">
+      <p class="booking-intro" id="teachingRegisterIntro"></p>
+      <form id="teachingRegisterForm">
+        <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+          <label for="teachingRegisterWebsite">Leave this field blank</label>
+          <input id="teachingRegisterWebsite" type="text" tabindex="-1" autocomplete="off" />
+        </div>
         <div class="booking-grid">
           <div class="booking-field">
-            <label for="classRegisterName">Your name</label>
-            <input id="classRegisterName" type="text" placeholder="First and last name" autocomplete="name" required />
+            <label for="teachingRegisterFirstName">First name</label>
+            <input id="teachingRegisterFirstName" type="text" autocomplete="given-name" required />
           </div>
           <div class="booking-field">
-            <label for="classRegisterEmail">Email address</label>
-            <input id="classRegisterEmail" type="email" placeholder="For class updates" autocomplete="email" required />
+            <label for="teachingRegisterLastName">Last name</label>
+            <input id="teachingRegisterLastName" type="text" autocomplete="family-name" required />
+          </div>
+          <div class="booking-field">
+            <label for="teachingRegisterEmail">Email address</label>
+            <input id="teachingRegisterEmail" type="email" placeholder="For confirmation and class access" autocomplete="email" required />
+          </div>
+          <div class="booking-field">
+            <label for="teachingRegisterPhoneNumber">Phone number</label>
+            <div style="display:flex;gap:8px">
+              <select id="teachingRegisterPhoneCountry" aria-label="Country code" style="flex:0 0 auto">${COUNTRY_OPTIONS}</select>
+              <input id="teachingRegisterPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required style="flex:1" />
+            </div>
           </div>
         </div>
+        <fieldset class="payment-demo" id="teachingRegisterPaymentFieldset" disabled>
+          <legend>Payment <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></legend>
+          <div class="booking-grid">
+            <div class="booking-field full">
+              <label>Card number</label>
+              <input type="text" value="4242 4242 4242 4242" readonly />
+            </div>
+            <div class="booking-field">
+              <label>Expiry</label>
+              <input type="text" value="12 / 29" readonly />
+            </div>
+            <div class="booking-field">
+              <label>CVC</label>
+              <input type="text" value="123" readonly />
+            </div>
+          </div>
+          <p class="payment-demo-note">This is a preview of what payment will look like once a real processor is connected. No card details are collected and no charge occurs today.</p>
+        </fieldset>
         <div class="booking-actions">
-          <button class="btn on-light fill" type="submit" id="classRegisterSubmitBtn">Register (Demo)</button>
-          <div class="booking-status" id="classRegisterStatus" role="status" aria-live="polite"></div>
+          <button class="btn on-light fill" type="submit" id="teachingRegisterSubmitBtn">Continue To Payment</button>
+          <div class="booking-status" id="teachingRegisterStatus" role="status" aria-live="polite"></div>
         </div>
-        <div class="booking-note">Class registration isn't connected to a real system yet — this shows what it will look like once it is.</div>
+        <div class="booking-note">Your seat is requested now and confirmed once payment is connected — you'll always be contacted at the email you provide. Private class access details are never posted publicly.</div>
       </form>
+    </div>
+  </dialog>
+
+  <dialog class="booking-dialog" id="teachingEditDialog" aria-labelledby="teachingEditTitle" style="max-width:720px">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0">Teaching Manager</div>
+        <h3 id="teachingEditTitle">New Teaching</h3>
+      </div>
+      <button class="booking-close" id="closeTeachingEdit" type="button" aria-label="Close teaching editor">×</button>
+    </div>
+    <div class="booking-body">
+      <form id="teachingEditForm">
+        <input type="hidden" id="teachingEditId" />
+        <strong class="teaching-edit-section-label">Basic Information</strong>
+        <div class="booking-grid">
+          <div class="booking-field full"><label for="teachingEditTitleInput">Teaching title</label><input id="teachingEditTitleInput" type="text" required /></div>
+          <div class="booking-field full"><label for="teachingEditSubtitle">Subtitle</label><input id="teachingEditSubtitle" type="text" /></div>
+          <div class="booking-field full"><label for="teachingEditShortDesc">Short description (used on cards + hero)</label><textarea id="teachingEditShortDesc" rows="2"></textarea></div>
+          <div class="booking-field full"><label for="teachingEditFullDesc">Full description (About This Teaching)</label><textarea id="teachingEditFullDesc" rows="4"></textarea></div>
+          <div class="booking-field full"><label for="teachingEditLearn">What you will learn — one per line</label><textarea id="teachingEditLearn" rows="4" placeholder="What spiritual discernment is&#10;Types of discernment&#10;..."></textarea></div>
+          <div class="booking-field"><label for="teachingEditInstructor">Instructor</label><input id="teachingEditInstructor" type="text" /></div>
+          <div class="booking-field"><label for="teachingEditCategory">Category</label><input id="teachingEditCategory" type="text" placeholder="e.g. Discernment" /></div>
+          <div class="booking-field"><label for="teachingEditDate">Date</label><input id="teachingEditDate" type="date" required /></div>
+          <div class="booking-field"><label for="teachingEditStartTime">Start time</label><input id="teachingEditStartTime" type="time" required /></div>
+          <div class="booking-field"><label for="teachingEditEndTime">End time (optional)</label><input id="teachingEditEndTime" type="time" /></div>
+          <div class="booking-field"><label for="teachingEditTimeZone">Time zone</label>
+            <select id="teachingEditTimeZone">
+              <option value="America/New_York">Eastern (America/New_York)</option>
+              <option value="America/Chicago">Central (America/Chicago)</option>
+              <option value="America/Denver">Mountain (America/Denver)</option>
+              <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
+              <option value="America/Anchorage">Alaska (America/Anchorage)</option>
+              <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
+            </select>
+          </div>
+          <div class="booking-field"><label for="teachingEditPrice">Price ($, blank = free)</label><input id="teachingEditPrice" type="number" min="0" step="0.01" /></div>
+          <div class="booking-field"><label for="teachingEditCapacity">Capacity</label><input id="teachingEditCapacity" type="number" min="1" /></div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding-top:22px"><input id="teachingEditUnlimited" type="checkbox" /> Unlimited capacity</label>
+        </div>
+
+        <strong class="teaching-edit-section-label">Class Format</strong>
+        <div class="booking-grid">
+          <div class="booking-field"><label for="teachingEditFormat">Format</label>
+            <select id="teachingEditFormat">
+              <option value="zoom">Zoom</option><option value="in-person">In Person</option>
+              <option value="hybrid">Hybrid</option><option value="other">Other</option>
+            </select>
+          </div>
+          <div class="booking-field"><label for="teachingEditLocation">Location (if in person/hybrid)</label><input id="teachingEditLocation" type="text" /></div>
+        </div>
+
+        <strong class="teaching-edit-section-label">Zoom (private — never shown publicly)</strong>
+        <div class="booking-grid">
+          <div class="booking-field full"><label for="teachingEditZoomUrl">Private Zoom URL</label><input id="teachingEditZoomUrl" type="url" placeholder="https://zoom.us/j/..." /></div>
+          <div class="booking-field"><label for="teachingEditZoomId">Meeting ID</label><input id="teachingEditZoomId" type="text" /></div>
+          <div class="booking-field"><label for="teachingEditZoomPasscode">Passcode</label><input id="teachingEditZoomPasscode" type="text" /></div>
+        </div>
+
+        <strong class="teaching-edit-section-label">Artwork (paste an image URL — direct upload isn't connected yet)</strong>
+        <div class="booking-grid">
+          <div class="booking-field full"><label for="teachingEditArtHero">Hero / main artwork URL</label><input id="teachingEditArtHero" type="url" /></div>
+          <div class="booking-field full"><label for="teachingEditArtHeroMobile">Mobile hero artwork URL (optional)</label><input id="teachingEditArtHeroMobile" type="url" /></div>
+          <div class="booking-field full"><label for="teachingEditArtCard">Card / thumbnail artwork URL</label><input id="teachingEditArtCard" type="url" /></div>
+          <div class="booking-field"><label for="teachingEditArtSocial">Social graphic URL (optional)</label><input id="teachingEditArtSocial" type="url" /></div>
+          <div class="booking-field"><label for="teachingEditArtStory">Instagram Story graphic URL (optional)</label><input id="teachingEditArtStory" type="url" /></div>
+          <div class="booking-field"><label for="teachingEditFocal">Hero focal position</label>
+            <select id="teachingEditFocal"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding-top:22px"><input id="teachingEditOverlay" type="checkbox" checked /> Dark overlay on hero</label>
+          <div class="booking-field"><label for="teachingEditOverlayStrength">Overlay strength (0–100)</label><input id="teachingEditOverlayStrength" type="range" min="0" max="100" value="55" /></div>
+        </div>
+
+        <strong class="teaching-edit-section-label">Status</strong>
+        <div class="booking-grid">
+          <div class="booking-field"><label for="teachingEditStatus">Status</label>
+            <select id="teachingEditStatus">
+              <option value="draft">Draft (not publicly visible)</option>
+              <option value="published">Published</option>
+              <option value="registration-open">Registration Open</option>
+              <option value="sold-out">Sold Out</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding-top:22px"><input id="teachingEditFeatured" type="checkbox" /> Make this the Featured Teaching</label>
+        </div>
+
+        <div class="booking-actions">
+          <button class="btn on-light fill" type="submit" id="teachingEditSubmitBtn">Save Teaching</button>
+          <button class="btn on-light" type="button" id="teachingEditDuplicateBtn">Duplicate As New</button>
+          <div class="booking-status" id="teachingEditStatusMsg" role="status" aria-live="polite"></div>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="booking-dialog" id="teachingRegistrantsDialog" aria-labelledby="teachingRegistrantsTitle">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0">Registrations</div>
+        <h3 id="teachingRegistrantsTitle">Registrants</h3>
+      </div>
+      <button class="booking-close" id="closeTeachingRegistrants" type="button" aria-label="Close registrants list">×</button>
+    </div>
+    <div class="booking-body">
+      <div id="teachingRegistrantsSummary" style="margin-bottom:14px;color:var(--ink-muted)"></div>
+      <input id="teachingRegistrantsSearch" type="text" placeholder="Search registrants…" style="width:100%;margin-bottom:14px" />
+      <div id="teachingRegistrantsList"></div>
     </div>
   </dialog>`;
 }
@@ -1054,6 +1290,87 @@ async function loadSchedulingConfig(){
 if(!DEMO_MODE) await loadSchedulingConfig();
 
 /* ---------------------------------------------------------------
+   Teaching Manager configuration + public teaching data. Same
+   real/demo split as scheduling above. Zoom details are deliberately
+   NOT part of this public load — they live in a separate admin-only
+   `teachingZoomInfo` collection so a public page read can never see
+   them, and are fetched only when the admin opens a teaching to edit
+   it (see wireTeachingManager below).
+   --------------------------------------------------------------- */
+let TEACHING_PAGE_SETTINGS = {
+  featuredTeachingId: 'demo-discernment', showUpcoming: true, upcomingCount: 6,
+  showLibrary: false, showScripture: true, showNewsletter: true,
+  defaultThursdayTime: '19:30', defaultTimeZone: 'America/New_York', autoArchiveCompleted: true
+};
+let TEACHINGS = DEMO_TEACHINGS;
+
+async function loadTeachingPageConfig(){
+  try {
+    const settingsSnap = await getDoc(doc(db, 'teachingPageSettings', 'global'));
+    if(settingsSnap.exists()) TEACHING_PAGE_SETTINGS = { ...TEACHING_PAGE_SETTINGS, ...settingsSnap.data() };
+  } catch (err) { /* keep defaults */ }
+  try {
+    const snap = await getDocs(collection(db, 'teachings'));
+    const map = {};
+    snap.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
+    TEACHINGS = map;
+  } catch (err) { /* keep whatever we had */ }
+}
+if(!DEMO_MODE) await loadTeachingPageConfig();
+
+function teachingIsPast(t){
+  if(!t.date) return false;
+  const end = t.date + 'T' + (t.endTime || t.startTime || '23:59');
+  return new Date(end) < new Date();
+}
+function visibleTeachingsList(){
+  // Drafts never render publicly even in demo mode, so the preview
+  // behaves the same as production would for a non-admin visitor.
+  return Object.values(TEACHINGS).filter(t => t.status !== 'draft' && t.status !== 'cancelled');
+}
+function upcomingTeachingsList(){
+  return visibleTeachingsList().filter(t => !teachingIsPast(t)).sort((a, b) => (a.date + (a.startTime || '')).localeCompare(b.date + (b.startTime || '')));
+}
+function featuredTeaching(){
+  const id = TEACHING_PAGE_SETTINGS.featuredTeachingId;
+  return (id && TEACHINGS[id] && TEACHINGS[id].status !== 'draft') ? TEACHINGS[id] : upcomingTeachingsList()[0] || null;
+}
+function teachingStatusButtonLabel(t){
+  if(t.status === 'sold-out') return 'SOLD OUT';
+  if(t.status === 'completed') return 'CLASS COMPLETED';
+  if(t.status === 'cancelled') return 'CANCELLED';
+  return 'REGISTER NOW';
+}
+function teachingStatusButtonDisabled(t){
+  return t.status === 'sold-out' || t.status === 'completed' || t.status === 'cancelled';
+}
+function formatTeachingDate(dateStr){
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Intl.DateTimeFormat(undefined, { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(y, m - 1, d));
+  } catch (err) { return dateStr; }
+}
+function formatTeachingDateShort(dateStr){
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(y, m - 1, d));
+  } catch (err) { return dateStr; }
+}
+function formatTeachingTime(hhmm, tz){
+  if(!hhmm) return '';
+  const [h, m] = hhmm.split(':').map(Number);
+  const label = minutesToLabel(h * 60 + m);
+  const abbr = tz ? tzAbbrFor(tz) : '';
+  return label + (abbr ? ' ' + abbr : '');
+}
+function teachingArtworkUrl(t, key){
+  return (t.artwork && t.artwork[key]) || (t.artwork && t.artwork.hero) || '';
+}
+function teachingCardArt(t){
+  return (t.artwork && (t.artwork.card || t.artwork.hero)) || '';
+}
+
+/* ---------------------------------------------------------------
    Nav / mobile menu
    --------------------------------------------------------------- */
 const nav = document.getElementById('nav');
@@ -1112,45 +1429,6 @@ storyDialog.addEventListener('close', () => { formStatus.textContent = ''; });
 testimonyForm.addEventListener('submit', event => {
   event.preventDefault();
   formStatus.textContent = "Thank you — this form isn't wired to storage yet, so nothing was saved. Please email your story to contactunveiledassembly@gmail.com for now.";
-});
-
-/* ---------------------------------------------------------------
-   Class registration — visual demonstration only, on every host
-   including production. Nothing here is persisted or sent anywhere;
-   it exists purely to show what registering for a class will look
-   like once a real class system is built and approved.
-   --------------------------------------------------------------- */
-const classRegisterDialog = document.getElementById('classRegisterDialog');
-const closeClassRegister = document.getElementById('closeClassRegister');
-const classRegisterForm = document.getElementById('classRegisterForm');
-const classRegisterStatus = document.getElementById('classRegisterStatus');
-const classRegisterIntro = document.getElementById('classRegisterIntro');
-let demoSeatsRemaining = { discern: 6 };
-
-document.addEventListener('click', event => {
-  const trigger = event.target.closest('.class-register-btn');
-  if(!trigger) return;
-  const classId = trigger.dataset.class || 'discern';
-  const className = trigger.dataset.className || 'this class';
-  const seats = demoSeatsRemaining[classId] ?? 6;
-  classRegisterForm.reset();
-  classRegisterStatus.textContent = '';
-  classRegisterForm.dataset.classId = classId;
-  classRegisterIntro.textContent = seats > 0
-    ? 'Sample seat count: ' + seats + ' remaining for ' + className + '. This is a visual preview — no seat is actually reserved yet.'
-    : 'Sample seat count: full for ' + className + ' (this is only a visual preview).';
-  classRegisterDialog.showModal();
-});
-closeClassRegister.addEventListener('click', () => classRegisterDialog.close());
-classRegisterDialog.addEventListener('click', event => {
-  if(event.target === classRegisterDialog) classRegisterDialog.close();
-});
-classRegisterForm.addEventListener('submit', event => {
-  event.preventDefault();
-  const classId = classRegisterForm.dataset.classId || 'discern';
-  if((demoSeatsRemaining[classId] ?? 0) > 0) demoSeatsRemaining[classId]--;
-  classRegisterStatus.textContent = 'Demo only — this is what a confirmed registration will look like. No seat was actually reserved and no email was sent.';
-  classRegisterForm.reset();
 });
 
 /* ---------------------------------------------------------------
@@ -2851,6 +3129,7 @@ document.addEventListener('click', event => {
 async function loadOwnerData(){
   if(!currentProfile || currentProfile.role !== 'admin') return;
   if(!DEMO_MODE){ try { await loadSchedulingConfig(); } catch (err) { /* keep whatever is already loaded */ } }
+  if(!DEMO_MODE){ try { await loadTeachingPageConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   renderSchedSettingsForm();
   renderSchedTypesList();
   renderSchedRulesList();
@@ -2858,6 +3137,7 @@ async function loadOwnerData(){
   renderSchedOverridesList();
   populateAdminBookTypeSelect();
   renderOwnerNotifications();
+  renderTeachingManager();
   await Promise.all([loadOwnerBookings(), loadOwnerConfirmed(), loadOwnerMembers(), loadBlockedDates()]);
 }
 
@@ -3149,6 +3429,578 @@ async function loadOwnerMembers(){
     container.innerHTML = '<p style="color:#656565">Could not load member accounts.</p>';
   }
 }
+
+/* ---------------------------------------------------------------
+   Teaching registration — public. Mirrors the one-on-one booking
+   dialog's pattern exactly: the registration itself is written for
+   real right now (pending payment), and only the payment step is a
+   visual demonstration until a real processor is connected.
+   --------------------------------------------------------------- */
+async function createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid }){
+  const t = TEACHINGS[teachingId] || {};
+  const data = {
+    teachingId, teachingTitle: t.title || '', teachingDate: t.date || '',
+    firstName, lastName, email, phone, status: 'pending_payment', uid: uid || null
+  };
+  if(DEMO_MODE){
+    DEMO_TEACHING_REGISTRATIONS.push({ id: 'demo-reg-' + (++DEMO_TEACHING_REG_SEQ), ...data });
+    return;
+  }
+  await setDoc(doc(collection(db, 'teachingRegistrations')), { ...data, registeredAt: serverTimestamp() });
+}
+
+async function fetchTeachingRegistrations(teachingId){
+  if(DEMO_MODE) return DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === teachingId);
+  try {
+    const snap = await getDocs(query(collection(db, 'teachingRegistrations'), where('teachingId', '==', teachingId)));
+    const rows = [];
+    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+    return rows;
+  } catch (err) { return []; }
+}
+
+const teachingRegisterDialog = document.getElementById('teachingRegisterDialog');
+const teachingRegisterForm = document.getElementById('teachingRegisterForm');
+const teachingRegisterStatus = document.getElementById('teachingRegisterStatus');
+const teachingRegisterSubmitBtn = document.getElementById('teachingRegisterSubmitBtn');
+
+function openTeachingRegister(teachingId){
+  const t = TEACHINGS[teachingId];
+  if(!t) return;
+  teachingRegisterForm.reset();
+  teachingRegisterStatus.textContent = '';
+  teachingRegisterForm.dataset.teachingId = teachingId;
+  document.getElementById('teachingRegisterTitle').textContent = t.title || 'Reserve your seat.';
+  document.getElementById('teachingRegisterIntro').textContent =
+    formatTeachingDate(t.date) + ' · ' + formatTeachingTime(t.startTime, t.timeZone) +
+    (t.format === 'zoom' ? ' · Live on Zoom' : t.location ? ' · ' + t.location : '') +
+    (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · Free');
+  document.getElementById('teachingRegisterSubmitBtn').textContent = t.price ? 'Continue To Payment' : 'Reserve My Seat';
+  if(currentUser && currentProfile){
+    const parts = (currentProfile.name || '').split(' ');
+    document.getElementById('teachingRegisterFirstName').value = parts[0] || '';
+    document.getElementById('teachingRegisterLastName').value = parts.slice(1).join(' ') || '';
+    document.getElementById('teachingRegisterEmail').value = currentProfile.email || '';
+  }
+  teachingRegisterDialog.showModal();
+}
+window.openTeachingRegister = openTeachingRegister;
+
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('.teaching-register-btn');
+  if(trigger && trigger.dataset.teachingId) openTeachingRegister(trigger.dataset.teachingId);
+});
+document.getElementById('closeTeachingRegister').addEventListener('click', () => teachingRegisterDialog.close());
+teachingRegisterDialog.addEventListener('click', event => {
+  if(event.target === teachingRegisterDialog) teachingRegisterDialog.close();
+});
+
+teachingRegisterForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const honeypot = document.getElementById('teachingRegisterWebsite').value;
+  const teachingId = teachingRegisterForm.dataset.teachingId;
+  const t = TEACHINGS[teachingId];
+  if(honeypot || !t) return;
+  if(throttledRecently('lastTeachingRegisterSubmit')){
+    teachingRegisterStatus.textContent = 'Please wait a moment before submitting another request.';
+    return;
+  }
+  const firstName = document.getElementById('teachingRegisterFirstName').value.trim();
+  const lastName = document.getElementById('teachingRegisterLastName').value.trim();
+  const email = document.getElementById('teachingRegisterEmail').value.trim();
+  const phone = toE164(document.getElementById('teachingRegisterPhoneCountry'), document.getElementById('teachingRegisterPhoneNumber'));
+  if(!phone){ teachingRegisterStatus.textContent = 'Enter a valid phone number, including country code.'; return; }
+  teachingRegisterSubmitBtn.disabled = true;
+  teachingRegisterStatus.textContent = 'Reserving your seat…';
+  try {
+    await createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid: currentUser ? currentUser.uid : null });
+    markThrottled('lastTeachingRegisterSubmit');
+    teachingRegisterStatus.textContent = "YOU'RE REGISTERED — " + t.title + ', ' + formatTeachingDate(t.date) + ' · ' +
+      formatTeachingTime(t.startTime, t.timeZone) + '. Your class access information will be sent to ' + email + ' before the class.';
+    teachingRegisterForm.reset();
+  } catch (err) {
+    teachingRegisterStatus.textContent = 'Could not submit your registration. Please try again.';
+  } finally {
+    teachingRegisterSubmitBtn.disabled = false;
+  }
+});
+
+/* ---------------------------------------------------------------
+   Teaching Manager — admin. Same real/demo split as the rest of the
+   admin dashboard. Zoom fields are written to a separate admin-only
+   collection (teachingZoomInfo) and are never merged into the public
+   TEACHINGS map, so a public page can never see them (Section 6/8 of
+   the request this was built from).
+   --------------------------------------------------------------- */
+async function fetchTeachingZoomInfo(id){
+  if(DEMO_MODE) return DEMO_TEACHING_ZOOM[id] || {};
+  try {
+    const snap = await getDoc(doc(db, 'teachingZoomInfo', id));
+    return snap.exists() ? snap.data() : {};
+  } catch (err) { return {}; }
+}
+
+async function saveTeaching(publicFields, zoomFields, existingId, makeFeatured){
+  const id = existingId || ('teaching-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+  if(DEMO_MODE){
+    TEACHINGS[id] = { ...(TEACHINGS[id] || demoTeachingDefaults()), ...publicFields, id };
+    if(zoomFields.zoomUrl || zoomFields.meetingId || zoomFields.passcode) DEMO_TEACHING_ZOOM[id] = zoomFields;
+    if(makeFeatured) TEACHING_PAGE_SETTINGS.featuredTeachingId = id;
+    return id;
+  }
+  await setDoc(doc(db, 'teachings', id), { ...publicFields, updatedAt: serverTimestamp() }, { merge: true });
+  if(zoomFields.zoomUrl || zoomFields.meetingId || zoomFields.passcode){
+    await setDoc(doc(db, 'teachingZoomInfo', id), zoomFields, { merge: true });
+  }
+  if(makeFeatured){
+    await setDoc(doc(db, 'teachingPageSettings', 'global'), { ...TEACHING_PAGE_SETTINGS, featuredTeachingId: id }, { merge: true });
+  }
+  await loadTeachingPageConfig();
+  return id;
+}
+
+async function setTeachingArchived(id, archived){
+  if(DEMO_MODE){ if(TEACHINGS[id]) TEACHINGS[id].archived = archived; return; }
+  await updateDoc(doc(db, 'teachings', id), { archived });
+  await loadTeachingPageConfig();
+}
+
+function collectTeachingEditForm(){
+  const whatYouWillLearn = document.getElementById('teachingEditLearn').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const priceRaw = document.getElementById('teachingEditPrice').value;
+  const publicFields = {
+    title: document.getElementById('teachingEditTitleInput').value.trim(),
+    subtitle: document.getElementById('teachingEditSubtitle').value.trim(),
+    shortDescription: document.getElementById('teachingEditShortDesc').value.trim(),
+    fullDescription: document.getElementById('teachingEditFullDesc').value.trim(),
+    whatYouWillLearn,
+    instructor: document.getElementById('teachingEditInstructor').value.trim(),
+    category: document.getElementById('teachingEditCategory').value.trim(),
+    date: document.getElementById('teachingEditDate').value,
+    startTime: document.getElementById('teachingEditStartTime').value,
+    endTime: document.getElementById('teachingEditEndTime').value || null,
+    timeZone: document.getElementById('teachingEditTimeZone').value,
+    price: priceRaw ? Number(priceRaw) : null,
+    isFree: !priceRaw,
+    capacity: document.getElementById('teachingEditUnlimited').checked ? null : (Number(document.getElementById('teachingEditCapacity').value) || null),
+    unlimitedCapacity: document.getElementById('teachingEditUnlimited').checked,
+    format: document.getElementById('teachingEditFormat').value,
+    location: document.getElementById('teachingEditLocation').value.trim() || null,
+    artwork: {
+      hero: document.getElementById('teachingEditArtHero').value.trim(),
+      heroMobile: document.getElementById('teachingEditArtHeroMobile').value.trim(),
+      card: document.getElementById('teachingEditArtCard').value.trim(),
+      social: document.getElementById('teachingEditArtSocial').value.trim(),
+      instagramStory: document.getElementById('teachingEditArtStory').value.trim(),
+      focalPosition: document.getElementById('teachingEditFocal').value,
+      overlay: document.getElementById('teachingEditOverlay').checked,
+      overlayStrength: Number(document.getElementById('teachingEditOverlayStrength').value)
+    },
+    status: document.getElementById('teachingEditStatus').value
+  };
+  const zoomFields = {
+    zoomUrl: document.getElementById('teachingEditZoomUrl').value.trim(),
+    meetingId: document.getElementById('teachingEditZoomId').value.trim(),
+    passcode: document.getElementById('teachingEditZoomPasscode').value.trim()
+  };
+  return { publicFields, zoomFields, makeFeatured: document.getElementById('teachingEditFeatured').checked };
+}
+
+function fillTeachingEditForm(t, zoom){
+  const g = id => document.getElementById(id);
+  g('teachingEditId').value = t ? t.id : '';
+  g('teachingEditTitle').textContent = t ? 'Edit Teaching' : 'New Teaching';
+  g('teachingEditTitleInput').value = t ? t.title || '' : '';
+  g('teachingEditSubtitle').value = t ? t.subtitle || '' : '';
+  g('teachingEditShortDesc').value = t ? t.shortDescription || '' : '';
+  g('teachingEditFullDesc').value = t ? t.fullDescription || '' : '';
+  g('teachingEditLearn').value = t && t.whatYouWillLearn ? t.whatYouWillLearn.join('\n') : '';
+  g('teachingEditInstructor').value = t ? (t.instructor || 'The Unveiled Assembly') : 'The Unveiled Assembly';
+  g('teachingEditCategory').value = t ? t.category || '' : '';
+  g('teachingEditDate').value = t ? t.date || '' : '';
+  g('teachingEditStartTime').value = t ? t.startTime || TEACHING_PAGE_SETTINGS.defaultThursdayTime : TEACHING_PAGE_SETTINGS.defaultThursdayTime;
+  g('teachingEditEndTime').value = t ? t.endTime || '' : '';
+  g('teachingEditTimeZone').value = t ? (t.timeZone || TEACHING_PAGE_SETTINGS.defaultTimeZone) : TEACHING_PAGE_SETTINGS.defaultTimeZone;
+  g('teachingEditPrice').value = t && t.price ? t.price : '';
+  g('teachingEditCapacity').value = t && t.capacity ? t.capacity : '';
+  g('teachingEditUnlimited').checked = t ? !!t.unlimitedCapacity : true;
+  g('teachingEditFormat').value = t ? t.format || 'zoom' : 'zoom';
+  g('teachingEditLocation').value = t ? t.location || '' : '';
+  g('teachingEditZoomUrl').value = zoom ? zoom.zoomUrl || '' : '';
+  g('teachingEditZoomId').value = zoom ? zoom.meetingId || '' : '';
+  g('teachingEditZoomPasscode').value = zoom ? zoom.passcode || '' : '';
+  const art = (t && t.artwork) || {};
+  g('teachingEditArtHero').value = art.hero || '';
+  g('teachingEditArtHeroMobile').value = art.heroMobile || '';
+  g('teachingEditArtCard').value = art.card || '';
+  g('teachingEditArtSocial').value = art.social || '';
+  g('teachingEditArtStory').value = art.instagramStory || '';
+  g('teachingEditFocal').value = art.focalPosition || 'center';
+  g('teachingEditOverlay').checked = art.overlay !== false;
+  g('teachingEditOverlayStrength').value = art.overlayStrength != null ? art.overlayStrength : 55;
+  g('teachingEditStatus').value = t ? t.status || 'draft' : 'draft';
+  g('teachingEditFeatured').checked = t ? TEACHING_PAGE_SETTINGS.featuredTeachingId === t.id : false;
+}
+
+const teachingEditDialog = document.getElementById('teachingEditDialog');
+const teachingEditForm = document.getElementById('teachingEditForm');
+const teachingEditStatusMsg = document.getElementById('teachingEditStatusMsg');
+
+async function openTeachingEditor(id){
+  const t = id ? TEACHINGS[id] : null;
+  const zoom = id ? await fetchTeachingZoomInfo(id) : {};
+  fillTeachingEditForm(t, zoom);
+  teachingEditStatusMsg.textContent = '';
+  teachingEditDialog.showModal();
+}
+document.getElementById('teachingMgrNewBtn').addEventListener('click', () => openTeachingEditor(null));
+document.getElementById('closeTeachingEdit').addEventListener('click', () => teachingEditDialog.close());
+teachingEditDialog.addEventListener('click', event => {
+  if(event.target === teachingEditDialog) teachingEditDialog.close();
+});
+
+teachingEditForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const existingId = document.getElementById('teachingEditId').value || null;
+  const { publicFields, zoomFields, makeFeatured } = collectTeachingEditForm();
+  if(!publicFields.title || !publicFields.date || !publicFields.startTime){
+    teachingEditStatusMsg.textContent = 'Title, date, and start time are required.';
+    return;
+  }
+  teachingEditStatusMsg.textContent = 'Saving…';
+  try {
+    await saveTeaching(publicFields, zoomFields, existingId, makeFeatured);
+    renderTeachingManager();
+    teachingEditStatusMsg.textContent = DEMO_MODE ? 'Saved to this preview only — sample data.' : 'Saved.';
+  } catch (err) {
+    teachingEditStatusMsg.textContent = 'Could not save that teaching.';
+  }
+});
+
+document.getElementById('teachingEditDuplicateBtn').addEventListener('click', async () => {
+  const { publicFields, zoomFields } = collectTeachingEditForm();
+  if(!publicFields.title){ teachingEditStatusMsg.textContent = 'Enter a title before duplicating.'; return; }
+  publicFields.title = publicFields.title + ' (Copy)';
+  publicFields.status = 'draft';
+  teachingEditStatusMsg.textContent = 'Duplicating…';
+  try {
+    const newId = await saveTeaching(publicFields, zoomFields, null, false);
+    renderTeachingManager();
+    await openTeachingEditor(newId);
+    teachingEditStatusMsg.textContent = 'Duplicated as a new draft — adjust the date and publish when ready.';
+  } catch (err) {
+    teachingEditStatusMsg.textContent = 'Could not duplicate that teaching.';
+  }
+});
+
+/* ---- Registrants dialog ---- */
+const teachingRegistrantsDialog = document.getElementById('teachingRegistrantsDialog');
+let teachingRegistrantsCache = [];
+
+function teachingRegistrantRowHtml(r){
+  return '<div class="portal-row" style="padding:8px 0">' +
+    '<div><strong>' + escapeHtml(r.firstName + ' ' + r.lastName) + '</strong><small>' + escapeHtml(r.email) +
+    (r.phone ? ' · ' + escapeHtml(r.phone) : '') + '</small></div>' +
+    '<span class="portal-access">' + escapeHtml(r.status === 'confirmed' ? 'Confirmed' : r.status === 'cancelled' ? 'Cancelled' : 'Pending Payment') + '</span>' +
+    '</div>';
+}
+
+async function openTeachingRegistrants(id){
+  const t = TEACHINGS[id];
+  if(!t) return;
+  document.getElementById('teachingRegistrantsTitle').textContent = t.title || 'Registrants';
+  document.getElementById('teachingRegistrantsList').innerHTML = '<p style="color:#656565">Loading…</p>';
+  document.getElementById('teachingRegistrantsSearch').value = '';
+  teachingRegistrantsDialog.showModal();
+  teachingRegistrantsCache = await fetchTeachingRegistrations(id);
+  const revenue = teachingRegistrantsCache.filter(r => r.status !== 'cancelled').length * (t.price || 0);
+  document.getElementById('teachingRegistrantsSummary').textContent =
+    'Registered: ' + teachingRegistrantsCache.length +
+    (t.unlimitedCapacity ? '' : ' · Capacity: ' + (t.capacity || '—')) +
+    (t.price ? ' · Revenue (once paid): $' + revenue.toFixed(2) : '');
+  renderTeachingRegistrantsList(teachingRegistrantsCache);
+}
+function renderTeachingRegistrantsList(rows){
+  const container = document.getElementById('teachingRegistrantsList');
+  container.innerHTML = rows.length === 0
+    ? '<p style="color:#8a8a8a;font-size:12px">No registrations yet.</p>'
+    : rows.map(teachingRegistrantRowHtml).join('');
+}
+document.getElementById('closeTeachingRegistrants').addEventListener('click', () => teachingRegistrantsDialog.close());
+teachingRegistrantsDialog.addEventListener('click', event => {
+  if(event.target === teachingRegistrantsDialog) teachingRegistrantsDialog.close();
+});
+document.getElementById('teachingRegistrantsSearch').addEventListener('input', event => {
+  const q = event.target.value.trim().toLowerCase();
+  renderTeachingRegistrantsList(!q ? teachingRegistrantsCache : teachingRegistrantsCache.filter(r =>
+    (r.firstName + ' ' + r.lastName + ' ' + r.email).toLowerCase().includes(q)));
+});
+
+/* ---- List / calendar / tabs ---- */
+let teachingMgrActiveTab = 'upcoming';
+
+function teachingsForTab(tab){
+  const all = Object.values(TEACHINGS);
+  if(tab === 'drafts') return all.filter(t => t.status === 'draft');
+  if(tab === 'cancelled') return all.filter(t => t.status === 'cancelled');
+  if(tab === 'completed') return all.filter(t => t.status === 'completed' || (teachingIsPast(t) && t.status !== 'cancelled' && t.status !== 'draft'));
+  if(tab === 'all') return all;
+  return all.filter(t => t.status !== 'draft' && t.status !== 'cancelled' && t.status !== 'completed' && !teachingIsPast(t));
+}
+
+function teachingMgrRowHtml(t){
+  const featured = TEACHING_PAGE_SETTINGS.featuredTeachingId === t.id;
+  return '<div class="portal-row" data-teaching-id="' + escapeHtml(t.id) + '" style="padding:10px 0;flex-wrap:wrap">' +
+    '<div><strong>' + escapeHtml(t.title || '(untitled)') + '</strong>' +
+    (featured ? ' <span class="verify-badge" style="background:var(--black);color:var(--ivory);border-color:var(--black)">Featured</span>' : '') +
+    '<small>' + escapeHtml(formatTeachingDate(t.date || '') + ' · ' + formatTeachingTime(t.startTime, t.timeZone) + ' · ' + (t.status || 'draft')) + '</small></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+    '<button class="portal-secondary teaching-mgr-edit" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Edit</button>' +
+    '<button class="portal-secondary teaching-mgr-registrants" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Registrants</button>' +
+    '<button class="portal-secondary teaching-mgr-archive" type="button" style="min-height:28px;padding:0 10px;font-size:9px">' + (t.archived ? 'Unarchive' : 'Archive') + '</button>' +
+    '</div></div>';
+}
+
+function renderTeachingManagerList(){
+  const container = document.getElementById('teachingMgrList');
+  if(!container) return;
+  const items = teachingsForTab(teachingMgrActiveTab).sort((a, b) => ((a.date || '') + (a.startTime || '')).localeCompare((b.date || '') + (b.startTime || '')));
+  container.innerHTML = items.length === 0
+    ? '<p style="color:#8a8a8a;font-size:12px">No teachings in this view yet.</p>'
+    : items.map(teachingMgrRowHtml).join('');
+}
+
+function renderTeachingManagerCalendar(){
+  const container = document.getElementById('teachingMgrCalendar');
+  if(!container) return;
+  const items = Object.values(TEACHINGS).filter(t => t.date).sort((a, b) => (a.date + (a.startTime || '')).localeCompare(b.date + (b.startTime || '')));
+  if(items.length === 0){ container.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No teachings scheduled yet.</p>'; return; }
+  const byMonth = {};
+  items.forEach(t => { const key = t.date.slice(0, 7); (byMonth[key] = byMonth[key] || []).push(t); });
+  container.innerHTML = Object.keys(byMonth).sort().map(key => {
+    const [y, m] = key.split('-').map(Number);
+    const monthLabel = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1)).toUpperCase();
+    const rows = byMonth[key].map(t => {
+      const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(new Date(t.date + 'T12:00:00'));
+      const day = Number(t.date.split('-')[2]);
+      return '<div class="portal-row teaching-mgr-cal-row" data-teaching-id="' + escapeHtml(t.id) + '" style="padding:8px 0;cursor:pointer">' +
+        '<div><strong>' + weekday + ' ' + day + '</strong><small>' + escapeHtml(t.title || '(untitled)') + ' · ' + (t.status || 'draft') + '</small></div></div>';
+    }).join('');
+    return '<div style="margin-bottom:18px"><div class="eyebrow" style="color:#8a8a8a;margin-bottom:6px">' + monthLabel + '</div>' + rows + '</div>';
+  }).join('');
+}
+
+function populateFeaturedTeachingSelect(){
+  const select = document.getElementById('teachingSettingsFeatured');
+  if(!select) return;
+  const current = TEACHING_PAGE_SETTINGS.featuredTeachingId;
+  const items = Object.values(TEACHINGS).filter(t => t.status !== 'cancelled');
+  select.innerHTML = '<option value="">None (defaults to next upcoming)</option>' +
+    items.map(t => '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.title || t.id) + ' — ' + escapeHtml(formatTeachingDateShort(t.date || '')) + '</option>').join('');
+  select.value = current && items.some(t => t.id === current) ? current : '';
+}
+
+function renderTeachingManager(){
+  if(!document.getElementById('teachingMgrList')) return;
+  renderTeachingManagerList();
+  renderTeachingManagerCalendar();
+  populateFeaturedTeachingSelect();
+  document.getElementById('teachingSettingsUpcomingCount').value = String(TEACHING_PAGE_SETTINGS.upcomingCount || 6);
+  document.getElementById('teachingSettingsDefaultTime').value = TEACHING_PAGE_SETTINGS.defaultThursdayTime || '19:30';
+  document.getElementById('teachingSettingsShowUpcoming').checked = TEACHING_PAGE_SETTINGS.showUpcoming !== false;
+  document.getElementById('teachingSettingsShowLibrary').checked = !!TEACHING_PAGE_SETTINGS.showLibrary;
+  document.getElementById('teachingSettingsShowScripture').checked = TEACHING_PAGE_SETTINGS.showScripture !== false;
+  document.getElementById('teachingSettingsShowNewsletter').checked = TEACHING_PAGE_SETTINGS.showNewsletter !== false;
+  document.getElementById('teachingSettingsAutoArchive').checked = TEACHING_PAGE_SETTINGS.autoArchiveCompleted !== false;
+}
+
+document.getElementById('teachingMgrTabs').addEventListener('click', event => {
+  const btn = event.target.closest('.teaching-tab');
+  if(!btn) return;
+  teachingMgrActiveTab = btn.dataset.teachingTab;
+  document.querySelectorAll('#teachingMgrTabs .teaching-tab').forEach(b => b.classList.toggle('active', b === btn));
+  renderTeachingManagerList();
+});
+document.getElementById('teachingMgrViewList').addEventListener('click', () => {
+  document.getElementById('teachingMgrList').hidden = false;
+  document.getElementById('teachingMgrCalendar').hidden = true;
+});
+document.getElementById('teachingMgrViewCalendar').addEventListener('click', () => {
+  document.getElementById('teachingMgrList').hidden = true;
+  document.getElementById('teachingMgrCalendar').hidden = false;
+});
+
+document.getElementById('teachingMgrList').addEventListener('click', async event => {
+  const row = event.target.closest('[data-teaching-id]');
+  if(!row) return;
+  const id = row.dataset.teachingId;
+  if(event.target.closest('.teaching-mgr-edit')) return openTeachingEditor(id);
+  if(event.target.closest('.teaching-mgr-registrants')) return openTeachingRegistrants(id);
+  if(event.target.closest('.teaching-mgr-archive')){
+    try { await setTeachingArchived(id, !TEACHINGS[id].archived); renderTeachingManagerList(); }
+    catch (err) { /* leave as-is on failure */ }
+  }
+});
+document.getElementById('teachingMgrCalendar').addEventListener('click', event => {
+  const row = event.target.closest('.teaching-mgr-cal-row');
+  if(row) openTeachingEditor(row.dataset.teachingId);
+});
+
+document.getElementById('teachingSettingsSaveBtn').addEventListener('click', async () => {
+  const status = document.getElementById('teachingSettingsStatus');
+  const updated = {
+    ...TEACHING_PAGE_SETTINGS,
+    featuredTeachingId: document.getElementById('teachingSettingsFeatured').value || null,
+    upcomingCount: Number(document.getElementById('teachingSettingsUpcomingCount').value) || 6,
+    defaultThursdayTime: document.getElementById('teachingSettingsDefaultTime').value || '19:30',
+    showUpcoming: document.getElementById('teachingSettingsShowUpcoming').checked,
+    showLibrary: document.getElementById('teachingSettingsShowLibrary').checked,
+    showScripture: document.getElementById('teachingSettingsShowScripture').checked,
+    showNewsletter: document.getElementById('teachingSettingsShowNewsletter').checked,
+    autoArchiveCompleted: document.getElementById('teachingSettingsAutoArchive').checked
+  };
+  status.textContent = 'Saving…';
+  if(DEMO_MODE){
+    TEACHING_PAGE_SETTINGS = updated;
+  } else {
+    try { await setDoc(doc(db, 'teachingPageSettings', 'global'), updated); await loadTeachingPageConfig(); }
+    catch (err) { status.textContent = 'Could not save settings.'; return; }
+  }
+  status.textContent = DEMO_MODE ? 'Saved to this preview only — sample data.' : 'Saved.';
+});
+
+/* ---------------------------------------------------------------
+   Public Teaching page rendering (teachings.html) and detail page
+   (teaching-detail.html) — both no-op harmlessly on every other page.
+   --------------------------------------------------------------- */
+function teachingCardHtml(t){
+  const art = teachingCardArt(t);
+  return '<a class="teaching-card" href="' + BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id) + '"' +
+    (art ? ' style="background-image:linear-gradient(180deg,rgba(10,10,10,.05),rgba(10,10,10,.75)),url(\'' + escapeHtml(art) + '\')"' : '') + '>' +
+    '<div class="teaching-card-body">' +
+    '<span class="teaching-card-eyebrow">' + escapeHtml(t.category || 'Teaching') + '</span>' +
+    '<h3>' + escapeHtml(t.title || '') + '</h3>' +
+    '<p>' + escapeHtml(formatTeachingDateShort(t.date || '')) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) +
+    (t.price ? ' · $' + Number(t.price).toFixed(2) : '') + '</p>' +
+    '<span class="teaching-card-arrow">View Class →</span>' +
+    '</div></a>';
+}
+
+function renderTeachingHero(){
+  const wrap = document.getElementById('teachingHero');
+  if(!wrap) return;
+  const t = featuredTeaching();
+  if(!t){
+    wrap.innerHTML = '<div class="section-inner reveal"><div class="eyebrow">Teachings</div><h1 class="display">New Teachings<br>Coming Soon.</h1></div>';
+    return;
+  }
+  const heroArt = teachingArtworkUrl(t, 'hero');
+  const overlay = t.artwork && t.artwork.overlay !== false;
+  const overlayStrength = (t.artwork && t.artwork.overlayStrength != null) ? t.artwork.overlayStrength : 55;
+  wrap.style.backgroundImage = heroArt ? "url('" + heroArt + "')" : '';
+  wrap.style.backgroundPosition = (t.artwork && t.artwork.focalPosition) || 'center';
+  wrap.innerHTML =
+    '<div class="teaching-hero-overlay" style="opacity:' + (overlay ? overlayStrength / 100 : 0) + '"></div>' +
+    '<div class="teaching-hero-inner reveal">' +
+    '<div class="eyebrow">Upcoming Class</div>' +
+    '<h1 class="display">' + escapeHtml(t.title || '') + '</h1>' +
+    (t.subtitle ? '<p class="serif-heading teaching-hero-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    '<p class="teaching-hero-desc">' + escapeHtml(t.shortDescription || '') + '</p>' +
+    '<div class="teaching-hero-meta">' +
+    '<span>' + escapeHtml(formatTeachingDate(t.date || '').toUpperCase()) + '</span>' +
+    '<span>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</span>' +
+    '<span>' + (t.format === 'zoom' ? 'LIVE ON ZOOM' : t.format === 'in-person' ? 'IN PERSON' : t.format === 'hybrid' ? 'HYBRID' : 'CLASS') + '</span>' +
+    '<span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'FREE') + '</span>' +
+    '</div>' +
+    '<div class="teaching-hero-actions">' +
+    '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
+      (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
+    '<a class="btn" href="' + BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id) + '">View Details</a>' +
+    '</div></div>';
+}
+
+function renderTeachingCards(){
+  const wrap = document.getElementById('teachingCardsList');
+  const section = document.getElementById('teachingCardsSection');
+  if(!wrap || !section) return;
+  if(!TEACHING_PAGE_SETTINGS.showUpcoming){ section.hidden = true; return; }
+  const subhead = document.getElementById('teachingCardsSubhead');
+  if(subhead) subhead.textContent = 'Every Thursday · ' + formatTeachingTime(TEACHING_PAGE_SETTINGS.defaultThursdayTime, TEACHING_PAGE_SETTINGS.defaultTimeZone);
+  const featuredId = featuredTeaching() ? featuredTeaching().id : null;
+  const items = upcomingTeachingsList().filter(t => t.id !== featuredId).slice(0, TEACHING_PAGE_SETTINGS.upcomingCount || 6);
+  section.hidden = items.length === 0;
+  wrap.innerHTML = items.map(teachingCardHtml).join('');
+}
+
+function renderTeachingLibrarySection(){
+  const section = document.getElementById('teachingLibrarySection');
+  if(!section) return;
+  section.hidden = !TEACHING_PAGE_SETTINGS.showLibrary;
+}
+function renderTeachingScriptureSection(){
+  const section = document.getElementById('teachingScriptureSection');
+  if(section) section.hidden = !TEACHING_PAGE_SETTINGS.showScripture;
+}
+function renderTeachingNewsletterSection(){
+  const section = document.getElementById('teachingNewsletterSection');
+  if(section) section.hidden = !TEACHING_PAGE_SETTINGS.showNewsletter;
+}
+
+function renderTeachingDetailPage(){
+  const wrap = document.getElementById('teachingDetailRoot');
+  if(!wrap) return;
+  const id = new URLSearchParams(window.location.search).get('id');
+  const t = id ? TEACHINGS[id] : null;
+  if(!t || t.status === 'draft'){
+    wrap.innerHTML = '<div class="section-inner reveal" style="padding-top:160px;text-align:center">' +
+      '<div class="eyebrow">Teachings</div><h1 class="display" style="margin-bottom:24px">Not Available</h1>' +
+      '<p style="color:var(--stone);margin-bottom:30px">This teaching isn\'t available right now.</p>' +
+      '<a class="btn" href="' + BASE + 'teachings.html">← Back To Teachings</a></div>';
+    return;
+  }
+  const heroArt = teachingArtworkUrl(t, 'hero');
+  const overlay = t.artwork && t.artwork.overlay !== false;
+  const overlayStrength = (t.artwork && t.artwork.overlayStrength != null) ? t.artwork.overlayStrength : 55;
+  const learnHtml = (t.whatYouWillLearn || []).map(li => '<li>' + escapeHtml(li) + '</li>').join('');
+  wrap.innerHTML =
+    '<header class="teaching-detail-hero" style="' + (heroArt ? "background-image:url('" + heroArt + "');" : '') + 'background-position:' + ((t.artwork && t.artwork.focalPosition) || 'center') + '">' +
+    '<div class="teaching-hero-overlay" style="opacity:' + (overlay ? overlayStrength / 100 : 0) + '"></div>' +
+    '<div class="teaching-hero-inner reveal">' +
+    '<div class="eyebrow">' + escapeHtml(t.category || 'Teaching') + '</div>' +
+    '<h1 class="display">' + escapeHtml(t.title || '') + '</h1>' +
+    (t.subtitle ? '<p class="serif-heading teaching-hero-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    '</div></header>' +
+    '<section class="on-light-section">' +
+    '<div class="teaching-detail-grid reveal">' +
+    '<div class="teaching-detail-facts">' +
+    '<div><span>Date</span><strong>' + escapeHtml(formatTeachingDate(t.date || '')) + '</strong></div>' +
+    '<div><span>Time</span><strong>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</strong></div>' +
+    '<div><span>Format</span><strong>' + (t.format === 'zoom' ? 'Live on Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + escapeHtml(t.location) : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Other') + '</strong></div>' +
+    '<div><span>Price</span><strong>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</strong></div>' +
+    '<div><span>Instructor</span><strong>' + escapeHtml(t.instructor || 'The Unveiled Assembly') + '</strong></div>' +
+    '<button class="btn on-light fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
+      (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
+    '</div>' +
+    '<div class="teaching-detail-copy">' +
+    '<h2 class="serif-heading">About This Teaching</h2>' +
+    '<p>' + escapeHtml(t.fullDescription || t.shortDescription || '') + '</p>' +
+    (learnHtml ? '<h2 class="serif-heading" style="margin-top:36px">What You Will Learn</h2><ul class="teaching-learn-list">' + learnHtml + '</ul>' : '') +
+    '</div></div></section>';
+}
+
+function renderPublicTeachingPages(){
+  const page = document.body.dataset.page;
+  if(page === 'teachings'){
+    renderTeachingHero();
+    renderTeachingCards();
+    renderTeachingLibrarySection();
+    renderTeachingScriptureSection();
+    renderTeachingNewsletterSection();
+  } else if(page === 'teaching-detail'){
+    renderTeachingDetailPage();
+  }
+}
+renderPublicTeachingPages();
 
 /* ---------------------------------------------------------------
    Auth state
