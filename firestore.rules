@@ -130,6 +130,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Owner Media Library — images uploaded from Owner → Media, reused
+    // across Teaching/Scripture images. Same pattern as teachingPageSettings:
+    // public read (the images themselves are already public once used on a
+    // page), admin-only write.
+    match /mediaLibrary/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Teaching registrations hold personal data, so the same pattern as
     // `bookings` above: only the admin or the registrant themself (if
     // signed in) can read one back; anyone can create one (guest

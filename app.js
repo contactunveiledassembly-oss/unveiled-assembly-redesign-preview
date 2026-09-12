@@ -736,13 +736,20 @@ function dialogsHtml(){
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="media">
-          <span class="portal-label">Media</span>
-          <p class="admin-panel-intro">Every image currently uploaded to a teaching, gathered in one place. Images are added and replaced from Teachings → open a class → Images — this is where you can see everything at a glance.</p>
+          <div class="admin-panel-head">
+            <div>
+              <span class="portal-label">Media</span>
+              <p class="admin-panel-intro">Every image you've uploaded, in one place. Upload here first, then use "Use For Teaching" to put it on a class — or upload directly from Teachings → open a class → Images.</p>
+            </div>
+            <div class="admin-panel-head-actions">
+              <label class="admin-btn-solid" id="ownerMediaUploadLabel" style="cursor:pointer">Upload New Image<input type="file" accept="image/*" id="ownerMediaUploadFile" hidden /></label>
+            </div>
+          </div>
           <div id="ownerMediaGallery" class="admin-media-gallery"></div>
         </article>
-        <article class="portal-panel wine" data-owner-section="bookings">
+        <article class="portal-panel" data-owner-section="bookings">
           <span class="portal-label">Pending Booking Requests</span>
-          <div id="ownerBookingsList"><p style="color:#d7d7d7">Loading booking requests…</p></div>
+          <div id="ownerBookingsList"><p style="color:#656565">Loading booking requests…</p></div>
         </article>
         <article class="portal-panel" data-owner-section="bookings">
           <span class="portal-label">Confirmed Upcoming Appointments</span>
@@ -969,8 +976,8 @@ function dialogsHtml(){
               <span class="admin-microlabel">Scripture Image <span class="admin-hint">(optional)</span></span>
               <div class="admin-image-preview" id="teachingSettingsScriptureImagePreview"></div>
               <div class="admin-image-actions">
-                <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingSettingsScriptureImageFile" hidden /></label>
-                <button type="button" class="admin-image-remove-btn" id="teachingSettingsScriptureImageRemove">Remove</button>
+                <label class="admin-image-upload-btn"><span class="admin-image-upload-btn-text">Upload Image</span><input type="file" accept="image/*" id="teachingSettingsScriptureImageFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="teachingSettingsScriptureImageRemove">Remove Image</button>
               </div>
               <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingSettingsScriptureImage" type="url" /></details>
             </div>
@@ -989,27 +996,40 @@ function dialogsHtml(){
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="settings">
+          <span class="portal-label">Account Profile</span>
+          <p class="admin-panel-intro">Your name, photo, and role, as shown across the Owner dashboard.</p>
+          <div class="admin-profile-photo-row">
+            <div class="admin-profile-photo" id="ownerProfilePhotoPreview">?</div>
+            <div class="admin-profile-photo-actions">
+              <label class="admin-image-upload-btn" style="cursor:pointer">Upload Photo<input type="file" accept="image/*" id="ownerProfilePhotoFile" hidden /></label>
+              <button type="button" class="admin-image-remove-btn" id="ownerProfilePhotoRemove">Remove Photo</button>
+            </div>
+          </div>
+          <div class="booking-grid" style="margin-top:20px">
+            <div class="booking-field"><label for="ownerProfileFirstName">First Name</label><input id="ownerProfileFirstName" type="text" /></div>
+            <div class="booking-field"><label for="ownerProfileLastName">Last Name</label><input id="ownerProfileLastName" type="text" /></div>
+            <div class="booking-field"><label for="ownerProfileEmailDisplay">Email</label><input id="ownerProfileEmailDisplay" type="text" readonly /></div>
+            <div class="booking-field"><label for="ownerProfilePhoneDisplay">Phone</label><input id="ownerProfilePhoneDisplay" type="text" readonly /></div>
+            <div class="booking-field"><label for="ownerProfileRoleDisplay">Role</label><input id="ownerProfileRoleDisplay" type="text" readonly value="Owner" /></div>
+          </div>
+          <p class="admin-hint" style="margin:10px 0 16px">To change your email or phone number, use Account Settings below.</p>
+          <button class="admin-btn-solid" type="button" id="ownerProfileSaveBtn">Save Changes</button>
+          <div class="form-status" id="ownerProfileStatus" style="color:var(--owner-text-muted);margin-top:10px"></div>
+        </article>
+        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="settings">
           <span class="portal-label">Appearance</span>
           <p class="admin-panel-intro">This changes how your Owner dashboard looks on this device — it has no effect on the public website.</p>
 
-          <div class="admin-subsection-label" style="border-top:0;padding-top:0;margin-top:18px">Interface Style</div>
-          <div class="appearance-option-row" id="appearanceStyleRow">
-            <button type="button" class="admin-tab" data-appearance-style="modern">Rounded / Modern</button>
-            <button type="button" class="admin-tab" data-appearance-style="classic">Classic</button>
-          </div>
+          <div class="admin-subsection-label" style="border-top:0;padding-top:0;margin-top:18px">Owner Theme</div>
+          <p class="admin-hint" style="margin-bottom:18px">Modern Light — a clean white-and-light-gray layout with a black sidebar. This is the Owner dashboard's only theme, so it always looks and feels the same.</p>
 
-          <div class="admin-subsection-label">Color Mode</div>
-          <div class="appearance-option-row" id="appearanceModeRow">
-            <button type="button" class="admin-tab" data-appearance-mode="light">Light</button>
-            <button type="button" class="admin-tab" data-appearance-mode="dark">Dark</button>
-            <button type="button" class="admin-tab" data-appearance-mode="system">System</button>
-          </div>
-
-          <div class="admin-subsection-label">Accent</div>
+          <div class="admin-subsection-label">Accent Style</div>
+          <p class="admin-hint" style="margin-bottom:14px">Only changes small details — the highlighted sidebar item, small badges, focus outlines, and thin accent lines. It never changes your page backgrounds or text color.</p>
           <div class="appearance-swatches" id="appearanceAccentRow" style="margin-bottom:22px">
-            <button type="button" class="appearance-swatch" data-appearance-accent="ink" style="background:#18181b" title="Ink"></button>
-            <button type="button" class="appearance-swatch" data-appearance-accent="slate" style="background:#33435c" title="Slate"></button>
-            <button type="button" class="appearance-swatch" data-appearance-accent="espresso" style="background:#4d3826" title="Espresso"></button>
+            <button type="button" class="appearance-swatch" data-appearance-accent="ink" style="background:#000000" title="Neutral Black"></button>
+            <button type="button" class="appearance-swatch" data-appearance-accent="gold" style="background:#a9782f" title="Soft Gold"></button>
+            <button type="button" class="appearance-swatch" data-appearance-accent="taupe" style="background:#7a6552" title="Warm Taupe"></button>
+            <button type="button" class="appearance-swatch" data-appearance-accent="bluegray" style="background:#3d4f68" title="Soft Blue Gray"></button>
           </div>
 
           <div class="admin-subsection-label">Preview</div>
@@ -1017,7 +1037,11 @@ function dialogsHtml(){
             <button type="button" class="admin-btn-solid">Primary Button</button>
             <button type="button" class="admin-btn-ghost">Outline Button</button>
             <input type="text" placeholder="Input field" style="max-width:160px;padding:9px 14px;border-radius:var(--owner-radius-pill);border:1px solid var(--owner-border-strong);background:var(--owner-surface);color:var(--owner-text)" readonly />
-            <label class="admin-checkbox-field" style="padding-top:0"><input type="checkbox" checked readonly /> Toggle</label>
+            <span class="admin-status-pill published">Badge</span>
+            <div class="appearance-preview-sidebar">
+              <div class="appearance-preview-sidebar-item">Dashboard</div>
+              <div class="appearance-preview-sidebar-item active">Teachings</div>
+            </div>
             <div class="appearance-preview-card"><strong>Sample Card</strong>This is what a card looks like.</div>
           </div>
         </article>
@@ -1332,76 +1356,91 @@ function dialogsHtml(){
         </div>
 
         <div class="admin-edit-panel" data-edit-panel="appearance" hidden>
-          <div class="admin-image-grid">
+          <div class="admin-image-card">
+            <div class="admin-image-card-head">
+              <span class="admin-image-card-title">Featured Teaching Image</span>
+              <p class="admin-hint">This is the large picture that appears beside the class title at the top of the Teaching page.</p>
+            </div>
             <div class="admin-image-field" data-image-field="hero">
-              <span class="admin-microlabel">Hero Image — Featured Teaching banner &amp; class page</span>
               <div class="admin-image-preview" id="teachingEditArtHeroPreview"></div>
               <div class="admin-image-actions">
-                <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingEditArtHeroFile" hidden /></label>
-                <button type="button" class="admin-image-remove-btn" id="teachingEditArtHeroRemove">Remove</button>
+                <label class="admin-image-upload-btn"><span class="admin-image-upload-btn-text">Upload Image</span><input type="file" accept="image/*" id="teachingEditArtHeroFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="teachingEditArtHeroRemove">Remove Image</button>
               </div>
               <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingEditArtHero" type="url" placeholder="https://…" /></details>
             </div>
-            <div class="admin-image-field" data-image-field="card">
-              <span class="admin-microlabel">Card Image — Upcoming Teachings grid</span>
-              <div class="admin-image-preview" id="teachingEditArtCardPreview"></div>
-              <div class="admin-image-actions">
-                <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingEditArtCardFile" hidden /></label>
-                <button type="button" class="admin-image-remove-btn" id="teachingEditArtCardRemove">Remove</button>
+            <div class="admin-subsection-label">Adjust This Image</div>
+            <input type="hidden" id="teachingEditFocalX" value="50" />
+            <input type="hidden" id="teachingEditFocalY" value="50" />
+            <input type="hidden" id="teachingEditZoom" value="100" />
+            <input type="hidden" id="teachingEditOverlayStrength" value="45" />
+            <div class="admin-image-adjust">
+              <div class="admin-image-adjust-preview-wrap">
+                <div class="admin-image-adjust-preview" id="teachingEditHeroLivePreview">
+                  <div class="teaching-hero-overlay" id="teachingEditHeroLiveOverlay"></div>
+                  <span class="admin-image-adjust-preview-label">Live Preview</span>
+                </div>
               </div>
-              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingEditArtCard" type="url" placeholder="https://… (blank = use hero image)" /></details>
-            </div>
-            <div class="admin-image-field" data-image-field="mobile">
-              <span class="admin-microlabel">Mobile Image <span class="admin-hint">(optional)</span></span>
-              <div class="admin-image-preview" id="teachingEditArtHeroMobilePreview"></div>
-              <div class="admin-image-actions">
-                <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingEditArtHeroMobileFile" hidden /></label>
-                <button type="button" class="admin-image-remove-btn" id="teachingEditArtHeroMobileRemove">Remove</button>
+              <div class="admin-image-adjust-controls">
+                <div class="admin-adjust-group">
+                  <span class="admin-microlabel">Move Image</span>
+                  <div class="admin-dpad">
+                    <button type="button" class="admin-btn-ghost" data-nudge="up">Move Up</button>
+                    <div class="admin-dpad-row">
+                      <button type="button" class="admin-btn-ghost" data-nudge="left">Move Left</button>
+                      <button type="button" class="admin-btn-ghost" data-nudge="center">Center</button>
+                      <button type="button" class="admin-btn-ghost" data-nudge="right">Move Right</button>
+                    </div>
+                    <button type="button" class="admin-btn-ghost" data-nudge="down">Move Down</button>
+                  </div>
+                </div>
+                <div class="admin-adjust-group">
+                  <span class="admin-microlabel">Zoom</span>
+                  <div class="admin-adjust-btn-row">
+                    <button type="button" class="admin-btn-ghost" data-zoom="out">Zoom Out</button>
+                    <button type="button" class="admin-btn-ghost" data-zoom="in">Zoom In</button>
+                  </div>
+                </div>
+                <div class="admin-adjust-group">
+                  <span class="admin-microlabel">Image Brightness</span>
+                  <div class="admin-adjust-btn-row">
+                    <button type="button" class="admin-btn-ghost" data-brightness="lighten">Lighten Image</button>
+                    <button type="button" class="admin-btn-ghost" data-brightness="darken">Darken Image</button>
+                  </div>
+                  <p class="admin-hint">Darkening makes the title easier to read over a busy photo.</p>
+                </div>
+                <button type="button" class="admin-btn-ghost" id="teachingEditResetImageBtn">Reset</button>
               </div>
-              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingEditArtHeroMobile" type="url" placeholder="https://… (blank = use hero image)" /></details>
             </div>
           </div>
-          <div class="admin-subsection-label">Adjust The Hero Image <span class="admin-hint">— this is the image beside the Featured Teaching, like the one next to "Discernment"</span></div>
-          <input type="hidden" id="teachingEditFocalX" value="50" />
-          <input type="hidden" id="teachingEditFocalY" value="50" />
-          <input type="hidden" id="teachingEditZoom" value="100" />
-          <input type="hidden" id="teachingEditOverlayStrength" value="45" />
-          <div class="admin-image-adjust">
-            <div class="admin-image-adjust-preview-wrap">
-              <div class="admin-image-adjust-preview" id="teachingEditHeroLivePreview">
-                <div class="teaching-hero-overlay" id="teachingEditHeroLiveOverlay"></div>
-                <span class="admin-image-adjust-preview-label">Live Preview</span>
-              </div>
+
+          <div class="admin-image-card">
+            <div class="admin-image-card-head">
+              <span class="admin-image-card-title">Class Card Image</span>
+              <p class="admin-hint">This image appears on the smaller upcoming class cards.</p>
             </div>
-            <div class="admin-image-adjust-controls">
-              <div class="admin-adjust-group">
-                <span class="admin-microlabel">Move Image</span>
-                <div class="admin-dpad">
-                  <button type="button" class="admin-btn-ghost" data-nudge="up">Move Up</button>
-                  <div class="admin-dpad-row">
-                    <button type="button" class="admin-btn-ghost" data-nudge="left">Move Left</button>
-                    <button type="button" class="admin-btn-ghost" data-nudge="center">Center</button>
-                    <button type="button" class="admin-btn-ghost" data-nudge="right">Move Right</button>
-                  </div>
-                  <button type="button" class="admin-btn-ghost" data-nudge="down">Move Down</button>
-                </div>
+            <div class="admin-image-field" data-image-field="card">
+              <div class="admin-image-preview" id="teachingEditArtCardPreview"></div>
+              <div class="admin-image-actions">
+                <label class="admin-image-upload-btn"><span class="admin-image-upload-btn-text">Upload Image</span><input type="file" accept="image/*" id="teachingEditArtCardFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="teachingEditArtCardRemove">Remove Image</button>
               </div>
-              <div class="admin-adjust-group">
-                <span class="admin-microlabel">Zoom</span>
-                <div class="admin-adjust-btn-row">
-                  <button type="button" class="admin-btn-ghost" data-zoom="out">Zoom Out</button>
-                  <button type="button" class="admin-btn-ghost" data-zoom="in">Zoom In</button>
-                </div>
+              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingEditArtCard" type="url" placeholder="https://… (blank = use Featured Teaching Image)" /></details>
+            </div>
+          </div>
+
+          <div class="admin-image-card">
+            <div class="admin-image-card-head">
+              <span class="admin-image-card-title">Mobile Image <span class="admin-hint">(optional)</span></span>
+              <p class="admin-hint">Optional. Use this if the phone version needs a different crop. If no mobile image is added, the Featured Teaching Image is used automatically.</p>
+            </div>
+            <div class="admin-image-field" data-image-field="mobile">
+              <div class="admin-image-preview" id="teachingEditArtHeroMobilePreview"></div>
+              <div class="admin-image-actions">
+                <label class="admin-image-upload-btn"><span class="admin-image-upload-btn-text">Upload Image</span><input type="file" accept="image/*" id="teachingEditArtHeroMobileFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="teachingEditArtHeroMobileRemove">Remove Image</button>
               </div>
-              <div class="admin-adjust-group">
-                <span class="admin-microlabel">Image Brightness</span>
-                <div class="admin-adjust-btn-row">
-                  <button type="button" class="admin-btn-ghost" data-brightness="lighten">Lighten Image</button>
-                  <button type="button" class="admin-btn-ghost" data-brightness="darken">Darken Image</button>
-                </div>
-                <p class="admin-hint">Darkening makes the title easier to read over a busy photo.</p>
-              </div>
-              <button type="button" class="admin-btn-ghost" id="teachingEditResetImageBtn">Reset Image Position</button>
+              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingEditArtHeroMobile" type="url" placeholder="https://… (blank = use Featured Teaching Image)" /></details>
             </div>
           </div>
         </div>
@@ -1483,6 +1522,31 @@ function dialogsHtml(){
       <div id="teachingRegistrantsSummary" style="margin-bottom:14px;color:var(--ink-muted)"></div>
       <input id="teachingRegistrantsSearch" type="text" placeholder="Search registrants…" style="width:100%;margin-bottom:14px" />
       <div id="teachingRegistrantsList"></div>
+    </div>
+  </dialog>
+
+  <dialog class="booking-dialog admin-dialog" id="mediaUseDialog" aria-labelledby="mediaUseTitle" style="max-width:420px">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0">Media Library</div>
+        <h3 id="mediaUseTitle">Use This Image For…</h3>
+      </div>
+    </div>
+    <div class="booking-body">
+      <div class="form-field" style="margin-bottom:14px">
+        <label for="mediaUseTeachingSelect">Class</label>
+        <select id="mediaUseTeachingSelect"></select>
+      </div>
+      <div class="form-field" style="margin-bottom:6px">
+        <label for="mediaUseSlotSelect">Use As</label>
+        <select id="mediaUseSlotSelect"></select>
+      </div>
+      <p class="admin-hint" style="margin-bottom:16px">This replaces whatever image is currently there for that class.</p>
+      <div class="booking-actions">
+        <button class="admin-btn-solid" type="button" id="mediaUseApplyBtn">Use This Image</button>
+        <button class="admin-btn-ghost" type="button" id="mediaUseCancelBtn">Cancel</button>
+      </div>
+      <div class="booking-status" id="mediaUseStatus" role="status" aria-live="polite"></div>
     </div>
   </dialog>`;
 }
@@ -1617,6 +1681,7 @@ let TEACHING_PAGE_SETTINGS = {
   scriptureReference: '1 Corinthians 2:14', scriptureImage: ''
 };
 let TEACHINGS = DEMO_TEACHINGS;
+let MEDIA_LIBRARY = [];
 
 /* ---------------------------------------------------------------
    Preview persistence (DEMO_MODE only). Saves Teaching Manager edits
@@ -1633,12 +1698,16 @@ let TEACHINGS = DEMO_TEACHINGS;
 const TEACHING_PREVIEW_DEFAULTS = {
   teachings: JSON.parse(JSON.stringify(DEMO_TEACHINGS)),
   settings: JSON.parse(JSON.stringify(TEACHING_PAGE_SETTINGS)),
-  zoom: JSON.parse(JSON.stringify(DEMO_TEACHING_ZOOM))
+  zoom: JSON.parse(JSON.stringify(DEMO_TEACHING_ZOOM)),
+  media: [],
+  profilePhoto: ''
 };
 const PREVIEW_STORAGE_KEYS = {
   teachings: 'ua_preview_teachings_v1',
   settings: 'ua_preview_teaching_settings_v1',
-  zoom: 'ua_preview_teaching_zoom_v1'
+  zoom: 'ua_preview_teaching_zoom_v1',
+  media: 'ua_preview_media_v1',
+  profilePhoto: 'ua_preview_profile_photo_v1'
 };
 function savePreviewToStorage(){
   if(!DEMO_MODE) return true;
@@ -1646,6 +1715,7 @@ function savePreviewToStorage(){
     localStorage.setItem(PREVIEW_STORAGE_KEYS.teachings, JSON.stringify(TEACHINGS));
     localStorage.setItem(PREVIEW_STORAGE_KEYS.settings, JSON.stringify(TEACHING_PAGE_SETTINGS));
     localStorage.setItem(PREVIEW_STORAGE_KEYS.zoom, JSON.stringify(DEMO_TEACHING_ZOOM));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.media, JSON.stringify(MEDIA_LIBRARY));
     return true;
   } catch (err) {
     console.error('Could not save preview data to this browser', err);
@@ -1657,9 +1727,11 @@ function loadPreviewFromStorage(){
     const t = localStorage.getItem(PREVIEW_STORAGE_KEYS.teachings);
     const s = localStorage.getItem(PREVIEW_STORAGE_KEYS.settings);
     const z = localStorage.getItem(PREVIEW_STORAGE_KEYS.zoom);
+    const m = localStorage.getItem(PREVIEW_STORAGE_KEYS.media);
     if(t) TEACHINGS = JSON.parse(t);
     if(s) TEACHING_PAGE_SETTINGS = JSON.parse(s);
     if(z) DEMO_TEACHING_ZOOM = JSON.parse(z);
+    if(m) MEDIA_LIBRARY = JSON.parse(m);
   } catch (err) { /* keep current defaults if storage is corrupt/unavailable */ }
 }
 function resetPreviewData(){
@@ -1667,10 +1739,14 @@ function resetPreviewData(){
     localStorage.removeItem(PREVIEW_STORAGE_KEYS.teachings);
     localStorage.removeItem(PREVIEW_STORAGE_KEYS.settings);
     localStorage.removeItem(PREVIEW_STORAGE_KEYS.zoom);
+    localStorage.removeItem(PREVIEW_STORAGE_KEYS.media);
+    localStorage.removeItem(PREVIEW_STORAGE_KEYS.profilePhoto);
   } catch (err) { /* ignore */ }
   TEACHINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.teachings));
   TEACHING_PAGE_SETTINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.settings));
   DEMO_TEACHING_ZOOM = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.zoom));
+  MEDIA_LIBRARY = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.media));
+  if(currentProfile) currentProfile.photoURL = '';
 }
 if(DEMO_MODE) loadPreviewFromStorage();
 
@@ -1687,6 +1763,17 @@ async function loadTeachingPageConfig(){
   } catch (err) { /* keep whatever we had */ }
 }
 if(!DEMO_MODE) await loadTeachingPageConfig();
+
+async function loadMediaLibrary(){
+  if(DEMO_MODE) return;
+  try {
+    const snap = await getDocs(collection(db, 'mediaLibrary'));
+    const items = [];
+    snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+    items.sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+    MEDIA_LIBRARY = items;
+  } catch (err) { /* keep whatever we had */ }
+}
 
 function teachingIsPast(t){
   if(!t.date) return false;
@@ -3540,59 +3627,307 @@ function updateOwnerSidebarProfile(){
   if(!currentProfile) return;
   const name = currentProfile.name || currentProfile.email || 'Signed in';
   document.getElementById('ownerSidebarName').textContent = name;
-  document.getElementById('ownerSidebarAvatar').textContent = name.trim().charAt(0).toUpperCase() || '?';
+  const avatar = document.getElementById('ownerSidebarAvatar');
+  const photo = getOwnerProfilePhoto();
+  if(photo){
+    avatar.style.backgroundImage = "url('" + photo.replace(/'/g, '%27') + "')";
+    avatar.textContent = '';
+  } else {
+    avatar.style.backgroundImage = '';
+    avatar.textContent = name.trim().charAt(0).toUpperCase() || '?';
+  }
 }
 
 /* ---------------------------------------------------------------
+   Owner profile photo. In preview mode this lives in localStorage
+   only (per the "preview should feel real" requirement); on the real
+   site it's a `photoURL` field on the owner's own `users/{uid}` doc —
+   the same plain-string-field pattern already used for every other
+   uploaded image in this app, so no Firebase Storage is needed here
+   either.
+   --------------------------------------------------------------- */
+function getOwnerProfilePhoto(){
+  if(DEMO_MODE){
+    try { return localStorage.getItem(PREVIEW_STORAGE_KEYS.profilePhoto) || ''; } catch (err) { return ''; }
+  }
+  return (currentProfile && currentProfile.photoURL) || '';
+}
+async function setOwnerProfilePhoto(dataUrl){
+  if(DEMO_MODE){
+    try {
+      if(dataUrl) localStorage.setItem(PREVIEW_STORAGE_KEYS.profilePhoto, dataUrl);
+      else localStorage.removeItem(PREVIEW_STORAGE_KEYS.profilePhoto);
+    } catch (err) {
+      throw new Error("This browser's preview storage is full — try a smaller image.");
+    }
+  } else if(currentUser) {
+    await updateDoc(doc(db, 'users', currentUser.uid), { photoURL: dataUrl || null });
+  }
+  if(currentProfile) currentProfile.photoURL = dataUrl || '';
+}
+function renderOwnerProfilePhotoPreview(){
+  const el = document.getElementById('ownerProfilePhotoPreview');
+  if(!el) return;
+  const photo = getOwnerProfilePhoto();
+  const name = (currentProfile && (currentProfile.name || currentProfile.email)) || '';
+  if(photo){ el.style.backgroundImage = "url('" + photo.replace(/'/g, '%27') + "')"; el.textContent = ''; }
+  else { el.style.backgroundImage = ''; el.textContent = name.trim().charAt(0).toUpperCase() || '?'; }
+}
+const ownerProfilePhotoFile = document.getElementById('ownerProfilePhotoFile');
+if(ownerProfilePhotoFile){
+  ownerProfilePhotoFile.addEventListener('change', async () => {
+    const file = ownerProfilePhotoFile.files[0];
+    ownerProfilePhotoFile.value = '';
+    if(!file) return;
+    if(!file.type || !file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 400, 0.82);
+      await setOwnerProfilePhoto(dataUrl);
+      renderOwnerProfilePhotoPreview();
+      updateOwnerSidebarProfile();
+    } catch (err) {
+      console.error('profile photo upload failed', err);
+      alert(err && err.message ? err.message : 'Could not use that image — try a different file.');
+    }
+  });
+}
+document.getElementById('ownerProfilePhotoRemove').addEventListener('click', async () => {
+  await setOwnerProfilePhoto('');
+  renderOwnerProfilePhotoPreview();
+  updateOwnerSidebarProfile();
+});
+
+/* ---------------------------------------------------------------
+   Account Profile — first/last name and a read-only summary of
+   email/phone/role (those are changed from Account Settings below,
+   which already has the verification flow for each).
+   --------------------------------------------------------------- */
+function renderOwnerAccountProfile(){
+  if(!currentProfile) return;
+  const parts = (currentProfile.name || '').split(' ');
+  document.getElementById('ownerProfileFirstName').value = currentProfile.firstName || parts[0] || '';
+  document.getElementById('ownerProfileLastName').value = currentProfile.lastName || parts.slice(1).join(' ') || '';
+  document.getElementById('ownerProfileEmailDisplay').value = currentProfile.email || '';
+  document.getElementById('ownerProfilePhoneDisplay').value = currentProfile.phone || 'Not added';
+  document.getElementById('ownerProfileRoleDisplay').value = 'Owner';
+  renderOwnerProfilePhotoPreview();
+}
+document.getElementById('ownerProfileSaveBtn').addEventListener('click', async () => {
+  const status = document.getElementById('ownerProfileStatus');
+  const firstName = document.getElementById('ownerProfileFirstName').value.trim();
+  const lastName = document.getElementById('ownerProfileLastName').value.trim();
+  if(!firstName || !lastName){ status.textContent = 'Enter your first and last name.'; return; }
+  const fullName = firstName + ' ' + lastName;
+  status.textContent = 'Saving…';
+  try {
+    if(DEMO_MODE){
+      if(currentUser) currentUser.displayName = fullName;
+    } else {
+      await updateProfile(currentUser, { displayName: fullName });
+      await updateDoc(doc(db, 'users', currentUser.uid), { firstName, lastName, name: fullName });
+    }
+    if(currentProfile){ currentProfile.name = fullName; currentProfile.firstName = firstName; currentProfile.lastName = lastName; }
+    updateOwnerSidebarProfile();
+    status.textContent = 'Saved.';
+  } catch (err) {
+    console.error('save owner profile failed', err);
+    status.textContent = 'Could not save changes — try again.';
+  }
+});
+
+/* ---------------------------------------------------------------
+   Media Library — independently uploaded images, separate from the
+   images already attached to a specific teaching. Reusable later for
+   a Featured Teaching Image, Class Card Image, or Scripture Image via
+   "Use For Teaching". Preview mode keeps this in localStorage; the
+   real site keeps it in a small `mediaLibrary` Firestore collection,
+   storing images the same resized-base64 way as everywhere else in
+   this app (no Firebase Storage required).
+   --------------------------------------------------------------- */
+async function addMediaLibraryItem(dataUrl, label){
+  const id = 'media-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  const item = { id, url: dataUrl, label: label || 'Uploaded Image', createdAtMs: Date.now() };
+  MEDIA_LIBRARY.unshift(item);
+  if(DEMO_MODE) savePreviewToStorage();
+  else await setDoc(doc(db, 'mediaLibrary', id), { url: dataUrl, label: item.label, createdAtMs: item.createdAtMs, createdAt: serverTimestamp() });
+  return item;
+}
+async function updateMediaLibraryItem(id, fields){
+  const item = MEDIA_LIBRARY.find(m => m.id === id);
+  if(!item) return;
+  Object.assign(item, fields);
+  if(DEMO_MODE) savePreviewToStorage();
+  else await updateDoc(doc(db, 'mediaLibrary', id), fields);
+}
+async function deleteMediaLibraryItem(id){
+  MEDIA_LIBRARY = MEDIA_LIBRARY.filter(m => m.id !== id);
+  if(DEMO_MODE) savePreviewToStorage();
+  else await deleteDoc(doc(db, 'mediaLibrary', id));
+}
+const MEDIA_ARTWORK_SLOTS = [
+  { field: 'hero', label: 'Featured Teaching Image' },
+  { field: 'card', label: 'Class Card Image' },
+  { field: 'heroMobile', label: 'Mobile Image' }
+];
+function renderOwnerMediaGallery(){
+  const wrap = document.getElementById('ownerMediaGallery');
+  if(!wrap) return;
+  const usedItems = [];
+  Object.values(TEACHINGS).forEach(t => {
+    const art = t.artwork || {};
+    if(art.hero) usedItems.push({ url: art.hero, label: (t.title || 'Untitled') + ' — Featured Teaching Image' });
+    if(art.card) usedItems.push({ url: art.card, label: (t.title || 'Untitled') + ' — Class Card Image' });
+    if(art.heroMobile) usedItems.push({ url: art.heroMobile, label: (t.title || 'Untitled') + ' — Mobile Image' });
+  });
+  if(TEACHING_PAGE_SETTINGS.scriptureImage) usedItems.push({ url: TEACHING_PAGE_SETTINGS.scriptureImage, label: 'Scripture Section' });
+
+  const libraryHtml = MEDIA_LIBRARY.map(item =>
+    '<div class="admin-media-item">' +
+      '<div class="admin-media-thumb" style="background-image:url(\'' + item.url.replace(/'/g, '%27') + '\')"></div>' +
+      '<span>' + escapeHtml(item.label || 'Uploaded Image') + '</span>' +
+      '<div class="admin-media-item-actions">' +
+        '<button type="button" class="admin-btn-ghost" data-media-action="use" data-media-id="' + item.id + '">Use For Teaching</button>' +
+        '<button type="button" class="admin-btn-ghost" data-media-action="view" data-media-id="' + item.id + '">View</button>' +
+        '<label class="admin-btn-ghost" style="cursor:pointer">Replace<input type="file" accept="image/*" hidden data-media-replace="' + item.id + '" /></label>' +
+        '<button type="button" class="admin-btn-ghost" data-media-action="delete" data-media-id="' + item.id + '">Delete</button>' +
+      '</div>' +
+    '</div>'
+  ).join('');
+  const usedHtml = usedItems.map(i =>
+    '<div class="admin-media-item">' +
+      '<div class="admin-media-thumb" style="background-image:url(\'' + i.url.replace(/'/g, '%27') + '\')"></div>' +
+      '<span>' + escapeHtml(i.label) + '</span>' +
+      '<div class="admin-media-item-actions"><span class="admin-microlabel">Already In Use</span></div>' +
+    '</div>'
+  ).join('');
+  wrap.innerHTML = (libraryHtml + usedHtml) ||
+    '<p class="admin-hint">No images yet — click "Upload New Image" above, or add one from Teachings → open a class → Images.</p>';
+}
+const ownerMediaUploadFile = document.getElementById('ownerMediaUploadFile');
+if(ownerMediaUploadFile){
+  ownerMediaUploadFile.addEventListener('change', async () => {
+    const file = ownerMediaUploadFile.files[0];
+    ownerMediaUploadFile.value = '';
+    if(!file) return;
+    if(!file.type || !file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 1600, 0.75);
+      await addMediaLibraryItem(dataUrl, file.name ? file.name.replace(/\.[^.]+$/, '') : 'Uploaded Image');
+      renderOwnerMediaGallery();
+    } catch (err) {
+      console.error('media upload failed', err);
+      alert(err && err.message ? err.message : 'Could not use that image — try a different file.');
+    }
+  });
+}
+let pendingMediaUseId = null;
+document.getElementById('ownerMediaGallery').addEventListener('click', async event => {
+  const useBtn = event.target.closest('[data-media-action="use"]');
+  const viewBtn = event.target.closest('[data-media-action="view"]');
+  const deleteBtn = event.target.closest('[data-media-action="delete"]');
+  if(useBtn){
+    pendingMediaUseId = useBtn.dataset.mediaId;
+    openMediaUseDialog();
+    return;
+  }
+  if(viewBtn){
+    const item = MEDIA_LIBRARY.find(m => m.id === viewBtn.dataset.mediaId);
+    if(item) window.open(item.url, '_blank');
+    return;
+  }
+  if(deleteBtn){
+    if(!confirm('Delete this image from your Media Library? This cannot be undone.')) return;
+    await deleteMediaLibraryItem(deleteBtn.dataset.mediaId);
+    renderOwnerMediaGallery();
+  }
+});
+document.getElementById('ownerMediaGallery').addEventListener('change', async event => {
+  const input = event.target.closest('[data-media-replace]');
+  if(!input) return;
+  const file = input.files[0];
+  const id = input.dataset.mediaReplace;
+  input.value = '';
+  if(!file) return;
+  if(!file.type || !file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+  try {
+    const dataUrl = await resizeImageToDataUrl(file, 1600, 0.75);
+    await updateMediaLibraryItem(id, { url: dataUrl });
+    renderOwnerMediaGallery();
+  } catch (err) {
+    console.error('media replace failed', err);
+    alert('Could not use that image — try a different file.');
+  }
+});
+function openMediaUseDialog(){
+  const teachingSelect = document.getElementById('mediaUseTeachingSelect');
+  const slotSelect = document.getElementById('mediaUseSlotSelect');
+  teachingSelect.innerHTML = Object.values(TEACHINGS)
+    .map(t => '<option value="' + t.id + '">' + escapeHtml(t.title || 'Untitled') + '</option>').join('');
+  slotSelect.innerHTML = MEDIA_ARTWORK_SLOTS
+    .map(s => '<option value="' + s.field + '">' + escapeHtml(s.label) + '</option>').join('');
+  document.getElementById('mediaUseStatus').textContent = '';
+  document.getElementById('mediaUseDialog').showModal();
+}
+document.getElementById('mediaUseCancelBtn').addEventListener('click', () => document.getElementById('mediaUseDialog').close());
+document.getElementById('mediaUseApplyBtn').addEventListener('click', async () => {
+  const item = MEDIA_LIBRARY.find(m => m.id === pendingMediaUseId);
+  const teachingId = document.getElementById('mediaUseTeachingSelect').value;
+  const slotField = document.getElementById('mediaUseSlotSelect').value;
+  const status = document.getElementById('mediaUseStatus');
+  if(!item || !teachingId || !slotField) return;
+  status.textContent = 'Applying…';
+  try {
+    const t = TEACHINGS[teachingId];
+    if(!t) throw new Error('not-found');
+    t.artwork = t.artwork || {};
+    t.artwork[slotField] = item.url;
+    if(DEMO_MODE) savePreviewToStorage();
+    else await updateDoc(doc(db, 'teachings', teachingId), { ['artwork.' + slotField]: item.url });
+    renderTeachingManager();
+    renderOwnerMediaGallery();
+    status.textContent = 'Done.';
+    setTimeout(() => document.getElementById('mediaUseDialog').close(), 500);
+  } catch (err) {
+    console.error('use for teaching failed', err);
+    status.textContent = 'Could not apply that image — try again.';
+  }
+});
+
+/* ---------------------------------------------------------------
    Owner Appearance — a per-browser preference for how the OWNER
-   DASHBOARD looks (not the public website). Stored in localStorage
-   only; applied via data-owner-style/data-owner-mode/data-owner-accent
-   on <body>, which every owner- and admin- prefixed CSS rule reads through the
-   --owner-* custom properties defined in styles.css.
+   DASHBOARD looks (not the public website). There's only one theme
+   (Modern Light); the only real choice is a small accent color,
+   applied via data-owner-accent on <body>, which every owner- and
+   admin- prefixed CSS rule reads through the --owner-* custom
+   properties defined in styles.css. Stored in localStorage only.
+   Old saved preferences from an earlier version of this screen (which
+   also had a Dark Mode and a Classic layout option) are migrated to
+   the closest accent so nobody's saved pick just disappears.
    --------------------------------------------------------------- */
 const OWNER_APPEARANCE_KEY = 'ua_owner_appearance_v1';
+const OWNER_APPEARANCE_ACCENT_MIGRATION = { slate: 'bluegray', espresso: 'taupe' };
 function loadOwnerAppearance(){
+  let accent = 'ink';
   try {
     const raw = localStorage.getItem(OWNER_APPEARANCE_KEY);
-    if(raw) return { style: 'modern', mode: 'light', accent: 'ink', ...JSON.parse(raw) };
+    if(raw){
+      const parsed = JSON.parse(raw);
+      accent = OWNER_APPEARANCE_ACCENT_MIGRATION[parsed.accent] || parsed.accent || 'ink';
+    }
   } catch (err) { /* ignore */ }
-  return { style: 'modern', mode: 'light', accent: 'ink' };
+  return { accent };
 }
 function saveOwnerAppearance(pref){
   try { localStorage.setItem(OWNER_APPEARANCE_KEY, JSON.stringify(pref)); } catch (err) { /* ignore */ }
 }
 function renderOwnerAppearanceControls(pref){
-  document.querySelectorAll('#appearanceStyleRow [data-appearance-style]').forEach(b => b.classList.toggle('active', b.dataset.appearanceStyle === pref.style));
-  document.querySelectorAll('#appearanceModeRow [data-appearance-mode]').forEach(b => b.classList.toggle('active', b.dataset.appearanceMode === pref.mode));
   document.querySelectorAll('#appearanceAccentRow [data-appearance-accent]').forEach(b => b.classList.toggle('active', b.dataset.appearanceAccent === pref.accent));
 }
 function applyOwnerAppearance(){
   const pref = loadOwnerAppearance();
-  let effectiveMode = pref.mode;
-  if(effectiveMode === 'system'){
-    effectiveMode = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-  }
-  document.body.dataset.ownerStyle = pref.style === 'classic' ? 'classic' : 'modern';
-  document.body.dataset.ownerMode = effectiveMode === 'dark' ? 'dark' : 'light';
   document.body.dataset.ownerAccent = pref.accent || 'ink';
   renderOwnerAppearanceControls(pref);
 }
-document.getElementById('appearanceStyleRow').addEventListener('click', event => {
-  const btn = event.target.closest('[data-appearance-style]');
-  if(!btn) return;
-  const pref = loadOwnerAppearance();
-  pref.style = btn.dataset.appearanceStyle;
-  saveOwnerAppearance(pref);
-  applyOwnerAppearance();
-});
-document.getElementById('appearanceModeRow').addEventListener('click', event => {
-  const btn = event.target.closest('[data-appearance-mode]');
-  if(!btn) return;
-  const pref = loadOwnerAppearance();
-  pref.mode = btn.dataset.appearanceMode;
-  saveOwnerAppearance(pref);
-  applyOwnerAppearance();
-});
 document.getElementById('appearanceAccentRow').addEventListener('click', event => {
   const btn = event.target.closest('[data-appearance-accent]');
   if(!btn) return;
@@ -3675,28 +4010,15 @@ document.getElementById('ownerPaymentsTabs').addEventListener('click', event => 
   document.querySelectorAll('#ownerPaymentsTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
 });
 
-function renderOwnerMediaGallery(){
-  const wrap = document.getElementById('ownerMediaGallery');
-  if(!wrap) return;
-  const items = [];
-  Object.values(TEACHINGS).forEach(t => {
-    const art = t.artwork || {};
-    if(art.hero) items.push({ url: art.hero, label: (t.title || 'Untitled') + ' — Hero' });
-    if(art.card) items.push({ url: art.card, label: (t.title || 'Untitled') + ' — Card' });
-    if(art.heroMobile) items.push({ url: art.heroMobile, label: (t.title || 'Untitled') + ' — Mobile' });
-  });
-  if(TEACHING_PAGE_SETTINGS.scriptureImage) items.push({ url: TEACHING_PAGE_SETTINGS.scriptureImage, label: 'Scripture Section' });
-  wrap.innerHTML = items.length === 0
-    ? '<p style="color:#8a8578;font-size:13px">No images uploaded yet — add one from Teachings → open a class → Images.</p>'
-    : items.map(i => '<div class="admin-media-item"><div class="admin-media-thumb" style="background-image:url(\'' + i.url.replace(/'/g, '%27') + '\')"></div><span>' + escapeHtml(i.label) + '</span></div>').join('');
-}
-
 async function loadOwnerData(){
   if(!currentProfile || currentProfile.role !== 'admin') return;
   updateOwnerSidebarProfile();
   applyOwnerAppearance();
   if(!DEMO_MODE){ try { await loadSchedulingConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadTeachingPageConfig(); } catch (err) { /* keep whatever is already loaded */ } }
+  if(!DEMO_MODE){ try { await loadMediaLibrary(); } catch (err) { /* keep whatever is already loaded */ } }
+  renderOwnerProfilePhotoPreview();
+  renderOwnerAccountProfile();
   renderSchedSettingsForm();
   renderSchedTypesList();
   renderSchedRulesList();
@@ -4192,6 +4514,8 @@ function wireAdminImageField(fieldId, previewId, fileId, removeId, label, maxDim
   const fileInput = document.getElementById(fileId);
   const removeBtn = document.getElementById(removeId);
   if(!input || !preview || !fileInput || !removeBtn) return;
+  const uploadLabel = fileInput.closest('label');
+  const uploadLabelText = uploadLabel ? uploadLabel.querySelector('.admin-image-upload-btn-text') : null;
   function refresh(){
     const val = input.value.trim();
     if(val){
@@ -4201,6 +4525,7 @@ function wireAdminImageField(fieldId, previewId, fileId, removeId, label, maxDim
       preview.style.backgroundImage = '';
       preview.innerHTML = '<span class="admin-image-empty">Drop an image here, or use Upload</span>';
     }
+    if(uploadLabelText) uploadLabelText.textContent = val ? 'Replace Image' : 'Upload Image';
     // The Hero field also drives the plain-language position/zoom/
     // brightness live preview below it — keep that in sync too.
     if(fieldId === 'teachingEditArtHero' && typeof updateHeroLivePreview === 'function') updateHeroLivePreview();
@@ -4725,10 +5050,13 @@ document.getElementById('teachingMgrPreviewPageBtn').addEventListener('click', (
   window.open(BASE + 'teachings.html', '_blank');
 });
 document.getElementById('teachingMgrResetPreviewBtn').addEventListener('click', () => {
-  if(!confirm('Reset all preview Teaching data in this browser back to the original samples? This cannot be undone.')) return;
+  if(!confirm('Reset all preview Teaching data in this browser back to the original samples? This also removes any uploaded Media Library images and your profile photo. This cannot be undone.')) return;
   resetPreviewData();
   renderTeachingManager();
   renderPublicTeachingPages();
+  renderOwnerMediaGallery();
+  renderOwnerProfilePhotoPreview();
+  updateOwnerSidebarProfile();
   portalOwnerStatus.textContent = 'Preview data has been reset to the original samples.';
 });
 document.getElementById('teachingMgrViewList').addEventListener('click', () => {
