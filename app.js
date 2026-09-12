@@ -645,22 +645,74 @@ function dialogsHtml(){
         <span class="portal-account">Private Owner View</span>
       </div>
       <div class="owner-shell">
+        <button type="button" class="owner-sidebar-toggle" id="ownerSidebarToggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          Menu
+        </button>
+        <div class="owner-sidebar-backdrop" id="ownerSidebarBackdrop"></div>
         <nav class="owner-sidebar" id="ownerSidebar">
-          <button type="button" class="owner-sidebar-item active" data-owner-nav="dashboard">Dashboard</button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="teachings">Teachings</button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="website">Website</button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="payments">Payments</button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">Bookings</button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="people">People</button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="media">Media</button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="settings">Settings</button>
+          <button type="button" class="owner-sidebar-item active" data-owner-nav="dashboard">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+            Dashboard
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="teachings">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18H6.5A2.5 2.5 0 0 0 4 20.5"/></svg>
+            Teachings
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
+            Bookings
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="people">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
+            People
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
+            Payments
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="media">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 16l-5.5-5.5a1.5 1.5 0 0 0-2 0L4 20"/></svg>
+            Media
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="website">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg>
+            Website
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="settings">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
+            Settings
+          </button>
+          <div class="owner-sidebar-profile">
+            <div class="owner-sidebar-avatar" id="ownerSidebarAvatar">?</div>
+            <div class="owner-sidebar-profile-text">
+              <strong id="ownerSidebarName">Signed in</strong>
+              <span>Owner</span>
+            </div>
+          </div>
         </nav>
         <div class="owner-content">
       <div class="portal-owner-grid">
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
-          <span class="portal-label">Overview</span>
-          <p class="admin-panel-intro">A quick look at what's happening across the site.</p>
+          <h3 style="font-family:var(--serif);font-size:26px;font-weight:600;color:var(--owner-text);margin:0 0 4px" id="ownerDashboardWelcome">Welcome back.</h3>
+          <p class="admin-panel-intro" style="margin-bottom:18px">Here's what's happening with your ministry.</p>
           <div class="admin-stat-row" id="ownerDashboardStats"></div>
+          <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:22px" class="owner-dashboard-lower">
+            <div>
+              <div class="admin-subsection-label" style="border-top:0;padding-top:0">Recent Activity</div>
+              <div id="ownerRecentActivity"></div>
+            </div>
+            <div>
+              <div class="admin-subsection-label" style="border-top:0;padding-top:0">Quick Actions</div>
+              <div style="display:flex;flex-direction:column;gap:8px" id="ownerQuickActions">
+                <button type="button" class="admin-btn-ghost" data-quick-action="new-teaching" style="text-align:left">+ Create A Teaching Class</button>
+                <button type="button" class="admin-btn-ghost" data-quick-action="media" style="text-align:left">Upload Media</button>
+                <button type="button" class="admin-btn-ghost" data-quick-action="bookings" style="text-align:left">Manage Bookings</button>
+                <button type="button" class="admin-btn-ghost" data-quick-action="registrants" style="text-align:left">View Registrations</button>
+                <button type="button" class="admin-btn-ghost" data-quick-action="website" style="text-align:left">Edit Website</button>
+              </div>
+            </div>
+          </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="website">
           <span class="portal-label">Website Pages <span class="demo-badge">Not Yet Connected</span></span>
@@ -668,18 +720,20 @@ function dialogsHtml(){
           <div id="ownerWebsitePagesList" class="admin-website-pages"></div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
-          <span class="portal-label">Payments <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></span>
-          <p class="admin-panel-intro">This is what your Payments dashboard will look like once a real payment processor (Stripe) is connected. No money has moved through the website yet, so the numbers below are sample figures only.</p>
-          <div class="admin-stat-row" id="ownerPaymentsTotals"></div>
-          <div class="admin-tabs" id="ownerPaymentsTabs" role="tablist">
-            <button type="button" class="admin-tab active" data-payments-tab="all">All Payments</button>
+          <span class="portal-label">Payments</span>
+          <p class="admin-panel-intro">Every payment collected through the website will appear here, in one place.</p>
+          <div class="admin-tabs" id="ownerPaymentsTabs" role="tablist" style="margin:16px 0">
+            <button type="button" class="admin-tab active" data-payments-tab="all">Overview</button>
             <button type="button" class="admin-tab" data-payments-tab="teaching">Teaching Payments</button>
-            <button type="button" class="admin-tab" data-payments-tab="oneonone">One-on-One Payments</button>
-            <button type="button" class="admin-tab" data-payments-tab="shop">Shop Payments</button>
+            <button type="button" class="admin-tab" data-payments-tab="oneonone">1:1 Payments</button>
+            <button type="button" class="admin-tab" data-payments-tab="shop">Shop Orders</button>
             <button type="button" class="admin-tab" data-payments-tab="donation">Donations</button>
             <button type="button" class="admin-tab" data-payments-tab="refund">Refunds</button>
           </div>
-          <div id="ownerPaymentsList" style="margin-top:14px"></div>
+          <div class="admin-payments-empty">
+            <strong>Payments Not Connected</strong>
+            <p>There's no real payment processor connected to the website yet, so there's no transaction history to show. Once one is connected, every teaching payment, one-on-one booking payment, shop order, donation, and refund will show up here automatically — with totals for this month, this year, and by category.</p>
+          </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="media">
           <span class="portal-label">Media</span>
@@ -874,37 +928,45 @@ function dialogsHtml(){
           <div id="teachingMgrList"></div>
           <div id="teachingMgrCalendar" hidden></div>
 
-          <div style="border-top:1px dashed #c7c7c7;padding-top:16px;margin-top:20px">
-            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Teaching Page Settings</strong>
-            <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
-              <div class="form-field" style="min-width:220px">
-                <label for="teachingSettingsFeatured">Featured Teaching</label>
-                <select id="teachingSettingsFeatured" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"></select>
+          <div style="border-top:1px solid var(--owner-border);padding-top:20px;margin-top:24px">
+            <span class="portal-label">Teaching Page Settings</span>
+            <p class="admin-panel-intro" style="margin-bottom:10px">Controls what visitors see on the public Teaching page.</p>
+
+            <div class="admin-subsection-label" style="border-top:0;padding-top:0">Featured Teaching</div>
+            <p class="admin-hint" style="margin-bottom:12px">Choose which class appears in the large section at the top of the Teaching page.</p>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-bottom:18px">
+              <div class="form-field" style="min-width:240px">
+                <label for="teachingSettingsFeatured">Select Teaching</label>
+                <select id="teachingSettingsFeatured" style="background:var(--owner-surface);color:var(--owner-text);border-color:var(--owner-border-strong);border-radius:var(--owner-radius-sm)"></select>
               </div>
-              <div class="form-field" style="flex:0 0 140px">
-                <label for="teachingSettingsUpcomingCount">Upcoming count</label>
-                <select id="teachingSettingsUpcomingCount" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+              <div class="admin-teaching-row" id="teachingSettingsFeaturedPreview" style="flex:1;min-width:220px;margin-bottom:0"></div>
+            </div>
+
+            <div class="admin-subsection-label">Upcoming Classes</div>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
+              <label class="admin-checkbox-field" style="padding-top:0"><input id="teachingSettingsShowUpcoming" type="checkbox" /> Show Upcoming Classes</label>
+              <div class="form-field" style="flex:0 0 220px">
+                <label for="teachingSettingsUpcomingCount">Number Of Upcoming Classes To Show</label>
+                <select id="teachingSettingsUpcomingCount" style="background:var(--owner-surface);color:var(--owner-text);border-color:var(--owner-border-strong);border-radius:var(--owner-radius-sm)">
                   <option value="3">3</option><option value="6">6</option><option value="9">9</option>
                 </select>
               </div>
-              <div class="form-field" style="flex:0 0 160px">
-                <label for="teachingSettingsDefaultTime">Default Thursday time</label>
-                <input id="teachingSettingsDefaultTime" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+              <div class="form-field" style="flex:0 0 170px">
+                <label for="teachingSettingsDefaultTime">Default Class Time</label>
+                <input id="teachingSettingsDefaultTime" type="time" style="background:var(--owner-surface);color:var(--owner-text);border-color:var(--owner-border-strong);border-radius:var(--owner-radius-sm)" />
               </div>
             </div>
-            <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px">
-              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowUpcoming" type="checkbox" /> Show Upcoming Teachings</label>
-              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowLibrary" type="checkbox" /> Show Teaching Library</label>
-              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowScripture" type="checkbox" /> Show Scripture Section</label>
-              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowNewsletter" type="checkbox" /> Show Stay Connected</label>
-              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsAutoArchive" type="checkbox" /> Auto-archive completed teachings</label>
-            </div>
+            <p class="admin-hint" style="margin-bottom:20px">Turn this off to hide future classes from the public page. Choose 6 to show the next six scheduled classes. Times are scheduled in Eastern Time.</p>
+
+            <div class="admin-subsection-label">Scripture Section</div>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:8px"><input id="teachingSettingsShowScripture" type="checkbox" /> Show Scripture Section</label>
+            <p class="admin-hint" style="margin-bottom:14px">Show or hide the Scripture/Foundation section near the bottom of the Teaching page.</p>
             <div class="booking-grid" style="margin-bottom:14px">
-              <div class="booking-field full"><label for="teachingSettingsScriptureText">Scripture / Foundation text</label><textarea id="teachingSettingsScriptureText" rows="2"></textarea></div>
-              <div class="booking-field"><label for="teachingSettingsScriptureRef">Reference</label><input id="teachingSettingsScriptureRef" type="text" placeholder="e.g. 1 Corinthians 2:14" /></div>
+              <div class="booking-field full"><label for="teachingSettingsScriptureText">Scripture Text</label><textarea id="teachingSettingsScriptureText" rows="2"></textarea></div>
+              <div class="booking-field"><label for="teachingSettingsScriptureRef">Scripture Reference</label><input id="teachingSettingsScriptureRef" type="text" placeholder="e.g. 1 Corinthians 2:14" /></div>
             </div>
-            <div class="admin-image-field" data-image-field="scripture" style="max-width:340px;margin-bottom:16px">
-              <span class="admin-microlabel">Section Image <span class="admin-hint">(optional)</span></span>
+            <div class="admin-image-field" data-image-field="scripture" style="max-width:340px;margin-bottom:20px">
+              <span class="admin-microlabel">Scripture Image <span class="admin-hint">(optional)</span></span>
               <div class="admin-image-preview" id="teachingSettingsScriptureImagePreview"></div>
               <div class="admin-image-actions">
                 <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingSettingsScriptureImageFile" hidden /></label>
@@ -912,8 +974,51 @@ function dialogsHtml(){
               </div>
               <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingSettingsScriptureImage" type="url" /></details>
             </div>
-            <button class="portal-secondary" type="button" id="teachingSettingsSaveBtn">Save Teaching Page Settings</button>
-            <div class="form-status" id="teachingSettingsStatus" style="color:#6d6d6d;margin-top:8px"></div>
+
+            <div class="admin-subsection-label">Stay Connected</div>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:20px"><input id="teachingSettingsShowNewsletter" type="checkbox" /> Show Stay Connected</label>
+            <p class="admin-hint" style="margin-top:-14px;margin-bottom:20px">Show or hide the email signup section at the bottom of the Teaching page.</p>
+
+            <div class="admin-subsection-label">Teaching Library</div>
+            <label class="admin-checkbox-field" style="padding-top:0"><input id="teachingSettingsShowLibrary" type="checkbox" /> Show Teaching Library</label>
+            <p class="admin-hint" style="margin-bottom:8px">Keep this off until you have class videos to show — the page stays completely hidden from visitors while it's off, not shown as "coming soon."</p>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:20px"><input id="teachingSettingsAutoArchive" type="checkbox" /> Automatically Archive Completed Classes</label>
+
+            <button class="admin-btn-solid" type="button" id="teachingSettingsSaveBtn">Save Changes</button>
+            <div class="form-status" id="teachingSettingsStatus" style="color:var(--owner-text-muted);margin-top:10px"></div>
+          </div>
+        </article>
+        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="settings">
+          <span class="portal-label">Appearance</span>
+          <p class="admin-panel-intro">This changes how your Owner dashboard looks on this device — it has no effect on the public website.</p>
+
+          <div class="admin-subsection-label" style="border-top:0;padding-top:0;margin-top:18px">Interface Style</div>
+          <div class="appearance-option-row" id="appearanceStyleRow">
+            <button type="button" class="admin-tab" data-appearance-style="modern">Rounded / Modern</button>
+            <button type="button" class="admin-tab" data-appearance-style="classic">Classic</button>
+          </div>
+
+          <div class="admin-subsection-label">Color Mode</div>
+          <div class="appearance-option-row" id="appearanceModeRow">
+            <button type="button" class="admin-tab" data-appearance-mode="light">Light</button>
+            <button type="button" class="admin-tab" data-appearance-mode="dark">Dark</button>
+            <button type="button" class="admin-tab" data-appearance-mode="system">System</button>
+          </div>
+
+          <div class="admin-subsection-label">Accent</div>
+          <div class="appearance-swatches" id="appearanceAccentRow" style="margin-bottom:22px">
+            <button type="button" class="appearance-swatch" data-appearance-accent="ink" style="background:#18181b" title="Ink"></button>
+            <button type="button" class="appearance-swatch" data-appearance-accent="slate" style="background:#33435c" title="Slate"></button>
+            <button type="button" class="appearance-swatch" data-appearance-accent="espresso" style="background:#4d3826" title="Espresso"></button>
+          </div>
+
+          <div class="admin-subsection-label">Preview</div>
+          <div class="appearance-preview">
+            <button type="button" class="admin-btn-solid">Primary Button</button>
+            <button type="button" class="admin-btn-ghost">Outline Button</button>
+            <input type="text" placeholder="Input field" style="max-width:160px;padding:9px 14px;border-radius:var(--owner-radius-pill);border:1px solid var(--owner-border-strong);background:var(--owner-surface);color:var(--owner-text)" readonly />
+            <label class="admin-checkbox-field" style="padding-top:0"><input type="checkbox" checked readonly /> Toggle</label>
+            <div class="appearance-preview-card"><strong>Sample Card</strong>This is what a card looks like.</div>
           </div>
         </article>
         ${accountSettingsHtml('owner')}
@@ -1116,6 +1221,20 @@ function dialogsHtml(){
           </div>
 
           <div class="admin-microlabel checkout-section-label">Payment</div>
+          <div class="checkout-payment-methods" aria-hidden="true">
+            <span class="checkout-payment-method active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              Card
+            </span>
+            <span class="checkout-payment-method">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6.9c-.8 1-2.1 1.7-3.3 1.6-.2-1.2.4-2.5 1.1-3.3.8-1 2.2-1.7 3.3-1.8.1 1.3-.4 2.6-1.1 3.5zm1.1 1.8c-1.8-.1-3.4 1-4.2 1-.9 0-2.2-1-3.7-.9-1.9 0-3.6 1.1-4.6 2.7-2 3.4-.5 8.5 1.4 11.3.9 1.4 2 2.9 3.5 2.8 1.4-.1 1.9-.9 3.6-.9s2.1.9 3.6.8c1.5 0 2.5-1.3 3.4-2.8.9-1.4 1.3-2.8 1.3-2.9-.1 0-2.7-1-2.7-4 0-2.5 2.1-3.7 2.2-3.8-1.2-1.7-3-1.9-3.6-2z"/></svg>
+              Apple Pay
+            </span>
+            <span class="checkout-payment-method">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M12 12h9"/></svg>
+              Google Pay
+            </span>
+          </div>
           <fieldset class="payment-demo checkout-payment-demo" id="teachingRegisterPaymentFieldset" disabled>
             <legend class="demo-badge">Visual Demonstration — Not Yet Connected</legend>
             <div class="booking-grid">
@@ -1131,8 +1250,13 @@ function dialogsHtml(){
                 <label>CVC</label>
                 <input type="text" value="123" readonly />
               </div>
+              <div class="booking-field full">
+                <label>Name on card</label>
+                <input type="text" value="Full name as shown on card" readonly />
+              </div>
             </div>
           </fieldset>
+          <p class="payment-demo-note checkout-payment-note">Card, Apple Pay, and Google Pay are shown as a preview of what will be available once a real payment processor is connected. No card details are collected and no charge occurs today.</p>
 
           <div class="checkout-order-summary" id="teachingRegisterOrderSummary"></div>
 
@@ -1160,65 +1284,50 @@ function dialogsHtml(){
         <button class="booking-close" id="closeTeachingEdit" type="button" aria-label="Close teaching editor">×</button>
       </div>
     </div>
-    <div class="admin-tabs" id="teachingEditTabs" role="tablist">
-      <button type="button" class="admin-tab active" data-edit-tab="content">Content</button>
-      <button type="button" class="admin-tab" data-edit-tab="access">Date &amp; Access</button>
-      <button type="button" class="admin-tab" data-edit-tab="pricing">Pricing</button>
-      <button type="button" class="admin-tab" data-edit-tab="appearance">Appearance</button>
-      <button type="button" class="admin-tab" data-edit-tab="registration">Registration</button>
-    </div>
     <div class="booking-body">
       <form id="teachingEditForm">
         <input type="hidden" id="teachingEditId" />
+        <div class="admin-editor-body">
+        <div class="admin-steps" id="teachingEditTabs" role="tablist">
+          <button type="button" class="admin-step active" data-edit-tab="content"><span class="admin-step-num">1</span> Class Information</button>
+          <button type="button" class="admin-step" data-edit-tab="datetime"><span class="admin-step-num">2</span> Date &amp; Time</button>
+          <button type="button" class="admin-step" data-edit-tab="pricing"><span class="admin-step-num">3</span> Price</button>
+          <button type="button" class="admin-step" data-edit-tab="appearance"><span class="admin-step-num">4</span> Images</button>
+          <button type="button" class="admin-step" data-edit-tab="registration"><span class="admin-step-num">5</span> Registration</button>
+          <button type="button" class="admin-step" data-edit-tab="zoomlocation"><span class="admin-step-num">6</span> Zoom &amp; Location</button>
+          <button type="button" class="admin-step" data-edit-tab="preview"><span class="admin-step-num">7</span> Preview</button>
+        </div>
+        <div class="admin-editor-panels">
 
         <div class="admin-edit-panel" data-edit-panel="content">
           <div class="booking-grid">
-            <div class="booking-field full"><label for="teachingEditTitleInput">Teaching title</label><input id="teachingEditTitleInput" type="text" required /></div>
+            <div class="booking-field full"><label for="teachingEditTitleInput">Class Title</label><input id="teachingEditTitleInput" type="text" required /></div>
             <div class="booking-field full"><label for="teachingEditSubtitle">Subtitle</label><input id="teachingEditSubtitle" type="text" /></div>
-            <div class="booking-field full"><label for="teachingEditShortDesc">Short description <span class="admin-hint">— shown on cards and the hero banner</span></label><textarea id="teachingEditShortDesc" rows="2"></textarea></div>
-            <div class="booking-field full"><label for="teachingEditFullDesc">Full description <span class="admin-hint">— shown under "About This Teaching" on the class page</span></label><textarea id="teachingEditFullDesc" rows="4"></textarea></div>
-            <div class="booking-field full"><label for="teachingEditLearn">What you will learn <span class="admin-hint">— one per line</span></label><textarea id="teachingEditLearn" rows="4" placeholder="What spiritual discernment is&#10;Types of discernment&#10;..."></textarea></div>
-            <div class="booking-field"><label for="teachingEditCategory">Category</label><input id="teachingEditCategory" type="text" placeholder="e.g. Discernment" /></div>
+            <div class="booking-field full"><label for="teachingEditShortDesc">Short Description <span class="admin-hint">— shown on cards and the hero banner</span></label><textarea id="teachingEditShortDesc" rows="2"></textarea></div>
+            <div class="booking-field full"><label for="teachingEditFullDesc">Full Description <span class="admin-hint">— shown under "About This Teaching" on the class page</span></label><textarea id="teachingEditFullDesc" rows="4"></textarea></div>
+            <div class="booking-field full"><label for="teachingEditLearn">What You Will Learn <span class="admin-hint">— one per line</span></label><textarea id="teachingEditLearn" rows="4" placeholder="What spiritual discernment is&#10;Types of discernment&#10;..."></textarea></div>
             <div class="booking-field"><label for="teachingEditInstructor">Instructor</label><input id="teachingEditInstructor" type="text" /></div>
+            <div class="booking-field"><label for="teachingEditCategory">Category</label><input id="teachingEditCategory" type="text" placeholder="e.g. Discernment" /></div>
           </div>
         </div>
 
-        <div class="admin-edit-panel" data-edit-panel="access" hidden>
+        <div class="admin-edit-panel" data-edit-panel="datetime" hidden>
           <div class="booking-grid">
             <div class="booking-field"><label for="teachingEditDate">Date</label><input id="teachingEditDate" type="date" required /></div>
-            <div class="booking-field"><label for="teachingEditStartTime">Start time</label><input id="teachingEditStartTime" type="time" required /></div>
-            <div class="booking-field"><label for="teachingEditEndTime">End time <span class="admin-hint">(optional)</span></label><input id="teachingEditEndTime" type="time" /></div>
-            <div class="booking-field"><label for="teachingEditTimeZone">Time zone</label>
-              <select id="teachingEditTimeZone">
-                <option value="America/New_York">Eastern (America/New_York)</option>
-                <option value="America/Chicago">Central (America/Chicago)</option>
-                <option value="America/Denver">Mountain (America/Denver)</option>
-                <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
-                <option value="America/Anchorage">Alaska (America/Anchorage)</option>
-                <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
-              </select>
-            </div>
-            <div class="booking-field"><label for="teachingEditFormat">Format</label>
-              <select id="teachingEditFormat">
-                <option value="zoom">Zoom</option><option value="in-person">In Person</option>
-                <option value="hybrid">Hybrid</option><option value="other">Other</option>
-              </select>
-            </div>
-            <div class="booking-field"><label for="teachingEditLocation">Location <span class="admin-hint">(if in person/hybrid)</span></label><input id="teachingEditLocation" type="text" /></div>
-            <div class="booking-field"><label for="teachingEditCapacity">Capacity</label><input id="teachingEditCapacity" type="number" min="1" /></div>
-            <label class="admin-checkbox-field"><input id="teachingEditUnlimited" type="checkbox" /> Unlimited capacity</label>
+            <div class="booking-field"><label for="teachingEditStartTime">Start Time</label><input id="teachingEditStartTime" type="time" required /></div>
+            <div class="booking-field"><label for="teachingEditEndTime">End Time <span class="admin-hint">(optional)</span></label><input id="teachingEditEndTime" type="time" /></div>
+            <input type="hidden" id="teachingEditTimeZone" value="America/New_York" />
           </div>
-          <div class="admin-subsection-label">Zoom <span class="admin-hint">— private, never shown publicly until access is built</span></div>
-          <div class="booking-grid">
-            <div class="booking-field full"><label for="teachingEditZoomUrl">Private Zoom URL</label><input id="teachingEditZoomUrl" type="url" placeholder="https://zoom.us/j/..." /></div>
-            <div class="booking-field"><label for="teachingEditZoomId">Meeting ID</label><input id="teachingEditZoomId" type="text" /></div>
-            <div class="booking-field"><label for="teachingEditZoomPasscode">Passcode</label><input id="teachingEditZoomPasscode" type="text" /></div>
-          </div>
+          <p class="admin-hint" style="margin-top:12px">Times are scheduled in Eastern Time. The public website automatically shows EST or EDT depending on the date, so you never have to think about daylight saving.</p>
         </div>
 
         <div class="admin-edit-panel" data-edit-panel="pricing" hidden>
-          <div class="booking-grid">
-            <div class="booking-field"><label for="teachingEditPrice">Price <span class="admin-hint">($, blank = free)</span></label><input id="teachingEditPrice" type="number" min="0" step="0.01" placeholder="Free" /></div>
+          <div class="admin-tabs" id="teachingEditFreePaidRow" style="margin-bottom:16px">
+            <button type="button" class="admin-tab active" data-free-paid="free">Free</button>
+            <button type="button" class="admin-tab" data-free-paid="paid">Paid</button>
+          </div>
+          <div class="booking-grid" id="teachingEditPriceFieldWrap" hidden>
+            <div class="booking-field"><label for="teachingEditPrice">Price <span class="admin-hint">example: $25.00</span></label><input id="teachingEditPrice" type="number" min="0" step="0.01" placeholder="25.00" /></div>
           </div>
         </div>
 
@@ -1304,8 +1413,36 @@ function dialogsHtml(){
             <div class="admin-stat-tile"><span>Capacity</span><strong id="teachingEditRegCapacity">—</strong></div>
             <div class="admin-stat-tile"><span>Revenue (once paid)</span><strong id="teachingEditRegRevenue">—</strong></div>
           </div>
-          <button class="portal-secondary" type="button" id="teachingEditOpenRegistrantsBtn" style="margin-top:16px">Open Full Registrant List</button>
-          <p class="admin-hint" style="margin-top:14px">Registration opens to visitors once this teaching's status is "Registration Open" — set that in the header above.</p>
+          <button class="admin-btn-ghost" type="button" id="teachingEditOpenRegistrantsBtn" style="margin-top:16px">View Registrants</button>
+          <p class="admin-hint" style="margin-top:14px">Registration opens to visitors once this teaching's status is "Registration Open" — set that at the bottom of this window.</p>
+        </div>
+
+        <div class="admin-edit-panel" data-edit-panel="zoomlocation" hidden>
+          <div class="booking-grid">
+            <div class="booking-field"><label for="teachingEditFormat">Format</label>
+              <select id="teachingEditFormat">
+                <option value="zoom">Zoom</option><option value="in-person">In Person</option>
+                <option value="hybrid">Hybrid</option><option value="other">Other</option>
+              </select>
+            </div>
+            <div class="booking-field"><label for="teachingEditLocation">Location <span class="admin-hint">(if in person/hybrid)</span></label><input id="teachingEditLocation" type="text" /></div>
+            <div class="booking-field"><label for="teachingEditCapacity">Capacity</label><input id="teachingEditCapacity" type="number" min="1" /></div>
+            <label class="admin-checkbox-field"><input id="teachingEditUnlimited" type="checkbox" /> Unlimited capacity</label>
+          </div>
+          <div class="admin-subsection-label">Zoom Details <span class="admin-hint">— private, never shown publicly before someone registers</span></div>
+          <div class="booking-grid">
+            <div class="booking-field full"><label for="teachingEditZoomUrl">Private Zoom Link</label><input id="teachingEditZoomUrl" type="url" placeholder="https://zoom.us/j/..." /></div>
+            <div class="booking-field"><label for="teachingEditZoomId">Meeting ID</label><input id="teachingEditZoomId" type="text" /></div>
+            <div class="booking-field"><label for="teachingEditZoomPasscode">Passcode</label><input id="teachingEditZoomPasscode" type="text" /></div>
+          </div>
+        </div>
+
+        <div class="admin-edit-panel" data-edit-panel="preview" hidden>
+          <p class="admin-hint" style="margin-bottom:14px">This is what the Featured Teaching section looks like with your current changes — before you publish.</p>
+          <div id="teachingEditFullPreview"></div>
+        </div>
+
+        </div>
         </div>
 
         <div class="admin-editor-footer">
@@ -1325,8 +1462,8 @@ function dialogsHtml(){
 
         <div class="booking-actions admin-editor-actions">
           <button class="btn on-light" type="button" id="teachingEditSaveDraftBtn">Save Draft</button>
-          <button class="btn on-light" type="button" id="teachingEditPreviewBtn">Preview Changes</button>
-          <button class="btn on-light fill" type="submit" id="teachingEditSubmitBtn">Publish</button>
+          <button class="btn on-light" type="button" id="teachingEditPreviewBtn">Preview Class</button>
+          <button class="btn on-light fill" type="submit" id="teachingEditSubmitBtn">Publish Class</button>
           <button class="btn on-light" type="button" id="teachingEditDuplicateBtn">Duplicate As New</button>
           <div class="booking-status" id="teachingEditStatusMsg" role="status" aria-live="polite"></div>
         </div>
@@ -3381,28 +3518,140 @@ function showOwnerSection(name){
   document.querySelectorAll('[data-owner-section]').forEach(p => { p.hidden = p.dataset.ownerSection !== name; });
   const desc = document.getElementById('ownerSectionDescription');
   if(desc) desc.textContent = OWNER_SECTION_DESCRIPTIONS[name] || '';
+  closeOwnerSidebarDrawer();
+}
+function openOwnerSidebarDrawer(){
+  document.getElementById('ownerSidebar').classList.add('open');
+  document.getElementById('ownerSidebarBackdrop').classList.add('open');
+}
+function closeOwnerSidebarDrawer(){
+  document.getElementById('ownerSidebar').classList.remove('open');
+  document.getElementById('ownerSidebarBackdrop').classList.remove('open');
 }
 document.getElementById('ownerSidebar').addEventListener('click', event => {
   const btn = event.target.closest('.owner-sidebar-item');
   if(btn) showOwnerSection(btn.dataset.ownerNav);
 });
+document.getElementById('ownerSidebarToggle').addEventListener('click', openOwnerSidebarDrawer);
+document.getElementById('ownerSidebarBackdrop').addEventListener('click', closeOwnerSidebarDrawer);
 showOwnerSection('dashboard');
+
+function updateOwnerSidebarProfile(){
+  if(!currentProfile) return;
+  const name = currentProfile.name || currentProfile.email || 'Signed in';
+  document.getElementById('ownerSidebarName').textContent = name;
+  document.getElementById('ownerSidebarAvatar').textContent = name.trim().charAt(0).toUpperCase() || '?';
+}
+
+/* ---------------------------------------------------------------
+   Owner Appearance — a per-browser preference for how the OWNER
+   DASHBOARD looks (not the public website). Stored in localStorage
+   only; applied via data-owner-style/data-owner-mode/data-owner-accent
+   on <body>, which every owner- and admin- prefixed CSS rule reads through the
+   --owner-* custom properties defined in styles.css.
+   --------------------------------------------------------------- */
+const OWNER_APPEARANCE_KEY = 'ua_owner_appearance_v1';
+function loadOwnerAppearance(){
+  try {
+    const raw = localStorage.getItem(OWNER_APPEARANCE_KEY);
+    if(raw) return { style: 'modern', mode: 'light', accent: 'ink', ...JSON.parse(raw) };
+  } catch (err) { /* ignore */ }
+  return { style: 'modern', mode: 'light', accent: 'ink' };
+}
+function saveOwnerAppearance(pref){
+  try { localStorage.setItem(OWNER_APPEARANCE_KEY, JSON.stringify(pref)); } catch (err) { /* ignore */ }
+}
+function renderOwnerAppearanceControls(pref){
+  document.querySelectorAll('#appearanceStyleRow [data-appearance-style]').forEach(b => b.classList.toggle('active', b.dataset.appearanceStyle === pref.style));
+  document.querySelectorAll('#appearanceModeRow [data-appearance-mode]').forEach(b => b.classList.toggle('active', b.dataset.appearanceMode === pref.mode));
+  document.querySelectorAll('#appearanceAccentRow [data-appearance-accent]').forEach(b => b.classList.toggle('active', b.dataset.appearanceAccent === pref.accent));
+}
+function applyOwnerAppearance(){
+  const pref = loadOwnerAppearance();
+  let effectiveMode = pref.mode;
+  if(effectiveMode === 'system'){
+    effectiveMode = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  document.body.dataset.ownerStyle = pref.style === 'classic' ? 'classic' : 'modern';
+  document.body.dataset.ownerMode = effectiveMode === 'dark' ? 'dark' : 'light';
+  document.body.dataset.ownerAccent = pref.accent || 'ink';
+  renderOwnerAppearanceControls(pref);
+}
+document.getElementById('appearanceStyleRow').addEventListener('click', event => {
+  const btn = event.target.closest('[data-appearance-style]');
+  if(!btn) return;
+  const pref = loadOwnerAppearance();
+  pref.style = btn.dataset.appearanceStyle;
+  saveOwnerAppearance(pref);
+  applyOwnerAppearance();
+});
+document.getElementById('appearanceModeRow').addEventListener('click', event => {
+  const btn = event.target.closest('[data-appearance-mode]');
+  if(!btn) return;
+  const pref = loadOwnerAppearance();
+  pref.mode = btn.dataset.appearanceMode;
+  saveOwnerAppearance(pref);
+  applyOwnerAppearance();
+});
+document.getElementById('appearanceAccentRow').addEventListener('click', event => {
+  const btn = event.target.closest('[data-appearance-accent]');
+  if(!btn) return;
+  const pref = loadOwnerAppearance();
+  pref.accent = btn.dataset.appearanceAccent;
+  saveOwnerAppearance(pref);
+  applyOwnerAppearance();
+});
+applyOwnerAppearance();
 
 async function renderOwnerDashboardStats(){
   const wrap = document.getElementById('ownerDashboardStats');
   if(!wrap) return;
-  let memberCount = '—';
+  const welcome = document.getElementById('ownerDashboardWelcome');
+  if(welcome && currentProfile){
+    const firstName = (currentProfile.name || '').split(' ')[0];
+    welcome.textContent = 'Welcome back' + (firstName ? ', ' + firstName : '') + '.';
+  }
+  let memberCount = '—', pendingBookings = [];
   try {
-    if(DEMO_MODE){ memberCount = String(DEMO_MEMBERS.length); }
-    else { const snap = await getDocs(collection(db, 'users')); memberCount = String(snap.size); }
-  } catch (err) { memberCount = '—'; }
-  const featured = featuredTeaching();
+    if(DEMO_MODE){
+      memberCount = String(DEMO_MEMBERS.length);
+      pendingBookings = DEMO_BOOKINGS.filter(b => b.status === 'pending');
+    } else {
+      const [usersSnap, bookingsSnap] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(query(collection(db, 'bookings'), where('status', '==', 'pending')))
+      ]);
+      memberCount = String(usersSnap.size);
+      bookingsSnap.forEach(d => pendingBookings.push({ id: d.id, ...d.data() }));
+    }
+  } catch (err) { /* leave placeholders */ }
+  const upcomingClassCount = teachingsForTab('upcoming').length;
+  const draftCount = Object.values(TEACHINGS).filter(t => t.status === 'draft').length;
   wrap.innerHTML =
-    '<div class="admin-stat-tile"><span>Upcoming Teachings</span><strong>' + teachingsForTab('upcoming').length + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Draft Teachings</span><strong>' + Object.values(TEACHINGS).filter(t => t.status === 'draft').length + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Member Accounts</span><strong>' + memberCount + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Featured Teaching</span><strong>' + (featured ? escapeHtml(featured.title) : 'None set') + '</strong></div>';
+    '<div class="admin-stat-tile"><span>Total Members</span><strong>' + memberCount + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Upcoming Classes</span><strong>' + upcomingClassCount + '</strong><em>' + draftCount + ' in drafts</em></div>' +
+    '<div class="admin-stat-tile"><span>1:1 Bookings Pending</span><strong>' + pendingBookings.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Revenue</span><strong style="font-size:14px;color:var(--owner-text-muted)">Payment system not connected</strong></div>';
+
+  const activityWrap = document.getElementById('ownerRecentActivity');
+  if(activityWrap){
+    const lines = [];
+    pendingBookings.slice(0, 4).forEach(b => lines.push('New booking request from ' + (b.name || 'a visitor') + (b.date ? ' — ' + formatTeachingDateShort(b.date) : '')));
+    if(draftCount > 0) lines.push(draftCount + ' teaching' + (draftCount === 1 ? '' : 's') + ' saved as draft, not yet published');
+    if(lines.length === 0) lines.push('Nothing new right now — you\'re all caught up.');
+    activityWrap.innerHTML = lines.map(l => '<div class="admin-hint" style="padding:9px 0;border-bottom:1px solid var(--owner-border)">' + escapeHtml(l) + '</div>').join('');
+  }
 }
+document.getElementById('ownerQuickActions').addEventListener('click', event => {
+  const btn = event.target.closest('[data-quick-action]');
+  if(!btn) return;
+  const action = btn.dataset.quickAction;
+  if(action === 'new-teaching'){ showOwnerSection('teachings'); openTeachingEditor(null); }
+  else if(action === 'media'){ showOwnerSection('media'); }
+  else if(action === 'bookings'){ showOwnerSection('bookings'); }
+  else if(action === 'registrants'){ showOwnerSection('teachings'); }
+  else if(action === 'website'){ showOwnerSection('website'); }
+});
 
 const OWNER_WEBSITE_PAGES = ['Home Page', 'Teaching Page', 'Prayer Page', 'Our Story', 'Beliefs', 'Gather', 'Connect', 'Give', 'Shop', 'Navigation', 'Footer'];
 function renderOwnerWebsitePages(){
@@ -3413,46 +3662,17 @@ function renderOwnerWebsitePages(){
   ).join('');
 }
 
-// Sample only — no real payment processor is connected anywhere in this
-// project yet (confirmed: one-on-one booking, Teaching registration, and
-// Shop all remain unpaid/placeholder). Shown so the intended shape of
-// this screen is visible now, and it's ready to switch to real data the
-// moment a processor is connected — nothing here is read from Firestore.
-const DEMO_PAYMENTS = [
-  { name: 'Jordan Lee', email: 'jordan@example.com', item: 'Discernment (Teaching)', amount: 25, date: '2026-09-18', status: 'Paid', type: 'teaching' },
-  { name: 'Amara Okafor', email: 'amara@example.com', item: 'Spiritual Warfare (Teaching)', amount: 25, date: '2026-09-22', status: 'Paid', type: 'teaching' },
-  { name: 'Sam Rivera', email: 'sam@example.com', item: '30-Minute One-on-One', amount: 0, date: '2026-09-15', status: 'Not Charged Yet', type: 'oneonone' },
-  { name: 'Taylor Brooks', email: 'taylor@example.com', item: 'Ministry T-Shirt', amount: 20, date: '2026-09-10', status: 'Paid', type: 'shop' },
-  { name: 'Morgan Reid', email: 'morgan@example.com', item: 'General Giving', amount: 50, date: '2026-09-08', status: 'Paid', type: 'donation' },
-  { name: 'Jordan Lee', email: 'jordan@example.com', item: 'Identity in Christ (Teaching)', amount: 25, date: '2026-08-30', status: 'Refunded', type: 'refund' }
-];
-function renderOwnerPaymentsPlaceholder(){
-  const totals = document.getElementById('ownerPaymentsTotals');
-  if(!totals) return;
-  const sum = rows => rows.reduce((s, r) => s + (r.status === 'Paid' ? r.amount : 0), 0);
-  totals.innerHTML =
-    '<div class="admin-stat-tile"><span>This Month (Sample)</span><strong>$' + sum(DEMO_PAYMENTS).toFixed(2) + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Teaching Revenue</span><strong>$' + sum(DEMO_PAYMENTS.filter(r => r.type === 'teaching')).toFixed(2) + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Booking Revenue</span><strong>$' + sum(DEMO_PAYMENTS.filter(r => r.type === 'oneonone')).toFixed(2) + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Shop + Giving</span><strong>$' + sum(DEMO_PAYMENTS.filter(r => r.type === 'shop' || r.type === 'donation')).toFixed(2) + '</strong></div>';
-  renderOwnerPaymentsList('all');
-}
-function renderOwnerPaymentsList(tab){
-  const wrap = document.getElementById('ownerPaymentsList');
-  if(!wrap) return;
-  const rows = tab === 'all' ? DEMO_PAYMENTS : DEMO_PAYMENTS.filter(r => r.type === tab);
-  wrap.innerHTML = rows.length === 0 ? '<p style="color:#8a8578;font-size:13px">No sample payments in this category.</p>' :
-    '<div class="tablewrap-scroll"><table class="admin-payments-table"><tr><th>Name</th><th>What They Paid For</th><th>Amount</th><th>Date</th><th>Status</th></tr>' +
-    rows.map(r => '<tr><td>' + escapeHtml(r.name) + '<br><span class="admin-hint">' + escapeHtml(r.email) + '</span></td><td>' + escapeHtml(r.item) + '</td><td>' +
-      (r.amount ? '$' + r.amount.toFixed(2) : '—') + '</td><td>' + escapeHtml(r.date) + '</td><td><span class="admin-status-pill ' +
-      (r.status === 'Paid' ? 'published' : r.status === 'Refunded' ? 'cancelled' : 'draft') + '">' + escapeHtml(r.status) + '</span></td></tr>').join('') +
-    '</table></div>';
-}
+// No real payment processor is connected anywhere in this project yet
+// (one-on-one booking, Teaching registration, and Shop all remain
+// unpaid/placeholder) — so this section is honestly empty rather than
+// showing invented transactions. The category tabs still switch (so
+// the intended structure is visible), they just all show the same
+// honest "not connected" message underneath since there's nothing to
+// filter yet.
 document.getElementById('ownerPaymentsTabs').addEventListener('click', event => {
   const btn = event.target.closest('.admin-tab');
   if(!btn) return;
   document.querySelectorAll('#ownerPaymentsTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
-  renderOwnerPaymentsList(btn.dataset.paymentsTab);
 });
 
 function renderOwnerMediaGallery(){
@@ -3473,6 +3693,8 @@ function renderOwnerMediaGallery(){
 
 async function loadOwnerData(){
   if(!currentProfile || currentProfile.role !== 'admin') return;
+  updateOwnerSidebarProfile();
+  applyOwnerAppearance();
   if(!DEMO_MODE){ try { await loadSchedulingConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadTeachingPageConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   renderSchedSettingsForm();
@@ -3484,7 +3706,6 @@ async function loadOwnerData(){
   renderOwnerNotifications();
   renderTeachingManager();
   renderOwnerWebsitePages();
-  renderOwnerPaymentsPlaceholder();
   renderOwnerMediaGallery();
   await Promise.all([loadOwnerBookings(), loadOwnerConfirmed(), loadOwnerMembers(), loadBlockedDates(), renderOwnerDashboardStats()]);
 }
@@ -4149,8 +4370,11 @@ function fillTeachingEditForm(t, zoom){
   g('teachingEditDate').value = t ? t.date || '' : '';
   g('teachingEditStartTime').value = t ? t.startTime || TEACHING_PAGE_SETTINGS.defaultThursdayTime : TEACHING_PAGE_SETTINGS.defaultThursdayTime;
   g('teachingEditEndTime').value = t ? t.endTime || '' : '';
-  g('teachingEditTimeZone').value = t ? (t.timeZone || TEACHING_PAGE_SETTINGS.defaultTimeZone) : TEACHING_PAGE_SETTINGS.defaultTimeZone;
+  g('teachingEditTimeZone').value = 'America/New_York';
   g('teachingEditPrice').value = t && t.price ? t.price : '';
+  const isPaid = !!(t && t.price);
+  document.querySelectorAll('#teachingEditFreePaidRow .admin-tab').forEach(b => b.classList.toggle('active', (b.dataset.freePaid === 'paid') === isPaid));
+  document.getElementById('teachingEditPriceFieldWrap').hidden = !isPaid;
   g('teachingEditCapacity').value = t && t.capacity ? t.capacity : '';
   g('teachingEditUnlimited').checked = t ? !!t.unlimitedCapacity : true;
   g('teachingEditFormat').value = t ? t.format || 'zoom' : 'zoom';
@@ -4176,13 +4400,39 @@ function fillTeachingEditForm(t, zoom){
 }
 
 function showTeachingEditTab(name){
-  document.querySelectorAll('#teachingEditTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.editTab === name));
+  document.querySelectorAll('#teachingEditTabs .admin-step').forEach(b => b.classList.toggle('active', b.dataset.editTab === name));
   document.querySelectorAll('.admin-edit-panel').forEach(p => { p.hidden = p.dataset.editPanel !== name; });
+  if(name === 'preview') renderTeachingEditFullPreview();
 }
 document.getElementById('teachingEditTabs').addEventListener('click', event => {
-  const btn = event.target.closest('.admin-tab');
+  const btn = event.target.closest('.admin-step');
   if(btn) showTeachingEditTab(btn.dataset.editTab);
 });
+document.getElementById('teachingEditFreePaidRow').addEventListener('click', event => {
+  const btn = event.target.closest('[data-free-paid]');
+  if(!btn) return;
+  document.querySelectorAll('#teachingEditFreePaidRow .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  const isPaid = btn.dataset.freePaid === 'paid';
+  document.getElementById('teachingEditPriceFieldWrap').hidden = !isPaid;
+  if(!isPaid) document.getElementById('teachingEditPrice').value = '';
+});
+function renderTeachingEditFullPreview(){
+  const wrap = document.getElementById('teachingEditFullPreview');
+  if(!wrap) return;
+  const { publicFields } = collectTeachingEditForm();
+  const previewTeaching = { ...publicFields, id: document.getElementById('teachingEditId').value || 'preview' };
+  wrap.innerHTML = '<div style="border-radius:var(--owner-radius);overflow:hidden;box-shadow:var(--owner-shadow)">' + teachingHeroMediaHtml(previewTeaching).replace('teaching-hero-media', 'teaching-hero-media admin-preview-embed') +
+    '<div style="background:#0c0c0e;color:#fff;padding:28px;margin-top:-1px">' +
+    '<div class="admin-microlabel" style="color:#9a9aa2">Upcoming Class</div>' +
+    '<h3 style="font-family:var(--serif);font-size:28px;margin:8px 0 4px">' + escapeHtml(publicFields.title || 'Untitled Class') + '</h3>' +
+    (publicFields.subtitle ? '<p style="font-family:var(--serif);font-style:italic;color:#c7c7cc;margin:0 0 12px">' + escapeHtml(publicFields.subtitle) + '</p>' : '') +
+    '<p style="color:#a6a6ae;font-size:13.5px;max-width:52ch">' + escapeHtml(publicFields.shortDescription || '') + '</p>' +
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-family:var(--mono);font-size:11px;color:#fff">' +
+    '<span>' + escapeHtml(publicFields.date ? formatTeachingDate(publicFields.date) : 'No date set') + '</span>' +
+    '<span>' + escapeHtml(publicFields.startTime ? formatTeachingTime(publicFields.startTime, 'America/New_York') : '') + '</span>' +
+    '<span>' + (publicFields.price ? '$' + Number(publicFields.price).toFixed(2) : 'Free') + '</span>' +
+    '</div></div></div>';
+}
 document.getElementById('teachingEditStatus').addEventListener('change', updateTeachingEditStatusPill);
 
 const teachingEditDialog = document.getElementById('teachingEditDialog');
@@ -4410,6 +4660,14 @@ function renderTeachingManagerCalendar(){
   }).join('');
 }
 
+function renderFeaturedTeachingPreview(){
+  const wrap = document.getElementById('teachingSettingsFeaturedPreview');
+  if(!wrap) return;
+  const t = featuredTeaching();
+  wrap.innerHTML = t ? teachingMgrRowHtml(t).replace('<div class="admin-teaching-actions">', '<div class="admin-teaching-actions" style="display:none">')
+    : '<div class="admin-hint">No teaching is featured yet.</div>';
+}
+
 function populateFeaturedTeachingSelect(){
   const select = document.getElementById('teachingSettingsFeatured');
   if(!select) return;
@@ -4418,7 +4676,15 @@ function populateFeaturedTeachingSelect(){
   select.innerHTML = '<option value="">None (defaults to next upcoming)</option>' +
     items.map(t => '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.title || t.id) + ' — ' + escapeHtml(formatTeachingDateShort(t.date || '')) + '</option>').join('');
   select.value = current && items.some(t => t.id === current) ? current : '';
+  renderFeaturedTeachingPreview();
 }
+document.getElementById('teachingSettingsFeatured').addEventListener('change', () => {
+  const wrap = document.getElementById('teachingSettingsFeaturedPreview');
+  const id = document.getElementById('teachingSettingsFeatured').value;
+  const t = id ? TEACHINGS[id] : upcomingTeachingsList()[0];
+  wrap.innerHTML = t ? teachingMgrRowHtml(t).replace('<div class="admin-teaching-actions">', '<div class="admin-teaching-actions" style="display:none">')
+    : '<div class="admin-hint">No teaching is featured yet.</div>';
+});
 
 function renderTeachingManager(){
   if(!document.getElementById('teachingMgrList')) return;
