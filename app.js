@@ -326,20 +326,24 @@ const EYE_OFF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 // A short, deliberately non-exhaustive list of common country codes. "Other"
 // lets someone type a full E.164 number (+<country code><number>) directly
 // if their country isn't listed, so no one is locked out.
+// A compact flag + dial code is the visible label (matches modern checkout
+// phone fields — a small code chip, not a full-width country name that
+// competes visually with the number field beside it); `full` is the
+// complete name kept as a title attribute for screen readers/hover.
 const COUNTRY_CODES = [
-  { code: '+1', label: 'US/CA +1' },
-  { code: '+44', label: 'UK +44' },
-  { code: '+234', label: 'Nigeria +234' },
-  { code: '+91', label: 'India +91' },
-  { code: '+254', label: 'Kenya +254' },
-  { code: '+233', label: 'Ghana +233' },
-  { code: '+27', label: 'South Africa +27' },
-  { code: '+61', label: 'Australia +61' },
-  { code: '+33', label: 'France +33' },
-  { code: '+49', label: 'Germany +49' },
-  { code: 'other', label: 'Other (type full number with +country code)' },
+  { code: '+1', label: '🇺🇸 +1', full: 'United States / Canada +1' },
+  { code: '+44', label: '🇬🇧 +44', full: 'United Kingdom +44' },
+  { code: '+234', label: '🇳🇬 +234', full: 'Nigeria +234' },
+  { code: '+91', label: '🇮🇳 +91', full: 'India +91' },
+  { code: '+254', label: '🇰🇪 +254', full: 'Kenya +254' },
+  { code: '+233', label: '🇬🇭 +233', full: 'Ghana +233' },
+  { code: '+27', label: '🇿🇦 +27', full: 'South Africa +27' },
+  { code: '+61', label: '🇦🇺 +61', full: 'Australia +61' },
+  { code: '+33', label: '🇫🇷 +33', full: 'France +33' },
+  { code: '+49', label: '🇩🇪 +49', full: 'Germany +49' },
+  { code: 'other', label: '🌐 Other', full: 'Other — type your full number with +country code' },
 ];
-const COUNTRY_OPTIONS = COUNTRY_CODES.map(c => `<option value="${c.code}">${c.label}</option>`).join('');
+const COUNTRY_OPTIONS = COUNTRY_CODES.map(c => `<option value="${c.code}" title="${c.full}">${c.label}</option>`).join('');
 
 // Account Settings block — identical markup used inside both the member
 // and admin dashboards (they coexist in the DOM, just one hidden at a
