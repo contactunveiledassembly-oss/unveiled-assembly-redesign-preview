@@ -630,11 +630,20 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 .password-toggle:hover{color:var(--black);background:rgba(10,10,10,.06)}
 .password-toggle:focus-visible{outline:2px solid var(--black);outline-offset:2px}
 
-.phone-input-row{display:grid;grid-template-columns:auto 1fr;gap:8px}
-.phone-input-row select{
-  border:1px solid var(--line-light);background:var(--white);color:var(--black);
-  padding:0 6px;font:inherit;font-size:11px;min-height:46px;max-width:118px;
+/* One connected control: the country-code select and the phone number
+   input share a single outer border with no gap between them, so they
+   read as one field group instead of two separate boxes floating apart. */
+.phone-input-row{
+  display:flex;align-items:stretch;border:1px solid var(--line-light);background:var(--white);
 }
+.phone-input-row select{
+  border:0;border-right:1px solid var(--line-light);background:transparent;color:var(--black);
+  padding:0 10px;font:inherit;font-size:11.5px;min-height:46px;flex:0 0 122px;width:122px;border-radius:0;
+}
+.phone-input-row input{
+  border:0 !important;background:transparent !important;flex:1;min-width:0;border-radius:0;
+}
+.phone-input-row:focus-within{outline:2px solid var(--black);outline-offset:1px}
 
 .link-btn{
   color:var(--black);font-size:11px;letter-spacing:.04em;text-decoration:underline;
@@ -660,8 +669,7 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 
 @media(max-width:560px){
   .portal-field-row{grid-template-columns:1fr}
-  .phone-input-row{grid-template-columns:1fr}
-  .phone-input-row select{max-width:none}
+  .phone-input-row select{flex-basis:100px;width:100px;padding:0 6px;font-size:10.5px}
   .auth-method-tabs{flex-direction:column}
 }
 
@@ -1046,6 +1054,16 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
 .checkout-payment-demo{margin:6px 0 20px;border:1px solid #e6e6e9;border-radius:16px;padding:18px}
 .checkout-payment-demo legend{padding:0 6px}
 .checkout-payment-demo input[type="text"]{border-radius:12px;border:1.5px solid #e6e6e9;padding:11px 14px}
+/* Customer info fields (name/email/phone) rounded to match the payment
+   fields below them, so the whole checkout form reads as one modern,
+   consistent set of controls instead of square editorial-site inputs
+   next to rounded payment inputs. */
+.checkout-form-side .booking-field input,.checkout-form-side .booking-field select{
+  border-radius:12px;border:1.5px solid #e6e6e9;min-height:46px;
+}
+.checkout-form-side .phone-input-row{border-radius:12px;border:1.5px solid #e6e6e9;overflow:hidden}
+.checkout-form-side .phone-input-row select{border-radius:0}
+.checkout-form-side .phone-input-row input{border-radius:0 !important}
 .checkout-order-summary{border-top:1px solid #e6e6e9;border-bottom:1px solid #e6e6e9;padding:16px 0;margin:22px 0}
 .checkout-order-row{display:flex;justify-content:space-between;font-size:13.5px;color:#6c6c74;margin-bottom:8px}
 .checkout-order-total{display:flex;justify-content:space-between;font-family:var(--serif);font-size:19px;font-weight:600;color:#18181b}

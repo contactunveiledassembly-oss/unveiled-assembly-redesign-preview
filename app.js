@@ -747,107 +747,144 @@ function dialogsHtml(){
           </div>
           <div id="ownerMediaGallery" class="admin-media-gallery"></div>
         </article>
-        <article class="portal-panel" data-owner-section="bookings">
-          <span class="portal-label">Pending Booking Requests</span>
-          <div id="ownerBookingsList"><p style="color:#656565">Loading booking requests…</p></div>
-        </article>
-        <article class="portal-panel" data-owner-section="bookings">
-          <span class="portal-label">Confirmed Upcoming Appointments</span>
-          <div id="ownerConfirmedList"><p style="color:#656565">Loading appointments…</p></div>
-        </article>
-        <article class="portal-panel" data-owner-section="bookings">
-          <span class="portal-label">Block A Date</span>
-          <p style="color:#656565;margin-bottom:14px">Mark a date as unavailable (holidays, travel, etc). Blocked dates won't show any open times to visitors.</p>
-          <form id="blockDateForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-            <div class="form-field" style="flex:1;min-width:160px">
-              <label for="blockDateInput">Date</label>
-              <input id="blockDateInput" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+        <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="bookings">
+          <div class="admin-panel-head">
+            <div>
+              <span class="portal-label">Bookings</span>
+              <p class="admin-panel-intro">1:1 appointment requests, your calendar, availability, session types, blocked dates, and reminders — all in one place.</p>
             </div>
-            <button class="portal-secondary" type="submit" id="blockDateSubmitBtn">Block This Date</button>
-          </form>
-          <div class="form-status" id="blockDateStatus" style="color:#6d6d6d;margin-top:8px"></div>
-          <div id="blockedDatesList" style="margin-top:14px"></div>
-        </article>
-        <article class="portal-panel" data-owner-section="bookings">
-          <span class="portal-label">Add An Appointment</span>
-          <p style="color:#656565;margin-bottom:14px">Manually schedule someone (phone-in requests, etc). This books and confirms in one step.</p>
-          <form id="adminBookForm">
-            <div class="story-form-grid">
-              <div class="form-field">
-                <label for="adminBookName">Name</label>
-                <input id="adminBookName" type="text" placeholder="First and last name" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
-              </div>
-              <div class="form-field">
-                <label for="adminBookEmail">Email</label>
-                <input id="adminBookEmail" type="email" placeholder="Their email" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
-              </div>
-              <div class="form-field">
-                <label for="adminBookType">Session</label>
-                <select id="adminBookType" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                </select>
-              </div>
-              <div class="form-field">
-                <label for="adminBookDate">Date</label>
-                <input id="adminBookDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
-              </div>
-              <div class="form-field full">
-                <label for="adminBookTime">Time</label>
-                <select id="adminBookTime" required disabled style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                  <option value="">Choose a date first</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button class="btn" type="submit" id="adminBookSubmitBtn" style="background:var(--black);color:var(--ivory);border-color:var(--black)">Add &amp; Confirm</button>
-              <div class="form-status" id="adminBookStatus" role="status" aria-live="polite" style="color:#6d6d6d"></div>
-            </div>
-          </form>
-        </article>
-        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="bookings">
-          <span class="portal-label">Scheduling Settings</span>
-          <p style="color:#656565;margin-bottom:14px">Controls what visitors see on the booking form — time zone, whether booking is open, the services offered, and when sessions can be requested. On the preview site this only edits sample data; on the live site it's real and applies immediately.</p>
-          <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px">
-            <div class="form-field" style="min-width:260px">
-              <label for="schedTimezone">Ministry time zone</label>
-              <select id="schedTimezone" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                <option value="America/New_York">Eastern (America/New_York)</option>
-                <option value="America/Chicago">Central (America/Chicago)</option>
-                <option value="America/Denver">Mountain (America/Denver)</option>
-                <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
-                <option value="America/Anchorage">Alaska (America/Anchorage)</option>
-                <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
-              </select>
-            </div>
-            <div class="form-field" style="flex:0 0 150px"><label for="schedMaxPerDay">Max bookings/day</label><input id="schedMaxPerDay" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-            <div class="form-field" style="flex:0 0 150px"><label for="schedMinNotice">Min notice (hours)</label><input id="schedMinNotice" type="number" min="0" placeholder="None" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-            <div class="form-field" style="flex:0 0 150px"><label for="schedMaxAdvance">Max advance (days)</label><input id="schedMaxAdvance" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-            <label style="display:flex;align-items:center;gap:8px;color:#3a3a3a;font-size:13px;padding-bottom:8px">
-              <input id="schedBookingPaused" type="checkbox" style="accent-color:var(--black)" />
-              Pause all new booking requests
-            </label>
-            <button class="portal-secondary" type="button" id="schedSettingsSaveBtn">Save Settings</button>
           </div>
-          <div class="form-status" id="schedSettingsStatus" style="color:#6d6d6d;margin-bottom:20px"></div>
+          <div class="admin-tabs" id="bookingsSubNav" role="tablist" style="margin:16px 0">
+            <button type="button" class="admin-tab active" data-bookings-tab="overview">Overview</button>
+            <button type="button" class="admin-tab" data-bookings-tab="appointments">Appointments</button>
+            <button type="button" class="admin-tab" data-bookings-tab="calendar">Calendar</button>
+            <button type="button" class="admin-tab" data-bookings-tab="availability">Availability</button>
+            <button type="button" class="admin-tab" data-bookings-tab="types">Session Types</button>
+            <button type="button" class="admin-tab" data-bookings-tab="blocked">Blocked Dates</button>
+            <button type="button" class="admin-tab" data-bookings-tab="notifications">Notifications</button>
+          </div>
 
-          <div style="border-top:1px dashed #c7c7c7;padding-top:16px;margin-bottom:20px">
-            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Session Types</strong>
-            <div id="schedTypesList" style="margin-bottom:14px"></div>
-            <form id="schedTypeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-              <div class="form-field" style="flex:1;min-width:130px"><label for="schedTypeId">ID</label><input id="schedTypeId" type="text" placeholder="e.g. 30-minute" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:1;min-width:170px"><label for="schedTypeName">Display name</label><input id="schedTypeName" type="text" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 100px"><label for="schedTypeDuration">Minutes</label><input id="schedTypeDuration" type="number" min="5" step="5" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 120px"><label for="schedTypePrice">Price</label><input id="schedTypePrice" type="number" min="0" step="0.01" placeholder="No charge" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferBefore">Buffer before</label><input id="schedTypeBufferBefore" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferAfter">Buffer after</label><input id="schedTypeBufferAfter" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:1;min-width:200px"><label for="schedTypeDescription">Description</label><input id="schedTypeDescription" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <button class="portal-secondary" type="submit">Add / Update Type</button>
+          <div class="admin-edit-panel" data-bookings-panel="overview">
+            <div class="admin-stat-row" id="bookingsOverviewStats"></div>
+            <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:22px" class="owner-dashboard-lower">
+              <div>
+                <div class="admin-subsection-label" style="border-top:0;padding-top:0">Today's Schedule</div>
+                <div id="bookingsTodayList"></div>
+                <div class="admin-subsection-label">Upcoming Appointments</div>
+                <div id="bookingsUpcomingPreview"></div>
+              </div>
+              <div>
+                <div class="admin-subsection-label" style="border-top:0;padding-top:0">Quick Actions</div>
+                <div style="display:flex;flex-direction:column;gap:8px" id="bookingsQuickActions">
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="copy-link" style="text-align:left">Copy Booking Page Link</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="availability" style="text-align:left">Manage Availability</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="calendar" style="text-align:left">View Calendar</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="blocked" style="text-align:left">Blocked Dates</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="types" style="text-align:left">Session Types</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="notifications" style="text-align:left">Notifications</button>
+                </div>
+                <div class="form-status" id="bookingsQuickActionStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-edit-panel" data-bookings-panel="appointments" hidden>
+            <div class="admin-tabs" id="bookingsApptFilterTabs" role="tablist" style="margin-bottom:16px">
+              <button type="button" class="admin-tab active" data-appt-filter="all">All</button>
+              <button type="button" class="admin-tab" data-appt-filter="upcoming">Upcoming</button>
+              <button type="button" class="admin-tab" data-appt-filter="pending">Pending</button>
+              <button type="button" class="admin-tab" data-appt-filter="completed">Completed</button>
+              <button type="button" class="admin-tab" data-appt-filter="cancelled">Cancelled</button>
+            </div>
+            <div data-appt-section="pending">
+              <div class="admin-subsection-label" style="border-top:0;padding-top:0">Pending Requests</div>
+              <div id="ownerBookingsList"><p class="admin-hint">Loading booking requests…</p></div>
+            </div>
+            <div data-appt-section="upcoming">
+              <div class="admin-subsection-label">Upcoming (Confirmed)</div>
+              <div id="ownerConfirmedList"><p class="admin-hint">Loading appointments…</p></div>
+            </div>
+            <div data-appt-section="completed">
+              <div class="admin-subsection-label">Completed</div>
+              <div id="ownerCompletedList"><p class="admin-hint">Loading…</p></div>
+            </div>
+            <div data-appt-section="cancelled">
+              <div class="admin-subsection-label">Cancelled / Declined</div>
+              <div id="ownerCancelledList"><p class="admin-hint">Loading…</p></div>
+            </div>
+            <div class="admin-subsection-label">Add An Appointment</div>
+            <p class="admin-hint" style="margin-bottom:14px">Manually schedule someone (phone-in requests, etc). This books and confirms in one step.</p>
+            <form id="adminBookForm">
+              <div class="story-form-grid">
+                <div class="form-field">
+                  <label for="adminBookName">Name</label>
+                  <input id="adminBookName" type="text" placeholder="First and last name" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+                </div>
+                <div class="form-field">
+                  <label for="adminBookEmail">Email</label>
+                  <input id="adminBookEmail" type="email" placeholder="Their email" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+                </div>
+                <div class="form-field">
+                  <label for="adminBookType">Session</label>
+                  <select id="adminBookType" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="adminBookDate">Date</label>
+                  <input id="adminBookDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+                </div>
+                <div class="form-field full">
+                  <label for="adminBookTime">Time</label>
+                  <select id="adminBookTime" required disabled style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                    <option value="">Choose a date first</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="admin-btn-solid" type="submit" id="adminBookSubmitBtn">Add &amp; Confirm</button>
+                <div class="form-status" id="adminBookStatus" role="status" aria-live="polite" style="color:var(--owner-text-muted)"></div>
+              </div>
             </form>
-            <div class="form-status" id="schedTypeStatus" style="color:#6d6d6d;margin-top:8px"></div>
-            <p style="color:#8a8a8a;font-size:11px;margin-top:8px">Using an existing ID updates that type instead of creating a new one. Prices, descriptions, and policies here are placeholders until you provide the real Calendly information.</p>
           </div>
 
-          <div style="border-top:1px dashed #c7c7c7;padding-top:16px;margin-bottom:20px">
-            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Weekly Availability Windows</strong>
+          <div class="admin-edit-panel" data-bookings-panel="calendar" hidden>
+            <div class="admin-tabs" id="bookingsCalendarViewTabs" role="tablist" style="margin-bottom:10px">
+              <button type="button" class="admin-tab" data-cal-view="day">Day</button>
+              <button type="button" class="admin-tab active" data-cal-view="week">Week</button>
+              <button type="button" class="admin-tab" data-cal-view="month">Month</button>
+            </div>
+            <p class="admin-hint" style="margin-bottom:16px">All booking times are shown in Eastern Time.</p>
+            <div id="bookingsCalendarView"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-bookings-panel="availability" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">Controls when visitors are allowed to request a 1:1 session — your time zone, how far ahead people can book, and how much notice you need.</p>
+            <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px">
+              <div class="form-field" style="min-width:260px">
+                <label for="schedTimezone">Ministry Time Zone</label>
+                <select id="schedTimezone" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                  <option value="America/New_York">Eastern (America/New_York)</option>
+                  <option value="America/Chicago">Central (America/Chicago)</option>
+                  <option value="America/Denver">Mountain (America/Denver)</option>
+                  <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
+                  <option value="America/Anchorage">Alaska (America/Anchorage)</option>
+                  <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
+                </select>
+              </div>
+              <div class="form-field" style="flex:0 0 170px"><label for="schedMaxPerDay">Maximum Appointments Per Day</label><input id="schedMaxPerDay" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 150px"><label for="schedMinNotice">Minimum Notice (hours)</label><input id="schedMinNotice" type="number" min="0" placeholder="None" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 170px"><label for="schedMaxAdvance">Maximum Advance Booking (days)</label><input id="schedMaxAdvance" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <label style="display:flex;align-items:center;gap:8px;color:var(--owner-text);font-size:13px;padding-bottom:8px">
+                <input id="schedBookingPaused" type="checkbox" style="accent-color:var(--owner-accent)" />
+                Pause all new booking requests
+              </label>
+              <button class="admin-btn-solid" type="button" id="schedSettingsSaveBtn">Save Settings</button>
+            </div>
+            <div class="form-status" id="schedSettingsStatus" style="color:var(--owner-text-muted);margin-bottom:8px"></div>
+            <p class="admin-hint" style="margin-bottom:20px">"Buffer Time" is set per Session Type (see the Session Types tab) since different session lengths often need different breathing room.</p>
+
+            <div class="admin-subsection-label">Available Days &amp; Hours</div>
+            <p class="admin-hint" style="margin-bottom:12px">These are the weekly windows visitors can request a time in. Add as many as you'd like — each one applies every week until removed.</p>
             <div id="schedRulesList" style="margin-bottom:14px"></div>
             <form id="schedRuleForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
               <div class="form-field" style="flex:1;min-width:130px">
@@ -860,40 +897,82 @@ function dialogsHtml(){
               <div class="form-field" style="flex:0 0 120px"><label for="schedRuleStart">Start</label><input id="schedRuleStart" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedRuleEnd">End</label><input id="schedRuleEnd" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 110px"><label for="schedRuleCapacity">Capacity</label><input id="schedRuleCapacity" type="number" min="1" value="1" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <button class="portal-secondary" type="submit">Add Window</button>
+              <button class="admin-btn-ghost" type="submit">Add Window</button>
             </form>
-            <div class="form-status" id="schedRuleStatus" style="color:#6d6d6d;margin-top:8px"></div>
-            <p style="color:#8a8a8a;font-size:11px;margin-top:8px">A new window applies to all session types, with the capacity you set (how many people can book the same exact time). Remove and re-add a window to change it.</p>
+            <div class="form-status" id="schedRuleStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+            <p class="admin-hint" style="margin-top:8px">A new window applies to all session types, with the capacity you set (how many people can book the same exact time). Remove and re-add a window to change it.</p>
           </div>
 
-          <div style="border-top:1px dashed #c7c7c7;padding-top:16px;margin-bottom:20px">
-            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Block A Date Range</strong>
-            <p style="color:#656565;margin-bottom:12px">For vacations, holidays, or multi-day closures. Single individual dates can still be blocked from the "Block A Date" panel above.</p>
+          <div class="admin-edit-panel" data-bookings-panel="types" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">The kinds of 1:1 appointments visitors can request — for example, 30-Minute One-on-One, Prayer Call, or Mentorship Session.</p>
+            <div id="schedTypesList" style="margin-bottom:14px"></div>
+            <div class="admin-subsection-label" style="border-top:0;padding-top:0">Add / Update A Session Type</div>
+            <form id="schedTypeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-field" style="flex:1;min-width:130px"><label for="schedTypeId">ID</label><input id="schedTypeId" type="text" placeholder="e.g. 30-minute" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:1;min-width:170px"><label for="schedTypeName">Name</label><input id="schedTypeName" type="text" placeholder="e.g. 30-Minute One-on-One" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 100px"><label for="schedTypeDuration">Minutes</label><input id="schedTypeDuration" type="number" min="5" step="5" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 120px"><label for="schedTypePrice">Price</label><input id="schedTypePrice" type="number" min="0" step="0.01" placeholder="No charge" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 130px"><label for="schedTypeFormat">Format</label>
+                <select id="schedTypeFormat" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                  <option value="zoom">Zoom</option><option value="phone">Phone</option><option value="in-person">In Person</option>
+                </select>
+              </div>
+              <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferBefore">Buffer before</label><input id="schedTypeBufferBefore" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferAfter">Buffer after</label><input id="schedTypeBufferAfter" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:1;min-width:200px"><label for="schedTypeDescription">Description</label><input id="schedTypeDescription" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <button class="admin-btn-solid" type="submit">Add / Update Type</button>
+            </form>
+            <div class="form-status" id="schedTypeStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+            <p class="admin-hint" style="margin-top:8px">Using an existing ID updates that type instead of creating a new one. Prices and descriptions here are placeholders until a real payment processor is connected.</p>
+          </div>
+
+          <div class="admin-edit-panel" data-bookings-panel="blocked" hidden>
+            <div class="admin-subsection-label" style="border-top:0;padding-top:0">Single Date Block</div>
+            <p class="admin-hint" style="margin-bottom:12px">Mark one date as fully unavailable — holidays, a personal day, travel. Visitors won't see any open times that day.</p>
+            <form id="blockDateForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-field" style="flex:1;min-width:160px">
+                <label for="blockDateInput">Date</label>
+                <input id="blockDateInput" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+              </div>
+              <button class="admin-btn-ghost" type="submit" id="blockDateSubmitBtn">Block This Date</button>
+            </form>
+            <div class="form-status" id="blockDateStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+            <div id="blockedDatesList" style="margin-top:14px"></div>
+
+            <div class="admin-subsection-label">Date Range Block</div>
+            <p class="admin-hint" style="margin-bottom:12px">For vacations, holidays, or multi-day closures.</p>
             <div id="schedRangesList" style="margin-bottom:14px"></div>
             <form id="schedRangeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
               <div class="form-field" style="flex:1;min-width:150px"><label for="schedRangeStart">Start date</label><input id="schedRangeStart" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:1;min-width:150px"><label for="schedRangeEnd">End date</label><input id="schedRangeEnd" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:1;min-width:160px"><label for="schedRangeReason">Reason (optional)</label><input id="schedRangeReason" type="text" placeholder="e.g. Vacation" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <button class="portal-secondary" type="submit">Block Range</button>
+              <button class="admin-btn-ghost" type="submit">Block Range</button>
             </form>
-            <div class="form-status" id="schedRangeStatus" style="color:#6d6d6d;margin-top:8px"></div>
-          </div>
+            <div class="form-status" id="schedRangeStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
 
-          <div style="border-top:1px dashed #c7c7c7;padding-top:16px">
-            <strong style="display:block;margin-bottom:10px;font-size:13px;letter-spacing:.04em">Special Availability For A Specific Date</strong>
-            <p style="color:#656565;margin-bottom:12px">Overrides the normal weekly windows for just one date — extra hours, reduced hours, or fully closed that day.</p>
+            <div class="admin-subsection-label">Specific Time Block</div>
+            <p class="admin-hint" style="margin-bottom:12px">Change just one date's hours — for example, open later than usual, close early, or fully closed for part of the day. Leave start/end blank and check "Fully closed" to block the whole date.</p>
             <div id="schedOverridesList" style="margin-bottom:14px"></div>
             <form id="schedOverrideForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
               <div class="form-field" style="flex:1;min-width:150px"><label for="schedOverrideDate">Date</label><input id="schedOverrideDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideStart">Start</label><input id="schedOverrideStart" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideEnd">End</label><input id="schedOverrideEnd" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#3a3a3a;padding-bottom:8px">
-                <input id="schedOverrideClosed" type="checkbox" style="accent-color:var(--black)" /> Fully closed this date
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--owner-text);padding-bottom:8px">
+                <input id="schedOverrideClosed" type="checkbox" style="accent-color:var(--owner-accent)" /> Fully closed this date
               </label>
-              <button class="portal-secondary" type="submit">Save Override</button>
+              <button class="admin-btn-ghost" type="submit">Save Override</button>
             </form>
-            <div class="form-status" id="schedOverrideStatus" style="color:#6d6d6d;margin-top:8px"></div>
-            <p style="color:#8a8a8a;font-size:11px;margin-top:8px">Leave start/end blank and check "Fully closed" to close a date entirely; otherwise set a start and end to replace that date's normal hours.</p>
+            <div class="form-status" id="schedOverrideStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-bookings-panel="notifications" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">Choose which messages get sent around a 1:1 booking. <strong>These switches save your preference now — actual email/SMS delivery isn't connected yet</strong>, so nothing is sent until a real provider is wired up.</p>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:16px"><input id="bookingsNotifyConfirmation" type="checkbox" /> Booking Confirmation — sent when a request is confirmed</label>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:16px"><input id="bookingsNotifyReminder" type="checkbox" /> Reminder Before Appointment — sent shortly before the session starts</label>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:16px"><input id="bookingsNotifyCancellation" type="checkbox" /> Cancellation Notice — sent if a booking is cancelled or declined</label>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:20px"><input id="bookingsNotifyReschedule" type="checkbox" /> Reschedule Notice — sent when a booking's time is changed</label>
+            <button class="admin-btn-solid" type="button" id="bookingsNotifySaveBtn">Save Changes</button>
+            <div class="form-status" id="bookingsNotifyStatus" style="color:var(--owner-text-muted);margin-top:10px"></div>
           </div>
         </article>
         <article class="portal-panel" data-owner-section="dashboard">
@@ -1095,9 +1174,9 @@ function dialogsHtml(){
           </div>
           <div class="booking-field">
             <label for="bookingPhoneNumber">Phone number</label>
-            <div style="display:flex;gap:8px">
-              <select id="bookingPhoneCountry" aria-label="Country code" style="flex:0 0 auto">${COUNTRY_OPTIONS}</select>
-              <input id="bookingPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required style="flex:1" />
+            <div class="phone-input-row">
+              <select id="bookingPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
+              <input id="bookingPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required />
             </div>
           </div>
           <div class="booking-field full">
@@ -1237,9 +1316,9 @@ function dialogsHtml(){
             </div>
             <div class="booking-field full">
               <label for="teachingRegisterPhoneNumber">Phone number</label>
-              <div style="display:flex;gap:8px">
-                <select id="teachingRegisterPhoneCountry" aria-label="Country code" style="flex:0 0 auto">${COUNTRY_OPTIONS}</select>
-                <input id="teachingRegisterPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required style="flex:1" />
+              <div class="phone-input-row">
+                <select id="teachingRegisterPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
+                <input id="teachingRegisterPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required />
               </div>
             </div>
           </div>
@@ -1607,11 +1686,12 @@ let SCHEDULING_SETTINGS = {
   minNoticeHours: null,
   maxAdvanceDays: null,
   maxBookingsPerDay: null,
-  backToBackAllowed: true
+  backToBackAllowed: true,
+  notifications: { confirmation: true, reminder: true, cancellation: true, reschedule: true }
 };
 let SESSION_TYPES = {
-  '30-minute': { name: '30-Minute One-on-One', durationMinutes: 30, price: null, description: 'More time for conversation, guidance, and focused ministry.', active: true, order: 1, bufferBeforeMin: 0, bufferAfterMin: 0 },
-  '15-minute': { name: '15-Minute Pop-Up', durationMinutes: 15, price: null, description: 'A shorter personal session for one focused need or question.', active: true, order: 2, bufferBeforeMin: 0, bufferAfterMin: 0 }
+  '30-minute': { name: '30-Minute One-on-One', durationMinutes: 30, price: null, description: 'More time for conversation, guidance, and focused ministry.', active: true, order: 1, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom' },
+  '15-minute': { name: '15-Minute Pop-Up', durationMinutes: 15, price: null, description: 'A shorter personal session for one focused need or question.', active: true, order: 2, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom' }
 };
 let AVAILABILITY_RULES = [
   { id: 'default-tue', dayOfWeek: 2, startTime: '14:00', endTime: '18:00', sessionTypeIds: [], capacity: 1 },
@@ -3161,6 +3241,8 @@ adminBookForm.addEventListener('submit', async event => {
     adminBookTimeSelect.appendChild(new Option('Choose a date first', ''));
     adminBookTimeSelect.disabled = true;
     loadOwnerConfirmed();
+    renderBookingsOverviewStats();
+    renderBookingsToday();
   } catch (err) {
     adminBookStatus.textContent = err.message === 'slot-taken'
       ? 'That time is already booked — pick another.'
@@ -3221,16 +3303,19 @@ function renderSchedTypesList(){
     schedTypesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No session types yet — add one below.</p>';
     return;
   }
+  const formatLabel = f => f === 'phone' ? 'Phone' : f === 'in-person' ? 'In Person' : 'Zoom';
   schedTypesList.innerHTML = ids.map(id => {
     const t = SESSION_TYPES[id];
     const buffer = (t.bufferBeforeMin || t.bufferAfterMin) ? ' · buffer ' + (t.bufferBeforeMin || 0) + '/' + (t.bufferAfterMin || 0) + ' min' : '';
-    return '<div class="portal-row" data-type-id="' + escapeHtml(id) + '" style="padding:8px 0">' +
-      '<div><strong>' + escapeHtml(t.name) + '</strong><small>' + t.durationMinutes + ' min' +
-      (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · no charge') + buffer + (t.active === false ? ' · inactive' : '') + '</small></div>' +
-      '<div style="display:flex;gap:8px">' +
-      '<button class="portal-secondary sched-type-toggle" type="button" style="min-height:28px;padding:0 10px;font-size:9px">' +
+    return '<div class="admin-teaching-row" data-type-id="' + escapeHtml(id) + '">' +
+      '<div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(t.name) + '</strong>' +
+      (t.active === false ? '<span class="admin-status-pill cancelled">Inactive</span>' : '<span class="admin-status-pill published">Active</span>') + '</div>' +
+      '<div class="admin-teaching-meta">' + t.durationMinutes + ' min · ' + formatLabel(t.format) +
+      (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · No Charge') + buffer + '</div></div>' +
+      '<div class="admin-teaching-actions">' +
+      '<button class="admin-btn-ghost sched-type-toggle" type="button">' +
         (t.active === false ? 'Activate' : 'Deactivate') + '</button>' +
-      '<button class="portal-secondary sched-type-delete" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Delete</button>' +
+      '<button class="admin-btn-ghost sched-type-delete" type="button">Delete</button>' +
       '</div></div>';
   }).join('');
 }
@@ -3313,12 +3398,13 @@ if(schedTimezoneSelect){
     const bufferBeforeMin = Number(document.getElementById('schedTypeBufferBefore').value || 0);
     const bufferAfterMin = Number(document.getElementById('schedTypeBufferAfter').value || 0);
     const description = document.getElementById('schedTypeDescription').value.trim();
+    const format = document.getElementById('schedTypeFormat').value || 'zoom';
     if(!id || !name || !duration){ schedTypeStatus.textContent = 'ID, name, and minutes are required.'; return; }
     const existing = SESSION_TYPES[id] || {};
     const data = {
       name, durationMinutes: duration,
       price: priceRaw ? Number(priceRaw) : null,
-      bufferBeforeMin, bufferAfterMin,
+      bufferBeforeMin, bufferAfterMin, format,
       description, active: existing.active !== false,
       order: existing.order || (Object.keys(SESSION_TYPES).length + 1)
     };
@@ -3332,6 +3418,7 @@ if(schedTimezoneSelect){
     renderSchedTypesList();
     renderBookingOptions();
     populateAdminBookTypeSelect();
+    renderBookingsOverviewStats();
     schedTypeForm.reset();
     schedTypeStatus.textContent = SCHED_SAVE_NOTE;
   });
@@ -4029,6 +4116,7 @@ async function loadOwnerData(){
   renderTeachingManager();
   renderOwnerWebsitePages();
   renderOwnerMediaGallery();
+  renderBookingsPanels();
   await Promise.all([loadOwnerBookings(), loadOwnerConfirmed(), loadOwnerMembers(), loadBlockedDates(), renderOwnerDashboardStats()]);
 }
 
@@ -4130,6 +4218,8 @@ document.getElementById('ownerConfirmedList').addEventListener('click', async ev
     );
     portalOwnerStatus.textContent = 'Appointment rescheduled.';
     loadOwnerConfirmed();
+    renderBookingsOverviewStats();
+    renderBookingsToday();
   } catch (err) {
     portalOwnerStatus.textContent = err.message === 'slot-taken' ? 'That new time is already booked.' : 'Could not reschedule.';
     saveBtn.disabled = false;
@@ -4190,8 +4280,11 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
       } else {
         if(b) b.status = 'declined';
         portalOwnerStatus.textContent = 'Booking declined and the time was freed up.';
+        loadOwnerCancelled();
       }
       loadOwnerBookings();
+      renderBookingsOverviewStats();
+      renderBookingsToday();
       return;
     }
     if(confirmBtn){
@@ -4202,13 +4295,257 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
       await updateDoc(doc(db, 'bookings', bookingId), { status: 'declined' });
       if(slotId) await deleteDoc(doc(db, 'slots', slotId));
       portalOwnerStatus.textContent = 'Booking declined and the time was freed up.';
+      loadOwnerCancelled();
     }
     loadOwnerBookings();
+    renderBookingsOverviewStats();
+    renderBookingsToday();
   } catch (err) {
     portalOwnerStatus.textContent = 'Could not update that booking.';
     event.target.disabled = false;
   }
 });
+
+function ownerCompletedRowHtml(b){
+  const label = sessionTypeName(b.sessionType);
+  return '<div class="portal-request" data-booking-id="' + b.id + '">' +
+    '<div><strong>' + escapeHtml(b.name) + '</strong><p>' + escapeHtml(label) + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
+    ' · ' + escapeHtml(b.email) + (b.phone ? ' · ' + escapeHtml(b.phone) : '') + '</p></div>' +
+    '<span class="admin-status-pill completed">Completed</span></div>';
+}
+async function loadOwnerCompleted(){
+  const container = document.getElementById('ownerCompletedList');
+  if(!container) return;
+  container.innerHTML = '<p class="admin-hint">Loading…</p>';
+  const today = new Date().toISOString().slice(0, 10);
+  if(DEMO_MODE){
+    const items = DEMO_BOOKINGS.filter(b => b.status === 'confirmed' && b.date < today)
+      .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    container.innerHTML = items.length === 0 ? '<p class="admin-hint">No completed appointments yet.</p>' : items.map(ownerCompletedRowHtml).join('');
+    return;
+  }
+  try {
+    const snap = await getDocs(query(collection(db, 'bookings'), where('status', '==', 'confirmed')));
+    const items = [];
+    snap.forEach(docSnap => { const b = docSnap.data(); if(b.date < today) items.push({ id: docSnap.id, ...b }); });
+    items.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    container.innerHTML = items.length === 0 ? '<p class="admin-hint">No completed appointments yet.</p>' : items.map(ownerCompletedRowHtml).join('');
+  } catch (err) {
+    container.innerHTML = '<p class="admin-hint">Could not load completed appointments.</p>';
+  }
+}
+
+function ownerCancelledRowHtml(b){
+  const label = sessionTypeName(b.sessionType);
+  const pillLabel = b.status === 'cancelled' ? 'Cancelled' : 'Declined';
+  return '<div class="portal-request" data-booking-id="' + b.id + '">' +
+    '<div><strong>' + escapeHtml(b.name) + '</strong><p>' + escapeHtml(label) + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
+    ' · ' + escapeHtml(b.email) + '</p></div>' +
+    '<span class="admin-status-pill cancelled">' + pillLabel + '</span></div>';
+}
+async function loadOwnerCancelled(){
+  const container = document.getElementById('ownerCancelledList');
+  if(!container) return;
+  container.innerHTML = '<p class="admin-hint">Loading…</p>';
+  if(DEMO_MODE){
+    const items = DEMO_BOOKINGS.filter(b => b.status === 'declined' || b.status === 'cancelled')
+      .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    container.innerHTML = items.length === 0 ? '<p class="admin-hint">Nothing cancelled or declined.</p>' : items.map(ownerCancelledRowHtml).join('');
+    return;
+  }
+  try {
+    const items = [];
+    for (const status of ['declined', 'cancelled']) {
+      const snap = await getDocs(query(collection(db, 'bookings'), where('status', '==', status)));
+      snap.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
+    }
+    items.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    container.innerHTML = items.length === 0 ? '<p class="admin-hint">Nothing cancelled or declined.</p>' : items.map(ownerCancelledRowHtml).join('');
+  } catch (err) {
+    container.innerHTML = '<p class="admin-hint">Could not load cancelled appointments.</p>';
+  }
+}
+
+/* ---------------------------------------------------------------
+   Bookings Overview — sub-nav, stat tiles, Today's Schedule, and
+   Quick Actions. Reuses the same DEMO_BOOKINGS/`bookings` collection
+   and SESSION_TYPES/AVAILABILITY_RULES already loaded above — this is
+   a read-only summary layer, not a second data source.
+   --------------------------------------------------------------- */
+async function ownerAllConfirmedBookings(){
+  if(DEMO_MODE) return DEMO_BOOKINGS.filter(b => b.status === 'confirmed');
+  try {
+    const snap = await getDocs(query(collection(db, 'bookings'), where('status', '==', 'confirmed')));
+    const items = [];
+    snap.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
+    return items;
+  } catch (err) { return []; }
+}
+async function ownerPendingCount(){
+  if(DEMO_MODE) return DEMO_BOOKINGS.filter(b => b.status === 'pending').length;
+  try {
+    const snap = await getDocs(query(collection(db, 'bookings'), where('status', '==', 'pending')));
+    return snap.size;
+  } catch (err) { return 0; }
+}
+async function renderBookingsOverviewStats(){
+  const wrap = document.getElementById('bookingsOverviewStats');
+  if(!wrap) return;
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const weekAhead = new Date(today.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+  const [confirmed, pendingCount] = await Promise.all([ownerAllConfirmedBookings(), ownerPendingCount()]);
+  const upcomingWeek = confirmed.filter(b => b.date >= todayStr && b.date <= weekAhead).length;
+  const zoomCount = confirmed.filter(b => b.date >= todayStr && (!SESSION_TYPES[b.sessionType] || (SESSION_TYPES[b.sessionType].format || 'zoom') === 'zoom')).length;
+  wrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Upcoming This Week</span><strong>' + upcomingWeek + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Pending Requests</span><strong>' + pendingCount + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Available Slots</span><strong>' + AVAILABILITY_RULES.length + '</strong><em>Weekly windows open</em></div>' +
+    '<div class="admin-stat-tile"><span>Zoom Sessions</span><strong>' + zoomCount + '</strong><em>Upcoming, confirmed</em></div>';
+}
+async function renderBookingsToday(){
+  const wrap = document.getElementById('bookingsTodayList');
+  const previewWrap = document.getElementById('bookingsUpcomingPreview');
+  if(!wrap && !previewWrap) return;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const confirmed = (await ownerAllConfirmedBookings()).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  if(wrap){
+    const todayItems = confirmed.filter(b => b.date === todayStr);
+    wrap.innerHTML = todayItems.length === 0
+      ? '<p class="admin-hint">Nothing on the calendar for today.</p>'
+      : todayItems.map(b => '<div class="admin-teaching-row"><div class="admin-teaching-info"><strong>' + escapeHtml(b.name) +
+          '</strong><div class="admin-teaching-meta">' + escapeHtml(sessionTypeName(b.sessionType)) + ' · ' + escapeHtml(formatLocalDateTime(b.date, b.time, BUSINESS_TZ)) +
+          '</div></div><span class="admin-status-pill published">Confirmed</span></div>').join('');
+  }
+  if(previewWrap){
+    const upcoming = confirmed.filter(b => b.date >= todayStr).slice(0, 5);
+    previewWrap.innerHTML = upcoming.length === 0
+      ? '<p class="admin-hint">No upcoming confirmed appointments.</p>'
+      : upcoming.map(b => '<div class="admin-teaching-row"><div class="admin-teaching-info"><strong>' + escapeHtml(b.name) +
+          '</strong><div class="admin-teaching-meta">' + escapeHtml(sessionTypeName(b.sessionType)) + ' · ' + escapeHtml(formatLocalDateTime(b.date, b.time, BUSINESS_TZ)) +
+          '</div></div><span class="admin-status-pill published">Confirmed</span></div>').join('');
+  }
+}
+document.getElementById('bookingsQuickActions').addEventListener('click', event => {
+  const btn = event.target.closest('[data-bookings-quick-action]');
+  if(!btn) return;
+  const status = document.getElementById('bookingsQuickActionStatus');
+  const action = btn.dataset.bookingsQuickAction;
+  if(action === 'copy-link'){
+    const link = new URL(BASE + 'index.html', window.location.href).href;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(() => { status.textContent = 'Booking page link copied — anyone with this link can click "Book A Session" in the menu.'; })
+        .catch(() => { status.textContent = 'Could not copy — the link is: ' + link; });
+    } else {
+      status.textContent = 'The link is: ' + link;
+    }
+    return;
+  }
+  const tabMap = { availability: 'availability', calendar: 'calendar', blocked: 'blocked', types: 'types', notifications: 'notifications' };
+  if(tabMap[action]) showBookingsTab(tabMap[action]);
+});
+
+function showBookingsTab(name){
+  document.querySelectorAll('#bookingsSubNav .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.bookingsTab === name));
+  document.querySelectorAll('[data-bookings-panel]').forEach(p => { p.hidden = p.dataset.bookingsPanel !== name; });
+  if(name === 'overview'){ renderBookingsOverviewStats(); renderBookingsToday(); }
+  if(name === 'calendar') renderBookingsCalendar();
+}
+document.getElementById('bookingsSubNav').addEventListener('click', event => {
+  const btn = event.target.closest('.admin-tab');
+  if(btn) showBookingsTab(btn.dataset.bookingsTab);
+});
+
+function applyAppointmentsFilter(filter){
+  const sections = { pending: 'pending', upcoming: 'upcoming', completed: 'completed', cancelled: 'cancelled' };
+  document.querySelectorAll('[data-appt-section]').forEach(el => {
+    const key = el.dataset.apptSection;
+    el.hidden = filter !== 'all' && sections[filter] !== key;
+  });
+}
+document.getElementById('bookingsApptFilterTabs').addEventListener('click', event => {
+  const btn = event.target.closest('.admin-tab');
+  if(!btn) return;
+  document.querySelectorAll('#bookingsApptFilterTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  applyAppointmentsFilter(btn.dataset.apptFilter);
+});
+
+let bookingsCalendarActiveView = 'week';
+async function renderBookingsCalendar(){
+  const wrap = document.getElementById('bookingsCalendarView');
+  if(!wrap) return;
+  const confirmed = await ownerAllConfirmedBookings();
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  let items;
+  if(bookingsCalendarActiveView === 'day'){
+    items = confirmed.filter(b => b.date === todayStr);
+  } else if(bookingsCalendarActiveView === 'week'){
+    const dow = today.getDay();
+    const start = new Date(today.getTime() - dow * 86400000).toISOString().slice(0, 10);
+    const end = new Date(today.getTime() + (6 - dow) * 86400000).toISOString().slice(0, 10);
+    items = confirmed.filter(b => b.date >= start && b.date <= end);
+  } else {
+    const monthKey = todayStr.slice(0, 7);
+    items = confirmed.filter(b => b.date.slice(0, 7) === monthKey);
+  }
+  items = items.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  if(items.length === 0){ wrap.innerHTML = '<p class="admin-hint">Nothing confirmed in this view.</p>'; return; }
+  const byDate = {};
+  items.forEach(b => { (byDate[b.date] = byDate[b.date] || []).push(b); });
+  wrap.innerHTML = Object.keys(byDate).sort().map(date => {
+    const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(date + 'T12:00:00'));
+    const rows = byDate[date].map(b =>
+      '<div class="admin-teaching-row"><div class="admin-teaching-info"><strong>' + escapeHtml(b.name) + '</strong>' +
+      '<div class="admin-teaching-meta">' + escapeHtml(sessionTypeName(b.sessionType)) + ' · ' + escapeHtml(formatLocalDateTime(b.date, b.time, BUSINESS_TZ)) + '</div></div>' +
+      '<span class="admin-status-pill published">Confirmed</span></div>'
+    ).join('');
+    return '<div style="margin-bottom:14px"><div class="admin-microlabel" style="margin-bottom:6px">' + weekday.toUpperCase() + '</div>' + rows + '</div>';
+  }).join('');
+}
+document.getElementById('bookingsCalendarViewTabs').addEventListener('click', event => {
+  const btn = event.target.closest('.admin-tab');
+  if(!btn) return;
+  document.querySelectorAll('#bookingsCalendarViewTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  bookingsCalendarActiveView = btn.dataset.calView;
+  renderBookingsCalendar();
+});
+
+function renderBookingsNotifications(){
+  const n = SCHEDULING_SETTINGS.notifications || {};
+  document.getElementById('bookingsNotifyConfirmation').checked = n.confirmation !== false;
+  document.getElementById('bookingsNotifyReminder').checked = n.reminder !== false;
+  document.getElementById('bookingsNotifyCancellation').checked = n.cancellation !== false;
+  document.getElementById('bookingsNotifyReschedule').checked = n.reschedule !== false;
+}
+document.getElementById('bookingsNotifySaveBtn').addEventListener('click', async () => {
+  const status = document.getElementById('bookingsNotifyStatus');
+  const notifications = {
+    confirmation: document.getElementById('bookingsNotifyConfirmation').checked,
+    reminder: document.getElementById('bookingsNotifyReminder').checked,
+    cancellation: document.getElementById('bookingsNotifyCancellation').checked,
+    reschedule: document.getElementById('bookingsNotifyReschedule').checked
+  };
+  const updated = { ...SCHEDULING_SETTINGS, notifications };
+  status.textContent = 'Saving…';
+  if(DEMO_MODE){
+    SCHEDULING_SETTINGS = updated;
+  } else {
+    try { await setDoc(doc(db, 'schedulingSettings', 'global'), updated); await loadSchedulingConfig(); }
+    catch (err) { status.textContent = 'Could not save.'; return; }
+  }
+  status.textContent = SCHED_SAVE_NOTE;
+});
+
+function renderBookingsPanels(){
+  if(!document.getElementById('bookingsSubNav')) return;
+  renderBookingsOverviewStats();
+  renderBookingsToday();
+  loadOwnerCompleted();
+  loadOwnerCancelled();
+  renderBookingsNotifications();
+  applyAppointmentsFilter('all');
+}
 
 /* ---------------------------------------------------------------
    Admin: block out a date
