@@ -803,22 +803,31 @@ function dialogsHtml(){
           <span class="portal-label">Member Accounts</span>
           <div id="ownerMembersList"><p style="color:#656565">Loading member accounts…</p></div>
         </article>
-        <article class="portal-panel" style="grid-column:1/-1">
-          <span class="portal-label">Teaching Manager</span>
-          <p style="color:#656565;margin-bottom:12px">Create and run the weekly Teaching classes — the public Teaching page updates automatically from what's here.</p>
-          <div id="teachingMgrModeNotice" style="border:1px solid #d6d2c6;background:#f3ede0;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:#4a4a4a"></div>
+        <article class="portal-panel admin-panel" style="grid-column:1/-1">
+          <div class="admin-panel-head">
+            <div>
+              <span class="portal-label">Teaching Manager</span>
+              <p class="admin-panel-intro">Create and run the weekly Teaching classes — the public Teaching page updates automatically from what's here.</p>
+            </div>
+            <div class="admin-panel-head-actions">
+              <button class="admin-btn-ghost" type="button" id="teachingMgrPreviewPageBtn">Preview Page ↗</button>
+              <button class="admin-btn-ghost" type="button" id="teachingMgrResetPreviewBtn">Reset Preview Data</button>
+            </div>
+          </div>
+          <div id="teachingMgrModeNotice" class="admin-mode-notice"></div>
+          <div class="admin-stat-row" id="teachingMgrOverview"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-            <div class="teaching-tabs" id="teachingMgrTabs" role="tablist">
-              <button type="button" class="teaching-tab active" data-teaching-tab="upcoming">Upcoming</button>
-              <button type="button" class="teaching-tab" data-teaching-tab="drafts">Drafts</button>
-              <button type="button" class="teaching-tab" data-teaching-tab="completed">Completed</button>
-              <button type="button" class="teaching-tab" data-teaching-tab="cancelled">Cancelled</button>
-              <button type="button" class="teaching-tab" data-teaching-tab="all">All</button>
+            <div class="admin-tabs" id="teachingMgrTabs" role="tablist">
+              <button type="button" class="admin-tab active" data-teaching-tab="upcoming">Upcoming</button>
+              <button type="button" class="admin-tab" data-teaching-tab="drafts">Drafts</button>
+              <button type="button" class="admin-tab" data-teaching-tab="completed">Completed</button>
+              <button type="button" class="admin-tab" data-teaching-tab="cancelled">Cancelled</button>
+              <button type="button" class="admin-tab" data-teaching-tab="all">All</button>
             </div>
             <div style="display:flex;gap:8px">
-              <button class="portal-secondary" type="button" id="teachingMgrViewList">List</button>
-              <button class="portal-secondary" type="button" id="teachingMgrViewCalendar">Calendar</button>
-              <button class="portal-secondary" type="button" id="teachingMgrNewBtn" style="background:var(--black);color:var(--ivory)">+ New Teaching</button>
+              <button class="admin-btn-ghost" type="button" id="teachingMgrViewList">List</button>
+              <button class="admin-btn-ghost" type="button" id="teachingMgrViewCalendar">Calendar</button>
+              <button class="admin-btn-solid" type="button" id="teachingMgrNewBtn">+ New Teaching</button>
             </div>
           </div>
           <div id="teachingMgrList"></div>
@@ -852,7 +861,15 @@ function dialogsHtml(){
             <div class="booking-grid" style="margin-bottom:14px">
               <div class="booking-field full"><label for="teachingSettingsScriptureText">Scripture / Foundation text</label><textarea id="teachingSettingsScriptureText" rows="2"></textarea></div>
               <div class="booking-field"><label for="teachingSettingsScriptureRef">Reference</label><input id="teachingSettingsScriptureRef" type="text" placeholder="e.g. 1 Corinthians 2:14" /></div>
-              <div class="booking-field"><label for="teachingSettingsScriptureImage">Section image URL (optional)</label><input id="teachingSettingsScriptureImage" type="url" /></div>
+            </div>
+            <div class="admin-image-field" data-image-field="scripture" style="max-width:340px;margin-bottom:16px">
+              <span class="admin-microlabel">Section Image <span class="admin-hint">(optional)</span></span>
+              <div class="admin-image-preview" id="teachingSettingsScriptureImagePreview"></div>
+              <div class="admin-image-actions">
+                <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingSettingsScriptureImageFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="teachingSettingsScriptureImageRemove">Remove</button>
+              </div>
+              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingSettingsScriptureImage" type="url" /></details>
             </div>
             <button class="portal-secondary" type="button" id="teachingSettingsSaveBtn">Save Teaching Page Settings</button>
             <div class="form-status" id="teachingSettingsStatus" style="color:#6d6d6d;margin-top:8px"></div>
@@ -1014,144 +1031,210 @@ function dialogsHtml(){
     </div>
   </dialog>
 
-  <dialog class="booking-dialog" id="teachingRegisterDialog" aria-labelledby="teachingRegisterTitle">
-    <div class="booking-head">
-      <div>
-        <div class="kicker" style="margin-bottom:0" id="teachingRegisterKicker">Teaching Registration</div>
-        <h3 id="teachingRegisterTitle">Reserve your seat.</h3>
+  <dialog class="booking-dialog checkout-dialog" id="teachingRegisterDialog" aria-labelledby="teachingRegisterTitle">
+    <button class="booking-close checkout-close" id="closeTeachingRegister" type="button" aria-label="Close registration">×</button>
+    <div class="checkout-grid">
+      <div class="checkout-summary" id="teachingRegisterSummaryArt">
+        <div class="checkout-summary-overlay"></div>
+        <div class="checkout-summary-content">
+          <div class="eyebrow" id="teachingRegisterKicker">Teaching Registration</div>
+          <h2 class="teaching-display" id="teachingRegisterTitle">Reserve your seat.</h2>
+          <div class="checkout-summary-meta" id="teachingRegisterMeta"></div>
+          <p class="checkout-summary-desc" id="teachingRegisterIntro"></p>
+        </div>
       </div>
-      <button class="booking-close" id="closeTeachingRegister" type="button" aria-label="Close registration">×</button>
-    </div>
-    <div class="booking-body">
-      <p class="booking-intro" id="teachingRegisterIntro"></p>
-      <form id="teachingRegisterForm">
-        <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
-          <label for="teachingRegisterWebsite">Leave this field blank</label>
-          <input id="teachingRegisterWebsite" type="text" tabindex="-1" autocomplete="off" />
-        </div>
-        <div class="booking-grid">
-          <div class="booking-field">
-            <label for="teachingRegisterFirstName">First name</label>
-            <input id="teachingRegisterFirstName" type="text" autocomplete="given-name" required />
+      <div class="checkout-form-side">
+        <form id="teachingRegisterForm">
+          <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+            <label for="teachingRegisterWebsite">Leave this field blank</label>
+            <input id="teachingRegisterWebsite" type="text" tabindex="-1" autocomplete="off" />
           </div>
-          <div class="booking-field">
-            <label for="teachingRegisterLastName">Last name</label>
-            <input id="teachingRegisterLastName" type="text" autocomplete="family-name" required />
-          </div>
-          <div class="booking-field">
-            <label for="teachingRegisterEmail">Email address</label>
-            <input id="teachingRegisterEmail" type="email" placeholder="For confirmation and class access" autocomplete="email" required />
-          </div>
-          <div class="booking-field">
-            <label for="teachingRegisterPhoneNumber">Phone number</label>
-            <div style="display:flex;gap:8px">
-              <select id="teachingRegisterPhoneCountry" aria-label="Country code" style="flex:0 0 auto">${COUNTRY_OPTIONS}</select>
-              <input id="teachingRegisterPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required style="flex:1" />
-            </div>
-          </div>
-        </div>
-        <fieldset class="payment-demo" id="teachingRegisterPaymentFieldset" disabled>
-          <legend>Payment <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></legend>
+          <div class="admin-microlabel checkout-section-label">Your Information</div>
           <div class="booking-grid">
+            <div class="booking-field">
+              <label for="teachingRegisterFirstName">First name</label>
+              <input id="teachingRegisterFirstName" type="text" autocomplete="given-name" required />
+            </div>
+            <div class="booking-field">
+              <label for="teachingRegisterLastName">Last name</label>
+              <input id="teachingRegisterLastName" type="text" autocomplete="family-name" required />
+            </div>
             <div class="booking-field full">
-              <label>Card number</label>
-              <input type="text" value="4242 4242 4242 4242" readonly />
+              <label for="teachingRegisterEmail">Email address</label>
+              <input id="teachingRegisterEmail" type="email" placeholder="For confirmation and class access" autocomplete="email" required />
             </div>
-            <div class="booking-field">
-              <label>Expiry</label>
-              <input type="text" value="12 / 29" readonly />
-            </div>
-            <div class="booking-field">
-              <label>CVC</label>
-              <input type="text" value="123" readonly />
+            <div class="booking-field full">
+              <label for="teachingRegisterPhoneNumber">Phone number</label>
+              <div style="display:flex;gap:8px">
+                <select id="teachingRegisterPhoneCountry" aria-label="Country code" style="flex:0 0 auto">${COUNTRY_OPTIONS}</select>
+                <input id="teachingRegisterPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required style="flex:1" />
+              </div>
             </div>
           </div>
-          <p class="payment-demo-note">This is a preview of what payment will look like once a real processor is connected. No card details are collected and no charge occurs today.</p>
-        </fieldset>
-        <div class="booking-actions">
-          <button class="btn on-light fill" type="submit" id="teachingRegisterSubmitBtn">Continue To Payment</button>
-          <div class="booking-status" id="teachingRegisterStatus" role="status" aria-live="polite"></div>
-        </div>
-        <div class="booking-note">Your seat is requested now and confirmed once payment is connected — you'll always be contacted at the email you provide. Private class access details are never posted publicly.</div>
-      </form>
+
+          <div class="admin-microlabel checkout-section-label">Payment</div>
+          <fieldset class="payment-demo checkout-payment-demo" id="teachingRegisterPaymentFieldset" disabled>
+            <legend class="demo-badge">Visual Demonstration — Not Yet Connected</legend>
+            <div class="booking-grid">
+              <div class="booking-field full">
+                <label>Card number</label>
+                <input type="text" value="4242 4242 4242 4242" readonly />
+              </div>
+              <div class="booking-field">
+                <label>Expiry</label>
+                <input type="text" value="12 / 29" readonly />
+              </div>
+              <div class="booking-field">
+                <label>CVC</label>
+                <input type="text" value="123" readonly />
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="checkout-order-summary" id="teachingRegisterOrderSummary"></div>
+
+          <div class="booking-actions checkout-actions">
+            <button class="btn on-light fill checkout-submit" type="submit" id="teachingRegisterSubmitBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <span id="teachingRegisterSubmitLabel">Continue To Payment</span>
+            </button>
+            <div class="booking-status" id="teachingRegisterStatus" role="status" aria-live="polite"></div>
+          </div>
+          <div class="booking-note checkout-note">Your seat is requested now and confirmed once payment is connected. Private class access details are never posted publicly — only sent to confirmed registrants.</div>
+        </form>
+      </div>
     </div>
   </dialog>
 
-  <dialog class="booking-dialog" id="teachingEditDialog" aria-labelledby="teachingEditTitle" style="max-width:720px">
-    <div class="booking-head">
+  <dialog class="booking-dialog admin-dialog" id="teachingEditDialog" aria-labelledby="teachingEditTitle" style="max-width:820px">
+    <div class="booking-head admin-editor-head">
       <div>
-        <div class="kicker" style="margin-bottom:0">Teaching Manager</div>
+        <div class="admin-microlabel" style="color:var(--stone)">Teaching Manager</div>
         <h3 id="teachingEditTitle">New Teaching</h3>
       </div>
-      <button class="booking-close" id="closeTeachingEdit" type="button" aria-label="Close teaching editor">×</button>
+      <div class="admin-editor-head-right">
+        <span class="admin-status-pill" id="teachingEditStatusPill">Draft</span>
+        <button class="booking-close" id="closeTeachingEdit" type="button" aria-label="Close teaching editor">×</button>
+      </div>
+    </div>
+    <div class="admin-tabs" id="teachingEditTabs" role="tablist">
+      <button type="button" class="admin-tab active" data-edit-tab="content">Content</button>
+      <button type="button" class="admin-tab" data-edit-tab="access">Date &amp; Access</button>
+      <button type="button" class="admin-tab" data-edit-tab="pricing">Pricing</button>
+      <button type="button" class="admin-tab" data-edit-tab="appearance">Appearance</button>
+      <button type="button" class="admin-tab" data-edit-tab="registration">Registration</button>
     </div>
     <div class="booking-body">
       <form id="teachingEditForm">
         <input type="hidden" id="teachingEditId" />
-        <strong class="teaching-edit-section-label">Basic Information</strong>
-        <div class="booking-grid">
-          <div class="booking-field full"><label for="teachingEditTitleInput">Teaching title</label><input id="teachingEditTitleInput" type="text" required /></div>
-          <div class="booking-field full"><label for="teachingEditSubtitle">Subtitle</label><input id="teachingEditSubtitle" type="text" /></div>
-          <div class="booking-field full"><label for="teachingEditShortDesc">Short description (used on cards + hero)</label><textarea id="teachingEditShortDesc" rows="2"></textarea></div>
-          <div class="booking-field full"><label for="teachingEditFullDesc">Full description (About This Teaching)</label><textarea id="teachingEditFullDesc" rows="4"></textarea></div>
-          <div class="booking-field full"><label for="teachingEditLearn">What you will learn — one per line</label><textarea id="teachingEditLearn" rows="4" placeholder="What spiritual discernment is&#10;Types of discernment&#10;..."></textarea></div>
-          <div class="booking-field"><label for="teachingEditInstructor">Instructor</label><input id="teachingEditInstructor" type="text" /></div>
-          <div class="booking-field"><label for="teachingEditCategory">Category</label><input id="teachingEditCategory" type="text" placeholder="e.g. Discernment" /></div>
-          <div class="booking-field"><label for="teachingEditDate">Date</label><input id="teachingEditDate" type="date" required /></div>
-          <div class="booking-field"><label for="teachingEditStartTime">Start time</label><input id="teachingEditStartTime" type="time" required /></div>
-          <div class="booking-field"><label for="teachingEditEndTime">End time (optional)</label><input id="teachingEditEndTime" type="time" /></div>
-          <div class="booking-field"><label for="teachingEditTimeZone">Time zone</label>
-            <select id="teachingEditTimeZone">
-              <option value="America/New_York">Eastern (America/New_York)</option>
-              <option value="America/Chicago">Central (America/Chicago)</option>
-              <option value="America/Denver">Mountain (America/Denver)</option>
-              <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
-              <option value="America/Anchorage">Alaska (America/Anchorage)</option>
-              <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
-            </select>
+
+        <div class="admin-edit-panel" data-edit-panel="content">
+          <div class="booking-grid">
+            <div class="booking-field full"><label for="teachingEditTitleInput">Teaching title</label><input id="teachingEditTitleInput" type="text" required /></div>
+            <div class="booking-field full"><label for="teachingEditSubtitle">Subtitle</label><input id="teachingEditSubtitle" type="text" /></div>
+            <div class="booking-field full"><label for="teachingEditShortDesc">Short description <span class="admin-hint">— shown on cards and the hero banner</span></label><textarea id="teachingEditShortDesc" rows="2"></textarea></div>
+            <div class="booking-field full"><label for="teachingEditFullDesc">Full description <span class="admin-hint">— shown under "About This Teaching" on the class page</span></label><textarea id="teachingEditFullDesc" rows="4"></textarea></div>
+            <div class="booking-field full"><label for="teachingEditLearn">What you will learn <span class="admin-hint">— one per line</span></label><textarea id="teachingEditLearn" rows="4" placeholder="What spiritual discernment is&#10;Types of discernment&#10;..."></textarea></div>
+            <div class="booking-field"><label for="teachingEditCategory">Category</label><input id="teachingEditCategory" type="text" placeholder="e.g. Discernment" /></div>
+            <div class="booking-field"><label for="teachingEditInstructor">Instructor</label><input id="teachingEditInstructor" type="text" /></div>
           </div>
-          <div class="booking-field"><label for="teachingEditPrice">Price ($, blank = free)</label><input id="teachingEditPrice" type="number" min="0" step="0.01" /></div>
-          <div class="booking-field"><label for="teachingEditCapacity">Capacity</label><input id="teachingEditCapacity" type="number" min="1" /></div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding-top:22px"><input id="teachingEditUnlimited" type="checkbox" /> Unlimited capacity</label>
         </div>
 
-        <strong class="teaching-edit-section-label">Class Format</strong>
-        <div class="booking-grid">
-          <div class="booking-field"><label for="teachingEditFormat">Format</label>
-            <select id="teachingEditFormat">
-              <option value="zoom">Zoom</option><option value="in-person">In Person</option>
-              <option value="hybrid">Hybrid</option><option value="other">Other</option>
-            </select>
+        <div class="admin-edit-panel" data-edit-panel="access" hidden>
+          <div class="booking-grid">
+            <div class="booking-field"><label for="teachingEditDate">Date</label><input id="teachingEditDate" type="date" required /></div>
+            <div class="booking-field"><label for="teachingEditStartTime">Start time</label><input id="teachingEditStartTime" type="time" required /></div>
+            <div class="booking-field"><label for="teachingEditEndTime">End time <span class="admin-hint">(optional)</span></label><input id="teachingEditEndTime" type="time" /></div>
+            <div class="booking-field"><label for="teachingEditTimeZone">Time zone</label>
+              <select id="teachingEditTimeZone">
+                <option value="America/New_York">Eastern (America/New_York)</option>
+                <option value="America/Chicago">Central (America/Chicago)</option>
+                <option value="America/Denver">Mountain (America/Denver)</option>
+                <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
+                <option value="America/Anchorage">Alaska (America/Anchorage)</option>
+                <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
+              </select>
+            </div>
+            <div class="booking-field"><label for="teachingEditFormat">Format</label>
+              <select id="teachingEditFormat">
+                <option value="zoom">Zoom</option><option value="in-person">In Person</option>
+                <option value="hybrid">Hybrid</option><option value="other">Other</option>
+              </select>
+            </div>
+            <div class="booking-field"><label for="teachingEditLocation">Location <span class="admin-hint">(if in person/hybrid)</span></label><input id="teachingEditLocation" type="text" /></div>
+            <div class="booking-field"><label for="teachingEditCapacity">Capacity</label><input id="teachingEditCapacity" type="number" min="1" /></div>
+            <label class="admin-checkbox-field"><input id="teachingEditUnlimited" type="checkbox" /> Unlimited capacity</label>
           </div>
-          <div class="booking-field"><label for="teachingEditLocation">Location (if in person/hybrid)</label><input id="teachingEditLocation" type="text" /></div>
-        </div>
-
-        <strong class="teaching-edit-section-label">Zoom (private — never shown publicly)</strong>
-        <div class="booking-grid">
-          <div class="booking-field full"><label for="teachingEditZoomUrl">Private Zoom URL</label><input id="teachingEditZoomUrl" type="url" placeholder="https://zoom.us/j/..." /></div>
-          <div class="booking-field"><label for="teachingEditZoomId">Meeting ID</label><input id="teachingEditZoomId" type="text" /></div>
-          <div class="booking-field"><label for="teachingEditZoomPasscode">Passcode</label><input id="teachingEditZoomPasscode" type="text" /></div>
-        </div>
-
-        <strong class="teaching-edit-section-label">Artwork (paste an image URL — direct upload isn't connected yet)</strong>
-        <div class="booking-grid">
-          <div class="booking-field full"><label for="teachingEditArtHero">Hero / main artwork URL</label><input id="teachingEditArtHero" type="url" /></div>
-          <div class="booking-field full"><label for="teachingEditArtHeroMobile">Mobile hero artwork URL (optional)</label><input id="teachingEditArtHeroMobile" type="url" /></div>
-          <div class="booking-field full"><label for="teachingEditArtCard">Card / thumbnail artwork URL</label><input id="teachingEditArtCard" type="url" /></div>
-          <div class="booking-field"><label for="teachingEditArtSocial">Social graphic URL (optional)</label><input id="teachingEditArtSocial" type="url" /></div>
-          <div class="booking-field"><label for="teachingEditArtStory">Instagram Story graphic URL (optional)</label><input id="teachingEditArtStory" type="url" /></div>
-          <div class="booking-field"><label for="teachingEditFocal">Hero focal position</label>
-            <select id="teachingEditFocal"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select>
+          <div class="admin-subsection-label">Zoom <span class="admin-hint">— private, never shown publicly until access is built</span></div>
+          <div class="booking-grid">
+            <div class="booking-field full"><label for="teachingEditZoomUrl">Private Zoom URL</label><input id="teachingEditZoomUrl" type="url" placeholder="https://zoom.us/j/..." /></div>
+            <div class="booking-field"><label for="teachingEditZoomId">Meeting ID</label><input id="teachingEditZoomId" type="text" /></div>
+            <div class="booking-field"><label for="teachingEditZoomPasscode">Passcode</label><input id="teachingEditZoomPasscode" type="text" /></div>
           </div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding-top:22px"><input id="teachingEditOverlay" type="checkbox" checked /> Dark overlay on hero</label>
-          <div class="booking-field"><label for="teachingEditOverlayStrength">Overlay strength (0–100)</label><input id="teachingEditOverlayStrength" type="range" min="0" max="100" value="55" /></div>
         </div>
 
-        <strong class="teaching-edit-section-label">Status</strong>
-        <div class="booking-grid">
-          <div class="booking-field"><label for="teachingEditStatus">Status</label>
+        <div class="admin-edit-panel" data-edit-panel="pricing" hidden>
+          <div class="booking-grid">
+            <div class="booking-field"><label for="teachingEditPrice">Price <span class="admin-hint">($, blank = free)</span></label><input id="teachingEditPrice" type="number" min="0" step="0.01" placeholder="Free" /></div>
+          </div>
+        </div>
+
+        <div class="admin-edit-panel" data-edit-panel="appearance" hidden>
+          <div class="admin-image-grid">
+            <div class="admin-image-field" data-image-field="hero">
+              <span class="admin-microlabel">Hero Image — Featured Teaching banner &amp; class page</span>
+              <div class="admin-image-preview" id="teachingEditArtHeroPreview"></div>
+              <div class="admin-image-actions">
+                <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingEditArtHeroFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="teachingEditArtHeroRemove">Remove</button>
+              </div>
+              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingEditArtHero" type="url" placeholder="https://…" /></details>
+            </div>
+            <div class="admin-image-field" data-image-field="card">
+              <span class="admin-microlabel">Card Image — Upcoming Teachings grid</span>
+              <div class="admin-image-preview" id="teachingEditArtCardPreview"></div>
+              <div class="admin-image-actions">
+                <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingEditArtCardFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="teachingEditArtCardRemove">Remove</button>
+              </div>
+              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingEditArtCard" type="url" placeholder="https://… (blank = use hero image)" /></details>
+            </div>
+            <div class="admin-image-field" data-image-field="mobile">
+              <span class="admin-microlabel">Mobile Image <span class="admin-hint">(optional)</span></span>
+              <div class="admin-image-preview" id="teachingEditArtHeroMobilePreview"></div>
+              <div class="admin-image-actions">
+                <label class="admin-image-upload-btn">Upload Image<input type="file" accept="image/*" id="teachingEditArtHeroMobileFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="teachingEditArtHeroMobileRemove">Remove</button>
+              </div>
+              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingEditArtHeroMobile" type="url" placeholder="https://… (blank = use hero image)" /></details>
+            </div>
+          </div>
+          <div class="booking-grid" style="margin-top:18px">
+            <div class="booking-field"><label for="teachingEditFocal">Hero focal point</label>
+              <select id="teachingEditFocal"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+            </div>
+            <label class="admin-checkbox-field"><input id="teachingEditOverlay" type="checkbox" checked /> Dark overlay on hero</label>
+            <div class="booking-field"><label for="teachingEditOverlayStrength">Overlay strength</label><input id="teachingEditOverlayStrength" type="range" min="0" max="100" value="55" /></div>
+          </div>
+        </div>
+
+        <div class="admin-edit-panel" data-edit-panel="registration" hidden>
+          <div class="admin-stat-row">
+            <div class="admin-stat-tile"><span>Status</span><strong id="teachingEditRegStatus">—</strong></div>
+            <div class="admin-stat-tile"><span>Registered</span><strong id="teachingEditRegCount">—</strong></div>
+            <div class="admin-stat-tile"><span>Capacity</span><strong id="teachingEditRegCapacity">—</strong></div>
+            <div class="admin-stat-tile"><span>Revenue (once paid)</span><strong id="teachingEditRegRevenue">—</strong></div>
+          </div>
+          <button class="portal-secondary" type="button" id="teachingEditOpenRegistrantsBtn" style="margin-top:16px">Open Full Registrant List</button>
+          <p class="admin-hint" style="margin-top:14px">Registration opens to visitors once this teaching's status is "Registration Open" — set that in the header above.</p>
+        </div>
+
+        <div class="admin-editor-footer">
+          <label class="admin-checkbox-field"><input id="teachingEditFeatured" type="checkbox" /> Make this the Featured Teaching</label>
+          <div class="booking-field" style="max-width:220px">
+            <label for="teachingEditStatus">Status</label>
             <select id="teachingEditStatus">
-              <option value="draft">Draft (not publicly visible)</option>
+              <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="registration-open">Registration Open</option>
               <option value="sold-out">Sold Out</option>
@@ -1159,11 +1242,12 @@ function dialogsHtml(){
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding-top:22px"><input id="teachingEditFeatured" type="checkbox" /> Make this the Featured Teaching</label>
         </div>
 
-        <div class="booking-actions">
-          <button class="btn on-light fill" type="submit" id="teachingEditSubmitBtn">Save Teaching</button>
+        <div class="booking-actions admin-editor-actions">
+          <button class="btn on-light" type="button" id="teachingEditSaveDraftBtn">Save Draft</button>
+          <button class="btn on-light" type="button" id="teachingEditPreviewBtn">Preview Changes</button>
+          <button class="btn on-light fill" type="submit" id="teachingEditSubmitBtn">Publish</button>
           <button class="btn on-light" type="button" id="teachingEditDuplicateBtn">Duplicate As New</button>
           <div class="booking-status" id="teachingEditStatusMsg" role="status" aria-live="polite"></div>
         </div>
@@ -1317,6 +1401,62 @@ let TEACHING_PAGE_SETTINGS = {
   scriptureReference: '1 Corinthians 2:14', scriptureImage: ''
 };
 let TEACHINGS = DEMO_TEACHINGS;
+
+/* ---------------------------------------------------------------
+   Preview persistence (DEMO_MODE only). Saves Teaching Manager edits
+   into this browser's localStorage — never the network, never the
+   real database — so a preview session survives navigating around
+   the site and reloading the page, the way editing on the real site
+   would feel, without writing anywhere outside this one browser.
+   "Reset Preview Data" clears it and returns to the original sample
+   content. Snapshotting the defaults has to happen right here, before
+   anything can mutate TEACHINGS in place — TEACHINGS *is* DEMO_TEACHINGS
+   (same object), so editing one edits the other unless we keep a
+   separate deep-cloned copy purely for resetting back to.
+   --------------------------------------------------------------- */
+const TEACHING_PREVIEW_DEFAULTS = {
+  teachings: JSON.parse(JSON.stringify(DEMO_TEACHINGS)),
+  settings: JSON.parse(JSON.stringify(TEACHING_PAGE_SETTINGS)),
+  zoom: JSON.parse(JSON.stringify(DEMO_TEACHING_ZOOM))
+};
+const PREVIEW_STORAGE_KEYS = {
+  teachings: 'ua_preview_teachings_v1',
+  settings: 'ua_preview_teaching_settings_v1',
+  zoom: 'ua_preview_teaching_zoom_v1'
+};
+function savePreviewToStorage(){
+  if(!DEMO_MODE) return true;
+  try {
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.teachings, JSON.stringify(TEACHINGS));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.settings, JSON.stringify(TEACHING_PAGE_SETTINGS));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.zoom, JSON.stringify(DEMO_TEACHING_ZOOM));
+    return true;
+  } catch (err) {
+    console.error('Could not save preview data to this browser', err);
+    return false;
+  }
+}
+function loadPreviewFromStorage(){
+  try {
+    const t = localStorage.getItem(PREVIEW_STORAGE_KEYS.teachings);
+    const s = localStorage.getItem(PREVIEW_STORAGE_KEYS.settings);
+    const z = localStorage.getItem(PREVIEW_STORAGE_KEYS.zoom);
+    if(t) TEACHINGS = JSON.parse(t);
+    if(s) TEACHING_PAGE_SETTINGS = JSON.parse(s);
+    if(z) DEMO_TEACHING_ZOOM = JSON.parse(z);
+  } catch (err) { /* keep current defaults if storage is corrupt/unavailable */ }
+}
+function resetPreviewData(){
+  try {
+    localStorage.removeItem(PREVIEW_STORAGE_KEYS.teachings);
+    localStorage.removeItem(PREVIEW_STORAGE_KEYS.settings);
+    localStorage.removeItem(PREVIEW_STORAGE_KEYS.zoom);
+  } catch (err) { /* ignore */ }
+  TEACHINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.teachings));
+  TEACHING_PAGE_SETTINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.settings));
+  DEMO_TEACHING_ZOOM = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.zoom));
+}
+if(DEMO_MODE) loadPreviewFromStorage();
 
 async function loadTeachingPageConfig(){
   try {
@@ -3485,11 +3625,20 @@ function openTeachingRegister(teachingId){
   teachingRegisterStatus.textContent = '';
   teachingRegisterForm.dataset.teachingId = teachingId;
   document.getElementById('teachingRegisterTitle').textContent = t.title || 'Reserve your seat.';
-  document.getElementById('teachingRegisterIntro').textContent =
-    formatTeachingDate(t.date) + ' · ' + formatTeachingTime(t.startTime, t.timeZone) +
-    (t.format === 'zoom' ? ' · Live on Zoom' : t.location ? ' · ' + t.location : '') +
-    (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · Free');
-  document.getElementById('teachingRegisterSubmitBtn').textContent = t.price ? 'Continue To Payment' : 'Reserve My Seat';
+  document.getElementById('teachingRegisterIntro').textContent = t.shortDescription || '';
+  const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
+  document.getElementById('teachingRegisterMeta').innerHTML =
+    '<span>' + escapeHtml(formatTeachingDate(t.date || '')) + '</span>' +
+    '<span>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</span>' +
+    '<span>' + escapeHtml(formatLabel) + '</span>';
+  const artEl = document.getElementById('teachingRegisterSummaryArt');
+  const art = teachingCardArt(t);
+  artEl.className = 'checkout-summary' + (art ? '' : ' ' + teachingArtClass(t.category));
+  artEl.style.backgroundImage = art ? "url('" + art + "')" : '';
+  document.getElementById('teachingRegisterOrderSummary').innerHTML =
+    '<div class="checkout-order-row"><span>' + escapeHtml(t.title || 'Teaching') + '</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</span></div>' +
+    '<div class="checkout-order-total"><span>Total</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : '$0.00') + '</span></div>';
+  document.getElementById('teachingRegisterSubmitLabel').textContent = t.price ? 'Continue To Payment' : 'Reserve My Seat';
   if(currentUser && currentProfile){
     const parts = (currentProfile.name || '').split(' ');
     document.getElementById('teachingRegisterFirstName').value = parts[0] || '';
@@ -3560,6 +3709,7 @@ async function saveTeaching(publicFields, zoomFields, existingId, makeFeatured){
     TEACHINGS[id] = { ...(TEACHINGS[id] || demoTeachingDefaults()), ...publicFields, id };
     if(zoomFields.zoomUrl || zoomFields.meetingId || zoomFields.passcode) DEMO_TEACHING_ZOOM[id] = zoomFields;
     if(makeFeatured) TEACHING_PAGE_SETTINGS.featuredTeachingId = id;
+    if(!savePreviewToStorage()) throw new Error('This browser\'s preview storage is full — try smaller images, or use Reset Preview Data.');
     return id;
   }
   await setDoc(doc(db, 'teachings', id), { ...publicFields, updatedAt: serverTimestamp() }, { merge: true });
@@ -3574,10 +3724,97 @@ async function saveTeaching(publicFields, zoomFields, existingId, makeFeatured){
 }
 
 async function setTeachingArchived(id, archived){
-  if(DEMO_MODE){ if(TEACHINGS[id]) TEACHINGS[id].archived = archived; return; }
+  if(DEMO_MODE){
+    if(TEACHINGS[id]) TEACHINGS[id].archived = archived;
+    savePreviewToStorage();
+    return;
+  }
   await updateDoc(doc(db, 'teachings', id), { archived });
   await loadTeachingPageConfig();
 }
+
+/* ---------------------------------------------------------------
+   Owner image uploads. No Firebase Storage is connected in this
+   project yet — rather than block real "upload a file" on that (a
+   separate setup/possibly-billing decision), an uploaded image is
+   resized and compressed client-side into a compact data URL and
+   stored directly in the same URL field the "advanced" paste-a-link
+   option already uses. Everything downstream (saving, rendering,
+   preview) treats it exactly like any other image URL — the only
+   difference is where the string came from. Kept deliberately small
+   (max ~1400px, JPEG ~70%) so a teaching's images stay well inside
+   both Firestore's 1MB-per-document limit and this browser's
+   localStorage quota in preview mode.
+   --------------------------------------------------------------- */
+function resizeImageToDataUrl(file, maxDim, quality){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error('Could not read that file.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not read that image.'));
+      img.onload = () => {
+        let width = img.naturalWidth, height = img.naturalHeight;
+        if(width > maxDim || height > maxDim){
+          if(width >= height){ height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+let adminImagePreviewRefreshers = [];
+function wireAdminImageField(fieldId, previewId, fileId, removeId, label, maxDim){
+  const input = document.getElementById(fieldId);
+  const preview = document.getElementById(previewId);
+  const fileInput = document.getElementById(fileId);
+  const removeBtn = document.getElementById(removeId);
+  if(!input || !preview || !fileInput || !removeBtn) return;
+  function refresh(){
+    const val = input.value.trim();
+    if(val){
+      preview.style.backgroundImage = "url('" + val.replace(/'/g, "%27") + "')";
+      preview.innerHTML = '';
+    } else {
+      preview.style.backgroundImage = '';
+      preview.innerHTML = '<span class="admin-image-empty">Drop an image here, or use Upload</span>';
+    }
+  }
+  async function handleFile(file){
+    if(!file || !file.type || !file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+    preview.innerHTML = '<span class="admin-image-empty">Processing…</span>';
+    try {
+      input.value = await resizeImageToDataUrl(file, maxDim || 1400, 0.72);
+    } catch (err) {
+      console.error('image resize failed', err);
+      alert('Could not use that image — try a different file.');
+    }
+    refresh();
+  }
+  refresh();
+  input.addEventListener('input', refresh);
+  fileInput.addEventListener('change', () => { handleFile(fileInput.files[0]); fileInput.value = ''; });
+  removeBtn.addEventListener('click', () => { input.value = ''; refresh(); });
+  preview.addEventListener('dragover', event => { event.preventDefault(); preview.classList.add('is-drag-over'); });
+  preview.addEventListener('dragleave', () => preview.classList.remove('is-drag-over'));
+  preview.addEventListener('drop', event => {
+    event.preventDefault();
+    preview.classList.remove('is-drag-over');
+    handleFile(event.dataTransfer.files && event.dataTransfer.files[0]);
+  });
+  adminImagePreviewRefreshers.push(refresh);
+}
+wireAdminImageField('teachingEditArtHero', 'teachingEditArtHeroPreview', 'teachingEditArtHeroFile', 'teachingEditArtHeroRemove', 'Hero', 1600);
+wireAdminImageField('teachingEditArtCard', 'teachingEditArtCardPreview', 'teachingEditArtCardFile', 'teachingEditArtCardRemove', 'Card', 1200);
+wireAdminImageField('teachingEditArtHeroMobile', 'teachingEditArtHeroMobilePreview', 'teachingEditArtHeroMobileFile', 'teachingEditArtHeroMobileRemove', 'Mobile', 1000);
+wireAdminImageField('teachingSettingsScriptureImage', 'teachingSettingsScriptureImagePreview', 'teachingSettingsScriptureImageFile', 'teachingSettingsScriptureImageRemove', 'Scripture', 1400);
 
 function collectTeachingEditForm(){
   const whatYouWillLearn = document.getElementById('teachingEditLearn').value.split('\n').map(s => s.trim()).filter(Boolean);
@@ -3604,8 +3841,6 @@ function collectTeachingEditForm(){
       hero: document.getElementById('teachingEditArtHero').value.trim(),
       heroMobile: document.getElementById('teachingEditArtHeroMobile').value.trim(),
       card: document.getElementById('teachingEditArtCard').value.trim(),
-      social: document.getElementById('teachingEditArtSocial').value.trim(),
-      instagramStory: document.getElementById('teachingEditArtStory').value.trim(),
       focalPosition: document.getElementById('teachingEditFocal').value,
       overlay: document.getElementById('teachingEditOverlay').checked,
       overlayStrength: Number(document.getElementById('teachingEditOverlayStrength').value)
@@ -3618,6 +3853,32 @@ function collectTeachingEditForm(){
     passcode: document.getElementById('teachingEditZoomPasscode').value.trim()
   };
   return { publicFields, zoomFields, makeFeatured: document.getElementById('teachingEditFeatured').checked };
+}
+
+const TEACHING_STATUS_LABELS = {
+  draft: 'Draft', published: 'Published', 'registration-open': 'Registration Open',
+  'sold-out': 'Sold Out', completed: 'Completed', cancelled: 'Cancelled'
+};
+function updateTeachingEditStatusPill(){
+  const pill = document.getElementById('teachingEditStatusPill');
+  const status = document.getElementById('teachingEditStatus').value || 'draft';
+  pill.textContent = TEACHING_STATUS_LABELS[status] || status;
+  pill.className = 'admin-status-pill ' + status;
+}
+
+async function populateTeachingEditRegistrationTab(t){
+  const statusEl = document.getElementById('teachingEditRegStatus');
+  const countEl = document.getElementById('teachingEditRegCount');
+  const capEl = document.getElementById('teachingEditRegCapacity');
+  const revEl = document.getElementById('teachingEditRegRevenue');
+  statusEl.textContent = t ? (TEACHING_STATUS_LABELS[t.status] || t.status) : '—';
+  capEl.textContent = t ? (t.unlimitedCapacity !== false ? 'Unlimited' : (t.capacity || '—')) : '—';
+  if(!t){ countEl.textContent = '—'; revEl.textContent = '—'; return; }
+  countEl.textContent = 'Loading…';
+  const rows = await fetchTeachingRegistrations(t.id);
+  const active = rows.filter(r => r.status !== 'cancelled');
+  countEl.textContent = String(active.length);
+  revEl.textContent = t.price ? '$' + (active.length * Number(t.price)).toFixed(2) : 'Free class';
 }
 
 function fillTeachingEditForm(t, zoom){
@@ -3647,14 +3908,26 @@ function fillTeachingEditForm(t, zoom){
   g('teachingEditArtHero').value = art.hero || '';
   g('teachingEditArtHeroMobile').value = art.heroMobile || '';
   g('teachingEditArtCard').value = art.card || '';
-  g('teachingEditArtSocial').value = art.social || '';
-  g('teachingEditArtStory').value = art.instagramStory || '';
   g('teachingEditFocal').value = art.focalPosition || 'center';
   g('teachingEditOverlay').checked = art.overlay !== false;
   g('teachingEditOverlayStrength').value = art.overlayStrength != null ? art.overlayStrength : 55;
   g('teachingEditStatus').value = t ? t.status || 'draft' : 'draft';
   g('teachingEditFeatured').checked = t ? TEACHING_PAGE_SETTINGS.featuredTeachingId === t.id : false;
+  updateTeachingEditStatusPill();
+  adminImagePreviewRefreshers.forEach(fn => fn());
+  populateTeachingEditRegistrationTab(t);
+  showTeachingEditTab('content');
 }
+
+function showTeachingEditTab(name){
+  document.querySelectorAll('#teachingEditTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.editTab === name));
+  document.querySelectorAll('.admin-edit-panel').forEach(p => { p.hidden = p.dataset.editPanel !== name; });
+}
+document.getElementById('teachingEditTabs').addEventListener('click', event => {
+  const btn = event.target.closest('.admin-tab');
+  if(btn) showTeachingEditTab(btn.dataset.editTab);
+});
+document.getElementById('teachingEditStatus').addEventListener('change', updateTeachingEditStatusPill);
 
 const teachingEditDialog = document.getElementById('teachingEditDialog');
 const teachingEditForm = document.getElementById('teachingEditForm');
@@ -3673,36 +3946,75 @@ teachingEditDialog.addEventListener('click', event => {
   if(event.target === teachingEditDialog) teachingEditDialog.close();
 });
 
-teachingEditForm.addEventListener('submit', async event => {
-  event.preventDefault();
+async function performTeachingSave(mode){
   const existingId = document.getElementById('teachingEditId').value || null;
   const { publicFields, zoomFields, makeFeatured } = collectTeachingEditForm();
   if(!publicFields.title || !publicFields.date || !publicFields.startTime){
     teachingEditStatusMsg.textContent = 'Title, date, and start time are required.';
-    return;
+    return null;
   }
-  teachingEditStatusMsg.textContent = 'Saving…';
+  if(mode === 'draft') publicFields.status = 'draft';
+  if(mode === 'publish' && publicFields.status === 'draft') publicFields.status = 'published';
+  teachingEditStatusMsg.textContent = mode === 'preview' ? 'Saving preview…' : 'Saving…';
   try {
-    await saveTeaching(publicFields, zoomFields, existingId, makeFeatured);
+    const id = await saveTeaching(publicFields, zoomFields, existingId, makeFeatured);
+    document.getElementById('teachingEditId').value = id;
+    document.getElementById('teachingEditStatus').value = publicFields.status;
+    updateTeachingEditStatusPill();
     renderTeachingManager();
     renderPublicTeachingPages();
-    teachingEditStatusMsg.textContent = DEMO_MODE
-      ? 'Saved to this preview only — this resets the next time the page is reloaded, since preview never writes to the real database.'
-      : 'Saved and live on the public Teaching page.';
+    return id;
   } catch (err) {
     console.error('saveTeaching failed', err);
     teachingEditStatusMsg.textContent = 'Could not save that teaching — ' + (err && err.message ? err.message : 'please try again.');
+    return null;
   }
+}
+
+document.getElementById('teachingEditSaveDraftBtn').addEventListener('click', async () => {
+  const id = await performTeachingSave('draft');
+  if(id) teachingEditStatusMsg.textContent = DEMO_MODE ? 'Draft saved to preview.' : 'Draft saved.';
 });
+
+document.getElementById('teachingEditPreviewBtn').addEventListener('click', async () => {
+  const id = await performTeachingSave('preview');
+  if(!id) return;
+  teachingEditStatusMsg.textContent = 'Opening preview…';
+  window.open(BASE + 'teaching-detail.html?id=' + encodeURIComponent(id), '_blank');
+  teachingEditStatusMsg.textContent = DEMO_MODE
+    ? 'Saved to this browser\'s preview and opened in a new tab.'
+    : 'Saved and opened in a new tab.';
+});
+
+teachingEditForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const id = await performTeachingSave('publish');
+  if(!id) return;
+  teachingEditStatusMsg.textContent = DEMO_MODE
+    ? 'Saved to preview — stays in this browser as you navigate and reload.'
+    : 'Published — live on the public Teaching page now.';
+});
+
+document.getElementById('teachingEditOpenRegistrantsBtn').addEventListener('click', () => {
+  const id = document.getElementById('teachingEditId').value;
+  if(id) openTeachingRegistrants(id);
+});
+
+async function duplicateTeachingRecord(publicSource, zoomSource){
+  const publicFields = JSON.parse(JSON.stringify(publicSource));
+  delete publicFields.id;
+  publicFields.title = (publicFields.title || 'Untitled') + ' (Copy)';
+  publicFields.status = 'draft';
+  const zoomFields = zoomSource ? JSON.parse(JSON.stringify(zoomSource)) : { zoomUrl: '', meetingId: '', passcode: '' };
+  return saveTeaching(publicFields, zoomFields, null, false);
+}
 
 document.getElementById('teachingEditDuplicateBtn').addEventListener('click', async () => {
   const { publicFields, zoomFields } = collectTeachingEditForm();
   if(!publicFields.title){ teachingEditStatusMsg.textContent = 'Enter a title before duplicating.'; return; }
-  publicFields.title = publicFields.title + ' (Copy)';
-  publicFields.status = 'draft';
   teachingEditStatusMsg.textContent = 'Duplicating…';
   try {
-    const newId = await saveTeaching(publicFields, zoomFields, null, false);
+    const newId = await duplicateTeachingRecord(publicFields, zoomFields);
     renderTeachingManager();
     renderPublicTeachingPages();
     await openTeachingEditor(newId);
@@ -3770,15 +4082,44 @@ function teachingsForTab(tab){
 
 function teachingMgrRowHtml(t){
   const featured = TEACHING_PAGE_SETTINGS.featuredTeachingId === t.id;
-  return '<div class="portal-row" data-teaching-id="' + escapeHtml(t.id) + '" style="padding:10px 0;flex-wrap:wrap">' +
-    '<div><strong>' + escapeHtml(t.title || '(untitled)') + '</strong>' +
-    (featured ? ' <span class="verify-badge" style="background:var(--black);color:var(--ivory);border-color:var(--black)">Featured</span>' : '') +
-    '<small>' + escapeHtml(formatTeachingDate(t.date || '') + ' · ' + formatTeachingTime(t.startTime, t.timeZone) + ' · ' + (t.status || 'draft')) + '</small></div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-    '<button class="portal-secondary teaching-mgr-edit" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Edit</button>' +
-    '<button class="portal-secondary teaching-mgr-registrants" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Registrants</button>' +
-    '<button class="portal-secondary teaching-mgr-archive" type="button" style="min-height:28px;padding:0 10px;font-size:9px">' + (t.archived ? 'Unarchive' : 'Archive') + '</button>' +
+  const art = teachingCardArt(t);
+  const status = t.status || 'draft';
+  return '<div class="admin-teaching-row" data-teaching-id="' + escapeHtml(t.id) + '">' +
+    '<div class="admin-teaching-thumb' + (art ? '' : ' ' + teachingArtClass(t.category)) + '"' +
+      (art ? ' style="background-image:url(\'' + escapeHtml(art) + '\')"' : '') + '></div>' +
+    '<div class="admin-teaching-info">' +
+    '<div class="admin-teaching-title-row"><strong>' + escapeHtml(t.title || '(untitled)') + '</strong>' +
+    (featured ? '<span class="admin-featured-badge">★ Featured</span>' : '') + '</div>' +
+    '<div class="admin-teaching-meta">' + escapeHtml(formatTeachingDate(t.date || '')) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) +
+    ' · ' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</div>' +
+    '</div>' +
+    '<span class="admin-status-pill ' + status + '">' + (TEACHING_STATUS_LABELS[status] || status) + '</span>' +
+    '<div class="admin-teaching-actions">' +
+    '<button class="admin-btn-ghost teaching-mgr-edit" type="button">Edit</button>' +
+    '<button class="admin-btn-ghost teaching-mgr-preview" type="button">Preview</button>' +
+    '<button class="admin-btn-ghost teaching-mgr-registrants" type="button">Registrants</button>' +
+    '<button class="admin-btn-ghost teaching-mgr-duplicate" type="button">Duplicate</button>' +
+    '<button class="admin-btn-ghost teaching-mgr-archive" type="button">' + (t.archived ? 'Unarchive' : 'Archive') + '</button>' +
     '</div></div>';
+}
+
+function renderTeachingMgrOverview(){
+  const wrap = document.getElementById('teachingMgrOverview');
+  if(!wrap) return;
+  const all = Object.values(TEACHINGS);
+  const counts = {
+    upcoming: teachingsForTab('upcoming').length,
+    drafts: all.filter(t => t.status === 'draft').length,
+    completed: teachingsForTab('completed').length,
+    cancelled: all.filter(t => t.status === 'cancelled').length
+  };
+  const featured = featuredTeaching();
+  wrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Upcoming</span><strong>' + counts.upcoming + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Drafts</span><strong>' + counts.drafts + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Completed</span><strong>' + counts.completed + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Cancelled</span><strong>' + counts.cancelled + '</strong></div>' +
+    '<div class="admin-stat-tile admin-stat-tile-wide"><span>Featured Teaching</span><strong>' + (featured ? escapeHtml(featured.title) : 'None set') + '</strong></div>';
 }
 
 function renderTeachingManagerList(){
@@ -3803,10 +4144,13 @@ function renderTeachingManagerCalendar(){
     const rows = byMonth[key].map(t => {
       const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(new Date(t.date + 'T12:00:00'));
       const day = Number(t.date.split('-')[2]);
-      return '<div class="portal-row teaching-mgr-cal-row" data-teaching-id="' + escapeHtml(t.id) + '" style="padding:8px 0;cursor:pointer">' +
-        '<div><strong>' + weekday + ' ' + day + '</strong><small>' + escapeHtml(t.title || '(untitled)') + ' · ' + (t.status || 'draft') + '</small></div></div>';
+      const status = t.status || 'draft';
+      return '<div class="admin-teaching-row teaching-mgr-cal-row" data-teaching-id="' + escapeHtml(t.id) + '" style="cursor:pointer">' +
+        '<div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(t.title || '(untitled)') + '</strong></div>' +
+        '<div class="admin-teaching-meta">' + weekday + ' ' + day + '</div></div>' +
+        '<span class="admin-status-pill ' + status + '">' + (TEACHING_STATUS_LABELS[status] || status) + '</span></div>';
     }).join('');
-    return '<div style="margin-bottom:18px"><div class="eyebrow" style="color:#8a8a8a;margin-bottom:6px">' + monthLabel + '</div>' + rows + '</div>';
+    return '<div style="margin-bottom:8px"><div class="admin-microlabel" style="margin-bottom:4px">' + monthLabel + '</div>' + rows + '</div>';
   }).join('');
 }
 
@@ -3824,10 +4168,13 @@ function renderTeachingManager(){
   if(!document.getElementById('teachingMgrList')) return;
   const notice = document.getElementById('teachingMgrModeNotice');
   if(notice){
-    notice.textContent = DEMO_MODE
-      ? 'You are on the preview site. Everything here — including Save and Publish — edits sample data in this browser tab only. Reloading the page resets it back to the defaults. To make permanent changes, this needs to run on theunveiledassembly.com.'
-      : 'You are on the live site. Save and Publish here write to the real database and update the public Teaching page immediately.';
+    notice.innerHTML = DEMO_MODE
+      ? '<strong>Preview Mode.</strong> Changes save to this browser only (not the real database) and stick around as you navigate and reload — use "Preview Page" to see them live, and "Reset Preview Data" to start over. Nothing here is visible to real visitors, and "Publish" only appears once this runs on theunveiledassembly.com.'
+      : '<strong>Live Site.</strong> Save Draft and Publish write to the real database and update the public Teaching page immediately.';
   }
+  const resetBtn = document.getElementById('teachingMgrResetPreviewBtn');
+  if(resetBtn) resetBtn.hidden = !DEMO_MODE;
+  renderTeachingMgrOverview();
   renderTeachingManagerList();
   renderTeachingManagerCalendar();
   populateFeaturedTeachingSelect();
@@ -3841,14 +4188,26 @@ function renderTeachingManager(){
   document.getElementById('teachingSettingsScriptureText').value = TEACHING_PAGE_SETTINGS.scriptureText || '';
   document.getElementById('teachingSettingsScriptureRef').value = TEACHING_PAGE_SETTINGS.scriptureReference || '';
   document.getElementById('teachingSettingsScriptureImage').value = TEACHING_PAGE_SETTINGS.scriptureImage || '';
+  adminImagePreviewRefreshers.forEach(fn => fn());
 }
 
 document.getElementById('teachingMgrTabs').addEventListener('click', event => {
-  const btn = event.target.closest('.teaching-tab');
+  const btn = event.target.closest('.admin-tab');
   if(!btn) return;
   teachingMgrActiveTab = btn.dataset.teachingTab;
-  document.querySelectorAll('#teachingMgrTabs .teaching-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('#teachingMgrTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
   renderTeachingManagerList();
+});
+
+document.getElementById('teachingMgrPreviewPageBtn').addEventListener('click', () => {
+  window.open(BASE + 'teachings.html', '_blank');
+});
+document.getElementById('teachingMgrResetPreviewBtn').addEventListener('click', () => {
+  if(!confirm('Reset all preview Teaching data in this browser back to the original samples? This cannot be undone.')) return;
+  resetPreviewData();
+  renderTeachingManager();
+  renderPublicTeachingPages();
+  portalOwnerStatus.textContent = 'Preview data has been reset to the original samples.';
 });
 document.getElementById('teachingMgrViewList').addEventListener('click', () => {
   document.getElementById('teachingMgrList').hidden = false;
@@ -3865,6 +4224,23 @@ document.getElementById('teachingMgrList').addEventListener('click', async event
   const id = row.dataset.teachingId;
   if(event.target.closest('.teaching-mgr-edit')) return openTeachingEditor(id);
   if(event.target.closest('.teaching-mgr-registrants')) return openTeachingRegistrants(id);
+  if(event.target.closest('.teaching-mgr-preview')){
+    window.open(BASE + 'teaching-detail.html?id=' + encodeURIComponent(id), '_blank');
+    return;
+  }
+  if(event.target.closest('.teaching-mgr-duplicate')){
+    try {
+      const zoom = await fetchTeachingZoomInfo(id);
+      await duplicateTeachingRecord(TEACHINGS[id], zoom);
+      renderTeachingManager();
+      renderPublicTeachingPages();
+      portalOwnerStatus.textContent = 'Duplicated as a new draft.';
+    } catch (err) {
+      console.error('duplicate from list failed', err);
+      portalOwnerStatus.textContent = 'Could not duplicate that teaching — ' + (err && err.message ? err.message : 'please try again.');
+    }
+    return;
+  }
   if(event.target.closest('.teaching-mgr-archive')){
     try {
       await setTeachingArchived(id, !TEACHINGS[id].archived);
@@ -3900,6 +4276,10 @@ document.getElementById('teachingSettingsSaveBtn').addEventListener('click', asy
   status.textContent = 'Saving…';
   if(DEMO_MODE){
     TEACHING_PAGE_SETTINGS = updated;
+    if(!savePreviewToStorage()){
+      status.textContent = "This browser's preview storage is full — try smaller images, or use Reset Preview Data.";
+      return;
+    }
   } else {
     try { await setDoc(doc(db, 'teachingPageSettings', 'global'), updated); await loadTeachingPageConfig(); }
     catch (err) {
@@ -3910,7 +4290,7 @@ document.getElementById('teachingSettingsSaveBtn').addEventListener('click', asy
   }
   renderPublicTeachingPages();
   status.textContent = DEMO_MODE
-    ? 'Saved to this preview only — this resets the next time the page is reloaded, since preview never writes to the real database.'
+    ? 'Saved to preview — stays in this browser as you navigate and reload. Not visible to real visitors.'
     : 'Saved and live on the public Teaching page.';
 });
 
@@ -4059,15 +4439,18 @@ function renderTeachingDetailPage(){
   if(!wrap) return;
   const id = new URLSearchParams(window.location.search).get('id');
   const t = id ? TEACHINGS[id] : null;
-  if(!t || t.status === 'draft'){
+  const viewerIsAdmin = !!(currentProfile && currentProfile.role === 'admin');
+  if(!t || (t.status === 'draft' && !viewerIsAdmin)){
     wrap.innerHTML = '<div class="section-inner reveal" style="padding-top:160px;text-align:center">' +
       '<div class="eyebrow">Teachings</div><h1 class="teaching-display" style="margin-bottom:24px">Not Available</h1>' +
       '<p style="color:var(--stone);margin-bottom:30px">This teaching isn\'t available right now.</p>' +
       '<a class="btn" href="' + BASE + 'teachings.html">← Back To Teachings</a></div>';
     return;
   }
+  const draftNoticeHtml = (t.status === 'draft')
+    ? '<div class="admin-preview-flag">You\'re viewing this as a draft — it isn\'t visible to the public yet.</div>' : '';
   const learnHtml = (t.whatYouWillLearn || []).map(li => '<li>' + escapeHtml(li) + '</li>').join('');
-  wrap.innerHTML =
+  wrap.innerHTML = draftNoticeHtml +
     '<header class="teaching-hero teaching-detail-hero">' + teachingHeroMediaHtml(t) +
     '<div class="teaching-hero-content reveal">' +
     '<div class="eyebrow">' + escapeHtml(t.category || 'Teaching') + '</div>' +
@@ -4134,6 +4517,10 @@ onAuthStateChanged(auth, async (user) => {
     setAccountControlLabel('Sign In');
   }
   refreshPortalTabs();
+  // A signed-in admin can preview their own drafts on the public
+  // Teaching detail page — re-render now that we actually know who's
+  // viewing (this listener resolves after the page's first paint).
+  renderPublicTeachingPages();
   if(memberPortalDialog.open){
     if(currentUser && currentProfile){
       // Right after registration, createUserWithEmailAndPassword signs the
