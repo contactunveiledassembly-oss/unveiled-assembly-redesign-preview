@@ -197,17 +197,23 @@ const DEMO_TEACHINGS = {
     date: demoNextWeekdayStr(4, 1), startTime: '19:30', price: 25,
     status: 'published' },
   'demo-voice': { id: 'demo-voice', ...demoTeachingDefaults(),
-    title: 'Hearing the Voice of God', subtitle: 'Recognizing How He Speaks', category: 'Prayer',
+    title: 'Hearing the Voice of God', subtitle: 'Recognizing How He Speaks', category: 'Hearing the Voice of God',
     shortDescription: 'Learning to recognize and respond to the voice of God in everyday life.',
     fullDescription: 'Learning to recognize and respond to the voice of God in everyday life.',
     date: demoNextWeekdayStr(4, 2), startTime: '19:30', price: 25,
     status: 'draft' },
-  'demo-dreams': { id: 'demo-dreams', ...demoTeachingDefaults(),
-    title: 'Dream Interpretation', subtitle: 'The Language of the Night', category: 'Dreams',
-    shortDescription: 'Understanding the language of dreams and how God speaks through them.',
-    fullDescription: 'Understanding the language of dreams and how God speaks through them.',
+  'demo-warfare': { id: 'demo-warfare', ...demoTeachingDefaults(),
+    title: 'Spiritual Warfare', subtitle: 'Understanding The Invisible', category: 'Spiritual Warfare',
+    shortDescription: 'A grounded look at spiritual warfare — what Scripture actually says, and how to stand without fear.',
+    fullDescription: 'A grounded look at spiritual warfare — what Scripture actually says, and how to stand without fear.',
     date: demoNextWeekdayStr(4, 3), startTime: '19:30', price: 25,
-    status: 'draft' },
+    status: 'published' },
+  'demo-identity': { id: 'demo-identity', ...demoTeachingDefaults(),
+    title: 'Identity in Christ', subtitle: 'Know Who You Are', category: 'Identity',
+    shortDescription: 'Rooting your sense of self in who God says you are, not in performance or circumstance.',
+    fullDescription: 'Rooting your sense of self in who God says you are, not in performance or circumstance.',
+    date: demoNextWeekdayStr(4, 4), startTime: '19:30', price: 25,
+    status: 'published' },
 };
 let DEMO_TEACHING_ZOOM = {
   'demo-discernment': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '000 000 0000', passcode: 'demo' }
@@ -799,7 +805,8 @@ function dialogsHtml(){
         </article>
         <article class="portal-panel" style="grid-column:1/-1">
           <span class="portal-label">Teaching Manager</span>
-          <p style="color:#656565;margin-bottom:16px">Create and run the weekly Teaching classes — the public Teaching page updates automatically from what's here. On the preview site this edits sample data only; on the live site it's real.</p>
+          <p style="color:#656565;margin-bottom:12px">Create and run the weekly Teaching classes — the public Teaching page updates automatically from what's here.</p>
+          <div id="teachingMgrModeNotice" style="border:1px solid #d6d2c6;background:#f3ede0;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:#4a4a4a"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
             <div class="teaching-tabs" id="teachingMgrTabs" role="tablist">
               <button type="button" class="teaching-tab active" data-teaching-tab="upcoming">Upcoming</button>
@@ -841,6 +848,11 @@ function dialogsHtml(){
               <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowScripture" type="checkbox" /> Show Scripture Section</label>
               <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsShowNewsletter" type="checkbox" /> Show Stay Connected</label>
               <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3a3a3a"><input id="teachingSettingsAutoArchive" type="checkbox" /> Auto-archive completed teachings</label>
+            </div>
+            <div class="booking-grid" style="margin-bottom:14px">
+              <div class="booking-field full"><label for="teachingSettingsScriptureText">Scripture / Foundation text</label><textarea id="teachingSettingsScriptureText" rows="2"></textarea></div>
+              <div class="booking-field"><label for="teachingSettingsScriptureRef">Reference</label><input id="teachingSettingsScriptureRef" type="text" placeholder="e.g. 1 Corinthians 2:14" /></div>
+              <div class="booking-field"><label for="teachingSettingsScriptureImage">Section image URL (optional)</label><input id="teachingSettingsScriptureImage" type="url" /></div>
             </div>
             <button class="portal-secondary" type="button" id="teachingSettingsSaveBtn">Save Teaching Page Settings</button>
             <div class="form-status" id="teachingSettingsStatus" style="color:#6d6d6d;margin-top:8px"></div>
@@ -1300,7 +1312,9 @@ if(!DEMO_MODE) await loadSchedulingConfig();
 let TEACHING_PAGE_SETTINGS = {
   featuredTeachingId: 'demo-discernment', showUpcoming: true, upcomingCount: 6,
   showLibrary: false, showScripture: true, showNewsletter: true,
-  defaultThursdayTime: '19:30', defaultTimeZone: 'America/New_York', autoArchiveCompleted: true
+  defaultThursdayTime: '19:30', defaultTimeZone: 'America/New_York', autoArchiveCompleted: true,
+  scriptureText: 'But the natural man receiveth not the things of the Spirit of God: for they are foolishness unto him: neither can he know them, because they are spiritually discerned.',
+  scriptureReference: '1 Corinthians 2:14', scriptureImage: ''
 };
 let TEACHINGS = DEMO_TEACHINGS;
 
@@ -3671,9 +3685,13 @@ teachingEditForm.addEventListener('submit', async event => {
   try {
     await saveTeaching(publicFields, zoomFields, existingId, makeFeatured);
     renderTeachingManager();
-    teachingEditStatusMsg.textContent = DEMO_MODE ? 'Saved to this preview only — sample data.' : 'Saved.';
+    renderPublicTeachingPages();
+    teachingEditStatusMsg.textContent = DEMO_MODE
+      ? 'Saved to this preview only — this resets the next time the page is reloaded, since preview never writes to the real database.'
+      : 'Saved and live on the public Teaching page.';
   } catch (err) {
-    teachingEditStatusMsg.textContent = 'Could not save that teaching.';
+    console.error('saveTeaching failed', err);
+    teachingEditStatusMsg.textContent = 'Could not save that teaching — ' + (err && err.message ? err.message : 'please try again.');
   }
 });
 
@@ -3686,10 +3704,12 @@ document.getElementById('teachingEditDuplicateBtn').addEventListener('click', as
   try {
     const newId = await saveTeaching(publicFields, zoomFields, null, false);
     renderTeachingManager();
+    renderPublicTeachingPages();
     await openTeachingEditor(newId);
     teachingEditStatusMsg.textContent = 'Duplicated as a new draft — adjust the date and publish when ready.';
   } catch (err) {
-    teachingEditStatusMsg.textContent = 'Could not duplicate that teaching.';
+    console.error('duplicate teaching failed', err);
+    teachingEditStatusMsg.textContent = 'Could not duplicate that teaching — ' + (err && err.message ? err.message : 'please try again.');
   }
 });
 
@@ -3802,6 +3822,12 @@ function populateFeaturedTeachingSelect(){
 
 function renderTeachingManager(){
   if(!document.getElementById('teachingMgrList')) return;
+  const notice = document.getElementById('teachingMgrModeNotice');
+  if(notice){
+    notice.textContent = DEMO_MODE
+      ? 'You are on the preview site. Everything here — including Save and Publish — edits sample data in this browser tab only. Reloading the page resets it back to the defaults. To make permanent changes, this needs to run on theunveiledassembly.com.'
+      : 'You are on the live site. Save and Publish here write to the real database and update the public Teaching page immediately.';
+  }
   renderTeachingManagerList();
   renderTeachingManagerCalendar();
   populateFeaturedTeachingSelect();
@@ -3812,6 +3838,9 @@ function renderTeachingManager(){
   document.getElementById('teachingSettingsShowScripture').checked = TEACHING_PAGE_SETTINGS.showScripture !== false;
   document.getElementById('teachingSettingsShowNewsletter').checked = TEACHING_PAGE_SETTINGS.showNewsletter !== false;
   document.getElementById('teachingSettingsAutoArchive').checked = TEACHING_PAGE_SETTINGS.autoArchiveCompleted !== false;
+  document.getElementById('teachingSettingsScriptureText').value = TEACHING_PAGE_SETTINGS.scriptureText || '';
+  document.getElementById('teachingSettingsScriptureRef').value = TEACHING_PAGE_SETTINGS.scriptureReference || '';
+  document.getElementById('teachingSettingsScriptureImage').value = TEACHING_PAGE_SETTINGS.scriptureImage || '';
 }
 
 document.getElementById('teachingMgrTabs').addEventListener('click', event => {
@@ -3837,8 +3866,14 @@ document.getElementById('teachingMgrList').addEventListener('click', async event
   if(event.target.closest('.teaching-mgr-edit')) return openTeachingEditor(id);
   if(event.target.closest('.teaching-mgr-registrants')) return openTeachingRegistrants(id);
   if(event.target.closest('.teaching-mgr-archive')){
-    try { await setTeachingArchived(id, !TEACHINGS[id].archived); renderTeachingManagerList(); }
-    catch (err) { /* leave as-is on failure */ }
+    try {
+      await setTeachingArchived(id, !TEACHINGS[id].archived);
+      renderTeachingManagerList();
+      renderPublicTeachingPages();
+    } catch (err) {
+      console.error('archive toggle failed', err);
+      portalOwnerStatus.textContent = 'Could not update that teaching — ' + (err && err.message ? err.message : 'please try again.');
+    }
   }
 });
 document.getElementById('teachingMgrCalendar').addEventListener('click', event => {
@@ -3857,32 +3892,98 @@ document.getElementById('teachingSettingsSaveBtn').addEventListener('click', asy
     showLibrary: document.getElementById('teachingSettingsShowLibrary').checked,
     showScripture: document.getElementById('teachingSettingsShowScripture').checked,
     showNewsletter: document.getElementById('teachingSettingsShowNewsletter').checked,
-    autoArchiveCompleted: document.getElementById('teachingSettingsAutoArchive').checked
+    autoArchiveCompleted: document.getElementById('teachingSettingsAutoArchive').checked,
+    scriptureText: document.getElementById('teachingSettingsScriptureText').value.trim(),
+    scriptureReference: document.getElementById('teachingSettingsScriptureRef').value.trim(),
+    scriptureImage: document.getElementById('teachingSettingsScriptureImage').value.trim()
   };
   status.textContent = 'Saving…';
   if(DEMO_MODE){
     TEACHING_PAGE_SETTINGS = updated;
   } else {
     try { await setDoc(doc(db, 'teachingPageSettings', 'global'), updated); await loadTeachingPageConfig(); }
-    catch (err) { status.textContent = 'Could not save settings.'; return; }
+    catch (err) {
+      console.error('save teaching settings failed', err);
+      status.textContent = 'Could not save settings — ' + (err && err.message ? err.message : 'please try again.');
+      return;
+    }
   }
-  status.textContent = DEMO_MODE ? 'Saved to this preview only — sample data.' : 'Saved.';
+  renderPublicTeachingPages();
+  status.textContent = DEMO_MODE
+    ? 'Saved to this preview only — this resets the next time the page is reloaded, since preview never writes to the real database.'
+    : 'Saved and live on the public Teaching page.';
 });
 
 /* ---------------------------------------------------------------
    Public Teaching page rendering (teachings.html) and detail page
    (teaching-detail.html) — both no-op harmlessly on every other page.
    --------------------------------------------------------------- */
+/* ---- Signature art (fallback when no real artwork URL is set yet) ----
+   Five distinct abstract/atmospheric treatments, one per named teaching
+   category from the request this was built from, plus a generic
+   fallback — pure CSS gradients rather than sourced photography, so
+   nothing here carries any licensing/rights question and every class
+   still looks intentional and finished before the admin uploads real
+   artwork. Matched by keyword against whatever the admin typed as the
+   category, so it degrades gracefully for categories not in the list. */
+function teachingArtClass(category){
+  const c = (category || '').toLowerCase();
+  if(c.includes('discern')) return 'teaching-art-discernment';
+  if(c.includes('prophet')) return 'teaching-art-prophetic';
+  if(c.includes('voice') || c.includes('hearing') || c.includes('prayer')) return 'teaching-art-voice';
+  if(c.includes('warfare') || c.includes('battle')) return 'teaching-art-warfare';
+  if(c.includes('identity')) return 'teaching-art-identity';
+  return 'teaching-art-default';
+}
+
+const TEACHING_META_ICONS = {
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg>',
+  people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 20c.2-2.4 1.6-4.4 3.6-5.4"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 21s7-6.3 7-11.5A7 7 0 0 0 5 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>'
+};
+function teachingMetaItem(icon, lines){
+  const text = (Array.isArray(lines) ? lines : [lines]).filter(Boolean).map(l => '<span>' + escapeHtml(l) + '</span>').join('');
+  return '<div class="teaching-meta-item">' + (TEACHING_META_ICONS[icon] || '') + '<div class="teaching-meta-text">' + text + '</div></div>';
+}
+function teachingFormatMeta(t){
+  if(t.format === 'zoom') return teachingMetaItem('video', 'LIVE ON ZOOM');
+  if(t.format === 'in-person') return teachingMetaItem('pin', ['IN PERSON', t.location || ''].filter(Boolean));
+  if(t.format === 'hybrid') return teachingMetaItem('pin', 'HYBRID');
+  return teachingMetaItem('video', 'CLASS');
+}
+function teachingCapacityMeta(t){
+  return teachingMetaItem('people', t.unlimitedCapacity !== false ? 'OPEN TO ALL' : (t.capacity ? t.capacity + ' SEATS' : 'OPEN TO ALL'));
+}
+
+// Shared by the main hero and the detail-page hero — a media panel
+// (real artwork if set, otherwise the signature art fallback) plus the
+// dark overlay the admin controls from Teaching Manager.
+function teachingHeroMediaHtml(t){
+  const heroArt = teachingArtworkUrl(t, 'hero');
+  const overlay = t.artwork && t.artwork.overlay !== false;
+  const overlayStrength = (t.artwork && t.artwork.overlayStrength != null) ? t.artwork.overlayStrength : 45;
+  const fallbackClass = heroArt ? '' : ' ' + teachingArtClass(t.category);
+  const style = heroArt
+    ? ' style="background-image:url(\'' + escapeHtml(heroArt) + '\');background-position:' + ((t.artwork && t.artwork.focalPosition) || 'center') + '"'
+    : '';
+  return '<div class="teaching-hero-media' + fallbackClass + '"' + style + '>' +
+    '<div class="teaching-hero-overlay" style="opacity:' + (overlay ? overlayStrength / 100 : 0) + '"></div></div>';
+}
+
 function teachingCardHtml(t){
   const art = teachingCardArt(t);
-  return '<a class="teaching-card" href="' + BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id) + '"' +
-    (art ? ' style="background-image:linear-gradient(180deg,rgba(10,10,10,.05),rgba(10,10,10,.75)),url(\'' + escapeHtml(art) + '\')"' : '') + '>' +
-    '<div class="teaching-card-body">' +
+  const fallbackClass = art ? '' : ' ' + teachingArtClass(t.category);
+  const style = art ? ' style="background-image:linear-gradient(190deg,rgba(10,10,10,.1),rgba(10,10,10,.72)),url(\'' + escapeHtml(art) + '\')"' : '';
+  return '<a class="teaching-card' + fallbackClass + '" href="' + BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id) + '"' + style + '>' +
+    '<div class="teaching-card-art-text">' +
     '<span class="teaching-card-eyebrow">' + escapeHtml(t.category || 'Teaching') + '</span>' +
     '<h3>' + escapeHtml(t.title || '') + '</h3>' +
-    '<p>' + escapeHtml(formatTeachingDateShort(t.date || '')) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) +
-    (t.price ? ' · $' + Number(t.price).toFixed(2) : '') + '</p>' +
-    '<span class="teaching-card-arrow">View Class →</span>' +
+    (t.subtitle ? '<p class="teaching-card-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    '</div>' +
+    '<div class="teaching-card-footer">' +
+    '<div><strong>' + escapeHtml(t.title || '') + '</strong><span>' + escapeHtml(formatTeachingDate(t.date || '')) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</span></div>' +
+    '<span class="teaching-card-arrow" aria-hidden="true">→</span>' +
     '</div></a>';
 }
 
@@ -3891,27 +3992,22 @@ function renderTeachingHero(){
   if(!wrap) return;
   const t = featuredTeaching();
   if(!t){
-    wrap.innerHTML = '<div class="section-inner reveal"><div class="eyebrow">Teachings</div><h1 class="display">New Teachings<br>Coming Soon.</h1></div>';
+    wrap.className = 'teaching-hero teaching-hero-empty';
+    wrap.innerHTML = '<div class="teaching-hero-content reveal"><div class="eyebrow">Teachings</div><h1 class="teaching-display">New Teachings<br>Coming Soon.</h1></div>';
     return;
   }
-  const heroArt = teachingArtworkUrl(t, 'hero');
-  const overlay = t.artwork && t.artwork.overlay !== false;
-  const overlayStrength = (t.artwork && t.artwork.overlayStrength != null) ? t.artwork.overlayStrength : 55;
-  wrap.style.backgroundImage = heroArt ? "url('" + heroArt + "')" : '';
-  wrap.style.backgroundPosition = (t.artwork && t.artwork.focalPosition) || 'center';
-  wrap.innerHTML =
-    '<div class="teaching-hero-overlay" style="opacity:' + (overlay ? overlayStrength / 100 : 0) + '"></div>' +
-    '<div class="teaching-hero-inner reveal">' +
+  wrap.className = 'teaching-hero';
+  wrap.innerHTML = teachingHeroMediaHtml(t) +
+    '<div class="teaching-hero-content reveal">' +
     '<div class="eyebrow">Upcoming Class</div>' +
-    '<h1 class="display">' + escapeHtml(t.title || '') + '</h1>' +
-    (t.subtitle ? '<p class="serif-heading teaching-hero-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
+    (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '<p class="teaching-hero-desc">' + escapeHtml(t.shortDescription || '') + '</p>' +
-    '<div class="teaching-hero-meta">' +
-    '<span>' + escapeHtml(formatTeachingDate(t.date || '').toUpperCase()) + '</span>' +
-    '<span>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</span>' +
-    '<span>' + (t.format === 'zoom' ? 'LIVE ON ZOOM' : t.format === 'in-person' ? 'IN PERSON' : t.format === 'hybrid' ? 'HYBRID' : 'CLASS') + '</span>' +
-    '<span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'FREE') + '</span>' +
+    '<div class="teaching-meta-row">' +
+    teachingMetaItem('calendar', [formatTeachingDate(t.date || '').toUpperCase(), formatTeachingTime(t.startTime, t.timeZone)]) +
+    teachingFormatMeta(t) + teachingCapacityMeta(t) +
     '</div>' +
+    '<div class="teaching-price-line">' + (t.price ? '$' + Number(t.price).toFixed(2) : 'FREE') + '</div>' +
     '<div class="teaching-hero-actions">' +
     '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
       (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
@@ -3939,7 +4035,19 @@ function renderTeachingLibrarySection(){
 }
 function renderTeachingScriptureSection(){
   const section = document.getElementById('teachingScriptureSection');
-  if(section) section.hidden = !TEACHING_PAGE_SETTINGS.showScripture;
+  if(!section) return;
+  section.hidden = !TEACHING_PAGE_SETTINGS.showScripture;
+  const verseEl = document.getElementById('teachingScriptureVerse');
+  const refEl = document.getElementById('teachingScriptureRef');
+  const artEl = section.querySelector('.teaching-scripture-art');
+  if(verseEl) verseEl.textContent = '"' + (TEACHING_PAGE_SETTINGS.scriptureText || '') + '"';
+  if(refEl) refEl.textContent = TEACHING_PAGE_SETTINGS.scriptureReference || '';
+  if(artEl){
+    const img = TEACHING_PAGE_SETTINGS.scriptureImage;
+    const t = featuredTeaching();
+    artEl.className = 'teaching-scripture-art' + (img ? '' : ' ' + teachingArtClass(t && t.category));
+    artEl.style.backgroundImage = img ? "url('" + img + "')" : '';
+  }
 }
 function renderTeachingNewsletterSection(){
   const section = document.getElementById('teachingNewsletterSection');
@@ -3953,22 +4061,18 @@ function renderTeachingDetailPage(){
   const t = id ? TEACHINGS[id] : null;
   if(!t || t.status === 'draft'){
     wrap.innerHTML = '<div class="section-inner reveal" style="padding-top:160px;text-align:center">' +
-      '<div class="eyebrow">Teachings</div><h1 class="display" style="margin-bottom:24px">Not Available</h1>' +
+      '<div class="eyebrow">Teachings</div><h1 class="teaching-display" style="margin-bottom:24px">Not Available</h1>' +
       '<p style="color:var(--stone);margin-bottom:30px">This teaching isn\'t available right now.</p>' +
       '<a class="btn" href="' + BASE + 'teachings.html">← Back To Teachings</a></div>';
     return;
   }
-  const heroArt = teachingArtworkUrl(t, 'hero');
-  const overlay = t.artwork && t.artwork.overlay !== false;
-  const overlayStrength = (t.artwork && t.artwork.overlayStrength != null) ? t.artwork.overlayStrength : 55;
   const learnHtml = (t.whatYouWillLearn || []).map(li => '<li>' + escapeHtml(li) + '</li>').join('');
   wrap.innerHTML =
-    '<header class="teaching-detail-hero" style="' + (heroArt ? "background-image:url('" + heroArt + "');" : '') + 'background-position:' + ((t.artwork && t.artwork.focalPosition) || 'center') + '">' +
-    '<div class="teaching-hero-overlay" style="opacity:' + (overlay ? overlayStrength / 100 : 0) + '"></div>' +
-    '<div class="teaching-hero-inner reveal">' +
+    '<header class="teaching-hero teaching-detail-hero">' + teachingHeroMediaHtml(t) +
+    '<div class="teaching-hero-content reveal">' +
     '<div class="eyebrow">' + escapeHtml(t.category || 'Teaching') + '</div>' +
-    '<h1 class="display">' + escapeHtml(t.title || '') + '</h1>' +
-    (t.subtitle ? '<p class="serif-heading teaching-hero-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
+    (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '</div></header>' +
     '<section class="on-light-section">' +
     '<div class="teaching-detail-grid reveal">' +
@@ -3982,9 +4086,9 @@ function renderTeachingDetailPage(){
       (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
     '</div>' +
     '<div class="teaching-detail-copy">' +
-    '<h2 class="serif-heading">About This Teaching</h2>' +
+    '<h2 class="teaching-subtitle-heading">About This Teaching</h2>' +
     '<p>' + escapeHtml(t.fullDescription || t.shortDescription || '') + '</p>' +
-    (learnHtml ? '<h2 class="serif-heading" style="margin-top:36px">What You Will Learn</h2><ul class="teaching-learn-list">' + learnHtml + '</ul>' : '') +
+    (learnHtml ? '<h2 class="teaching-subtitle-heading" style="margin-top:36px">What You Will Learn</h2><ul class="teaching-learn-list">' + learnHtml + '</ul>' : '') +
     '</div></div></section>';
 }
 

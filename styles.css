@@ -684,63 +684,133 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
    section, and the admin manager it's all driven from.
    ================================================================= */
 
-/* ---------- Featured Teaching hero (cinematic) ---------- */
-.teaching-hero{
-  position:relative;min-height:86vh;display:flex;align-items:flex-end;overflow:hidden;
-  background-color:var(--black);background-size:cover;background-repeat:no-repeat;
-  padding:0 5vw 90px;
+/* ---------- Teaching-specific typography ----------
+   A deliberate three-role system, distinct from the rest of the site's
+   Anton-heavy headings: Anton stays for structural section titles
+   ("Upcoming Teachings."), but the teaching's own name — the thing a
+   person is meant to remember — is set in the editorial serif instead,
+   so it reads as a title, not a poster. */
+.teaching-display{
+  font-family:var(--serif);font-weight:600;text-transform:uppercase;
+  letter-spacing:.01em;line-height:.98;color:var(--ivory);
 }
-.teaching-hero::before{
+.teaching-subtitle{
+  font-family:var(--serif);font-style:italic;font-weight:400;color:var(--ivory);opacity:.86;
+  font-size:clamp(17px,1.7vw,22px);letter-spacing:.01em;margin-bottom:18px;
+}
+.teaching-subtitle-heading{font-family:var(--serif);font-weight:600;color:var(--black);font-size:clamp(22px,2.4vw,30px);margin-bottom:16px}
+.teaching-section-title{font-size:clamp(34px,4.6vw,64px);margin-bottom:8px}
+
+/* ---------- Signature art (fallback before real artwork is uploaded) ----
+   Five distinct atmospheric treatments, all pure CSS — no stock photos
+   with unclear rights hotlinked into the live site. Each layers a ring
+   motif (matching the orb device already used sitewide) over a tinted
+   radial glow. Swapped out instantly the moment a real artwork URL is
+   set in Teaching Manager. */
+.teaching-art-discernment,.teaching-art-prophetic,.teaching-art-voice,.teaching-art-warfare,.teaching-art-identity,.teaching-art-default{
+  position:relative;background-color:var(--black);
+}
+.teaching-art-discernment::after,.teaching-art-prophetic::after,.teaching-art-voice::after,.teaching-art-warfare::after,.teaching-art-identity::after,.teaching-art-default::after{
   content:"";position:absolute;inset:0;
-  background:radial-gradient(ellipse at 75% 20%, rgba(255,255,255,.05), transparent 55%);
-  pointer-events:none;
+  background:repeating-radial-gradient(circle at var(--ring-x,55%) var(--ring-y,45%),
+    rgba(245,243,238,.05) 0px, rgba(245,243,238,.05) 1px, transparent 1px, transparent 30px);
+  -webkit-mask-image:radial-gradient(circle at var(--ring-x,55%) var(--ring-y,45%), black 0%, transparent 46%);
+  mask-image:radial-gradient(circle at var(--ring-x,55%) var(--ring-y,45%), black 0%, transparent 46%);
 }
-.teaching-hero-overlay{position:absolute;inset:0;background:var(--black);pointer-events:none;transition:opacity .3s}
-.teaching-hero-inner{position:relative;z-index:1;max-width:720px}
-.teaching-hero-inner .eyebrow{color:var(--stone)}
-.teaching-hero-inner h1{font-size:clamp(46px,7.4vw,110px);color:var(--ivory);margin:14px 0 10px}
-.teaching-hero-subtitle{font-size:clamp(18px,2vw,26px);color:var(--ivory);opacity:.88;margin-bottom:18px}
-.teaching-hero-desc{max-width:52ch;color:var(--stone);font-size:15.5px;line-height:1.75;margin-bottom:30px}
-.teaching-hero-meta{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:34px}
-.teaching-hero-meta span{
-  font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ivory);
-  padding-bottom:8px;border-bottom:1px solid var(--line-dark);
+.teaching-art-discernment{--ring-x:38%;--ring-y:46%;
+  background-image:radial-gradient(circle at 30% 42%, rgba(245,243,238,.16), transparent 46%),
+    radial-gradient(circle at 70% 58%, rgba(0,0,0,.55), transparent 55%),
+    linear-gradient(115deg, #1d1d1c 0%, #0a0a0a 55%, #050505 100%);
 }
+.teaching-art-prophetic{--ring-x:50%;--ring-y:20%;
+  background-image:radial-gradient(ellipse at 50% 4%, rgba(240,222,180,.20), transparent 55%),
+    radial-gradient(circle at 50% 95%, rgba(0,0,0,.6), transparent 60%),
+    linear-gradient(180deg, #18140d 0%, #0a0a0a 72%);
+}
+.teaching-art-voice{--ring-x:50%;--ring-y:50%;
+  background-image:radial-gradient(circle at 50% 50%, rgba(205,220,235,.14), transparent 55%),
+    linear-gradient(180deg, #0c1013 0%, #0a0a0a 70%);
+}
+.teaching-art-warfare{--ring-x:72%;--ring-y:30%;
+  background-image:linear-gradient(135deg, rgba(90,15,15,.4) 0%, transparent 42%),
+    radial-gradient(circle at 75% 28%, rgba(130,20,20,.22), transparent 50%),
+    linear-gradient(160deg, #170808 0%, #050505 68%);
+}
+.teaching-art-identity{--ring-x:50%;--ring-y:42%;
+  background-image:radial-gradient(circle at 50% 38%, rgba(245,243,238,.18), transparent 48%),
+    linear-gradient(90deg, rgba(245,243,238,.05), transparent 22%, transparent 78%, rgba(245,243,238,.05)),
+    #0a0a0a;
+}
+.teaching-art-default{--ring-x:62%;--ring-y:38%;
+  background-image:radial-gradient(circle at 62% 38%, rgba(245,243,238,.1), transparent 52%), #0a0a0a;
+}
+
+/* ---------- Featured Teaching hero (editorial split) ---------- */
+.teaching-hero{
+  display:grid;grid-template-columns:1fr 1fr;min-height:82vh;background:var(--black);overflow:hidden;
+}
+.teaching-hero-media{position:relative;background-color:var(--black);background-size:cover;background-repeat:no-repeat;min-height:340px}
+.teaching-hero-overlay{position:absolute;inset:0;background:#000;pointer-events:none;transition:opacity .3s}
+.teaching-hero-content{
+  position:relative;display:flex;flex-direction:column;justify-content:center;
+  padding:70px 4.5vw;background:radial-gradient(ellipse at 85% 15%, rgba(255,255,255,.045), transparent 55%);
+}
+.teaching-hero-content .eyebrow{color:var(--stone);margin-bottom:16px}
+.teaching-hero-content h1{font-size:clamp(42px,5.4vw,92px);margin-bottom:8px}
+.teaching-hero-desc{max-width:44ch;color:var(--stone);font-size:15px;line-height:1.75;margin-bottom:30px}
+.teaching-meta-row{display:flex;flex-wrap:wrap;gap:26px;margin-bottom:26px}
+.teaching-meta-item{display:flex;align-items:flex-start;gap:9px;color:var(--ivory)}
+.teaching-meta-item svg{width:16px;height:16px;stroke:var(--stone);flex:0 0 auto;margin-top:1px}
+.teaching-meta-text{display:flex;flex-direction:column;gap:2px}
+.teaching-meta-text span{font-family:var(--sans);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;line-height:1.5}
+.teaching-price-line{font-family:var(--serif);font-size:26px;color:var(--ivory);margin-bottom:26px}
 .teaching-hero-actions{display:flex;gap:14px;flex-wrap:wrap}
 .teaching-register-btn:disabled{opacity:.4;cursor:not-allowed}
+.teaching-hero.teaching-hero-empty{grid-template-columns:1fr;background:radial-gradient(ellipse at 70% 40%, rgba(255,255,255,.05), transparent 55%), var(--black)}
+.teaching-hero.teaching-hero-empty .teaching-hero-content{padding:100px 5vw}
 
-@media(max-width:760px){
-  .teaching-hero{min-height:78vh;align-items:flex-end;padding:0 6vw 60px}
-  .teaching-hero-inner{max-width:none}
+@media(max-width:820px){
+  .teaching-hero{grid-template-columns:1fr;min-height:auto}
+  .teaching-hero-media{min-height:52vh}
+  .teaching-hero-content{padding:48px 6vw 56px}
 }
 
-/* ---------- Upcoming teaching cards ---------- */
+/* ---------- Upcoming teaching cards (campaign-poster style) ---------- */
 .teaching-cards-section{padding-top:120px}
 .teaching-cards-subhead{font-family:var(--serif);font-style:italic;font-size:17px}
-.teaching-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-dark);border:1px solid var(--line-dark)}
+.teaching-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
 .teaching-card{
-  position:relative;display:block;min-height:420px;background-color:var(--panel);background-size:cover;background-position:center;
-  color:var(--ivory);overflow:hidden;
+  display:flex;flex-direction:column;color:var(--ivory);border:1px solid var(--line-dark);transition:.25s;
 }
-.teaching-card-body{position:absolute;left:0;right:0;bottom:0;padding:26px 24px;z-index:1}
-.teaching-card-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--stone);display:block;margin-bottom:10px}
-.teaching-card h3{font-family:var(--display);text-transform:uppercase;font-size:clamp(24px,2.4vw,32px);line-height:.98;margin-bottom:10px}
-.teaching-card p{font-size:12.5px;letter-spacing:.04em;color:var(--stone);margin-bottom:14px}
-.teaching-card-arrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:0;transform:translateY(4px);transition:.25s;display:inline-block}
-.teaching-card:hover .teaching-card-arrow{opacity:1;transform:translateY(0)}
-.teaching-card:hover{outline:1px solid rgba(245,243,238,.35);outline-offset:-1px}
+.teaching-card:hover{border-color:rgba(245,243,238,.4);transform:translateY(-3px)}
+.teaching-card-art-text{
+  position:relative;min-height:360px;background-size:cover;background-position:center;background-color:var(--panel);
+  display:flex;flex-direction:column;justify-content:flex-end;padding:26px 22px;
+}
+.teaching-card-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--stone);display:block;margin-bottom:12px}
+.teaching-card-art-text h3{font-family:var(--serif);font-weight:600;text-transform:uppercase;font-size:clamp(24px,2.2vw,30px);line-height:1.05;margin-bottom:8px}
+.teaching-card-subtitle{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--stone);letter-spacing:.02em}
+.teaching-card-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 20px;
+  border-top:1px solid var(--line-dark);background:var(--panel);
+}
+.teaching-card-footer > div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.teaching-card-footer strong{font-family:var(--sans);font-weight:600;font-size:13px;color:var(--ivory);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.teaching-card-footer span{font-size:11px;letter-spacing:.03em;color:var(--stone)}
+.teaching-card-arrow{font-size:15px;opacity:.55;transition:.25s;flex:0 0 auto}
+.teaching-card:hover .teaching-card-arrow{opacity:1;transform:translateX(3px)}
 @media(max-width:900px){.teaching-cards-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.teaching-cards-grid{grid-template-columns:1fr}.teaching-card{min-height:320px}}
+@media(max-width:600px){.teaching-cards-grid{grid-template-columns:1fr}.teaching-card-art-text{min-height:300px}}
 
 /* ---------- Teaching Library (reuses the card grid look) ---------- */
 .teaching-library-section .teaching-cards-grid{margin-top:10px}
 
-/* ---------- Scripture / editorial split ---------- */
+/* ---------- Scripture / Foundation split ---------- */
 .teaching-scripture-section{padding:0}
-.teaching-scripture-grid{display:grid;grid-template-columns:1fr 1fr;min-height:70vh}
-.teaching-scripture-art{background:radial-gradient(circle at 30% 40%, rgba(255,255,255,.05), transparent 60%), var(--charcoal);border-right:1px solid var(--line-dark)}
-.teaching-scripture-copy{display:flex;flex-direction:column;justify-content:center;padding:80px 6vw}
-.teaching-scripture-verse{font-size:clamp(24px,2.6vw,36px);line-height:1.4;font-style:italic;max-width:20ch;margin-bottom:22px}
+.teaching-scripture-grid{display:grid;grid-template-columns:1fr 1fr;min-height:64vh}
+.teaching-scripture-art{background-size:cover;background-position:center;border-right:1px solid var(--line-dark)}
+.teaching-scripture-copy{display:flex;flex-direction:column;justify-content:center;padding:80px 6vw;background:#161311}
+.teaching-scripture-verse{font-family:var(--serif);font-style:italic;font-weight:400;font-size:clamp(23px,2.4vw,32px);line-height:1.45;color:var(--ivory);max-width:22ch;margin-bottom:22px}
 .teaching-scripture-ref{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--stone)}
 @media(max-width:820px){
   .teaching-scripture-grid{grid-template-columns:1fr}
@@ -749,17 +819,14 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 }
 
 /* ---------- Teaching detail page ---------- */
-.teaching-detail-hero{
-  position:relative;min-height:64vh;display:flex;align-items:flex-end;overflow:hidden;
-  background-color:var(--black);background-size:cover;background-repeat:no-repeat;padding:0 5vw 70px;
-}
+.teaching-detail-hero{min-height:64vh}
+.teaching-detail-hero .teaching-hero-content{padding-bottom:64px}
 .teaching-detail-grid{display:grid;grid-template-columns:280px 1fr;gap:70px}
 .teaching-detail-facts{display:flex;flex-direction:column;gap:16px;padding-right:20px;border-right:1px solid var(--line-light);height:fit-content}
 .teaching-detail-facts div{display:flex;flex-direction:column;gap:3px}
 .teaching-detail-facts span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
 .teaching-detail-facts strong{font-family:var(--serif);font-size:19px;font-weight:400}
 .teaching-detail-facts .btn{margin-top:10px}
-.teaching-detail-copy h2{font-size:clamp(22px,2.4vw,30px);margin-bottom:16px}
 .teaching-detail-copy p{color:var(--ink-muted);line-height:1.8;max-width:62ch}
 .teaching-learn-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
 .teaching-learn-list li{padding-left:26px;position:relative;color:var(--ink-muted);line-height:1.6}
