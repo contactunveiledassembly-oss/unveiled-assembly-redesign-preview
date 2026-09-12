@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="One-on-one sessions with The Unveiled Assembly — prayer, clarity, discernment, and spiritual direction." />
+  <title>One-on-One Sessions | The Unveiled Assembly</title>
+  <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="one-on-one">
+  <div class="grain"></div>
+
+  <header class="teaching-hero teaching-hero-empty" id="oneOnOneHero">
+    <div class="teaching-hero-content reveal">
+      <div class="eyebrow">One-on-One Sessions</div>
+      <h1 class="teaching-display">Guidance For A<br>Deeper Journey.</h1>
+      <p class="teaching-hero-desc">Personal conversations for prayer, clarity, discernment, and spiritual direction.</p>
+    </div>
+  </header>
+
+  <section class="teaching-cards-section">
+    <div class="section-inner">
+      <div class="oneonone-filters reveal">
+        <div class="oneonone-search-field">
+          <input type="search" id="oneOnOneSearch" placeholder="What are you seeking guidance for? (prayer, clarity, mentorship…)" aria-label="Search sessions by need" />
+        </div>
+        <div class="oneonone-filter-row">
+          <span class="eyebrow" style="letter-spacing:.14em">Format</span>
+          <div class="oneonone-pills" id="oneOnOneFormatPills">
+            <button type="button" class="oneonone-pill active" data-format="all">All</button>
+            <button type="button" class="oneonone-pill" data-format="zoom">Zoom</button>
+            <button type="button" class="oneonone-pill" data-format="phone">Phone</button>
+            <button type="button" class="oneonone-pill" data-format="in-person">In Person</button>
+          </div>
+        </div>
+        <div class="oneonone-filter-row">
+          <span class="eyebrow" style="letter-spacing:.14em">Time</span>
+          <div class="oneonone-pills" id="oneOnOneDurationPills">
+            <button type="button" class="oneonone-pill active" data-duration="all">All</button>
+            <button type="button" class="oneonone-pill" data-duration="30">30 Min</button>
+            <button type="button" class="oneonone-pill" data-duration="60">60 Min</button>
+          </div>
+        </div>
+      </div>
+      <div class="oneonone-cards-grid reveal" id="oneOnOneCardsList"></div>
+      <p id="oneOnOneEmptyState" hidden style="text-align:center;color:var(--stone);margin-top:24px">No sessions match those filters right now.</p>
+    </div>
+  </section>
+
+  <section class="on-light-section" style="padding-bottom:100px">
+    <div class="section-inner reveal" style="text-align:center;margin-bottom:56px">
+      <div class="eyebrow on-light" style="margin-bottom:16px">How It Works</div>
+      <h2 class="serif-heading" style="font-size:clamp(26px,3.2vw,40px)">Simple, From Start To Finish.</h2>
+    </div>
+    <div class="oneonone-steps reveal">
+      <div class="oneonone-step" style="color:var(--black)">
+        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">1</div>
+        <div class="oneonone-step-label" style="color:var(--black)">Choose Session</div>
+      </div>
+      <div class="oneonone-step">
+        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">2</div>
+        <div class="oneonone-step-label" style="color:var(--black)">Choose Date &amp; Time</div>
+      </div>
+      <div class="oneonone-step">
+        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">3</div>
+        <div class="oneonone-step-label" style="color:var(--black)">Enter Information</div>
+      </div>
+      <div class="oneonone-step">
+        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">4</div>
+        <div class="oneonone-step-label" style="color:var(--black)">Payment</div>
+      </div>
+      <div class="oneonone-step">
+        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">5</div>
+        <div class="oneonone-step-label" style="color:var(--black)">Confirmation</div>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

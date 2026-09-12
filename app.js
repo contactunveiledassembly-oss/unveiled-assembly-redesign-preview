@@ -152,9 +152,9 @@ const DEMO_TUE1 = demoNextWeekdayStr(2, 0);
 const DEMO_THU1 = demoNextWeekdayStr(4, 0);
 const DEMO_TUE2 = demoNextWeekdayStr(2, 1);
 let DEMO_BOOKING_SEQ = 1;
-const DEMO_BOOKINGS = [
+let DEMO_BOOKINGS = [
   { id: 'demo-1', slotId: DEMO_TUE1 + '_14:00', date: DEMO_TUE1, time: '14:00', sessionType: '30-minute', name: 'Jordan Lee', email: 'jordan@example.com', uid: null, status: 'pending' },
-  { id: 'demo-2', slotId: DEMO_THU1 + '_15:00', date: DEMO_THU1, time: '15:00', sessionType: '15-minute', name: 'Amara Okafor', email: 'amara@example.com', uid: null, status: 'confirmed' },
+  { id: 'demo-2', slotId: DEMO_THU1 + '_15:00', date: DEMO_THU1, time: '15:00', sessionType: 'prayer-call', name: 'Amara Okafor', email: 'amara@example.com', uid: null, status: 'confirmed' },
   { id: 'demo-3', slotId: DEMO_TUE2 + '_16:00', date: DEMO_TUE2, time: '16:00', sessionType: '30-minute', name: 'Sam Rivera', email: 'sam@example.com', uid: null, status: 'confirmed' },
 ];
 const DEMO_MEMBERS = [
@@ -162,7 +162,7 @@ const DEMO_MEMBERS = [
   { id: 'demo-m2', name: 'Amara Okafor', email: 'amara@example.com', role: 'member' },
   { id: 'demo-m3', name: 'Sam Rivera', email: 'sam@example.com', role: 'member' },
 ];
-const DEMO_BLOCKED_DATES = [demoNextWeekdayStr(4, 2)];
+let DEMO_BLOCKED_DATES = [demoNextWeekdayStr(4, 2)];
 // Temporary slot holds (Phase 6) — in demo mode these just live in this
 // array; in real mode the equivalent lives in the bookingHolds collection.
 let DEMO_HOLDS = [];
@@ -235,6 +235,7 @@ const NAV_LINKS = [
   { page: 'beliefs', href: 'beliefs.html', label: 'Beliefs' },
   { page: 'gather', href: 'gather.html', label: 'Gather' },
   { page: 'teachings', href: 'teachings.html', label: 'Teachings' },
+  { page: 'one-on-one', href: 'one-on-one.html', label: 'One-on-One' },
   { page: 'prayer', href: 'prayer.html', label: 'Prayer' },
   { page: 'connect', href: 'connect.html', label: 'Connect' },
   { page: 'shop', href: 'shop/', label: 'Shop' },
@@ -766,6 +767,8 @@ function dialogsHtml(){
             <button type="button" class="admin-tab" data-bookings-tab="types">Session Types</button>
             <button type="button" class="admin-tab" data-bookings-tab="blocked">Blocked Dates</button>
             <button type="button" class="admin-tab" data-bookings-tab="notifications">Notifications</button>
+            <button type="button" class="admin-tab" data-bookings-tab="clients">Clients</button>
+            <button type="button" class="admin-tab" data-bookings-tab="reports">Reports</button>
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="overview">
@@ -776,18 +779,24 @@ function dialogsHtml(){
                 <div id="bookingsTodayList"></div>
                 <div class="admin-subsection-label">Upcoming Appointments</div>
                 <div id="bookingsUpcomingPreview"></div>
+                <div class="admin-subsection-label">Calendar Preview <span class="admin-hint">— this week</span></div>
+                <div id="bookingsCalendarPreview"></div>
               </div>
               <div>
                 <div class="admin-subsection-label" style="border-top:0;padding-top:0">Quick Actions</div>
                 <div style="display:flex;flex-direction:column;gap:8px" id="bookingsQuickActions">
-                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="copy-link" style="text-align:left">Copy Booking Page Link</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="new-appointment" style="text-align:left">New Appointment</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="copy-link" style="text-align:left">Copy Booking Link</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="preview-page" style="text-align:left">Preview Booking Page ↗</button>
                   <button type="button" class="admin-btn-ghost" data-bookings-quick-action="availability" style="text-align:left">Manage Availability</button>
-                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="calendar" style="text-align:left">View Calendar</button>
-                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="blocked" style="text-align:left">Blocked Dates</button>
-                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="types" style="text-align:left">Session Types</button>
-                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="notifications" style="text-align:left">Notifications</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="blocked" style="text-align:left">Block A Date</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="types" style="text-align:left">Manage Session Types</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="reminder" style="text-align:left" title="Coming Later">Send Scheduling Reminder</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="notifications" style="text-align:left">Manage Notifications</button>
                 </div>
                 <div class="form-status" id="bookingsQuickActionStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+                <div class="admin-subsection-label">Ministry Insights</div>
+                <div id="bookingsInsights"></div>
               </div>
             </div>
           </div>
@@ -908,7 +917,7 @@ function dialogsHtml(){
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="types" hidden>
-            <p class="admin-hint" style="margin-bottom:16px">The kinds of 1:1 appointments visitors can request — for example, 30-Minute One-on-One, Prayer Call, or Mentorship Session.</p>
+            <p class="admin-hint" style="margin-bottom:16px">The kinds of 1:1 appointments visitors can request — for example, 30-Minute One-on-One, Prayer Call, or Mentorship Session. These are exactly what shows up on the public One-on-One Sessions page.</p>
             <div id="schedTypesList" style="margin-bottom:14px"></div>
             <div class="admin-subsection-label" style="border-top:0;padding-top:0">Add / Update A Session Type</div>
             <form id="schedTypeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
@@ -921,9 +930,19 @@ function dialogsHtml(){
                   <option value="zoom">Zoom</option><option value="phone">Phone</option><option value="in-person">In Person</option>
                 </select>
               </div>
+              <div class="form-field" style="flex:0 0 130px"><label for="schedTypeCapacity">Capacity <span class="admin-hint">(optional)</span></label><input id="schedTypeCapacity" type="number" min="1" placeholder="Unlimited" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferBefore">Buffer before</label><input id="schedTypeBufferBefore" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferAfter">Buffer after</label><input id="schedTypeBufferAfter" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:1;min-width:200px"><label for="schedTypeDescription">Description</label><input id="schedTypeDescription" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="admin-image-field" data-image-field="session-type" style="max-width:280px">
+                <span class="admin-microlabel">Session Image <span class="admin-hint">(optional — shown on the public One-on-One page)</span></span>
+                <div class="admin-image-preview" id="schedTypeImagePreview"></div>
+                <div class="admin-image-actions">
+                  <label class="admin-image-upload-btn"><span class="admin-image-upload-btn-text">Upload Image</span><input type="file" accept="image/*" id="schedTypeImageFile" hidden /></label>
+                  <button type="button" class="admin-image-remove-btn" id="schedTypeImageRemove">Remove Image</button>
+                </div>
+                <input type="hidden" id="schedTypeImage" />
+              </div>
               <button class="admin-btn-solid" type="submit">Add / Update Type</button>
             </form>
             <div class="form-status" id="schedTypeStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
@@ -970,13 +989,26 @@ function dialogsHtml(){
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="notifications" hidden>
-            <p class="admin-hint" style="margin-bottom:16px">Choose which messages get sent around a 1:1 booking. <strong>These switches save your preference now — actual email/SMS delivery isn't connected yet</strong>, so nothing is sent until a real provider is wired up.</p>
-            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:16px"><input id="bookingsNotifyConfirmation" type="checkbox" /> Booking Confirmation — sent when a request is confirmed</label>
-            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:16px"><input id="bookingsNotifyReminder" type="checkbox" /> Reminder Before Appointment — sent shortly before the session starts</label>
-            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:16px"><input id="bookingsNotifyCancellation" type="checkbox" /> Cancellation Notice — sent if a booking is cancelled or declined</label>
-            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:20px"><input id="bookingsNotifyReschedule" type="checkbox" /> Reschedule Notice — sent when a booking's time is changed</label>
+            <p class="admin-hint" style="margin-bottom:16px">Choose which messages you'd like sent around a 1:1 booking. <strong>These switches save your preference now — actual email/SMS delivery isn't connected yet</strong>, so nothing is sent until a real provider is wired up.</p>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:14px"><input id="bookingsNotifyConfirmation" type="checkbox" /> Booking Confirmation — sent when a request is confirmed <span class="admin-status-pill draft">Not Connected Yet</span></label>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:14px"><input id="bookingsNotifyReminder24" type="checkbox" /> 24-Hour Reminder — sent the day before the appointment <span class="admin-status-pill draft">Not Connected Yet</span></label>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:14px"><input id="bookingsNotifyReminder1" type="checkbox" /> 1-Hour Reminder — sent shortly before the session starts <span class="admin-status-pill draft">Not Connected Yet</span></label>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:14px"><input id="bookingsNotifyCancellation" type="checkbox" /> Cancellation Notice — sent if a booking is cancelled or declined <span class="admin-status-pill draft">Not Connected Yet</span></label>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:20px"><input id="bookingsNotifyReschedule" type="checkbox" /> Reschedule Notice — sent when a booking's time is changed <span class="admin-status-pill draft">Not Connected Yet</span></label>
             <button class="admin-btn-solid" type="button" id="bookingsNotifySaveBtn">Save Changes</button>
             <div class="form-status" id="bookingsNotifyStatus" style="color:var(--owner-text-muted);margin-top:10px"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-bookings-panel="clients" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">Everyone who has requested or completed a 1:1 session, gathered from your bookings — not a separate contact list.</p>
+            <div id="bookingsClientsList"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-bookings-panel="reports" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">A simple look at booking activity. Revenue reporting will appear here honestly once a real payment processor is connected — these counts are real, drawn from your actual bookings.</p>
+            <div class="admin-stat-row" id="bookingsReportsStats"></div>
+            <div class="admin-subsection-label" style="border-top:0;padding-top:0">Most Requested Session Types</div>
+            <div id="bookingsReportsTypes"></div>
           </div>
         </article>
         <article class="portal-panel" data-owner-section="dashboard">
@@ -1146,6 +1178,11 @@ function dialogsHtml(){
       <button class="booking-close" id="closeBooking" type="button" aria-label="Close scheduling">×</button>
     </div>
     <div class="booking-body">
+      <div class="oneonone-steps checkout-step-strip">
+        <div class="oneonone-step"><div class="oneonone-step-num">1</div><div class="oneonone-step-label">Details</div></div>
+        <div class="oneonone-step"><div class="oneonone-step-num">2</div><div class="oneonone-step-label">Payment</div></div>
+        <div class="oneonone-step"><div class="oneonone-step-num">3</div><div class="oneonone-step-label">Confirmation</div></div>
+      </div>
       <p class="booking-intro" id="bookingIntro">Choose a date and an open time below.</p>
       <form id="bookingForm">
         <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
@@ -1188,8 +1225,23 @@ function dialogsHtml(){
             <input id="bookingReason" name="reason" type="text" placeholder="A brief note on what you'd like to talk through" required />
           </div>
         </div>
-        <fieldset class="payment-demo" disabled>
-          <legend>Payment <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></legend>
+        <div class="admin-microlabel checkout-section-label" style="margin-top:20px">Payment</div>
+        <div class="checkout-payment-methods" aria-hidden="true">
+          <span class="checkout-payment-method active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            Card
+          </span>
+          <span class="checkout-payment-method">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6.9c-.8 1-2.1 1.7-3.3 1.6-.2-1.2.4-2.5 1.1-3.3.8-1 2.2-1.7 3.3-1.8.1 1.3-.4 2.6-1.1 3.5zm1.1 1.8c-1.8-.1-3.4 1-4.2 1-.9 0-2.2-1-3.7-.9-1.9 0-3.6 1.1-4.6 2.7-2 3.4-.5 8.5 1.4 11.3.9 1.4 2 2.9 3.5 2.8 1.4-.1 1.9-.9 3.6-.9s2.1.9 3.6.8c1.5 0 2.5-1.3 3.4-2.8.9-1.4 1.3-2.8 1.3-2.9-.1 0-2.7-1-2.7-4 0-2.5 2.1-3.7 2.2-3.8-1.2-1.7-3-1.9-3.6-2z"/></svg>
+            Apple Pay
+          </span>
+          <span class="checkout-payment-method">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M12 12h9"/></svg>
+            Google Pay
+          </span>
+        </div>
+        <fieldset class="payment-demo checkout-payment-demo" disabled>
+          <legend class="demo-badge">Payment Preview Only — Not Yet Connected</legend>
           <div class="booking-grid">
             <div class="booking-field full">
               <label>Card number</label>
@@ -1203,8 +1255,12 @@ function dialogsHtml(){
               <label>CVC</label>
               <input type="text" value="123" readonly />
             </div>
+            <div class="booking-field full">
+              <label>Name on card</label>
+              <input type="text" value="Full name as shown on card" readonly />
+            </div>
           </div>
-          <p class="payment-demo-note">This is a preview of what payment will look like once a real processor is connected. No card details are collected and no charge occurs today.</p>
+          <p class="payment-demo-note">This shows how checkout will look once a real payment processor is connected. No card details are collected and no charge occurs today.</p>
         </fieldset>
         <div class="booking-hold-notice" id="bookingHoldNotice" role="status" aria-live="polite"></div>
         <div class="booking-actions">
@@ -1212,6 +1268,14 @@ function dialogsHtml(){
           <div class="booking-status" id="bookingStatus" role="status" aria-live="polite"></div>
         </div>
         <div class="booking-note">Booking requests are held as pending until confirmed by The Assembly. This does not yet collect payment.</div>
+        <div class="checkout-next-steps">
+          <div class="admin-microlabel checkout-section-label">What Happens Next?</div>
+          <div class="checkout-next-row">
+            <span>Instant Confirmation</span>
+            <span>Calendar Invite</span>
+            <span>Prepare For Your Session</span>
+          </div>
+        </div>
       </form>
     </div>
   </dialog>
@@ -1304,6 +1368,11 @@ function dialogsHtml(){
             <label for="teachingRegisterWebsite">Leave this field blank</label>
             <input id="teachingRegisterWebsite" type="text" tabindex="-1" autocomplete="off" />
           </div>
+          <div class="oneonone-steps checkout-step-strip">
+            <div class="oneonone-step"><div class="oneonone-step-num">1</div><div class="oneonone-step-label">Details</div></div>
+            <div class="oneonone-step"><div class="oneonone-step-num">2</div><div class="oneonone-step-label">Payment</div></div>
+            <div class="oneonone-step"><div class="oneonone-step-num">3</div><div class="oneonone-step-label">Confirmation</div></div>
+          </div>
           <div class="admin-microlabel checkout-section-label">Your Information</div>
           <div class="booking-grid">
             <div class="booking-field">
@@ -1375,6 +1444,14 @@ function dialogsHtml(){
             <div class="booking-status" id="teachingRegisterStatus" role="status" aria-live="polite"></div>
           </div>
           <div class="booking-note checkout-note">Your seat is requested now and confirmed once payment is connected. Private class access details are never posted publicly — only sent to confirmed registrants.</div>
+          <div class="checkout-next-steps">
+            <div class="admin-microlabel checkout-section-label">What Happens Next?</div>
+            <div class="checkout-next-row">
+              <span>Instant Confirmation</span>
+              <span>Calendar Invite</span>
+              <span>Prepare For Your Session</span>
+            </div>
+          </div>
         </form>
       </div>
     </div>
@@ -1691,11 +1768,13 @@ let SCHEDULING_SETTINGS = {
   maxAdvanceDays: null,
   maxBookingsPerDay: null,
   backToBackAllowed: true,
-  notifications: { confirmation: true, reminder: true, cancellation: true, reschedule: true }
+  notifications: { confirmation: true, reminder24: true, reminder1: true, cancellation: true, reschedule: true }
 };
 let SESSION_TYPES = {
-  '30-minute': { name: '30-Minute One-on-One', durationMinutes: 30, price: null, description: 'More time for conversation, guidance, and focused ministry.', active: true, order: 1, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom' },
-  '15-minute': { name: '15-Minute Pop-Up', durationMinutes: 15, price: null, description: 'A shorter personal session for one focused need or question.', active: true, order: 2, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom' }
+  '30-minute': { name: '30-Minute One-on-One', durationMinutes: 30, price: 50, description: 'Focused guidance for a specific question or season.', active: true, order: 1, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom', capacity: null, imageUrl: '' },
+  '60-minute': { name: '60-Minute One-on-One', durationMinutes: 60, price: 90, description: 'A deeper conversation for clarity, direction, and breakthrough.', active: true, order: 2, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom', capacity: null, imageUrl: '' },
+  'prayer-call': { name: 'Prayer Call', durationMinutes: 30, price: 50, description: 'A dedicated time of prayer and spiritual covering.', active: true, order: 3, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'phone', capacity: null, imageUrl: '' },
+  'mentorship': { name: 'Mentorship Session', durationMinutes: 60, price: 90, description: 'Ongoing support and guidance for your spiritual journey.', active: true, order: 4, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom', capacity: null, imageUrl: '' }
 };
 let AVAILABILITY_RULES = [
   { id: 'default-tue', dayOfWeek: 2, startTime: '14:00', endTime: '18:00', sessionTypeIds: [], capacity: 1 },
@@ -1784,14 +1863,28 @@ const TEACHING_PREVIEW_DEFAULTS = {
   settings: JSON.parse(JSON.stringify(TEACHING_PAGE_SETTINGS)),
   zoom: JSON.parse(JSON.stringify(DEMO_TEACHING_ZOOM)),
   media: [],
-  profilePhoto: ''
+  profilePhoto: '',
+  sessionTypes: JSON.parse(JSON.stringify(SESSION_TYPES)),
+  schedulingSettings: JSON.parse(JSON.stringify(SCHEDULING_SETTINGS)),
+  availabilityRules: JSON.parse(JSON.stringify(AVAILABILITY_RULES)),
+  blockoutRanges: JSON.parse(JSON.stringify(BLOCKOUT_RANGES)),
+  availabilityOverrides: JSON.parse(JSON.stringify(AVAILABILITY_OVERRIDES)),
+  bookings: JSON.parse(JSON.stringify(DEMO_BOOKINGS)),
+  blockedDates: JSON.parse(JSON.stringify(DEMO_BLOCKED_DATES))
 };
 const PREVIEW_STORAGE_KEYS = {
   teachings: 'ua_preview_teachings_v1',
   settings: 'ua_preview_teaching_settings_v1',
   zoom: 'ua_preview_teaching_zoom_v1',
   media: 'ua_preview_media_v1',
-  profilePhoto: 'ua_preview_profile_photo_v1'
+  profilePhoto: 'ua_preview_profile_photo_v1',
+  sessionTypes: 'ua_preview_session_types_v1',
+  schedulingSettings: 'ua_preview_scheduling_settings_v1',
+  availabilityRules: 'ua_preview_availability_rules_v1',
+  blockoutRanges: 'ua_preview_blockout_ranges_v1',
+  availabilityOverrides: 'ua_preview_availability_overrides_v1',
+  bookings: 'ua_preview_bookings_v1',
+  blockedDates: 'ua_preview_blocked_dates_v1'
 };
 function savePreviewToStorage(){
   if(!DEMO_MODE) return true;
@@ -1806,6 +1899,22 @@ function savePreviewToStorage(){
     return false;
   }
 }
+function saveBookingsPreviewToStorage(){
+  if(!DEMO_MODE) return true;
+  try {
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.sessionTypes, JSON.stringify(SESSION_TYPES));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.schedulingSettings, JSON.stringify(SCHEDULING_SETTINGS));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.availabilityRules, JSON.stringify(AVAILABILITY_RULES));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.blockoutRanges, JSON.stringify(BLOCKOUT_RANGES));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.availabilityOverrides, JSON.stringify(AVAILABILITY_OVERRIDES));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.bookings, JSON.stringify(DEMO_BOOKINGS));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.blockedDates, JSON.stringify(DEMO_BLOCKED_DATES));
+    return true;
+  } catch (err) {
+    console.error('Could not save booking preview data to this browser', err);
+    return false;
+  }
+}
 function loadPreviewFromStorage(){
   try {
     const t = localStorage.getItem(PREVIEW_STORAGE_KEYS.teachings);
@@ -1816,20 +1925,38 @@ function loadPreviewFromStorage(){
     if(s) TEACHING_PAGE_SETTINGS = JSON.parse(s);
     if(z) DEMO_TEACHING_ZOOM = JSON.parse(z);
     if(m) MEDIA_LIBRARY = JSON.parse(m);
+    const st = localStorage.getItem(PREVIEW_STORAGE_KEYS.sessionTypes);
+    const ss = localStorage.getItem(PREVIEW_STORAGE_KEYS.schedulingSettings);
+    const ar = localStorage.getItem(PREVIEW_STORAGE_KEYS.availabilityRules);
+    const br = localStorage.getItem(PREVIEW_STORAGE_KEYS.blockoutRanges);
+    const ao = localStorage.getItem(PREVIEW_STORAGE_KEYS.availabilityOverrides);
+    const bk = localStorage.getItem(PREVIEW_STORAGE_KEYS.bookings);
+    const bd = localStorage.getItem(PREVIEW_STORAGE_KEYS.blockedDates);
+    if(st) SESSION_TYPES = JSON.parse(st);
+    if(ss) SCHEDULING_SETTINGS = JSON.parse(ss);
+    if(ar) AVAILABILITY_RULES = JSON.parse(ar);
+    if(br) BLOCKOUT_RANGES = JSON.parse(br);
+    if(ao) AVAILABILITY_OVERRIDES = JSON.parse(ao);
+    if(bk) DEMO_BOOKINGS = JSON.parse(bk);
+    if(bd) DEMO_BLOCKED_DATES = JSON.parse(bd);
   } catch (err) { /* keep current defaults if storage is corrupt/unavailable */ }
 }
 function resetPreviewData(){
   try {
-    localStorage.removeItem(PREVIEW_STORAGE_KEYS.teachings);
-    localStorage.removeItem(PREVIEW_STORAGE_KEYS.settings);
-    localStorage.removeItem(PREVIEW_STORAGE_KEYS.zoom);
-    localStorage.removeItem(PREVIEW_STORAGE_KEYS.media);
-    localStorage.removeItem(PREVIEW_STORAGE_KEYS.profilePhoto);
+    Object.values(PREVIEW_STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
   } catch (err) { /* ignore */ }
   TEACHINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.teachings));
   TEACHING_PAGE_SETTINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.settings));
   DEMO_TEACHING_ZOOM = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.zoom));
   MEDIA_LIBRARY = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.media));
+  SESSION_TYPES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.sessionTypes));
+  SCHEDULING_SETTINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.schedulingSettings));
+  AVAILABILITY_RULES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.availabilityRules));
+  BLOCKOUT_RANGES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.blockoutRanges));
+  AVAILABILITY_OVERRIDES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.availabilityOverrides));
+  DEMO_BOOKINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.bookings));
+  DEMO_BLOCKED_DATES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.blockedDates));
+  BUSINESS_TZ = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
   if(currentProfile) currentProfile.photoURL = '';
 }
 if(DEMO_MODE) loadPreviewFromStorage();
@@ -3121,6 +3248,7 @@ async function createBooking({ name, email, phone, reason, sessionType, date, ti
     }
     DEMO_BOOKINGS.push({ id: 'demo-' + (++DEMO_BOOKING_SEQ), slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone });
     DEMO_HOLDS = DEMO_HOLDS.filter(h => h.id !== holdIdFor(date, time));
+    saveBookingsPreviewToStorage();
     return;
   }
   await runTransaction(db, async (tx) => {
@@ -3311,12 +3439,18 @@ function renderSchedTypesList(){
   schedTypesList.innerHTML = ids.map(id => {
     const t = SESSION_TYPES[id];
     const buffer = (t.bufferBeforeMin || t.bufferAfterMin) ? ' · buffer ' + (t.bufferBeforeMin || 0) + '/' + (t.bufferAfterMin || 0) + ' min' : '';
+    const capacity = t.capacity ? ' · capacity ' + t.capacity : '';
+    const thumb = t.imageUrl
+      ? '<div class="admin-teaching-thumb" style="background-image:url(\'' + t.imageUrl.replace(/'/g, '%27') + '\')"></div>'
+      : '<div class="admin-teaching-thumb ' + teachingArtClass(t.name) + '"></div>';
     return '<div class="admin-teaching-row" data-type-id="' + escapeHtml(id) + '">' +
+      thumb +
       '<div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(t.name) + '</strong>' +
       (t.active === false ? '<span class="admin-status-pill cancelled">Inactive</span>' : '<span class="admin-status-pill published">Active</span>') + '</div>' +
       '<div class="admin-teaching-meta">' + t.durationMinutes + ' min · ' + formatLabel(t.format) +
-      (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · No Charge') + buffer + '</div></div>' +
+      (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · No Charge') + buffer + capacity + '</div></div>' +
       '<div class="admin-teaching-actions">' +
+      '<button class="admin-btn-ghost sched-type-copy-link" type="button">Copy Link</button>' +
       '<button class="admin-btn-ghost sched-type-toggle" type="button">' +
         (t.active === false ? 'Activate' : 'Deactivate') + '</button>' +
       '<button class="admin-btn-ghost sched-type-delete" type="button">Delete</button>' +
@@ -3384,6 +3518,7 @@ if(schedTimezoneSelect){
     schedSettingsStatus.textContent = 'Saving…';
     if(DEMO_MODE){
       SCHEDULING_SETTINGS = updated;
+      saveBookingsPreviewToStorage();
     } else {
       try { await setDoc(doc(db, 'schedulingSettings', 'global'), updated); await loadSchedulingConfig(); }
       catch (err) { schedSettingsStatus.textContent = 'Could not save settings.'; return; }
@@ -3403,18 +3538,23 @@ if(schedTimezoneSelect){
     const bufferAfterMin = Number(document.getElementById('schedTypeBufferAfter').value || 0);
     const description = document.getElementById('schedTypeDescription').value.trim();
     const format = document.getElementById('schedTypeFormat').value || 'zoom';
+    const capacityRaw = document.getElementById('schedTypeCapacity').value;
+    const imageUrl = document.getElementById('schedTypeImage').value.trim();
     if(!id || !name || !duration){ schedTypeStatus.textContent = 'ID, name, and minutes are required.'; return; }
     const existing = SESSION_TYPES[id] || {};
     const data = {
       name, durationMinutes: duration,
       price: priceRaw ? Number(priceRaw) : null,
       bufferBeforeMin, bufferAfterMin, format,
+      capacity: capacityRaw ? Number(capacityRaw) : null,
+      imageUrl,
       description, active: existing.active !== false,
       order: existing.order || (Object.keys(SESSION_TYPES).length + 1)
     };
     schedTypeStatus.textContent = 'Saving…';
     if(DEMO_MODE){
       SESSION_TYPES[id] = data;
+      saveBookingsPreviewToStorage();
     } else {
       try { await setDoc(doc(db, 'sessionTypes', id), data); await loadSchedulingConfig(); }
       catch (err) { schedTypeStatus.textContent = 'Could not save that session type.'; return; }
@@ -3424,18 +3564,31 @@ if(schedTimezoneSelect){
     populateAdminBookTypeSelect();
     renderBookingsOverviewStats();
     schedTypeForm.reset();
+    adminImagePreviewRefreshers.forEach(fn => fn());
     schedTypeStatus.textContent = SCHED_SAVE_NOTE;
   });
 
   schedTypesList.addEventListener('click', async event => {
     const toggleBtn = event.target.closest('.sched-type-toggle');
     const deleteBtn = event.target.closest('.sched-type-delete');
-    if(!toggleBtn && !deleteBtn) return;
+    const copyBtn = event.target.closest('.sched-type-copy-link');
+    if(!toggleBtn && !deleteBtn && !copyBtn) return;
     const row = event.target.closest('[data-type-id]');
     const id = row.dataset.typeId;
+    if(copyBtn){
+      const link = new URL(BASE + 'one-on-one.html?service=' + encodeURIComponent(id), window.location.href).href;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(link).then(() => { schedTypeStatus.textContent = 'Link copied for "' + SESSION_TYPES[id].name + '".'; })
+          .catch(() => { schedTypeStatus.textContent = 'The link is: ' + link; });
+      } else {
+        schedTypeStatus.textContent = 'The link is: ' + link;
+      }
+      return;
+    }
     if(DEMO_MODE){
       if(toggleBtn) SESSION_TYPES[id].active = SESSION_TYPES[id].active === false;
       else delete SESSION_TYPES[id];
+      saveBookingsPreviewToStorage();
     } else {
       try {
         if(toggleBtn) await setDoc(doc(db, 'sessionTypes', id), { ...SESSION_TYPES[id], active: SESSION_TYPES[id].active === false });
@@ -3459,6 +3612,7 @@ if(schedTimezoneSelect){
     schedRuleStatus.textContent = 'Saving…';
     if(DEMO_MODE){
       AVAILABILITY_RULES.push({ id: 'preview-rule-' + (schedRuleSeq++), ...data });
+      saveBookingsPreviewToStorage();
     } else {
       try { await setDoc(doc(collection(db, 'availabilityRules')), data); await loadSchedulingConfig(); }
       catch (err) { schedRuleStatus.textContent = 'Could not add that window.'; return; }
@@ -3476,6 +3630,7 @@ if(schedTimezoneSelect){
     if(DEMO_MODE){
       const idx = AVAILABILITY_RULES.findIndex(r => r.id === row.dataset.ruleId);
       if(idx !== -1) AVAILABILITY_RULES.splice(idx, 1);
+      saveBookingsPreviewToStorage();
     } else {
       try { await deleteDoc(doc(db, 'availabilityRules', row.dataset.ruleId)); await loadSchedulingConfig(); }
       catch (err) { return; }
@@ -3494,6 +3649,7 @@ if(schedTimezoneSelect){
     schedRangeStatus.textContent = 'Saving…';
     if(DEMO_MODE){
       BLOCKOUT_RANGES.push({ id: 'preview-range-' + (schedRangeSeq++), ...data });
+      saveBookingsPreviewToStorage();
     } else {
       try { await setDoc(doc(collection(db, 'blockoutRanges')), data); await loadSchedulingConfig(); }
       catch (err) { schedRangeStatus.textContent = 'Could not save that range.'; return; }
@@ -3510,6 +3666,7 @@ if(schedTimezoneSelect){
     if(DEMO_MODE){
       const idx = BLOCKOUT_RANGES.findIndex(r => r.id === row.dataset.rangeId);
       if(idx !== -1) BLOCKOUT_RANGES.splice(idx, 1);
+      saveBookingsPreviewToStorage();
     } else {
       try { await deleteDoc(doc(db, 'blockoutRanges', row.dataset.rangeId)); await loadSchedulingConfig(); }
       catch (err) { return; }
@@ -3534,6 +3691,7 @@ if(schedTimezoneSelect){
     schedOverrideStatus.textContent = 'Saving…';
     if(DEMO_MODE){
       AVAILABILITY_OVERRIDES[date] = data;
+      saveBookingsPreviewToStorage();
     } else {
       try { await setDoc(doc(db, 'availabilityOverrides', date), data); await loadSchedulingConfig(); }
       catch (err) { schedOverrideStatus.textContent = 'Could not save that override.'; return; }
@@ -3550,6 +3708,7 @@ if(schedTimezoneSelect){
     const date = row.dataset.overrideDate;
     if(DEMO_MODE){
       delete AVAILABILITY_OVERRIDES[date];
+      saveBookingsPreviewToStorage();
     } else {
       try { await deleteDoc(doc(db, 'availabilityOverrides', date)); await loadSchedulingConfig(); }
       catch (err) { return; }
@@ -4133,7 +4292,8 @@ async function rescheduleBooking(bookingId, oldSlotId, newDate, newTime, session
       throw new Error('slot-taken');
     }
     const b = DEMO_BOOKINGS.find(x => x.id === bookingId);
-    if(b){ b.date = newDate; b.time = newTime; b.slotId = newSlotId; b.startAtUTC = startAtUTC; }
+    if(b){ b.date = newDate; b.time = newTime; b.slotId = newSlotId; b.startAtUTC = startAtUTC; b.rescheduled = true; }
+    saveBookingsPreviewToStorage();
     return;
   }
   await runTransaction(db, async (tx) => {
@@ -4142,24 +4302,31 @@ async function rescheduleBooking(bookingId, oldSlotId, newDate, newTime, session
     if(newSlotSnap.exists()) throw new Error('slot-taken');
     if(oldSlotId) tx.delete(doc(db, 'slots', oldSlotId));
     tx.set(newSlotRef, { date: newDate, time: newTime, sessionType, uid: uid || null, createdAt: serverTimestamp() });
-    tx.update(doc(db, 'bookings', bookingId), { date: newDate, time: newTime, slotId: newSlotId, startAtUTC });
+    tx.update(doc(db, 'bookings', bookingId), { date: newDate, time: newTime, slotId: newSlotId, startAtUTC, rescheduled: true });
   });
 }
 
 function ownerConfirmedRowHtml(b){
   const label = sessionTypeName(b.sessionType);
+  const format = (SESSION_TYPES[b.sessionType] && SESSION_TYPES[b.sessionType].format) || 'zoom';
+  const formatLabel = format === 'phone' ? 'Phone' : format === 'in-person' ? 'In Person' : 'Zoom';
   return '<div class="portal-request" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') +
     '" data-uid="' + escapeHtml(b.uid || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
     '<div style="flex:1;min-width:0">' +
-    '<div style="display:flex;justify-content:space-between;gap:14px">' +
-    '<div><strong>' + escapeHtml(b.name) + '</strong><p>' + escapeHtml(label) + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
+    '<div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap">' +
+    '<div><strong>' + escapeHtml(b.name) + '</strong> <span class="admin-status-pill published">Confirmed</span>' +
+    (b.rescheduled ? ' <span class="admin-status-pill draft">Rescheduled</span>' : '') +
+    '<p>' + escapeHtml(label) + ' · ' + formatLabel + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
     ' · ' + escapeHtml(b.email) + (b.phone ? ' · ' + escapeHtml(b.phone) : '') + (b.reason ? '<br>“' + escapeHtml(b.reason) + '”' : '') + '</p></div>' +
-    '<button class="portal-secondary owner-reschedule-toggle" type="button" style="min-height:32px;padding:0 10px;font-size:9px;flex:0 0 auto">Reschedule</button>' +
-    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto">' +
+    '<button class="admin-btn-ghost owner-reschedule-toggle" type="button">Reschedule</button>' +
+    '<button class="admin-btn-ghost owner-cancel-confirmed" type="button">Cancel</button>' +
+    '<button class="admin-btn-ghost" type="button" disabled title="Coming Later">Message Client</button>' +
+    '</div></div>' +
     '<div class="owner-reschedule-panel" hidden style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed #c7c7c7">' +
     '<div class="form-field" style="flex:1;min-width:140px"><label>New date</label><input type="date" class="owner-resched-date" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>' +
     '<div class="form-field" style="flex:1;min-width:160px"><label>New time</label><select class="owner-resched-time" disabled style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"><option value="">Choose a date first</option></select></div>' +
-    '<button class="portal-secondary owner-resched-save" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Save</button>' +
+    '<button class="admin-btn-ghost owner-resched-save" type="button">Save</button>' +
     '</div></div></div>';
 }
 
@@ -4205,10 +4372,33 @@ document.getElementById('ownerConfirmedList').addEventListener('change', async e
 document.getElementById('ownerConfirmedList').addEventListener('click', async event => {
   const toggleBtn = event.target.closest('.owner-reschedule-toggle');
   const saveBtn = event.target.closest('.owner-resched-save');
-  if(!toggleBtn && !saveBtn) return;
+  const cancelBtn = event.target.closest('.owner-cancel-confirmed');
+  if(!toggleBtn && !saveBtn && !cancelBtn) return;
   const row = event.target.closest('[data-booking-id]');
   if(toggleBtn){
     row.querySelector('.owner-reschedule-panel').hidden = !row.querySelector('.owner-reschedule-panel').hidden;
+    return;
+  }
+  if(cancelBtn){
+    if(!confirm('Cancel this confirmed appointment? The client will need a new booking if they want to reschedule.')) return;
+    cancelBtn.disabled = true;
+    try {
+      if(DEMO_MODE){
+        const b = DEMO_BOOKINGS.find(x => x.id === row.dataset.bookingId);
+        if(b) b.status = 'cancelled';
+        saveBookingsPreviewToStorage();
+      } else {
+        await updateDoc(doc(db, 'bookings', row.dataset.bookingId), { status: 'cancelled' });
+      }
+      portalOwnerStatus.textContent = 'Appointment cancelled.';
+      loadOwnerConfirmed();
+      loadOwnerCancelled();
+      renderBookingsOverviewStats();
+      renderBookingsToday();
+    } catch (err) {
+      portalOwnerStatus.textContent = 'Could not cancel that appointment.';
+      cancelBtn.disabled = false;
+    }
     return;
   }
   const dateVal = row.querySelector('.owner-resched-date').value;
@@ -4232,12 +4422,16 @@ document.getElementById('ownerConfirmedList').addEventListener('click', async ev
 
 function ownerPendingRowHtml(b){
   const label = sessionTypeName(b.sessionType);
+  const format = (SESSION_TYPES[b.sessionType] && SESSION_TYPES[b.sessionType].format) || 'zoom';
+  const formatLabel = format === 'phone' ? 'Phone' : format === 'in-person' ? 'In Person' : 'Zoom';
   return '<div class="portal-request" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') + '">' +
-    '<div><strong>' + escapeHtml(b.name) + '</strong><p>' + escapeHtml(label) + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
+    '<div><strong>' + escapeHtml(b.name) + '</strong> <span class="admin-status-pill draft">Pending</span>' +
+    '<p>' + escapeHtml(label) + ' · ' + formatLabel + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
     ' · ' + escapeHtml(b.email) + (b.phone ? ' · ' + escapeHtml(b.phone) : '') + (b.reason ? '<br>“' + escapeHtml(b.reason) + '”' : '') + '</p></div>' +
     '<div class="portal-inline-actions">' +
-    '<button class="portal-secondary owner-confirm-booking" type="button">Confirm</button>' +
-    '<button class="portal-secondary owner-decline-booking" type="button">Decline</button>' +
+    '<button class="admin-btn-ghost owner-confirm-booking" type="button">Confirm</button>' +
+    '<button class="admin-btn-ghost owner-decline-booking" type="button">Cancel</button>' +
+    '<button class="admin-btn-ghost" type="button" disabled title="Coming Later">Message Client</button>' +
     '</div></div>';
 }
 
@@ -4286,6 +4480,7 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
         portalOwnerStatus.textContent = 'Booking declined and the time was freed up.';
         loadOwnerCancelled();
       }
+      saveBookingsPreviewToStorage();
       loadOwnerBookings();
       renderBookingsOverviewStats();
       renderBookingsToday();
@@ -4436,13 +4631,26 @@ document.getElementById('bookingsQuickActions').addEventListener('click', event 
   const status = document.getElementById('bookingsQuickActionStatus');
   const action = btn.dataset.bookingsQuickAction;
   if(action === 'copy-link'){
-    const link = new URL(BASE + 'index.html', window.location.href).href;
+    const link = new URL(BASE + 'one-on-one.html', window.location.href).href;
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(link).then(() => { status.textContent = 'Booking page link copied — anyone with this link can click "Book A Session" in the menu.'; })
+      navigator.clipboard.writeText(link).then(() => { status.textContent = 'Booking link copied — this opens the One-on-One Sessions page.'; })
         .catch(() => { status.textContent = 'Could not copy — the link is: ' + link; });
     } else {
       status.textContent = 'The link is: ' + link;
     }
+    return;
+  }
+  if(action === 'preview-page'){
+    window.open(new URL(BASE + 'one-on-one.html', window.location.href).href, '_blank');
+    return;
+  }
+  if(action === 'new-appointment'){
+    showBookingsTab('appointments');
+    setTimeout(() => { const el = document.getElementById('adminBookName'); if(el) el.focus(); }, 50);
+    return;
+  }
+  if(action === 'reminder'){
+    status.textContent = 'Sending reminders isn\'t connected yet — this is coming later.';
     return;
   }
   const tabMap = { availability: 'availability', calendar: 'calendar', blocked: 'blocked', types: 'types', notifications: 'notifications' };
@@ -4452,8 +4660,10 @@ document.getElementById('bookingsQuickActions').addEventListener('click', event 
 function showBookingsTab(name){
   document.querySelectorAll('#bookingsSubNav .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.bookingsTab === name));
   document.querySelectorAll('[data-bookings-panel]').forEach(p => { p.hidden = p.dataset.bookingsPanel !== name; });
-  if(name === 'overview'){ renderBookingsOverviewStats(); renderBookingsToday(); }
+  if(name === 'overview'){ renderBookingsOverviewStats(); renderBookingsToday(); renderBookingsCalendarPreview(); renderBookingsInsights(); }
   if(name === 'calendar') renderBookingsCalendar();
+  if(name === 'clients') renderBookingsClients();
+  if(name === 'reports') renderBookingsReports();
 }
 document.getElementById('bookingsSubNav').addEventListener('click', event => {
   const btn = event.target.closest('.admin-tab');
@@ -4500,7 +4710,8 @@ async function renderBookingsCalendar(){
   wrap.innerHTML = Object.keys(byDate).sort().map(date => {
     const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(date + 'T12:00:00'));
     const rows = byDate[date].map(b =>
-      '<div class="admin-teaching-row"><div class="admin-teaching-info"><strong>' + escapeHtml(b.name) + '</strong>' +
+      '<div class="admin-teaching-row admin-cal-row-confirmed"><div class="admin-teaching-info"><strong>' + escapeHtml(b.name) +
+      (b.rescheduled ? ' <span class="admin-status-pill draft">Rescheduled</span>' : '') + '</strong>' +
       '<div class="admin-teaching-meta">' + escapeHtml(sessionTypeName(b.sessionType)) + ' · ' + escapeHtml(formatLocalDateTime(b.date, b.time, BUSINESS_TZ)) + '</div></div>' +
       '<span class="admin-status-pill published">Confirmed</span></div>'
     ).join('');
@@ -4514,11 +4725,41 @@ document.getElementById('bookingsCalendarViewTabs').addEventListener('click', ev
   bookingsCalendarActiveView = btn.dataset.calView;
   renderBookingsCalendar();
 });
+async function renderBookingsCalendarPreview(){
+  const wrap = document.getElementById('bookingsCalendarPreview');
+  if(!wrap) return;
+  const confirmed = await ownerAllConfirmedBookings();
+  const today = new Date();
+  const dow = today.getDay();
+  const start = new Date(today.getTime() - dow * 86400000).toISOString().slice(0, 10);
+  const end = new Date(today.getTime() + (6 - dow) * 86400000).toISOString().slice(0, 10);
+  const items = confirmed.filter(b => b.date >= start && b.date <= end).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 4);
+  wrap.innerHTML = items.length === 0
+    ? '<p class="admin-hint">No confirmed appointments this week.</p>'
+    : items.map(b => '<div class="admin-teaching-row admin-cal-row-confirmed"><div class="admin-teaching-info"><strong>' + escapeHtml(b.name) +
+        '</strong><div class="admin-teaching-meta">' + escapeHtml(sessionTypeName(b.sessionType)) + ' · ' + escapeHtml(formatLocalDateTime(b.date, b.time, BUSINESS_TZ)) +
+        '</div></div><span class="admin-status-pill published">Confirmed</span></div>').join('');
+}
+async function renderBookingsInsights(){
+  const wrap = document.getElementById('bookingsInsights');
+  if(!wrap) return;
+  const all = await ownerAllBookingsEverything();
+  if(all.length === 0){ wrap.innerHTML = '<p class="admin-hint">Not enough booking activity yet for insights.</p>'; return; }
+  const counts = {};
+  all.forEach(b => { counts[b.sessionType] = (counts[b.sessionType] || 0) + 1; });
+  const topId = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  const confirmedCount = all.filter(b => b.status === 'confirmed').length;
+  const completionRate = all.length ? Math.round((confirmedCount / all.length) * 100) : 0;
+  wrap.innerHTML =
+    '<p class="admin-hint" style="margin-bottom:8px">Most requested: <strong style="color:var(--owner-text)">' + escapeHtml(sessionTypeName(topId)) + '</strong></p>' +
+    '<p class="admin-hint">' + completionRate + '% of requests have been confirmed (' + confirmedCount + ' of ' + all.length + ').</p>';
+}
 
 function renderBookingsNotifications(){
   const n = SCHEDULING_SETTINGS.notifications || {};
   document.getElementById('bookingsNotifyConfirmation').checked = n.confirmation !== false;
-  document.getElementById('bookingsNotifyReminder').checked = n.reminder !== false;
+  document.getElementById('bookingsNotifyReminder24').checked = n.reminder24 !== false;
+  document.getElementById('bookingsNotifyReminder1').checked = n.reminder1 !== false;
   document.getElementById('bookingsNotifyCancellation').checked = n.cancellation !== false;
   document.getElementById('bookingsNotifyReschedule').checked = n.reschedule !== false;
 }
@@ -4526,7 +4767,8 @@ document.getElementById('bookingsNotifySaveBtn').addEventListener('click', async
   const status = document.getElementById('bookingsNotifyStatus');
   const notifications = {
     confirmation: document.getElementById('bookingsNotifyConfirmation').checked,
-    reminder: document.getElementById('bookingsNotifyReminder').checked,
+    reminder24: document.getElementById('bookingsNotifyReminder24').checked,
+    reminder1: document.getElementById('bookingsNotifyReminder1').checked,
     cancellation: document.getElementById('bookingsNotifyCancellation').checked,
     reschedule: document.getElementById('bookingsNotifyReschedule').checked
   };
@@ -4534,6 +4776,7 @@ document.getElementById('bookingsNotifySaveBtn').addEventListener('click', async
   status.textContent = 'Saving…';
   if(DEMO_MODE){
     SCHEDULING_SETTINGS = updated;
+    saveBookingsPreviewToStorage();
   } else {
     try { await setDoc(doc(db, 'schedulingSettings', 'global'), updated); await loadSchedulingConfig(); }
     catch (err) { status.textContent = 'Could not save.'; return; }
@@ -4541,10 +4784,63 @@ document.getElementById('bookingsNotifySaveBtn').addEventListener('click', async
   status.textContent = SCHED_SAVE_NOTE;
 });
 
+async function ownerAllBookingsEverything(){
+  if(DEMO_MODE) return DEMO_BOOKINGS;
+  try {
+    const snap = await getDocs(collection(db, 'bookings'));
+    const items = [];
+    snap.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
+    return items;
+  } catch (err) { return []; }
+}
+async function renderBookingsClients(){
+  const wrap = document.getElementById('bookingsClientsList');
+  if(!wrap) return;
+  const all = await ownerAllBookingsEverything();
+  const byEmail = {};
+  all.forEach(b => {
+    if(!b.email) return;
+    const key = b.email.toLowerCase();
+    if(!byEmail[key]) byEmail[key] = { name: b.name, email: b.email, phone: b.phone, count: 0, lastDate: '' };
+    byEmail[key].count += 1;
+    if(b.date > byEmail[key].lastDate) byEmail[key].lastDate = b.date;
+  });
+  const clients = Object.values(byEmail).sort((a, b) => b.count - a.count);
+  wrap.innerHTML = clients.length === 0 ? '<p class="admin-hint">No one has booked a session yet.</p>' : clients.map(c =>
+    '<div class="admin-teaching-row"><div class="admin-teaching-info"><strong>' + escapeHtml(c.name || 'Unnamed') + '</strong>' +
+    '<div class="admin-teaching-meta">' + escapeHtml(c.email) + (c.phone ? ' · ' + escapeHtml(c.phone) : '') + ' · Most recent: ' + escapeHtml(c.lastDate ? formatTeachingDate(c.lastDate) : '—') + '</div></div>' +
+    '<span class="admin-status-pill published">' + c.count + (c.count === 1 ? ' Session' : ' Sessions') + '</span></div>'
+  ).join('');
+}
+async function renderBookingsReports(){
+  const statsWrap = document.getElementById('bookingsReportsStats');
+  const typesWrap = document.getElementById('bookingsReportsTypes');
+  if(!statsWrap) return;
+  const all = await ownerAllBookingsEverything();
+  const total = all.length;
+  const confirmed = all.filter(b => b.status === 'confirmed').length;
+  const pending = all.filter(b => b.status === 'pending').length;
+  const cancelled = all.filter(b => b.status === 'declined' || b.status === 'cancelled').length;
+  statsWrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Total Bookings</span><strong>' + total + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Confirmed</span><strong>' + confirmed + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Pending</span><strong>' + pending + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Cancelled / Declined</span><strong>' + cancelled + '</strong></div>';
+  const counts = {};
+  all.forEach(b => { counts[b.sessionType] = (counts[b.sessionType] || 0) + 1; });
+  const rows = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  typesWrap.innerHTML = rows.length === 0 ? '<p class="admin-hint">No bookings yet.</p>' : rows.map(id =>
+    '<div class="admin-teaching-row"><div class="admin-teaching-info"><strong>' + escapeHtml(sessionTypeName(id)) + '</strong></div>' +
+    '<span class="admin-status-pill published">' + counts[id] + (counts[id] === 1 ? ' Booking' : ' Bookings') + '</span></div>'
+  ).join('');
+}
+
 function renderBookingsPanels(){
   if(!document.getElementById('bookingsSubNav')) return;
   renderBookingsOverviewStats();
   renderBookingsToday();
+  renderBookingsCalendarPreview();
+  renderBookingsInsights();
   loadOwnerCompleted();
   loadOwnerCancelled();
   renderBookingsNotifications();
@@ -4601,6 +4897,7 @@ blockDateForm.addEventListener('submit', async event => {
   try {
     if(DEMO_MODE){
       if(!DEMO_BLOCKED_DATES.includes(dateStr)) DEMO_BLOCKED_DATES.push(dateStr);
+      saveBookingsPreviewToStorage();
     } else {
       await setDoc(doc(db, 'blockouts', dateStr), { date: dateStr, createdAt: serverTimestamp() });
     }
@@ -4623,6 +4920,7 @@ document.getElementById('blockedDatesList').addEventListener('click', async even
     if(DEMO_MODE){
       const idx = DEMO_BLOCKED_DATES.indexOf(row.dataset.blockedDate);
       if(idx !== -1) DEMO_BLOCKED_DATES.splice(idx, 1);
+      saveBookingsPreviewToStorage();
     } else {
       await deleteDoc(doc(db, 'blockouts', row.dataset.blockedDate));
     }
@@ -4902,6 +5200,7 @@ wireAdminImageField('teachingEditArtHero', 'teachingEditArtHeroPreview', 'teachi
 wireAdminImageField('teachingEditArtCard', 'teachingEditArtCardPreview', 'teachingEditArtCardFile', 'teachingEditArtCardRemove', 'Card', 1200, 'teachingEditCategory');
 wireAdminImageField('teachingEditArtHeroMobile', 'teachingEditArtHeroMobilePreview', 'teachingEditArtHeroMobileFile', 'teachingEditArtHeroMobileRemove', 'Mobile', 1000, 'teachingEditCategory');
 wireAdminImageField('teachingSettingsScriptureImage', 'teachingSettingsScriptureImagePreview', 'teachingSettingsScriptureImageFile', 'teachingSettingsScriptureImageRemove', 'Scripture', 1400);
+wireAdminImageField('schedTypeImage', 'schedTypeImagePreview', 'schedTypeImageFile', 'schedTypeImageRemove', 'SessionType', 1200);
 document.getElementById('teachingEditCategory').addEventListener('input', () => adminImagePreviewRefreshers.forEach(fn => fn()));
 
 /* ---------------------------------------------------------------
@@ -5685,9 +5984,79 @@ function renderPublicTeachingPages(){
     renderTeachingNewsletterSection();
   } else if(page === 'teaching-detail'){
     renderTeachingDetailPage();
+  } else if(page === 'one-on-one'){
+    renderOneOnOnePage();
   }
 }
 renderPublicTeachingPages();
+
+/* ---------------------------------------------------------------
+   One-on-One Sessions — public selection page. Renders a card per
+   active session type (the SAME `SESSION_TYPES` the Owner manages in
+   Bookings → Session Types — nothing here is a separate data source),
+   with a search box and Format/Time pill filters. "Select" reuses the
+   site's existing `.book-session` + `openBooking(service)` mechanism,
+   so it opens the exact same booking dialog everywhere else on the
+   site already uses — this page is a nicer front door to it, not a
+   second checkout system.
+   --------------------------------------------------------------- */
+let oneOnOneFilters = { search: '', format: 'all', duration: 'all' };
+function oneOnOneCardHtml(t){
+  const formatLabel = t.format === 'phone' ? 'Phone' : t.format === 'in-person' ? 'In Person' : t.format === 'phone-or-zoom' ? 'Phone or Zoom' : 'Video / Zoom';
+  const artClass = t.imageUrl ? '' : teachingArtClass(t.name);
+  const imageStyle = t.imageUrl ? ' style="background-image:url(\'' + t.imageUrl.replace(/'/g, '%27') + '\')"' : '';
+  return '<article class="oneonone-card">' +
+    '<div class="oneonone-card-image ' + artClass + '"' + imageStyle + '></div>' +
+    '<div class="oneonone-card-body">' +
+    '<h3 class="oneonone-card-name">' + escapeHtml(t.name) + '</h3>' +
+    '<div class="oneonone-card-meta"><span>' + t.durationMinutes + ' Minutes</span><span>' + formatLabel + '</span></div>' +
+    '<p class="oneonone-card-desc">' + escapeHtml(t.description || '') + '</p>' +
+    '<div class="oneonone-card-footer">' +
+    '<div class="oneonone-card-price">' + (t.price ? '$' + Number(t.price).toFixed(0) : 'Free') + (t.price ? '<small> one-time</small>' : '') + '</div>' +
+    '<button type="button" class="oneonone-select-btn book-session" data-service="' + escapeHtml(t.id) + '">Select</button>' +
+    '</div></div></article>';
+}
+function renderOneOnOneCards(){
+  const wrap = document.getElementById('oneOnOneCardsList');
+  const empty = document.getElementById('oneOnOneEmptyState');
+  if(!wrap) return;
+  const q = oneOnOneFilters.search.trim().toLowerCase();
+  const types = Object.keys(SESSION_TYPES)
+    .map(id => ({ id, ...SESSION_TYPES[id] }))
+    .filter(t => t.active !== false)
+    .filter(t => oneOnOneFilters.format === 'all' || t.format === oneOnOneFilters.format)
+    .filter(t => oneOnOneFilters.duration === 'all' || String(t.durationMinutes) === oneOnOneFilters.duration)
+    .filter(t => !q || (t.name || '').toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q))
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  wrap.innerHTML = types.map(oneOnOneCardHtml).join('');
+  if(empty) empty.hidden = types.length > 0;
+}
+function renderOneOnOnePage(){
+  renderOneOnOneCards();
+  const searchInput = document.getElementById('oneOnOneSearch');
+  if(searchInput) searchInput.addEventListener('input', () => { oneOnOneFilters.search = searchInput.value; renderOneOnOneCards(); });
+  const formatPills = document.getElementById('oneOnOneFormatPills');
+  if(formatPills) formatPills.addEventListener('click', event => {
+    const btn = event.target.closest('.oneonone-pill');
+    if(!btn) return;
+    formatPills.querySelectorAll('.oneonone-pill').forEach(b => b.classList.toggle('active', b === btn));
+    oneOnOneFilters.format = btn.dataset.format;
+    renderOneOnOneCards();
+  });
+  const durationPills = document.getElementById('oneOnOneDurationPills');
+  if(durationPills) durationPills.addEventListener('click', event => {
+    const btn = event.target.closest('.oneonone-pill');
+    if(!btn) return;
+    durationPills.querySelectorAll('.oneonone-pill').forEach(b => b.classList.toggle('active', b === btn));
+    oneOnOneFilters.duration = btn.dataset.duration;
+    renderOneOnOneCards();
+  });
+  // Deep link from Owner → Session Types → "Copy Link" (?service=30-minute)
+  // opens straight to that session's booking dialog, pre-selected.
+  const params = new URLSearchParams(window.location.search);
+  const preselect = params.get('service');
+  if(preselect && SESSION_TYPES[preselect] && window.openBooking) window.openBooking(preselect);
+}
 
 /* ---------------------------------------------------------------
    Auth state

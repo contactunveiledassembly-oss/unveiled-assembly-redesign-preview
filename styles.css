@@ -835,6 +835,58 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 @media(max-width:900px){.teaching-cards-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.teaching-cards-grid{grid-template-columns:1fr}.teaching-card-art-text{min-height:300px}}
 
+/* =================================================================
+   One-on-One Sessions — public selection page. Dark/cinematic, same
+   family as the Teaching cards above, but a distinct "soft black card"
+   treatment (rounded, not square) since these are personal/intimate
+   sessions rather than a scheduled class.
+   ================================================================= */
+.oneonone-filters{max-width:760px;margin:0 auto 48px;display:flex;flex-direction:column;gap:20px}
+.oneonone-search-field input{
+  width:100%;background:var(--panel);border:1px solid var(--line-dark);color:var(--ivory);
+  padding:14px 18px;font:inherit;font-size:14px;border-radius:999px;
+}
+.oneonone-search-field input::placeholder{color:var(--stone-dim)}
+.oneonone-search-field input:focus{outline:2px solid var(--ivory);outline-offset:1px}
+.oneonone-filter-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
+.oneonone-pills{display:flex;gap:8px;flex-wrap:wrap}
+.oneonone-pill{
+  font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.02em;
+  padding:8px 16px;border-radius:999px;border:1px solid var(--line-dark);background:transparent;color:var(--stone);cursor:pointer;transition:.15s;
+}
+.oneonone-pill:hover{border-color:var(--ivory);color:var(--ivory)}
+.oneonone-pill.active{background:var(--ivory);border-color:var(--ivory);color:var(--black)}
+
+.oneonone-cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px}
+.oneonone-card{
+  display:flex;flex-direction:column;border:1px solid var(--line-dark);border-radius:18px;overflow:hidden;
+  background:var(--panel);transition:.25s;
+}
+.oneonone-card:hover{border-color:rgba(245,243,238,.4);transform:translateY(-3px)}
+.oneonone-card-image{position:relative;aspect-ratio:16/9;background-size:cover;background-position:center;background-color:var(--panel)}
+.oneonone-card-body{display:flex;flex-direction:column;gap:10px;padding:26px}
+.oneonone-card-name{font-family:var(--serif);font-weight:600;font-size:22px;color:var(--ivory)}
+.oneonone-card-meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--stone);display:flex;gap:10px;flex-wrap:wrap}
+.oneonone-card-desc{color:var(--stone);font-size:13.5px;line-height:1.65;flex:1}
+.oneonone-card-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:6px}
+.oneonone-card-price{font-family:var(--serif);font-size:22px;color:var(--ivory)}
+.oneonone-card-price small{font-family:var(--sans);font-size:11px;color:var(--stone);font-weight:400}
+.oneonone-select-btn{
+  font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.02em;
+  padding:11px 26px;border-radius:999px;background:var(--ivory);color:var(--black);border:1px solid var(--ivory);cursor:pointer;transition:.15s;
+}
+.oneonone-select-btn:hover{opacity:.85}
+@media(max-width:820px){.oneonone-cards-grid{grid-template-columns:1fr}}
+
+.oneonone-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;max-width:1000px;margin:0 auto}
+.oneonone-step{text-align:center;padding:0 8px}
+.oneonone-step-num{
+  width:34px;height:34px;border-radius:50%;border:1px solid var(--line-dark);display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:12px;color:var(--stone);margin:0 auto 14px;
+}
+.oneonone-step-label{font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--ivory)}
+@media(max-width:760px){.oneonone-steps{grid-template-columns:repeat(2,1fr)}}
+
 /* ---------- Teaching Library (reuses the card grid look) ---------- */
 .teaching-library-section .teaching-cards-grid{margin-top:10px}
 
@@ -1024,6 +1076,9 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
 }
 .admin-teaching-row:hover{border-color:var(--owner-border-strong)}
 .admin-teaching-row:last-child{margin-bottom:0}
+.admin-cal-row-confirmed{border-left:3px solid #16a34a}
+.admin-cal-row-pending{border-left:3px solid #a16207}
+.admin-cal-row-cancelled{border-left:3px solid #dc2626}
 .admin-teaching-thumb{
   flex:0 0 auto;width:64px;height:64px;border-radius:var(--owner-radius-sm);background-color:#141414;background-size:cover;background-position:center;
 }
@@ -1062,16 +1117,16 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
 .checkout-payment-demo{margin:6px 0 20px;border:1px solid #e6e6e9;border-radius:16px;padding:18px}
 .checkout-payment-demo legend{padding:0 6px}
 .checkout-payment-demo input[type="text"]{border-radius:12px;border:1.5px solid #e6e6e9;padding:11px 14px}
-/* Customer info fields (name/email/phone) rounded to match the payment
-   fields below them, so the whole checkout form reads as one modern,
-   consistent set of controls instead of square editorial-site inputs
-   next to rounded payment inputs. */
-.checkout-form-side .booking-field input,.checkout-form-side .booking-field select{
+/* Every customer info / payment form sitewide (Teaching checkout, 1:1
+   booking, and any future one) rounds its fields the same way, so the
+   whole payment experience feels consistent everywhere it appears, not
+   just fixed in one checkout. */
+.booking-field input,.booking-field select{
   border-radius:12px;border:1.5px solid #e6e6e9;min-height:46px;
 }
-.checkout-form-side .phone-input-row{border-radius:12px;border:1.5px solid #e6e6e9;overflow:hidden}
-.checkout-form-side .phone-input-row select{border-radius:0}
-.checkout-form-side .phone-input-row input{border-radius:0 !important}
+.phone-input-row{border-radius:12px;border:1.5px solid #e6e6e9;overflow:hidden}
+.phone-input-row select{border-radius:0}
+.phone-input-row input{border-radius:0 !important}
 .checkout-order-summary{border-top:1px solid #e6e6e9;border-bottom:1px solid #e6e6e9;padding:16px 0;margin:22px 0}
 .checkout-order-row{display:flex;justify-content:space-between;font-size:13.5px;color:#6c6c74;margin-bottom:8px}
 .checkout-order-total{display:flex;justify-content:space-between;font-family:var(--serif);font-size:19px;font-weight:600;color:#18181b}
@@ -1080,6 +1135,16 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
 .checkout-submit:hover{opacity:.9}
 .checkout-submit svg{width:16px;height:16px}
 .checkout-note{display:flex;align-items:center;gap:8px;color:#8b8b93}
+.checkout-step-strip{margin-bottom:22px}
+.checkout-step-strip.oneonone-steps{grid-template-columns:repeat(3,1fr);gap:8px;max-width:none}
+.checkout-step-strip .oneonone-step-num{border-color:#e6e6e9;color:#8b8b93;width:26px;height:26px;font-size:11px;margin-bottom:8px}
+.checkout-step-strip .oneonone-step-label{color:#18181b;font-size:11px}
+.checkout-next-steps{margin-top:18px;padding-top:16px;border-top:1px solid #e6e6e9}
+.checkout-next-row{display:flex;gap:16px;flex-wrap:wrap}
+.checkout-next-row span{
+  font-family:var(--sans);font-size:11.5px;color:#6c6c74;display:flex;align-items:center;gap:6px;
+}
+.checkout-next-row span::before{content:"✓";color:#18181b;font-weight:700}
 @media(max-width:760px){
   .checkout-dialog{width:calc(100% - 20px);max-height:94vh;overflow-y:auto}
   .checkout-grid{grid-template-columns:1fr}
