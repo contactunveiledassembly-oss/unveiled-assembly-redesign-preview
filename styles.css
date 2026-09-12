@@ -705,49 +705,62 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 .teaching-subtitle-heading{font-family:var(--serif);font-weight:600;color:var(--black);font-size:clamp(22px,2.4vw,30px);margin-bottom:16px}
 .teaching-section-title{font-size:clamp(34px,4.6vw,64px);margin-bottom:8px}
 
-/* ---------- Signature art (fallback before real artwork is uploaded) ----
-   Five distinct atmospheric treatments, all pure CSS — no stock photos
-   with unclear rights hotlinked into the live site. Each layers a ring
-   motif (matching the orb device already used sitewide) over a tinted
-   radial glow. Swapped out instantly the moment a real artwork URL is
-   set in Teaching Manager. */
-.teaching-art-discernment,.teaching-art-prophetic,.teaching-art-voice,.teaching-art-warfare,.teaching-art-identity,.teaching-art-default{
-  position:relative;background-color:var(--black);
+/* ---------- Teaching artwork fallback (no real photo uploaded yet) ----------
+   No real ministry photography is licensed to hotlink into the live site, so
+   until the Owner uploads a real photo, each category gets a dark sepia-toned
+   editorial composition — warm gradient + grain + one faint line-art symbol —
+   deliberately matching the site's cinematic art direction (dark photography,
+   soft shadows, thin lines) rather than looking like a generic placeholder.
+   Swapped out instantly the moment a real artwork URL/upload is set. */
+.teaching-art-discernment,.teaching-art-prophetic,.teaching-art-voice,.teaching-art-warfare,.teaching-art-identity,.teaching-art-dreams,.teaching-art-default{
+  position:relative;background-color:#0d0a08;
 }
-.teaching-art-discernment::after,.teaching-art-prophetic::after,.teaching-art-voice::after,.teaching-art-warfare::after,.teaching-art-identity::after,.teaching-art-default::after{
-  content:"";position:absolute;inset:0;
-  background:repeating-radial-gradient(circle at var(--ring-x,55%) var(--ring-y,45%),
-    rgba(245,243,238,.05) 0px, rgba(245,243,238,.05) 1px, transparent 1px, transparent 30px);
-  -webkit-mask-image:radial-gradient(circle at var(--ring-x,55%) var(--ring-y,45%), black 0%, transparent 46%);
-  mask-image:radial-gradient(circle at var(--ring-x,55%) var(--ring-y,45%), black 0%, transparent 46%);
+.teaching-art-discernment::before,.teaching-art-prophetic::before,.teaching-art-voice::before,.teaching-art-warfare::before,.teaching-art-identity::before,.teaching-art-dreams::before,.teaching-art-default::before{
+  content:"";position:absolute;inset:0;mix-blend-mode:overlay;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.9'/%3E%3C/svg%3E");
 }
-.teaching-art-discernment{--ring-x:38%;--ring-y:46%;
-  background-image:radial-gradient(circle at 30% 42%, rgba(245,243,238,.16), transparent 46%),
-    radial-gradient(circle at 70% 58%, rgba(0,0,0,.55), transparent 55%),
-    linear-gradient(115deg, #1d1d1c 0%, #0a0a0a 55%, #050505 100%);
+.teaching-art-discernment::after,.teaching-art-prophetic::after,.teaching-art-voice::after,.teaching-art-warfare::after,.teaching-art-identity::after,.teaching-art-dreams::after,.teaching-art-default::after{
+  content:"";position:absolute;inset:0;background-repeat:no-repeat;background-size:44% auto;
+  background-position:var(--icon-x,78%) var(--icon-y,72%);
 }
-.teaching-art-prophetic{--ring-x:50%;--ring-y:20%;
-  background-image:radial-gradient(ellipse at 50% 4%, rgba(240,222,180,.20), transparent 55%),
+.teaching-art-discernment{--icon-x:22%;--icon-y:38%;
+  background-image:radial-gradient(circle at 30% 38%, rgba(210,190,155,.16), transparent 48%),
+    radial-gradient(circle at 74% 68%, rgba(0,0,0,.6), transparent 55%),
+    linear-gradient(120deg, #2a2115 0%, #14100b 55%, #0a0806 100%);
+}
+.teaching-art-discernment::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'%3E%3Cpath d='M55 15c10 2 16 12 15 22-1 6-4 9-3 14 1 6 8 7 8 13 0 5-6 8-13 8h-2c1 5 5 8 5 8H30s6-10 6-22c0-4-2-6-4-10-3-6-3-14 1-20 4-7 13-15 22-13z' fill='none' stroke='rgba(230,215,190,0.16)' stroke-width='2'/%3E%3Cpath d='M30 80c-4 12-10 20-10 34h50c0-4-6-8-10-14' fill='none' stroke='rgba(230,215,190,0.13)' stroke-width='2'/%3E%3C/svg%3E")}
+.teaching-art-prophetic{--icon-x:50%;--icon-y:22%;
+  background-image:radial-gradient(ellipse at 50% 6%, rgba(224,196,140,.22), transparent 55%),
     radial-gradient(circle at 50% 95%, rgba(0,0,0,.6), transparent 60%),
-    linear-gradient(180deg, #18140d 0%, #0a0a0a 72%);
+    linear-gradient(180deg, #241a0f 0%, #0e0b08 72%);
 }
-.teaching-art-voice{--ring-x:50%;--ring-y:50%;
-  background-image:radial-gradient(circle at 50% 50%, rgba(205,220,235,.14), transparent 55%),
-    linear-gradient(180deg, #0c1013 0%, #0a0a0a 70%);
+.teaching-art-prophetic::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cg stroke='rgba(240,222,180,0.18)' stroke-width='1.6'%3E%3Cline x1='60' y1='8' x2='60' y2='42'/%3E%3Cline x1='60' y1='78' x2='60' y2='112'/%3E%3Cline x1='8' y1='60' x2='42' y2='60'/%3E%3Cline x1='78' y1='60' x2='112' y2='60'/%3E%3Cline x1='24' y1='24' x2='46' y2='46'/%3E%3Cline x1='74' y1='74' x2='96' y2='96'/%3E%3Cline x1='96' y1='24' x2='74' y2='46'/%3E%3Cline x1='46' y1='74' x2='24' y2='96'/%3E%3C/g%3E%3Ccircle cx='60' cy='60' r='13' fill='none' stroke='rgba(240,222,180,0.22)' stroke-width='1.6'/%3E%3C/svg%3E")}
+.teaching-art-voice{--icon-x:76%;--icon-y:66%;
+  background-image:radial-gradient(circle at 40% 45%, rgba(190,205,220,.14), transparent 55%),
+    linear-gradient(180deg, #12161c 0%, #0b0d10 70%);
 }
-.teaching-art-warfare{--ring-x:72%;--ring-y:30%;
+.teaching-art-voice::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'%3E%3Cpath d='M50 130c0 0-20-30-22-70-1-25 10-45 22-50 0 0 0 60 0 120z' fill='none' stroke='rgba(210,220,230,0.17)' stroke-width='2.2'/%3E%3Cpath d='M50 130c0 0 20-30 22-70 1-25-10-45-22-50' fill='none' stroke='rgba(210,220,230,0.17)' stroke-width='2.2'/%3E%3C/svg%3E")}
+.teaching-art-warfare{--icon-x:74%;--icon-y:32%;
   background-image:linear-gradient(135deg, rgba(90,15,15,.4) 0%, transparent 42%),
     radial-gradient(circle at 75% 28%, rgba(130,20,20,.22), transparent 50%),
-    linear-gradient(160deg, #170808 0%, #050505 68%);
+    linear-gradient(160deg, #1c0e0c 0%, #0a0706 68%);
 }
-.teaching-art-identity{--ring-x:50%;--ring-y:42%;
-  background-image:radial-gradient(circle at 50% 38%, rgba(245,243,238,.18), transparent 48%),
-    linear-gradient(90deg, rgba(245,243,238,.05), transparent 22%, transparent 78%, rgba(245,243,238,.05)),
-    #0a0a0a;
+.teaching-art-warfare::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 100'%3E%3Cpath d='M35 55c-12 0-20-9-20-19 0-11 9-19 19-19 3-11 13-19 25-19 13 0 24 9 26 21 10 1 18 9 18 19 0 11-9 19-20 19H35z' fill='none' stroke='rgba(190,70,70,0.2)' stroke-width='2.2'/%3E%3Cpath d='M70 55 L58 82 L74 82 L60 110' fill='none' stroke='rgba(210,100,90,0.26)' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
+.teaching-art-identity{--icon-x:50%;--icon-y:30%;
+  background-image:radial-gradient(circle at 50% 22%, rgba(224,196,140,.18), transparent 48%),
+    linear-gradient(90deg, rgba(224,196,140,.05), transparent 22%, transparent 78%, rgba(224,196,140,.05)),
+    #140f0a;
 }
-.teaching-art-default{--ring-x:62%;--ring-y:38%;
-  background-image:radial-gradient(circle at 62% 38%, rgba(245,243,238,.1), transparent 52%), #0a0a0a;
+.teaching-art-identity::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'%3E%3Cpath d='M10 78 L10 40 L32 58 L60 22 L88 58 L110 40 L110 78 Z' fill='none' stroke='rgba(232,205,140,0.18)' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cline x1='6' y1='82' x2='114' y2='82' stroke='rgba(232,205,140,0.18)' stroke-width='2.4'/%3E%3C/svg%3E")}
+.teaching-art-dreams{--icon-x:72%;--icon-y:30%;
+  background-image:radial-gradient(circle at 30% 25%, rgba(200,210,230,.14), transparent 50%),
+    linear-gradient(200deg, #0e1218 0%, #08090c 70%);
 }
+.teaching-art-dreams::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 100'%3E%3Cpath d='M78 15a30 30 0 1 0 22 50 24 24 0 0 1-22-50z' fill='none' stroke='rgba(210,215,230,0.2)' stroke-width='2'/%3E%3Cpath d='M15 78c-8 0-14-6-14-13s6-13 13-13c2-8 9-13 17-13 9 0 16 6 18 15 7 0 12 5 12 11s-5 11-12 11H15z' fill='none' stroke='rgba(210,215,230,0.15)' stroke-width='2'/%3E%3C/svg%3E")}
+.teaching-art-default{--icon-x:50%;--icon-y:50%;
+  background-image:radial-gradient(circle at 50% 42%, rgba(210,200,180,.1), transparent 52%), #100d09;
+}
+.teaching-art-default::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Ccircle cx='60' cy='60' r='38' fill='none' stroke='rgba(230,222,205,0.12)' stroke-width='1.6'/%3E%3Ccircle cx='60' cy='60' r='2' fill='rgba(230,222,205,0.16)'/%3E%3C/svg%3E")}
 
 /* ---------- Featured Teaching hero (editorial split) ---------- */
 .teaching-hero{
@@ -972,7 +985,8 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
   display:flex;align-items:center;justify-content:center;overflow:hidden;transition:.15s;
 }
 .admin-image-preview.is-drag-over{border-color:var(--owner-text);background-color:var(--owner-surface)}
-.admin-image-empty{font-family:var(--sans);font-size:11px;color:var(--owner-text-faint);text-align:center;padding:0 14px;line-height:1.5}
+.admin-image-empty{font-family:var(--sans);font-size:11px;color:var(--owner-text-faint);text-align:center;padding:0 14px;line-height:1.5;position:relative;z-index:1}
+.admin-image-preview[class*="teaching-art-"] .admin-image-empty{color:rgba(255,255,255,.62)}
 .admin-image-actions{display:flex;gap:8px}
 .admin-image-upload-btn,.admin-image-remove-btn{
   font-family:var(--sans);font-size:11px;letter-spacing:.01em;font-weight:600;

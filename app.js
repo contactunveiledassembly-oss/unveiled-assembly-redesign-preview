@@ -1359,7 +1359,7 @@ function dialogsHtml(){
           <div class="admin-image-card">
             <div class="admin-image-card-head">
               <span class="admin-image-card-title">Featured Teaching Image</span>
-              <p class="admin-hint">This is the large picture that appears beside the class title at the top of the Teaching page.</p>
+              <p class="admin-hint">This is the large picture that appears beside the class title at the top of the Teaching page — for example, this is the image next to "Discernment" on the live Teaching page.</p>
             </div>
             <div class="admin-image-field" data-image-field="hero">
               <div class="admin-image-preview" id="teachingEditArtHeroPreview"></div>
@@ -4508,7 +4508,7 @@ function resizeImageToDataUrl(file, maxDim, quality){
 }
 
 let adminImagePreviewRefreshers = [];
-function wireAdminImageField(fieldId, previewId, fileId, removeId, label, maxDim){
+function wireAdminImageField(fieldId, previewId, fileId, removeId, label, maxDim, categoryFieldId){
   const input = document.getElementById(fieldId);
   const preview = document.getElementById(previewId);
   const fileInput = document.getElementById(fileId);
@@ -4518,11 +4518,14 @@ function wireAdminImageField(fieldId, previewId, fileId, removeId, label, maxDim
   const uploadLabelText = uploadLabel ? uploadLabel.querySelector('.admin-image-upload-btn-text') : null;
   function refresh(){
     const val = input.value.trim();
+    preview.className = preview.className.replace(/\bteaching-art-\S+/g, '').trim();
     if(val){
       preview.style.backgroundImage = "url('" + val.replace(/'/g, "%27") + "')";
       preview.innerHTML = '';
     } else {
       preview.style.backgroundImage = '';
+      const category = categoryFieldId && document.getElementById(categoryFieldId) ? document.getElementById(categoryFieldId).value : '';
+      if(categoryFieldId) preview.classList.add(teachingArtClass(category));
       preview.innerHTML = '<span class="admin-image-empty">Drop an image here, or use Upload</span>';
     }
     if(uploadLabelText) uploadLabelText.textContent = val ? 'Replace Image' : 'Upload Image';
@@ -4554,10 +4557,11 @@ function wireAdminImageField(fieldId, previewId, fileId, removeId, label, maxDim
   });
   adminImagePreviewRefreshers.push(refresh);
 }
-wireAdminImageField('teachingEditArtHero', 'teachingEditArtHeroPreview', 'teachingEditArtHeroFile', 'teachingEditArtHeroRemove', 'Hero', 1600);
-wireAdminImageField('teachingEditArtCard', 'teachingEditArtCardPreview', 'teachingEditArtCardFile', 'teachingEditArtCardRemove', 'Card', 1200);
-wireAdminImageField('teachingEditArtHeroMobile', 'teachingEditArtHeroMobilePreview', 'teachingEditArtHeroMobileFile', 'teachingEditArtHeroMobileRemove', 'Mobile', 1000);
+wireAdminImageField('teachingEditArtHero', 'teachingEditArtHeroPreview', 'teachingEditArtHeroFile', 'teachingEditArtHeroRemove', 'Hero', 1600, 'teachingEditCategory');
+wireAdminImageField('teachingEditArtCard', 'teachingEditArtCardPreview', 'teachingEditArtCardFile', 'teachingEditArtCardRemove', 'Card', 1200, 'teachingEditCategory');
+wireAdminImageField('teachingEditArtHeroMobile', 'teachingEditArtHeroMobilePreview', 'teachingEditArtHeroMobileFile', 'teachingEditArtHeroMobileRemove', 'Mobile', 1000, 'teachingEditCategory');
 wireAdminImageField('teachingSettingsScriptureImage', 'teachingSettingsScriptureImagePreview', 'teachingSettingsScriptureImageFile', 'teachingSettingsScriptureImageRemove', 'Scripture', 1400);
+document.getElementById('teachingEditCategory').addEventListener('input', () => adminImagePreviewRefreshers.forEach(fn => fn()));
 
 /* ---------------------------------------------------------------
    Plain-language image position/zoom/brightness controls for the
@@ -5163,6 +5167,7 @@ function teachingArtClass(category){
   if(c.includes('voice') || c.includes('hearing') || c.includes('prayer')) return 'teaching-art-voice';
   if(c.includes('warfare') || c.includes('battle')) return 'teaching-art-warfare';
   if(c.includes('identity')) return 'teaching-art-identity';
+  if(c.includes('dream')) return 'teaching-art-dreams';
   return 'teaching-art-default';
 }
 
