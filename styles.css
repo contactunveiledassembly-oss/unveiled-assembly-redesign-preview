@@ -1137,8 +1137,39 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
 .checkout-note{display:flex;align-items:center;gap:8px;color:#8b8b93}
 .checkout-step-strip{margin-bottom:22px}
 .checkout-step-strip.oneonone-steps{grid-template-columns:repeat(3,1fr);gap:8px;max-width:none}
-.checkout-step-strip .oneonone-step-num{border-color:#e6e6e9;color:#8b8b93;width:26px;height:26px;font-size:11px;margin-bottom:8px}
-.checkout-step-strip .oneonone-step-label{color:#18181b;font-size:11px}
+.checkout-step-strip .oneonone-step-num{border-color:#e6e6e9;color:#8b8b93;width:26px;height:26px;font-size:11px;margin-bottom:8px;transition:.15s}
+.checkout-step-strip .oneonone-step-label{color:#8b8b93;font-size:10.5px;transition:.15s}
+#bookingStepStrip.oneonone-steps{grid-template-columns:repeat(5,1fr);gap:4px}
+.checkout-step-strip .oneonone-step.active .oneonone-step-num{background:#18181b;border-color:#18181b;color:#fff}
+.checkout-step-strip .oneonone-step.active .oneonone-step-label{color:#18181b;font-weight:700}
+.checkout-step-strip .oneonone-step.completed .oneonone-step-num{background:#18181b;border-color:#18181b;color:#fff}
+.checkout-step-strip .oneonone-step.completed .oneonone-step-num::before{content:"✓"}
+.checkout-step-strip .oneonone-step.completed .oneonone-step-label{color:#18181b}
+
+/* ---------- One-on-one booking wizard ---------- */
+.booking-step-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px}
+.booking-step-actions .admin-btn-solid,.booking-step-actions .admin-btn-ghost{padding:11px 22px;font-size:12px}
+.booking-step-actions .checkout-submit{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:999px}
+.booking-time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.booking-time-btn{
+  font-family:var(--sans);font-size:13px;font-weight:600;padding:13px 8px;border-radius:12px;
+  border:1.5px solid var(--line-light);background:var(--white);color:var(--black);cursor:pointer;transition:.15s;
+}
+.booking-time-btn:hover{border-color:var(--black)}
+.booking-time-btn.active{background:var(--black);border-color:var(--black);color:var(--white)}
+@media(max-width:480px){.booking-time-grid{grid-template-columns:repeat(2,1fr)}}
+.booking-policy-checks{display:flex;flex-direction:column;gap:12px;margin:20px 0;padding:16px;border:1px solid #e6e6e9;border-radius:12px;background:#fafafb}
+.booking-policy-check{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;color:#3a3a3a;line-height:1.6;cursor:pointer}
+.booking-policy-check input{margin-top:3px;accent-color:#18181b;flex:0 0 auto}
+.booking-policy-check .link-btn{font-size:inherit;padding:0;display:inline}
+.booking-confirm-step{text-align:center}
+.booking-confirm-check{
+  width:56px;height:56px;border-radius:50%;background:#18181b;color:#fff;font-size:26px;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 18px;
+}
+.booking-confirm-step .checkout-order-summary{text-align:left}
+.booking-confirm-step .checkout-next-steps{text-align:left}
+.booking-option{border-radius:14px}
 .checkout-next-steps{margin-top:18px;padding-top:16px;border-top:1px solid #e6e6e9}
 .checkout-next-row{display:flex;gap:16px;flex-wrap:wrap}
 .checkout-next-row span{

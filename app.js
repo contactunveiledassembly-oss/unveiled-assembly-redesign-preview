@@ -154,7 +154,7 @@ const DEMO_TUE2 = demoNextWeekdayStr(2, 1);
 let DEMO_BOOKING_SEQ = 1;
 let DEMO_BOOKINGS = [
   { id: 'demo-1', slotId: DEMO_TUE1 + '_14:00', date: DEMO_TUE1, time: '14:00', sessionType: '30-minute', name: 'Jordan Lee', email: 'jordan@example.com', uid: null, status: 'pending' },
-  { id: 'demo-2', slotId: DEMO_THU1 + '_15:00', date: DEMO_THU1, time: '15:00', sessionType: 'prayer-call', name: 'Amara Okafor', email: 'amara@example.com', uid: null, status: 'confirmed' },
+  { id: 'demo-2', slotId: DEMO_THU1 + '_15:00', date: DEMO_THU1, time: '15:00', sessionType: '15-minute', name: 'Amara Okafor', email: 'amara@example.com', uid: null, status: 'confirmed' },
   { id: 'demo-3', slotId: DEMO_TUE2 + '_16:00', date: DEMO_TUE2, time: '16:00', sessionType: '30-minute', name: 'Sam Rivera', email: 'sam@example.com', uid: null, status: 'confirmed' },
 ];
 const DEMO_MEMBERS = [
@@ -766,6 +766,7 @@ function dialogsHtml(){
             <button type="button" class="admin-tab" data-bookings-tab="availability">Availability</button>
             <button type="button" class="admin-tab" data-bookings-tab="types">Session Types</button>
             <button type="button" class="admin-tab" data-bookings-tab="blocked">Blocked Dates</button>
+            <button type="button" class="admin-tab" data-bookings-tab="policies">Policies</button>
             <button type="button" class="admin-tab" data-bookings-tab="notifications">Notifications</button>
             <button type="button" class="admin-tab" data-bookings-tab="clients">Clients</button>
             <button type="button" class="admin-tab" data-bookings-tab="reports">Reports</button>
@@ -910,6 +911,11 @@ function dialogsHtml(){
               <div class="form-field" style="flex:0 0 120px"><label for="schedRuleStart">Start</label><input id="schedRuleStart" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedRuleEnd">End</label><input id="schedRuleEnd" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 110px"><label for="schedRuleCapacity">Capacity</label><input id="schedRuleCapacity" type="number" min="1" value="1" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:1;min-width:180px">
+                <label>Session Types Allowed</label>
+                <div id="schedRuleTypesCheckboxes" style="display:flex;gap:14px;flex-wrap:wrap;padding-top:11px"></div>
+              </div>
+              <div class="form-field" style="flex:1;min-width:160px"><label for="schedRuleNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedRuleNotes" type="text" placeholder="e.g. Prayer line only" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <button class="admin-btn-ghost" type="submit">Add Window</button>
             </form>
             <div class="form-status" id="schedRuleStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
@@ -917,7 +923,8 @@ function dialogsHtml(){
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="types" hidden>
-            <p class="admin-hint" style="margin-bottom:16px">The kinds of 1:1 appointments visitors can request — for example, 30-Minute One-on-One, Prayer Call, or Mentorship Session. These are exactly what shows up on the public One-on-One Sessions page.</p>
+            <p class="admin-hint" style="margin-bottom:8px">The kinds of 1:1 appointments visitors can request. These are exactly what shows up on the public One-on-One Sessions page — nothing here is a separate list.</p>
+            <p class="admin-hint" style="margin-bottom:16px"><strong style="color:var(--owner-text)">Right now, only 15-Minute and 30-Minute One-on-One are active</strong> and shown publicly. You can add more below for later — a new one only appears on the public page once you mark it Active.</p>
             <div id="schedTypesList" style="margin-bottom:14px"></div>
             <div class="admin-subsection-label" style="border-top:0;padding-top:0">Add / Update A Session Type</div>
             <form id="schedTypeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
@@ -974,18 +981,57 @@ function dialogsHtml(){
             <div class="form-status" id="schedRangeStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
 
             <div class="admin-subsection-label">Specific Time Block</div>
-            <p class="admin-hint" style="margin-bottom:12px">Change just one date's hours — for example, open later than usual, close early, or fully closed for part of the day. Leave start/end blank and check "Fully closed" to block the whole date.</p>
+            <p class="admin-hint" style="margin-bottom:12px">Change just one date's hours — for example, open later than usual, close early, or fully closed for part of the day. Set a start and end time and the system automatically offers every bookable time inside it (no need to list each time by hand). Leave start/end blank and check "Fully closed" to block the whole date.</p>
             <div id="schedOverridesList" style="margin-bottom:14px"></div>
             <form id="schedOverrideForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
               <div class="form-field" style="flex:1;min-width:150px"><label for="schedOverrideDate">Date</label><input id="schedOverrideDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideStart">Start</label><input id="schedOverrideStart" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideEnd">End</label><input id="schedOverrideEnd" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:1;min-width:180px">
+                <label>Session Types Allowed</label>
+                <div id="schedOverrideTypesCheckboxes" style="display:flex;gap:14px;flex-wrap:wrap;padding-top:11px"></div>
+              </div>
+              <div class="form-field" style="flex:1;min-width:160px"><label for="schedOverrideNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedOverrideNotes" type="text" placeholder="e.g. Ministry event" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--owner-text);padding-bottom:8px">
                 <input id="schedOverrideClosed" type="checkbox" style="accent-color:var(--owner-accent)" /> Fully closed this date
               </label>
               <button class="admin-btn-ghost" type="submit">Save Override</button>
             </form>
             <div class="form-status" id="schedOverrideStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-bookings-panel="policies" hidden>
+            <p class="admin-hint" style="margin-bottom:20px">The exact wording shown to visitors at checkout. They must agree to both before completing a booking.</p>
+
+            <div class="admin-image-card">
+              <div class="admin-image-card-head">
+                <span class="admin-image-card-title">Terms and Conditions</span>
+                <p class="admin-hint">Shown as a required checkbox and a "Read Terms and Conditions" link at checkout.</p>
+              </div>
+              <div class="booking-grid">
+                <div class="booking-field full"><label for="policyTermsTitle">Policy Title</label><input id="policyTermsTitle" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="booking-field full"><label for="policyTermsText">Policy Text</label><textarea id="policyTermsText" rows="5" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"></textarea></div>
+              </div>
+              <label class="admin-checkbox-field" style="padding-top:0;margin-top:4px"><input id="policyTermsActive" type="checkbox" /> Show this policy at checkout (turn off to hide it)</label>
+              <p class="admin-hint" id="policyTermsUpdated" style="margin-top:8px"></p>
+              <button class="admin-btn-solid" type="button" id="policyTermsSaveBtn" style="margin-top:12px">Save Changes</button>
+              <div class="form-status" id="policyTermsStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+            </div>
+
+            <div class="admin-image-card">
+              <div class="admin-image-card-head">
+                <span class="admin-image-card-title">No Refund Policy</span>
+                <p class="admin-hint">Shown as a required checkbox and a "Read No Refund Policy" link at checkout.</p>
+              </div>
+              <div class="booking-grid">
+                <div class="booking-field full"><label for="policyNoRefundTitle">Policy Title</label><input id="policyNoRefundTitle" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="booking-field full"><label for="policyNoRefundText">Policy Text</label><textarea id="policyNoRefundText" rows="5" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"></textarea></div>
+              </div>
+              <label class="admin-checkbox-field" style="padding-top:0;margin-top:4px"><input id="policyNoRefundActive" type="checkbox" /> Show this policy at checkout (turn off to hide it)</label>
+              <p class="admin-hint" id="policyNoRefundUpdated" style="margin-top:8px"></p>
+              <button class="admin-btn-solid" type="button" id="policyNoRefundSaveBtn" style="margin-top:12px">Save Changes</button>
+              <div class="form-status" id="policyNoRefundStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+            </div>
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="notifications" hidden>
@@ -1169,114 +1215,174 @@ function dialogsHtml(){
     </div>
   </dialog>
 
-  <dialog class="booking-dialog" id="bookingDialog" aria-labelledby="bookingTitle">
-    <div class="booking-head">
-      <div>
-        <div class="kicker" style="margin-bottom:0">One-on-One Scheduling</div>
-        <h3 id="bookingTitle">Choose your session.</h3>
-      </div>
-      <button class="booking-close" id="closeBooking" type="button" aria-label="Close scheduling">×</button>
-    </div>
-    <div class="booking-body">
-      <div class="oneonone-steps checkout-step-strip">
-        <div class="oneonone-step"><div class="oneonone-step-num">1</div><div class="oneonone-step-label">Details</div></div>
-        <div class="oneonone-step"><div class="oneonone-step-num">2</div><div class="oneonone-step-label">Payment</div></div>
-        <div class="oneonone-step"><div class="oneonone-step-num">3</div><div class="oneonone-step-label">Confirmation</div></div>
-      </div>
-      <p class="booking-intro" id="bookingIntro">Choose a date and an open time below.</p>
-      <form id="bookingForm">
-        <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
-          <label for="bookingWebsite">Leave this field blank</label>
-          <input id="bookingWebsite" name="website" type="text" tabindex="-1" autocomplete="off" />
+  <dialog class="booking-dialog checkout-dialog" id="bookingDialog" aria-labelledby="bookingTitle">
+    <button class="booking-close checkout-close" id="closeBooking" type="button" aria-label="Close scheduling">×</button>
+    <div class="checkout-grid">
+      <div class="checkout-summary" id="bookingSummaryArt">
+        <div class="checkout-summary-overlay"></div>
+        <div class="checkout-summary-content">
+          <div class="eyebrow">One-on-One Session</div>
+          <h2 class="teaching-display" id="bookingTitle">Choose Your Session.</h2>
+          <div class="checkout-summary-meta" id="bookingSummaryMeta"></div>
+          <p class="checkout-summary-desc" id="bookingSummaryDesc">15 or 30 minutes of focused, personal time with The Unveiled Assembly.</p>
         </div>
-        <div class="booking-options" id="bookingOptions" aria-label="Choose a one-on-one service"></div>
-        <div class="booking-grid">
-          <div class="booking-field full">
-            <label for="bookingTimeZone">Your time zone</label>
-            <select id="bookingTimeZone" name="timeZone"></select>
+      </div>
+      <div class="checkout-form-side">
+        <div class="oneonone-steps checkout-step-strip" id="bookingStepStrip">
+          <div class="oneonone-step" data-step-indicator="session"><div class="oneonone-step-num">1</div><div class="oneonone-step-label">Session</div></div>
+          <div class="oneonone-step" data-step-indicator="date"><div class="oneonone-step-num">2</div><div class="oneonone-step-label">Date</div></div>
+          <div class="oneonone-step" data-step-indicator="time"><div class="oneonone-step-num">3</div><div class="oneonone-step-label">Time</div></div>
+          <div class="oneonone-step" data-step-indicator="details"><div class="oneonone-step-num">4</div><div class="oneonone-step-label">Details &amp; Payment</div></div>
+          <div class="oneonone-step" data-step-indicator="confirm"><div class="oneonone-step-num">5</div><div class="oneonone-step-label">Confirmation</div></div>
+        </div>
+        <form id="bookingForm">
+          <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+            <label for="bookingWebsite">Leave this field blank</label>
+            <input id="bookingWebsite" name="website" type="text" tabindex="-1" autocomplete="off" />
           </div>
-          <div class="booking-field">
-            <label for="bookingDate">Choose a date</label>
-            <input id="bookingDate" name="date" type="date" required />
+
+          <div class="booking-step" data-booking-step="session">
+            <div class="admin-microlabel checkout-section-label">Select A Session</div>
+            <p class="booking-intro" id="bookingIntro">Choose the kind of one-on-one you'd like.</p>
+            <div class="booking-options" id="bookingOptions" aria-label="Choose a one-on-one service"></div>
+            <div class="booking-step-actions">
+              <button type="button" class="admin-btn-solid checkout-submit" id="bookingStepSessionNext">Continue</button>
+            </div>
           </div>
-          <div class="booking-field">
-            <label for="bookingTime">Choose an available time</label>
-            <select id="bookingTime" name="time" required disabled>
+
+          <div class="booking-step" data-booking-step="date" hidden>
+            <div class="admin-microlabel checkout-section-label">Your Time Zone</div>
+            <div class="booking-field full" style="margin-bottom:18px">
+              <select id="bookingTimeZone" name="timeZone"></select>
+            </div>
+            <div class="admin-microlabel checkout-section-label">Choose A Date</div>
+            <div class="booking-field full">
+              <input id="bookingDate" name="date" type="date" required />
+            </div>
+            <p class="admin-hint" style="margin-top:10px">You'll only be able to choose from times that are actually open — all times are shown in Eastern Time.</p>
+            <div class="booking-step-actions">
+              <button type="button" class="admin-btn-ghost" data-booking-back="session">Back</button>
+              <button type="button" class="admin-btn-solid checkout-submit" id="bookingStepDateNext" disabled>Continue</button>
+            </div>
+          </div>
+
+          <div class="booking-step" data-booking-step="time" hidden>
+            <div class="admin-microlabel checkout-section-label">Available Times</div>
+            <p class="admin-hint" style="margin-bottom:14px">All times are shown in Eastern Time.</p>
+            <div class="booking-time-grid" id="bookingTimeButtons"></div>
+            <select id="bookingTime" name="time" required disabled style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true" tabindex="-1">
               <option value="">Choose a date first</option>
             </select>
-          </div>
-          <div class="booking-field">
-            <label for="bookingName">Your name</label>
-            <input id="bookingName" name="name" type="text" placeholder="First and last name" autocomplete="name" required />
-          </div>
-          <div class="booking-field">
-            <label for="bookingEmail">Email address</label>
-            <input id="bookingEmail" name="email" type="email" placeholder="For confirmation and reminders" autocomplete="email" required />
-          </div>
-          <div class="booking-field">
-            <label for="bookingPhoneNumber">Phone number</label>
-            <div class="phone-input-row">
-              <select id="bookingPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
-              <input id="bookingPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required />
+            <div class="booking-hold-notice" id="bookingHoldNotice" role="status" aria-live="polite"></div>
+            <div class="booking-step-actions">
+              <button type="button" class="admin-btn-ghost" data-booking-back="date">Back</button>
+              <button type="button" class="admin-btn-solid checkout-submit" id="bookingStepTimeNext" disabled>Continue</button>
             </div>
           </div>
-          <div class="booking-field full">
-            <label for="bookingReason">What are you trusting God to reveal or do?</label>
-            <input id="bookingReason" name="reason" type="text" placeholder="A brief note on what you'd like to talk through" required />
+
+          <div class="booking-step" data-booking-step="details" hidden>
+            <div class="admin-microlabel checkout-section-label">Your Information</div>
+            <div class="booking-grid">
+              <div class="booking-field">
+                <label for="bookingName">Your name</label>
+                <input id="bookingName" name="name" type="text" placeholder="First and last name" autocomplete="name" required />
+              </div>
+              <div class="booking-field">
+                <label for="bookingEmail">Email address</label>
+                <input id="bookingEmail" name="email" type="email" placeholder="For confirmation and reminders" autocomplete="email" required />
+              </div>
+              <div class="booking-field full">
+                <label for="bookingPhoneNumber">Phone number</label>
+                <div class="phone-input-row">
+                  <select id="bookingPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
+                  <input id="bookingPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required />
+                </div>
+              </div>
+              <div class="booking-field full">
+                <label for="bookingReason">What are you trusting God to reveal or do?</label>
+                <input id="bookingReason" name="reason" type="text" placeholder="A brief note on what you'd like to talk through" required />
+              </div>
+            </div>
+
+            <div class="admin-microlabel checkout-section-label" style="margin-top:20px">Payment</div>
+            <div class="checkout-payment-methods" aria-hidden="true">
+              <span class="checkout-payment-method active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                Card
+              </span>
+              <span class="checkout-payment-method">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6.9c-.8 1-2.1 1.7-3.3 1.6-.2-1.2.4-2.5 1.1-3.3.8-1 2.2-1.7 3.3-1.8.1 1.3-.4 2.6-1.1 3.5zm1.1 1.8c-1.8-.1-3.4 1-4.2 1-.9 0-2.2-1-3.7-.9-1.9 0-3.6 1.1-4.6 2.7-2 3.4-.5 8.5 1.4 11.3.9 1.4 2 2.9 3.5 2.8 1.4-.1 1.9-.9 3.6-.9s2.1.9 3.6.8c1.5 0 2.5-1.3 3.4-2.8.9-1.4 1.3-2.8 1.3-2.9-.1 0-2.7-1-2.7-4 0-2.5 2.1-3.7 2.2-3.8-1.2-1.7-3-1.9-3.6-2z"/></svg>
+                Apple Pay
+              </span>
+              <span class="checkout-payment-method">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M12 12h9"/></svg>
+                Google Pay
+              </span>
+            </div>
+            <fieldset class="payment-demo checkout-payment-demo" disabled>
+              <legend class="demo-badge">Payment Preview Only — Not Yet Connected</legend>
+              <div class="booking-grid">
+                <div class="booking-field full">
+                  <label>Card number</label>
+                  <input type="text" value="4242 4242 4242 4242" readonly />
+                </div>
+                <div class="booking-field">
+                  <label>Expiry</label>
+                  <input type="text" value="12 / 29" readonly />
+                </div>
+                <div class="booking-field">
+                  <label>CVC</label>
+                  <input type="text" value="123" readonly />
+                </div>
+                <div class="booking-field full">
+                  <label>Name on card</label>
+                  <input type="text" value="Full name as shown on card" readonly />
+                </div>
+              </div>
+              <p class="payment-demo-note">This shows how checkout will look once a real payment processor is connected. No card details are collected and no charge occurs today.</p>
+            </fieldset>
+
+            <div class="checkout-order-summary" id="bookingOrderSummary"></div>
+
+            <div class="booking-policy-checks">
+              <label class="booking-policy-check">
+                <input type="checkbox" id="bookingAgreeTerms" required />
+                <span>I agree to the <button type="button" class="link-btn" id="bookingViewTerms">Terms and Conditions</button>.</span>
+              </label>
+              <label class="booking-policy-check">
+                <input type="checkbox" id="bookingAgreeNoRefund" required />
+                <span>I understand that all bookings are final and non-refundable. <button type="button" class="link-btn" id="bookingViewNoRefund">Read No Refund Policy</button></span>
+              </label>
+            </div>
+
+            <div class="booking-step-actions">
+              <button type="button" class="admin-btn-ghost" data-booking-back="time">Back</button>
+              <button class="btn on-light fill checkout-submit" type="submit" id="bookingSubmitBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                <span>Complete Booking</span>
+              </button>
+            </div>
+            <div class="booking-status" id="bookingStatus" role="status" aria-live="polite"></div>
+            <div class="booking-note checkout-note">Your time is reserved now and confirmed once payment is connected. This does not yet collect real payment.</div>
           </div>
-        </div>
-        <div class="admin-microlabel checkout-section-label" style="margin-top:20px">Payment</div>
-        <div class="checkout-payment-methods" aria-hidden="true">
-          <span class="checkout-payment-method active">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-            Card
-          </span>
-          <span class="checkout-payment-method">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6.9c-.8 1-2.1 1.7-3.3 1.6-.2-1.2.4-2.5 1.1-3.3.8-1 2.2-1.7 3.3-1.8.1 1.3-.4 2.6-1.1 3.5zm1.1 1.8c-1.8-.1-3.4 1-4.2 1-.9 0-2.2-1-3.7-.9-1.9 0-3.6 1.1-4.6 2.7-2 3.4-.5 8.5 1.4 11.3.9 1.4 2 2.9 3.5 2.8 1.4-.1 1.9-.9 3.6-.9s2.1.9 3.6.8c1.5 0 2.5-1.3 3.4-2.8.9-1.4 1.3-2.8 1.3-2.9-.1 0-2.7-1-2.7-4 0-2.5 2.1-3.7 2.2-3.8-1.2-1.7-3-1.9-3.6-2z"/></svg>
-            Apple Pay
-          </span>
-          <span class="checkout-payment-method">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M12 12h9"/></svg>
-            Google Pay
-          </span>
-        </div>
-        <fieldset class="payment-demo checkout-payment-demo" disabled>
-          <legend class="demo-badge">Payment Preview Only — Not Yet Connected</legend>
-          <div class="booking-grid">
-            <div class="booking-field full">
-              <label>Card number</label>
-              <input type="text" value="4242 4242 4242 4242" readonly />
+
+          <div class="booking-step booking-confirm-step" data-booking-step="confirm" hidden>
+            <div class="booking-confirm-check">✓</div>
+            <h3 class="serif-heading" style="margin-bottom:6px">You're Booked.</h3>
+            <p class="admin-hint" style="margin-bottom:20px">Your session is reserved — here's a summary for your records.</p>
+            <div class="checkout-order-summary" id="bookingConfirmSummary"></div>
+            <div class="checkout-next-steps">
+              <div class="admin-microlabel checkout-section-label">What Happens Next?</div>
+              <div class="checkout-next-row">
+                <span>Instant Confirmation</span>
+                <span>Calendar Invite</span>
+                <span>Prepare For Your Session</span>
+              </div>
             </div>
-            <div class="booking-field">
-              <label>Expiry</label>
-              <input type="text" value="12 / 29" readonly />
-            </div>
-            <div class="booking-field">
-              <label>CVC</label>
-              <input type="text" value="123" readonly />
-            </div>
-            <div class="booking-field full">
-              <label>Name on card</label>
-              <input type="text" value="Full name as shown on card" readonly />
-            </div>
+            <button type="button" class="admin-btn-solid" id="bookingConfirmCloseBtn" style="margin-top:20px">Done</button>
           </div>
-          <p class="payment-demo-note">This shows how checkout will look once a real payment processor is connected. No card details are collected and no charge occurs today.</p>
-        </fieldset>
-        <div class="booking-hold-notice" id="bookingHoldNotice" role="status" aria-live="polite"></div>
-        <div class="booking-actions">
-          <button class="btn on-light fill" type="submit" id="bookingSubmitBtn">Request This Time</button>
-          <div class="booking-status" id="bookingStatus" role="status" aria-live="polite"></div>
-        </div>
-        <div class="booking-note">Booking requests are held as pending until confirmed by The Assembly. This does not yet collect payment.</div>
-        <div class="checkout-next-steps">
-          <div class="admin-microlabel checkout-section-label">What Happens Next?</div>
-          <div class="checkout-next-row">
-            <span>Instant Confirmation</span>
-            <span>Calendar Invite</span>
-            <span>Prepare For Your Session</span>
-          </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   </dialog>
 
@@ -1708,6 +1814,20 @@ function dialogsHtml(){
       </div>
       <div class="booking-status" id="mediaUseStatus" role="status" aria-live="polite"></div>
     </div>
+  </dialog>
+
+  <dialog class="booking-dialog" id="policyViewDialog" aria-labelledby="policyViewTitle" style="max-width:520px">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0">Policy</div>
+        <h3 id="policyViewTitle">Terms and Conditions</h3>
+      </div>
+      <button class="booking-close" id="closePolicyView" type="button" aria-label="Close policy">×</button>
+    </div>
+    <div class="booking-body">
+      <p id="policyViewText" style="color:var(--ink-muted);line-height:1.7;white-space:pre-wrap"></p>
+      <p class="admin-hint" id="policyViewUpdated" style="margin-top:14px"></p>
+    </div>
   </dialog>`;
 }
 
@@ -1770,11 +1890,25 @@ let SCHEDULING_SETTINGS = {
   backToBackAllowed: true,
   notifications: { confirmation: true, reminder24: true, reminder1: true, cancellation: true, reschedule: true }
 };
+// Public-facing booking policies (Terms & Conditions, No Refund Policy).
+// A separate small collection from schedulingSettings since these are
+// legal/consent text the Owner edits far less often, shown verbatim to
+// visitors — not scheduling behavior.
+let BOOKING_POLICIES = {
+  terms: {
+    title: 'Terms and Conditions',
+    text: 'By booking a one-on-one session, you agree to arrive on time, provide accurate contact information, and communicate respectfully during your session. The Unveiled Assembly reserves the right to reschedule or cancel a session with reasonable notice.',
+    lastUpdated: '', active: true
+  },
+  noRefund: {
+    title: 'No Refund Policy',
+    text: 'All one-on-one booking payments are final and non-refundable. If you are unable to attend, you may request a reschedule based on availability, but refunds are not guaranteed.',
+    lastUpdated: '', active: true
+  }
+};
 let SESSION_TYPES = {
-  '30-minute': { name: '30-Minute One-on-One', durationMinutes: 30, price: 50, description: 'Focused guidance for a specific question or season.', active: true, order: 1, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom', capacity: null, imageUrl: '' },
-  '60-minute': { name: '60-Minute One-on-One', durationMinutes: 60, price: 90, description: 'A deeper conversation for clarity, direction, and breakthrough.', active: true, order: 2, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom', capacity: null, imageUrl: '' },
-  'prayer-call': { name: 'Prayer Call', durationMinutes: 30, price: 50, description: 'A dedicated time of prayer and spiritual covering.', active: true, order: 3, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'phone', capacity: null, imageUrl: '' },
-  'mentorship': { name: 'Mentorship Session', durationMinutes: 60, price: 90, description: 'Ongoing support and guidance for your spiritual journey.', active: true, order: 4, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom', capacity: null, imageUrl: '' }
+  '15-minute': { name: '15-Minute One-on-One', durationMinutes: 15, price: 25, description: 'A focused conversation for one question, quick counsel, or a specific area of clarity.', active: true, order: 1, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom', capacity: null, imageUrl: '' },
+  '30-minute': { name: '30-Minute One-on-One', durationMinutes: 30, price: 50, description: 'A deeper conversation for discernment, prayer, guidance, and personal direction.', active: true, order: 2, bufferBeforeMin: 0, bufferAfterMin: 0, format: 'zoom', capacity: null, imageUrl: '' }
 };
 let AVAILABILITY_RULES = [
   { id: 'default-tue', dayOfWeek: 2, startTime: '14:00', endTime: '18:00', sessionTypeIds: [], capacity: 1 },
@@ -1820,6 +1954,14 @@ async function loadSchedulingConfig(){
     const overrides = {};
     overridesSnap.forEach(d => { overrides[d.id] = d.data(); });
     AVAILABILITY_OVERRIDES = overrides;
+  } catch (err) { /* keep defaults */ }
+  try {
+    const [termsSnap, noRefundSnap] = await Promise.all([
+      getDoc(doc(db, 'bookingPolicies', 'terms')),
+      getDoc(doc(db, 'bookingPolicies', 'noRefund'))
+    ]);
+    if(termsSnap.exists()) BOOKING_POLICIES.terms = termsSnap.data();
+    if(noRefundSnap.exists()) BOOKING_POLICIES.noRefund = noRefundSnap.data();
   } catch (err) { /* keep defaults */ }
   BUSINESS_TZ = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
 }
@@ -1870,7 +2012,8 @@ const TEACHING_PREVIEW_DEFAULTS = {
   blockoutRanges: JSON.parse(JSON.stringify(BLOCKOUT_RANGES)),
   availabilityOverrides: JSON.parse(JSON.stringify(AVAILABILITY_OVERRIDES)),
   bookings: JSON.parse(JSON.stringify(DEMO_BOOKINGS)),
-  blockedDates: JSON.parse(JSON.stringify(DEMO_BLOCKED_DATES))
+  blockedDates: JSON.parse(JSON.stringify(DEMO_BLOCKED_DATES)),
+  policies: JSON.parse(JSON.stringify(BOOKING_POLICIES))
 };
 const PREVIEW_STORAGE_KEYS = {
   teachings: 'ua_preview_teachings_v1',
@@ -1884,7 +2027,8 @@ const PREVIEW_STORAGE_KEYS = {
   blockoutRanges: 'ua_preview_blockout_ranges_v1',
   availabilityOverrides: 'ua_preview_availability_overrides_v1',
   bookings: 'ua_preview_bookings_v1',
-  blockedDates: 'ua_preview_blocked_dates_v1'
+  blockedDates: 'ua_preview_blocked_dates_v1',
+  policies: 'ua_preview_booking_policies_v1'
 };
 function savePreviewToStorage(){
   if(!DEMO_MODE) return true;
@@ -1909,6 +2053,7 @@ function saveBookingsPreviewToStorage(){
     localStorage.setItem(PREVIEW_STORAGE_KEYS.availabilityOverrides, JSON.stringify(AVAILABILITY_OVERRIDES));
     localStorage.setItem(PREVIEW_STORAGE_KEYS.bookings, JSON.stringify(DEMO_BOOKINGS));
     localStorage.setItem(PREVIEW_STORAGE_KEYS.blockedDates, JSON.stringify(DEMO_BLOCKED_DATES));
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.policies, JSON.stringify(BOOKING_POLICIES));
     return true;
   } catch (err) {
     console.error('Could not save booking preview data to this browser', err);
@@ -1932,6 +2077,7 @@ function loadPreviewFromStorage(){
     const ao = localStorage.getItem(PREVIEW_STORAGE_KEYS.availabilityOverrides);
     const bk = localStorage.getItem(PREVIEW_STORAGE_KEYS.bookings);
     const bd = localStorage.getItem(PREVIEW_STORAGE_KEYS.blockedDates);
+    const pol = localStorage.getItem(PREVIEW_STORAGE_KEYS.policies);
     if(st) SESSION_TYPES = JSON.parse(st);
     if(ss) SCHEDULING_SETTINGS = JSON.parse(ss);
     if(ar) AVAILABILITY_RULES = JSON.parse(ar);
@@ -1939,6 +2085,7 @@ function loadPreviewFromStorage(){
     if(ao) AVAILABILITY_OVERRIDES = JSON.parse(ao);
     if(bk) DEMO_BOOKINGS = JSON.parse(bk);
     if(bd) DEMO_BLOCKED_DATES = JSON.parse(bd);
+    if(pol) BOOKING_POLICIES = JSON.parse(pol);
   } catch (err) { /* keep current defaults if storage is corrupt/unavailable */ }
 }
 function resetPreviewData(){
@@ -1956,6 +2103,7 @@ function resetPreviewData(){
   AVAILABILITY_OVERRIDES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.availabilityOverrides));
   DEMO_BOOKINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.bookings));
   DEMO_BLOCKED_DATES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.blockedDates));
+  BOOKING_POLICIES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.policies));
   BUSINESS_TZ = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
   if(currentProfile) currentProfile.photoURL = '';
 }
@@ -3111,11 +3259,117 @@ async function loadTimeSlots(){
   if(!checkedInput) return;
   const service = checkedInput.value;
   await populateTimeSelect(bookingTimeSelect, dateStr, SESSION_TYPES[service] && SESSION_TYPES[service].durationMinutes, service, selectedBookingTimeZone());
+  renderBookingTimeButtons();
 }
+
+/* ---------------------------------------------------------------
+   One-on-One booking wizard — Select Session → Choose Date → Choose
+   Time → Details & Payment → Confirmation. One <form> the whole way
+   through (so the existing submit handler/validation below is
+   untouched); this layer only shows/hides panels and keeps the left
+   summary panel in sync with what's been chosen so far.
+   --------------------------------------------------------------- */
+const BOOKING_WIZARD_STEPS = ['session', 'date', 'time', 'details', 'confirm'];
+let bookingWizardStep = 'session';
+function showBookingWizardStep(name){
+  bookingWizardStep = name;
+  document.querySelectorAll('.booking-step[data-booking-step]').forEach(el => { el.hidden = el.dataset.bookingStep !== name; });
+  const idx = BOOKING_WIZARD_STEPS.indexOf(name);
+  document.querySelectorAll('#bookingStepStrip .oneonone-step').forEach(el => {
+    const stepIdx = BOOKING_WIZARD_STEPS.indexOf(el.dataset.stepIndicator);
+    el.classList.toggle('active', stepIdx === idx);
+    el.classList.toggle('completed', stepIdx < idx);
+  });
+}
+function selectedSessionType(){
+  const checked = bookingForm.querySelector('input[name="sessionType"]:checked');
+  return checked ? SESSION_TYPES[checked.value] : null;
+}
+function updateBookingSummaryPanel(){
+  const art = document.getElementById('bookingSummaryArt');
+  const meta = document.getElementById('bookingSummaryMeta');
+  const desc = document.getElementById('bookingSummaryDesc');
+  const title = document.getElementById('bookingTitle');
+  const t = selectedSessionType();
+  if(!t){ return; }
+  title.textContent = t.name;
+  desc.textContent = t.description || '';
+  art.className = 'checkout-summary' + (t.imageUrl ? '' : ' ' + teachingArtClass(t.name));
+  art.style.backgroundImage = t.imageUrl ? "url('" + t.imageUrl.replace(/'/g, '%27') + "')" : '';
+  const parts = [t.durationMinutes + ' Minutes', t.price ? '$' + Number(t.price).toFixed(0) : 'Free'];
+  if(bookingDateInput.value) parts.push(formatTeachingDate ? formatTeachingDate(bookingDateInput.value) : bookingDateInput.value);
+  if(bookingTimeSelect.value) parts.push(formatLocalTime(bookingDateInput.value, bookingTimeSelect.value, selectedBookingTimeZone()));
+  meta.innerHTML = parts.map(p => '<span>' + escapeHtml(p) + '</span>').join('');
+}
+function renderBookingTimeButtons(){
+  const wrap = document.getElementById('bookingTimeButtons');
+  if(!wrap) return;
+  const opts = Array.from(bookingTimeSelect.options).filter(o => o.value);
+  if(bookingTimeSelect.disabled || opts.length === 0){
+    const msg = bookingTimeSelect.options[0] ? bookingTimeSelect.options[0].text : 'Choose a date first';
+    wrap.innerHTML = '<p class="admin-hint">' + escapeHtml(msg) + '</p>';
+    document.getElementById('bookingStepTimeNext').disabled = true;
+    return;
+  }
+  wrap.innerHTML = opts.map(o => '<button type="button" class="booking-time-btn" data-time="' + escapeHtml(o.value) + '">' + escapeHtml(o.text.split(' (')[0]) + '</button>').join('');
+  document.getElementById('bookingStepTimeNext').disabled = true;
+}
+document.getElementById('bookingTimeButtons').addEventListener('click', event => {
+  const btn = event.target.closest('.booking-time-btn');
+  if(!btn) return;
+  document.querySelectorAll('#bookingTimeButtons .booking-time-btn').forEach(b => b.classList.toggle('active', b === btn));
+  bookingTimeSelect.value = btn.dataset.time;
+  bookingTimeSelect.dispatchEvent(new Event('change'));
+});
+document.getElementById('bookingStepSessionNext').addEventListener('click', () => {
+  if(!bookingForm.querySelector('input[name="sessionType"]:checked')){ bookingStatus.textContent = 'Choose a session to continue.'; return; }
+  bookingStatus.textContent = '';
+  updateBookingSummaryPanel();
+  showBookingWizardStep('date');
+});
+document.getElementById('bookingStepDateNext').addEventListener('click', () => {
+  showBookingWizardStep('time');
+  loadTimeSlots();
+});
+bookingDateInput.addEventListener('input', () => {
+  document.getElementById('bookingStepDateNext').disabled = !bookingDateInput.value;
+});
+document.getElementById('bookingStepTimeNext').addEventListener('click', () => {
+  updateBookingSummaryPanel();
+  showBookingWizardStep('details');
+  renderBookingOrderSummary();
+});
+document.querySelectorAll('[data-booking-back]').forEach(btn => {
+  btn.addEventListener('click', () => showBookingWizardStep(btn.dataset.bookingBack));
+});
+function renderBookingOrderSummary(){
+  const wrap = document.getElementById('bookingOrderSummary');
+  if(!wrap) return;
+  const t = selectedSessionType();
+  if(!t) return;
+  wrap.innerHTML =
+    '<div class="checkout-order-row"><span>' + escapeHtml(t.name) + '</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</span></div>' +
+    '<div class="checkout-order-row"><span>' + escapeHtml(formatLocalDateTime(bookingDateInput.value, bookingTimeSelect.value, selectedBookingTimeZone())) + '</span><span></span></div>' +
+    '<div class="checkout-order-total"><span>Total</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</span></div>';
+}
+function openPolicyView(key){
+  const p = BOOKING_POLICIES[key];
+  if(!p) return;
+  document.getElementById('policyViewTitle').textContent = p.title || (key === 'terms' ? 'Terms and Conditions' : 'No Refund Policy');
+  document.getElementById('policyViewText').textContent = p.text || '';
+  document.getElementById('policyViewUpdated').textContent = p.lastUpdated ? 'Last updated ' + p.lastUpdated : '';
+  document.getElementById('policyViewDialog').showModal();
+}
+document.getElementById('bookingViewTerms').addEventListener('click', () => openPolicyView('terms'));
+document.getElementById('bookingViewNoRefund').addEventListener('click', () => openPolicyView('noRefund'));
+document.getElementById('closePolicyView').addEventListener('click', () => document.getElementById('policyViewDialog').close());
+document.getElementById('bookingConfirmCloseBtn').addEventListener('click', () => bookingDialog.close());
 
 function openBooking(service){
   bookingForm.reset();
   bookingStatus.textContent = '';
+  document.getElementById('bookingStepDateNext').disabled = true;
+  document.getElementById('bookingStepTimeNext').disabled = true;
   if(service){
     const serviceChoice = bookingForm.querySelector('input[name="sessionType"][value="' + service + '"]');
     if(serviceChoice) serviceChoice.checked = true;
@@ -3125,7 +3379,8 @@ function openBooking(service){
     document.getElementById('bookingEmail').value = currentProfile.email || '';
   }
   setDetectedTimeZoneDefault();
-  loadTimeSlots();
+  updateBookingSummaryPanel();
+  showBookingWizardStep('session');
   bookingDialog.showModal();
 }
 window.openBooking = openBooking; // pages can trigger booking directly, e.g. Prayer CTAs
@@ -3207,7 +3462,7 @@ function startHoldCountdown(expiresAt){
       return;
     }
     const m = Math.floor(secondsLeft / 60), s = secondsLeft % 60;
-    bookingHoldNotice.textContent = 'This time is held for you: ' + m + ':' + String(s).padStart(2, '0');
+    bookingHoldNotice.textContent = "We're holding this time for you — " + m + ':' + String(s).padStart(2, '0') + ' remaining.';
   };
   tick();
   holdCountdownTimer = setInterval(tick, 1000);
@@ -3233,6 +3488,8 @@ bookingTimeSelect.addEventListener('change', async () => {
     const hold = await createHold(dateStr, time, sessionTypeId);
     currentHoldDate = dateStr; currentHoldTime = time;
     startHoldCountdown(hold.expiresAt);
+    const nextBtn = document.getElementById('bookingStepTimeNext');
+    if(nextBtn) nextBtn.disabled = false;
   } catch (err) {
     bookingStatus.textContent = 'That time was just taken by someone else — please choose another.';
     loadTimeSlots();
@@ -3300,6 +3557,10 @@ bookingForm.addEventListener('submit', async event => {
     bookingStatus.textContent = 'Enter a valid phone number, including country code.';
     return;
   }
+  if(!document.getElementById('bookingAgreeTerms').checked || !document.getElementById('bookingAgreeNoRefund').checked){
+    bookingStatus.textContent = 'Please agree to the Terms and Conditions and the No Refund Policy to continue.';
+    return;
+  }
   bookingSubmitBtn.disabled = true;
   bookingStatus.textContent = 'Requesting your session…';
   const clientTimeZone = selectedBookingTimeZone();
@@ -3309,14 +3570,22 @@ bookingForm.addEventListener('submit', async event => {
       status: 'pending', uid: currentUser ? currentUser.uid : null, clientTimeZone
     });
     markThrottled('lastBookingSubmit');
-    bookingStatus.textContent = 'Request received — your ' + sessionTypeName(service) +
-      ' session on ' + formatLocalDateTime(dateStr, time, clientTimeZone) + ' is pending confirmation. You will be contacted at ' + email + '.';
+    const bookingRef = 'UA-' + Date.now().toString(36).toUpperCase();
+    document.getElementById('bookingConfirmSummary').innerHTML =
+      '<div class="checkout-order-row"><span>Session</span><span>' + escapeHtml(sessionTypeName(service)) + '</span></div>' +
+      '<div class="checkout-order-row"><span>When</span><span>' + escapeHtml(formatLocalDateTime(dateStr, time, clientTimeZone)) + '</span></div>' +
+      '<div class="checkout-order-row"><span>Email</span><span>' + escapeHtml(email) + '</span></div>' +
+      '<div class="checkout-order-row"><span>Phone</span><span>' + escapeHtml(phone) + '</span></div>' +
+      '<div class="checkout-order-total"><span>Booking Reference</span><span>' + bookingRef + '</span></div>';
+    bookingStatus.textContent = '';
+    showBookingWizardStep('confirm');
     bookingForm.reset();
     loadTimeSlots();
     if(currentUser) loadMemberBookings();
   } catch (err) {
     if(err.message === 'slot-taken'){
       bookingStatus.textContent = 'That time was just taken by someone else — pick another.';
+      showBookingWizardStep('time');
       loadTimeSlots();
     } else {
       bookingStatus.textContent = 'Could not submit your request. Please try again.';
@@ -3458,8 +3727,30 @@ function renderSchedTypesList(){
   }).join('');
 }
 
+function sessionTypesAllowedLabel(ids){
+  if(!ids || ids.length === 0) return 'All session types';
+  return ids.map(sessionTypeName).join(', ');
+}
+function renderSessionTypeCheckboxes(containerId, checkedIds){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const checked = checkedIds && checkedIds.length ? checkedIds : Object.keys(SESSION_TYPES);
+  el.innerHTML = Object.keys(SESSION_TYPES).map(id =>
+    '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--owner-text)">' +
+    '<input type="checkbox" value="' + escapeHtml(id) + '"' + (checked.includes(id) ? ' checked' : '') + ' /> ' + escapeHtml(SESSION_TYPES[id].name) +
+    '</label>'
+  ).join('');
+}
+function checkedSessionTypeIds(containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return [];
+  const all = Object.keys(SESSION_TYPES);
+  const checked = Array.from(el.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value);
+  return checked.length === all.length ? [] : checked;
+}
 function renderSchedRulesList(){
   if(!schedRulesList) return;
+  renderSessionTypeCheckboxes('schedRuleTypesCheckboxes');
   if(AVAILABILITY_RULES.length === 0){
     schedRulesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No availability windows yet — booking is effectively closed until you add one.</p>';
     return;
@@ -3467,7 +3758,8 @@ function renderSchedRulesList(){
   schedRulesList.innerHTML = AVAILABILITY_RULES.map(r => {
     return '<div class="portal-row" data-rule-id="' + escapeHtml(r.id || '') + '" style="padding:8px 0">' +
       '<div><strong>' + DAY_NAMES[r.dayOfWeek] + '</strong><small>' + minutesToLabel(hhmmToMinutes(r.startTime)) + '–' + minutesToLabel(hhmmToMinutes(r.endTime)) +
-      ' · capacity ' + (r.capacity || 1) + '</small></div>' +
+      ' · capacity ' + (r.capacity || 1) + ' · ' + escapeHtml(sessionTypesAllowedLabel(r.sessionTypeIds)) +
+      (r.notes ? ' · ' + escapeHtml(r.notes) : '') + '</small></div>' +
       '<button class="portal-secondary sched-rule-delete" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Remove</button>' +
       '</div>';
   }).join('');
@@ -3489,6 +3781,7 @@ function renderSchedRangesList(){
 
 function renderSchedOverridesList(){
   if(!schedOverridesList) return;
+  renderSessionTypeCheckboxes('schedOverrideTypesCheckboxes');
   const dates = Object.keys(AVAILABILITY_OVERRIDES).sort();
   if(dates.length === 0){
     schedOverridesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No special-date overrides.</p>';
@@ -3496,9 +3789,10 @@ function renderSchedOverridesList(){
   }
   schedOverridesList.innerHTML = dates.map(d => {
     const o = AVAILABILITY_OVERRIDES[d];
-    const desc = o.closed ? 'Fully closed' : (o.windows || []).map(w => minutesToLabel(hhmmToMinutes(w.startTime)) + '–' + minutesToLabel(hhmmToMinutes(w.endTime))).join(', ');
+    const desc = o.closed ? 'Fully closed' : (o.windows || []).map(w => minutesToLabel(hhmmToMinutes(w.startTime)) + '–' + minutesToLabel(hhmmToMinutes(w.endTime)) +
+      ' (' + sessionTypesAllowedLabel(w.sessionTypeIds) + ')').join(', ');
     return '<div class="portal-row" data-override-date="' + escapeHtml(d) + '" style="padding:8px 0">' +
-      '<div><strong>' + escapeHtml(d) + '</strong><small>' + escapeHtml(desc) + '</small></div>' +
+      '<div><strong>' + escapeHtml(d) + '</strong><small>' + escapeHtml(desc) + (o.notes ? ' · ' + escapeHtml(o.notes) : '') + '</small></div>' +
       '<button class="portal-secondary sched-override-delete" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Remove</button></div>';
   }).join('');
 }
@@ -3607,8 +3901,10 @@ if(schedTimezoneSelect){
     const startTime = document.getElementById('schedRuleStart').value;
     const endTime = document.getElementById('schedRuleEnd').value;
     const capacity = Math.max(1, Number(document.getElementById('schedRuleCapacity').value || 1));
+    const notes = document.getElementById('schedRuleNotes').value.trim();
     if(!startTime || !endTime || endTime <= startTime){ schedRuleStatus.textContent = 'Choose a valid start and end time.'; return; }
-    const data = { dayOfWeek, startTime, endTime, sessionTypeIds: [], capacity };
+    const sessionTypeIds = checkedSessionTypeIds('schedRuleTypesCheckboxes');
+    const data = { dayOfWeek, startTime, endTime, sessionTypeIds, capacity, notes };
     schedRuleStatus.textContent = 'Saving…';
     if(DEMO_MODE){
       AVAILABILITY_RULES.push({ id: 'preview-rule-' + (schedRuleSeq++), ...data });
@@ -3620,6 +3916,7 @@ if(schedTimezoneSelect){
     renderSchedRulesList();
     if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
     schedRuleForm.reset();
+    renderSessionTypeCheckboxes('schedRuleTypesCheckboxes');
     schedRuleStatus.textContent = SCHED_SAVE_NOTE;
   });
 
@@ -3680,13 +3977,15 @@ if(schedTimezoneSelect){
     const start = document.getElementById('schedOverrideStart').value;
     const end = document.getElementById('schedOverrideEnd').value;
     const closed = document.getElementById('schedOverrideClosed').checked;
+    const notes = document.getElementById('schedOverrideNotes').value.trim();
     if(!date){ schedOverrideStatus.textContent = 'Choose a date.'; return; }
     let data;
     if(closed){
-      data = { closed: true, windows: [] };
+      data = { closed: true, windows: [], notes };
     } else {
       if(!start || !end || end <= start){ schedOverrideStatus.textContent = 'Set a valid start and end time, or check "Fully closed".'; return; }
-      data = { closed: false, windows: [{ startTime: start, endTime: end, capacity: 1, sessionTypeIds: [] }] };
+      const sessionTypeIds = checkedSessionTypeIds('schedOverrideTypesCheckboxes');
+      data = { closed: false, windows: [{ startTime: start, endTime: end, capacity: 1, sessionTypeIds }], notes };
     }
     schedOverrideStatus.textContent = 'Saving…';
     if(DEMO_MODE){
@@ -4595,12 +4894,11 @@ async function renderBookingsOverviewStats(){
   const weekAhead = new Date(today.getTime() + 7 * 86400000).toISOString().slice(0, 10);
   const [confirmed, pendingCount] = await Promise.all([ownerAllConfirmedBookings(), ownerPendingCount()]);
   const upcomingWeek = confirmed.filter(b => b.date >= todayStr && b.date <= weekAhead).length;
-  const zoomCount = confirmed.filter(b => b.date >= todayStr && (!SESSION_TYPES[b.sessionType] || (SESSION_TYPES[b.sessionType].format || 'zoom') === 'zoom')).length;
   wrap.innerHTML =
     '<div class="admin-stat-tile"><span>Upcoming This Week</span><strong>' + upcomingWeek + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Pending Requests</span><strong>' + pendingCount + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Available Slots</span><strong>' + AVAILABILITY_RULES.length + '</strong><em>Weekly windows open</em></div>' +
-    '<div class="admin-stat-tile"><span>Zoom Sessions</span><strong>' + zoomCount + '</strong><em>Upcoming, confirmed</em></div>';
+    '<div class="admin-stat-tile"><span>Booked Sessions</span><strong>' + confirmed.length + '</strong><em>All confirmed, all-time</em></div>';
 }
 async function renderBookingsToday(){
   const wrap = document.getElementById('bookingsTodayList');
@@ -4664,6 +4962,7 @@ function showBookingsTab(name){
   if(name === 'calendar') renderBookingsCalendar();
   if(name === 'clients') renderBookingsClients();
   if(name === 'reports') renderBookingsReports();
+  if(name === 'policies') renderBookingPolicies();
 }
 document.getElementById('bookingsSubNav').addEventListener('click', event => {
   const btn = event.target.closest('.admin-tab');
@@ -4754,6 +5053,40 @@ async function renderBookingsInsights(){
     '<p class="admin-hint" style="margin-bottom:8px">Most requested: <strong style="color:var(--owner-text)">' + escapeHtml(sessionTypeName(topId)) + '</strong></p>' +
     '<p class="admin-hint">' + completionRate + '% of requests have been confirmed (' + confirmedCount + ' of ' + all.length + ').</p>';
 }
+
+function renderBookingPolicies(){
+  const terms = BOOKING_POLICIES.terms || {};
+  const noRefund = BOOKING_POLICIES.noRefund || {};
+  document.getElementById('policyTermsTitle').value = terms.title || '';
+  document.getElementById('policyTermsText').value = terms.text || '';
+  document.getElementById('policyTermsActive').checked = terms.active !== false;
+  document.getElementById('policyTermsUpdated').textContent = terms.lastUpdated ? 'Last updated ' + terms.lastUpdated : 'Not saved yet.';
+  document.getElementById('policyNoRefundTitle').value = noRefund.title || '';
+  document.getElementById('policyNoRefundText').value = noRefund.text || '';
+  document.getElementById('policyNoRefundActive').checked = noRefund.active !== false;
+  document.getElementById('policyNoRefundUpdated').textContent = noRefund.lastUpdated ? 'Last updated ' + noRefund.lastUpdated : 'Not saved yet.';
+}
+async function saveBookingPolicy(key, idPrefix){
+  const status = document.getElementById(idPrefix + 'Status');
+  const title = document.getElementById(idPrefix + 'Title').value.trim();
+  const text = document.getElementById(idPrefix + 'Text').value.trim();
+  const active = document.getElementById(idPrefix + 'Active').checked;
+  if(!title || !text){ status.textContent = 'Both a title and policy text are required.'; return; }
+  const lastUpdated = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date());
+  const data = { title, text, active, lastUpdated };
+  status.textContent = 'Saving…';
+  if(DEMO_MODE){
+    BOOKING_POLICIES[key] = data;
+    saveBookingsPreviewToStorage();
+  } else {
+    try { await setDoc(doc(db, 'bookingPolicies', key), data); }
+    catch (err) { status.textContent = 'Could not save that policy.'; return; }
+  }
+  renderBookingPolicies();
+  status.textContent = SCHED_SAVE_NOTE;
+}
+document.getElementById('policyTermsSaveBtn').addEventListener('click', () => saveBookingPolicy('terms', 'policyTerms'));
+document.getElementById('policyNoRefundSaveBtn').addEventListener('click', () => saveBookingPolicy('noRefund', 'policyNoRefund'));
 
 function renderBookingsNotifications(){
   const n = SCHEDULING_SETTINGS.notifications || {};
@@ -6000,57 +6333,37 @@ renderPublicTeachingPages();
    site already uses — this page is a nicer front door to it, not a
    second checkout system.
    --------------------------------------------------------------- */
-let oneOnOneFilters = { search: '', format: 'all', duration: 'all' };
 function oneOnOneCardHtml(t){
-  const formatLabel = t.format === 'phone' ? 'Phone' : t.format === 'in-person' ? 'In Person' : t.format === 'phone-or-zoom' ? 'Phone or Zoom' : 'Video / Zoom';
   const artClass = t.imageUrl ? '' : teachingArtClass(t.name);
   const imageStyle = t.imageUrl ? ' style="background-image:url(\'' + t.imageUrl.replace(/'/g, '%27') + '\')"' : '';
   return '<article class="oneonone-card">' +
     '<div class="oneonone-card-image ' + artClass + '"' + imageStyle + '></div>' +
     '<div class="oneonone-card-body">' +
     '<h3 class="oneonone-card-name">' + escapeHtml(t.name) + '</h3>' +
-    '<div class="oneonone-card-meta"><span>' + t.durationMinutes + ' Minutes</span><span>' + formatLabel + '</span></div>' +
+    '<div class="oneonone-card-meta"><span>' + t.durationMinutes + ' Minutes</span></div>' +
     '<p class="oneonone-card-desc">' + escapeHtml(t.description || '') + '</p>' +
     '<div class="oneonone-card-footer">' +
     '<div class="oneonone-card-price">' + (t.price ? '$' + Number(t.price).toFixed(0) : 'Free') + (t.price ? '<small> one-time</small>' : '') + '</div>' +
     '<button type="button" class="oneonone-select-btn book-session" data-service="' + escapeHtml(t.id) + '">Select</button>' +
     '</div></div></article>';
 }
+// Only 15-Minute and 30-Minute One-on-One are active public options right
+// now — this renders whatever is marked Active in Owner → Bookings →
+// Session Types, so it stays correct automatically if that ever changes,
+// without a second list of session types to keep in sync.
 function renderOneOnOneCards(){
   const wrap = document.getElementById('oneOnOneCardsList');
   const empty = document.getElementById('oneOnOneEmptyState');
   if(!wrap) return;
-  const q = oneOnOneFilters.search.trim().toLowerCase();
   const types = Object.keys(SESSION_TYPES)
     .map(id => ({ id, ...SESSION_TYPES[id] }))
     .filter(t => t.active !== false)
-    .filter(t => oneOnOneFilters.format === 'all' || t.format === oneOnOneFilters.format)
-    .filter(t => oneOnOneFilters.duration === 'all' || String(t.durationMinutes) === oneOnOneFilters.duration)
-    .filter(t => !q || (t.name || '').toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q))
     .sort((a, b) => (a.order || 0) - (b.order || 0));
   wrap.innerHTML = types.map(oneOnOneCardHtml).join('');
   if(empty) empty.hidden = types.length > 0;
 }
 function renderOneOnOnePage(){
   renderOneOnOneCards();
-  const searchInput = document.getElementById('oneOnOneSearch');
-  if(searchInput) searchInput.addEventListener('input', () => { oneOnOneFilters.search = searchInput.value; renderOneOnOneCards(); });
-  const formatPills = document.getElementById('oneOnOneFormatPills');
-  if(formatPills) formatPills.addEventListener('click', event => {
-    const btn = event.target.closest('.oneonone-pill');
-    if(!btn) return;
-    formatPills.querySelectorAll('.oneonone-pill').forEach(b => b.classList.toggle('active', b === btn));
-    oneOnOneFilters.format = btn.dataset.format;
-    renderOneOnOneCards();
-  });
-  const durationPills = document.getElementById('oneOnOneDurationPills');
-  if(durationPills) durationPills.addEventListener('click', event => {
-    const btn = event.target.closest('.oneonone-pill');
-    if(!btn) return;
-    durationPills.querySelectorAll('.oneonone-pill').forEach(b => b.classList.toggle('active', b === btn));
-    oneOnOneFilters.duration = btn.dataset.duration;
-    renderOneOnOneCards();
-  });
   // Deep link from Owner → Session Types → "Copy Link" (?service=30-minute)
   // opens straight to that session's booking dialog, pre-selected.
   const params = new URLSearchParams(window.location.search);
