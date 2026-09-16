@@ -21,7 +21,8 @@ import {
   signInWithPhoneNumber as _signInWithPhoneNumber,
   linkWithPhoneNumber as _linkWithPhoneNumber,
   reauthenticateWithCredential as _reauthenticateWithCredential,
-  EmailAuthProvider, verifyBeforeUpdateEmail as _verifyBeforeUpdateEmail, unlink as _unlink
+  EmailAuthProvider, verifyBeforeUpdateEmail as _verifyBeforeUpdateEmail, unlink as _unlink,
+  setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
@@ -46,6 +47,32 @@ const DEMO_MODE = !PRODUCTION_HOSTS.includes(window.location.hostname);
 const DEMO_ADMIN_EMAIL = 'contactunveiledassembly@gmail.com';
 
 let demoAuthCallback = null;
+// Keeps the preview's fake sign-in alive across page loads (this is a
+// static multi-page site, so every link click reloads app.js from
+// scratch). Without this, onAuthStateChanged below would reset to
+// signed-out on every navigation, which is what made the Owner Portal
+// preview feel like it kept logging itself out.
+const DEMO_SESSION_KEY = 'uaDemoSession';
+const DEMO_SESSION_DAYS = 7;
+function saveDemoSession(user){
+  try {
+    if(!user){ localStorage.removeItem(DEMO_SESSION_KEY); return; }
+    const { uid, email, displayName, phoneNumber, emailVerified, role } = user;
+    localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({
+      uid, email, displayName, phoneNumber, emailVerified, role,
+      expires: Date.now() + DEMO_SESSION_DAYS * 86400000
+    }));
+  } catch (err) { /* ignore storage failures — preview keeps working, just won't persist */ }
+}
+function loadDemoSession(){
+  try {
+    const raw = localStorage.getItem(DEMO_SESSION_KEY);
+    if(!raw) return null;
+    const saved = JSON.parse(raw);
+    if(!saved || !saved.expires || saved.expires < Date.now()){ localStorage.removeItem(DEMO_SESSION_KEY); return null; }
+    return saved;
+  } catch (err) { return null; }
+}
 function demoUser(overrides){
   return Object.assign({
     uid: 'demo-' + Math.random().toString(36).slice(2, 10),
@@ -58,6 +85,7 @@ function demoUser(overrides){
   }, overrides);
 }
 function demoSetUser(user){
+  saveDemoSession(user);
   if(demoAuthCallback) demoAuthCallback(user);
 }
 
@@ -80,7 +108,8 @@ async function signInWithEmailAndPassword(authArg, email, password){
 function onAuthStateChanged(authArg, callback){
   if(DEMO_MODE){
     demoAuthCallback = callback;
-    callback(null);
+    const saved = loadDemoSession();
+    callback(saved ? demoUser(saved) : null);
     return () => { demoAuthCallback = null; };
   }
   return _onAuthStateChanged(authArg, callback);
@@ -1262,7 +1291,7 @@ function dialogsHtml(){
                 </div>
               </div>
               <div>
-                <div class="admin-microlabel checkout-section-label">Available Times</div>
+                <div class="admin-microlabel checkout-section-label" id="bookingTimesHeading">Available Times</div>
                 <p class="admin-hint" style="margin-bottom:14px">All times are shown in Eastern Time.</p>
                 <div class="booking-time-grid" id="bookingTimeButtons"></div>
                 <select id="bookingTime" name="time" required disabled style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true" tabindex="-1">
@@ -1401,6 +1430,10 @@ function dialogsHtml(){
             <input id="storyName" name="name" type="text" placeholder="First and last name" required />
           </div>
           <div class="form-field">
+            <label for="storyTitle">Title (optional)</label>
+            <input id="storyTitle" name="title" type="text" placeholder="A short title for your story" />
+          </div>
+          <div class="form-field">
             <label for="storyEmail">Email address</label>
             <input id="storyEmail" name="email" type="email" placeholder="For private follow-up" required />
           </div>
@@ -1433,6 +1466,7 @@ function dialogsHtml(){
           <div class="form-field">
             <label for="storyMedia">Add a photo or video</label>
             <input id="storyMedia" name="media" type="file" accept="image/*,video/*" />
+            <small class="admin-hint">Video preview only — shown in this browser, not uploaded or hosted yet.</small>
           </div>
           <div class="form-field">
             <label for="storyVideoLink">Or include a video link</label>
@@ -1861,6 +1895,9 @@ const ADMIN_EMAIL = 'contactunveiledassembly@gmail.com';
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
+// Keep a signed-in member/owner signed in across visits (real Firebase
+// auth already defaults to this, but it's made explicit here on purpose).
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 
 let currentUser = null;
 let currentProfile = null;
@@ -2305,7 +2342,9 @@ const DEFAULT_TESTIMONIALS = [
     message: 'During the teaching, I felt a deeper sense of peace and clarity about decisions I had been wrestling with for months.',
     visibility: 'public',
     status: 'published',
-    publicDisplayText: 'Sarah M. — During the teaching, I felt a deeper sense of peace and clarity about decisions I had been wrestling with for months.',
+    title: 'Peace In The Middle Of The Decision',
+    publicDisplayText: 'During the teaching, I felt a deeper sense of peace and clarity about decisions I had been wrestling with for months.',
+    hasVideoPreview: false,
     createdAt: '2026-09-08T17:00:00.000Z'
   },
   {
@@ -2319,6 +2358,20 @@ const DEFAULT_TESTIMONIALS = [
     status: 'private',
     publicDisplayText: 'Anonymous',
     createdAt: '2026-09-06T13:14:00.000Z'
+  },
+  {
+    id: 'story-demo-3',
+    firstName: 'Kayla',
+    lastName: 'R.',
+    email: 'kayla@example.com',
+    phone: '',
+    message: 'I recorded a short video to share what changed for me after joining The Gathering.',
+    visibility: 'public',
+    status: 'published',
+    title: 'A Video Testimony',
+    publicDisplayText: 'I recorded a short video to share what changed for me after joining The Gathering.',
+    hasVideoPreview: true,
+    createdAt: '2026-09-13T20:00:00.000Z'
   }
 ];
 
@@ -2333,10 +2386,43 @@ const DEFAULT_CLASS_REVIEWS = [
     message: 'This class brought much-needed clarity to the way I pray and discern what God is speaking.',
     visibility: 'public',
     status: 'published',
-    publicDisplayText: 'Marcus R. — This class brought much-needed clarity to the way I pray and discern what God is speaking.',
+    publicDisplayText: 'This class brought much-needed clarity to the way I pray and discern what God is speaking.',
     rating: 5,
     recommendation: 'Yes',
+    reviewDate: '2026-09-04',
     createdAt: '2026-09-04T08:20:00.000Z'
+  },
+  {
+    id: 'review-demo-2',
+    className: 'Identity in Christ',
+    firstName: 'Jasmine',
+    lastName: 'T.',
+    email: 'jasmine@example.com',
+    phone: '',
+    message: 'I finally understood who I am in Christ instead of just hearing the phrase. Practical and rooted in Scripture.',
+    visibility: 'public',
+    status: 'published',
+    publicDisplayText: 'I finally understood who I am in Christ instead of just hearing the phrase. Practical and rooted in Scripture.',
+    rating: 5,
+    recommendation: 'Yes',
+    reviewDate: '2026-08-27',
+    createdAt: '2026-08-27T14:05:00.000Z'
+  },
+  {
+    id: 'review-demo-3',
+    className: 'Hearing the Voice of God',
+    firstName: 'Anonymous',
+    lastName: '',
+    email: '',
+    phone: '',
+    message: 'Helped me recognize how God has already been speaking to me — I just didn’t have the language for it before.',
+    visibility: 'anonymous',
+    status: 'published',
+    publicDisplayText: 'Helped me recognize how God has already been speaking to me — I just didn’t have the language for it before.',
+    rating: 4,
+    recommendation: 'Yes',
+    reviewDate: '2026-08-19',
+    createdAt: '2026-08-19T19:40:00.000Z'
   }
 ];
 
@@ -2388,6 +2474,20 @@ function getPublicPreviewLegacy(item){
   if(item.visibility === 'private') return 'Private';
   const name = [item.firstName, item.lastName].filter(Boolean).join(' ').trim();
   return name ? name : 'Anonymous';
+}
+
+// Public-facing name display only: "Public" shows first name + last
+// initial (e.g. "Kayla R."), "Anonymous" always shows "Anonymous", and
+// "Private" never renders on a public page (callers should already be
+// filtering private items out before this is reached).
+function publicNameLabel(item){
+  if(!item) return 'Anonymous';
+  if(item.visibility === 'anonymous') return 'Anonymous';
+  if(item.visibility === 'private') return 'Anonymous';
+  const first = (item.firstName || '').trim();
+  const lastInitial = (item.lastName || '').trim().charAt(0);
+  if(!first && !lastInitial) return 'Anonymous';
+  return (first + (lastInitial ? ' ' + lastInitial + '.' : '')).trim();
 }
 
 function formatVisibilityBadge(visibility){
@@ -2551,11 +2651,16 @@ function openTestimonyDetailWindow(itemId){
   const dialog = document.getElementById('testimonyDetailDialog');
   const fields = document.getElementById('testimonyDetailFields');
   if(!dialog || !fields) return;
+  const videoLine = item.hasVideoPreview
+    ? (VIDEO_PREVIEW_URLS[item.id] ? 'Video attached (preview only, this browser session)' : 'Video attached previously — preview expired, re-upload below to preview again')
+    : 'No video attached';
   fields.innerHTML = '<div class="form-field full"><label>Display Name</label><input value="' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '" readonly /></div>' +
     '<div class="form-field"><label>Visibility</label><input value="' + escapeHtml(formatVisibilityBadge(item.visibility)) + '" readonly /></div>' +
     '<div class="form-field"><label>Status</label><input value="' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '" readonly /></div>' +
+    '<div class="form-field"><label>Date Shown Publicly</label><input type="date" id="testimonyDateInput" value="' + escapeHtml((item.reviewDate || (item.createdAt || '').slice(0, 10))) + '" /></div>' +
     '<div class="form-field full"><label>Full Testimony</label><textarea readonly>' + escapeHtml(item.message || '') + '</textarea></div>' +
-    '<div class="form-field full"><label>Public Display Text</label><textarea id="testimonyPublicDisplayText">' + escapeHtml(item.publicDisplayText || item.message || '') + '</textarea></div>';
+    '<div class="form-field full"><label>Public Display Text</label><textarea id="testimonyPublicDisplayText">' + escapeHtml(item.publicDisplayText || item.message || '') + '</textarea></div>' +
+    '<div class="form-field full"><label>Video (Preview Only)</label><p class="admin-hint">' + escapeHtml(videoLine) + '</p><input id="testimonyReplaceVideoInput" type="file" accept="video/*" /></div>';
   document.getElementById('testimonyStatusMessage').textContent = '';
   dialog.dataset.testimonyId = item.id;
   dialog.showModal();
@@ -2571,6 +2676,7 @@ function openReviewDetailWindow(itemId){
     '<div class="form-field"><label>Reviewer</label><input value="' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '" readonly /></div>' +
     '<div class="form-field"><label>Visibility</label><input value="' + escapeHtml(formatVisibilityBadge(item.visibility)) + '" readonly /></div>' +
     '<div class="form-field"><label>Status</label><input value="' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '" readonly /></div>' +
+    '<div class="form-field"><label>Date Shown Publicly</label><input type="date" id="reviewDateInput" value="' + escapeHtml((item.reviewDate || (item.createdAt || '').slice(0, 10))) + '" /></div>' +
     '<div class="form-field full"><label>Review</label><textarea readonly>' + escapeHtml(item.message || '') + '</textarea></div>' +
     '<div class="form-field full"><label>Public Display Text</label><textarea id="reviewPublicDisplayText">' + escapeHtml(item.publicDisplayText || item.message || '') + '</textarea></div>';
   document.getElementById('reviewStatusMessage').textContent = '';
@@ -2615,6 +2721,31 @@ function setReviewStatus(itemId, nextStatus){
   if(document.getElementById('reviewDetailDialog')) document.getElementById('reviewDetailDialog').close();
 }
 
+// Video testimony preview only: the file itself lives in memory for the
+// current browser tab (object URL), never in localStorage — a real video
+// upload/host is not connected yet. item.hasVideoPreview persists so the
+// Owner Portal can still show "video attached" after a reload, even once
+// the object URL itself is gone.
+const VIDEO_PREVIEW_URLS = {};
+
+function testimonialCardHtml(item){
+  const name = publicNameLabel(item);
+  const dateLabel = shortDate(item.reviewDate || item.createdAt);
+  const title = item.title ? '<h4>' + escapeHtml(item.title) + '</h4>' : '';
+  const videoUrl = VIDEO_PREVIEW_URLS[item.id];
+  let media = '';
+  if(item.hasVideoPreview){
+    media = videoUrl
+      ? '<div class="testimony-video-frame" data-video-play="' + item.id + '"><video src="' + escapeHtml(videoUrl) + '" muted playsinline preload="metadata"></video><span class="video-play-overlay">▶</span></div>'
+      : '<div class="testimony-video-frame testimony-video-expired"><span class="video-play-overlay">▶</span><p>Video preview only available during this browser session — re-upload to preview again.</p></div>';
+  }
+  return '<article class="preview-card testimony-card">' + media +
+    '<span>' + escapeHtml(name) + ' · ' + escapeHtml(dateLabel) + '</span>' +
+    title +
+    '<p>' + escapeHtml((item.publicDisplayText || item.message || '').slice(0, 220)) + '</p>' +
+  '</article>';
+}
+
 function renderPublishedTestimonials(){
   const page = document.body.dataset.page;
   if(page !== 'testimonials' && !document.getElementById('publishedTestimonialsSection')) return;
@@ -2622,17 +2753,54 @@ function renderPublishedTestimonials(){
   const list = document.getElementById('publishedTestimonialsList');
   if(!section || !list) return;
   const items = TESTIMONIALS.filter(t => t.status === 'published');
-  if(items.length === 0){ list.innerHTML = '<p class="admin-hint">No published testimonies yet.</p>'; return; }
-  list.innerHTML = items.map(item => '<article class="preview-card"><span>' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '</span><h4>' + escapeHtml((item.publicDisplayText || item.message || '').slice(0, 80)) + '</h4><p>' + escapeHtml((item.message || '').slice(0, 220)) + '</p></article>').join('');
+  section.hidden = items.length === 0;
+  if(items.length === 0){ list.innerHTML = ''; return; }
+  list.innerHTML = items.map(testimonialCardHtml).join('');
+}
+
+let classReviewsExpanded = false;
+function classReviewCardHtml(item){
+  const rating = Number(item.rating) || 0;
+  const stars = rating ? '<span class="review-stars" aria-label="' + rating + ' out of 5 stars">' + '★'.repeat(rating) + '☆'.repeat(5 - rating) + '</span>' : '';
+  return '<article class="preview-card review-card">' +
+    '<span>' + escapeHtml(item.className || 'Class Review') + ' · ' + escapeHtml(shortDate(item.reviewDate || item.createdAt)) + '</span>' +
+    '<h4>' + escapeHtml(publicNameLabel(item)) + '</h4>' +
+    stars +
+    '<p>' + escapeHtml((item.publicDisplayText || item.message || '').slice(0, 220)) + '</p>' +
+  '</article>';
 }
 
 function renderPublishedClassReviews(){
   const list = document.getElementById('publishedClassReviewsList');
+  const section = document.getElementById('publishedClassReviewsSection');
   if(!list) return;
   const items = CLASS_REVIEWS.filter(r => r.status === 'published');
-  if(items.length === 0){ list.innerHTML = '<p class="admin-hint">No published class reviews yet.</p>'; return; }
-  list.innerHTML = items.map(item => '<article class="preview-card"><span>' + escapeHtml(item.className || 'Class Review') + '</span><h4>' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '</h4><p>' + escapeHtml((item.publicDisplayText || item.message || '').slice(0, 220)) + '</p></article>').join('');
+  if(section) section.hidden = items.length === 0;
+  if(items.length === 0){ list.innerHTML = ''; return; }
+  const visible = classReviewsExpanded ? items : items.slice(0, 3);
+  list.innerHTML = visible.map(classReviewCardHtml).join('');
+  const moreWrap = document.getElementById('publishedClassReviewsMore');
+  if(moreWrap){
+    moreWrap.innerHTML = (!classReviewsExpanded && items.length > 3)
+      ? '<button type="button" class="btn on-light" id="viewMoreClassReviews">View More Reviews</button>' : '';
+  }
 }
+document.addEventListener('click', event => {
+  if(event.target.closest('#viewMoreClassReviews')){
+    classReviewsExpanded = true;
+    renderPublishedClassReviews();
+  }
+  const videoFrame = event.target.closest('[data-video-play]');
+  if(videoFrame){
+    const video = videoFrame.querySelector('video');
+    if(video){
+      video.controls = true;
+      video.muted = false;
+      video.play();
+      videoFrame.querySelector('.video-play-overlay')?.remove();
+    }
+  }
+});
 
 function ensurePublicMinistrySections(){
   if(document.body.dataset.page === 'testimonials'){
@@ -2646,7 +2814,7 @@ function ensurePublicMinistrySections(){
   const reviewSection = document.getElementById('publishedClassReviewsSection');
   if(!reviewSection && document.body.dataset.page === 'teachings'){
     const target = document.getElementById('teachingCardsSection');
-    const html = '<section class="on-light-section" id="publishedClassReviewsSection" style="padding-top:0"><div class="section-inner"><div class="eyebrow reveal" style="margin-bottom:24px">Class Reviews</div><div class="preview-cards reveal" id="publishedClassReviewsList"></div></div></section>';
+    const html = '<section class="on-light-section" id="publishedClassReviewsSection" style="padding-top:0"><div class="section-inner"><div class="eyebrow reveal" style="margin-bottom:24px">Class Reviews</div><div class="preview-cards reveal" id="publishedClassReviewsList"></div><div style="margin-top:24px;text-align:center" id="publishedClassReviewsMore"></div></div></section>';
     if(target) target.insertAdjacentHTML('afterend', html); else document.body.insertAdjacentHTML('beforeend', html);
   }
   const reviewButtonArea = document.getElementById('classReviewButtonArea');
@@ -2699,7 +2867,7 @@ function bindMinistryFormDialogEvents(){
       persistMinistryData();
       renderMinistryInboxViews();
       form.reset();
-      document.getElementById('prayerFormStatus').textContent = 'We received your prayer request and we are praying for you. Confirmation message shown. Email response will be enabled when email automation is connected.';
+      document.getElementById('prayerFormStatus').textContent = 'We received your prayer request and we are praying for you.';
       const dialog = document.getElementById('prayerRequestDialog');
       if(dialog) setTimeout(() => dialog.close(), 1200);
     });
@@ -2716,15 +2884,22 @@ function bindMinistryFormDialogEvents(){
         lastName: String(formData.get('lastName') || formData.get('name') || '').trim().split(/\s+/).slice(1).join(' '),
         email: String(formData.get('email') || '').trim(),
         phone: String(formData.get('phone') || '').trim(),
+        title: String(formData.get('title') || '').trim(),
         message: String(formData.get('message') || '').trim(),
         visibility: String(formData.get('visibility') || 'public'),
         status: 'pending',
         publicDisplayText: '',
+        hasVideoPreview: false,
         createdAt: new Date().toISOString()
       };
       if(!item.message || (!formData.get('permission') && !formData.get('terms'))){
         document.getElementById('testimonyFormStatus').textContent = 'Please complete the form and agree to the terms.';
         return;
+      }
+      const mediaFile = formData.get('media');
+      if(mediaFile && mediaFile instanceof File && mediaFile.type.startsWith('video/') && mediaFile.size > 0){
+        VIDEO_PREVIEW_URLS[item.id] = URL.createObjectURL(mediaFile);
+        item.hasVideoPreview = true;
       }
       TESTIMONIALS.unshift(item);
       persistMinistryData();
@@ -2766,7 +2941,7 @@ function bindMinistryFormDialogEvents(){
       renderMinistryInboxViews();
       renderPublishedClassReviews();
       form.reset();
-      document.getElementById('classReviewFormStatus').textContent = 'Thank you — your class review was received and is waiting for review.';
+      document.getElementById('classReviewFormStatus').textContent = 'Thank you for sharing your class review.';
       const dialog = document.getElementById('classReviewDialog');
       if(dialog) setTimeout(() => dialog.close(), 1200);
     });
@@ -2828,29 +3003,32 @@ function setupPublicFormButtons(){
 
 function addMinistryDialogs(){
   document.body.insertAdjacentHTML('beforeend', `
-    <dialog class="story-dialog" id="prayerRequestDialog" aria-labelledby="prayerRequestTitle">
-      <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Prayer Request</div><h3 id="prayerRequestTitle">Request Prayer</h3></div><button class="dialog-close" id="closePrayerRequestDialog" type="button" aria-label="Close prayer form">×</button></div>
+    <dialog class="story-dialog prayer-simple-dialog" id="prayerRequestDialog" aria-labelledby="prayerRequestTitle">
+      <div class="dialog-head"><div><h3 id="prayerRequestTitle">Prayer Request</h3></div><button class="dialog-close" id="closePrayerRequestDialog" type="button" aria-label="Close prayer form">×</button></div>
       <div class="dialog-body">
-        <p class="dialog-intro">Share what is on your heart. Your choice of Public, Anonymous, or Private determines how visible it is.</p>
+        <p class="dialog-intro">Share your prayer request below. We are honored to pray with you.</p>
         <form id="prayerRequestForm">
           <div class="story-form-grid">
-            <div class="form-field"><label for="prayerFirstName">First Name</label><input id="prayerFirstName" name="firstName" type="text" placeholder="First name" required /></div>
-            <div class="form-field"><label for="prayerLastName">Last Name</label><input id="prayerLastName" name="lastName" type="text" placeholder="Last name" required /></div>
-            <div class="form-field"><label for="prayerEmail">Email</label><input id="prayerEmail" name="email" type="email" placeholder="Email address" required /></div>
-            <div class="form-field"><label for="prayerPhone">Phone</label><input id="prayerPhone" name="phone" type="tel" placeholder="Phone optional" /></div>
-            <div class="form-field full"><label for="prayerMessage">Prayer Request</label><textarea id="prayerMessage" name="message" rows="5" placeholder="Tell us what you are carrying" required></textarea></div>
+            <div class="form-field full"><textarea id="prayerMessage" name="message" rows="6" class="prayer-message-box" placeholder="Type your prayer request here..." required></textarea></div>
             <div class="form-field full">
-              <label>How would you like this handled?</label>
-              <div class="option-card-grid">
-                <label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong><small>May be shared with the ministry community.</small></span></label>
-                <label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong><small>Your name and personal details will be hidden.</small></span></label>
-                <label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong><small>Only visible to the ministry team.</small></span></label>
+              <div class="option-card-grid option-card-grid-compact">
+                <label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong></span></label>
+                <label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong></span></label>
+                <label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong></span></label>
               </div>
             </div>
-            <div class="form-field full"><label class="permission-label"><input name="terms" type="checkbox" required /><span>I agree to the Prayer Request Terms and understand that a submission does not guarantee a personal response.</span></label></div>
-            <div class="form-field full"><a class="text-link" href="#" id="prayerTermsLink" type="button">Read Terms &amp; Conditions</a></div>
+            <details class="prayer-optional-fields" style="grid-column:1/-1">
+              <summary>Add your name or email (optional)</summary>
+              <div class="story-form-grid" style="margin-top:14px">
+                <div class="form-field"><label for="prayerFirstName">First Name</label><input id="prayerFirstName" name="firstName" type="text" placeholder="First name" /></div>
+                <div class="form-field"><label for="prayerLastName">Last Name</label><input id="prayerLastName" name="lastName" type="text" placeholder="Last name" /></div>
+                <div class="form-field"><label for="prayerEmail">Email</label><input id="prayerEmail" name="email" type="email" placeholder="Email address" /></div>
+                <div class="form-field"><label for="prayerPhone">Phone</label><input id="prayerPhone" name="phone" type="tel" placeholder="Phone optional" /></div>
+              </div>
+            </details>
+            <div class="form-field full"><label class="permission-label"><input name="terms" type="checkbox" required /><span>I agree to the Prayer Request Terms. <a class="text-link" href="#" id="prayerTermsLink" type="button">Read Terms &amp; Conditions</a></span></label></div>
           </div>
-          <div class="form-actions"><button class="btn fill" type="submit">Submit Request</button><div class="form-status" id="prayerFormStatus" role="status" aria-live="polite"></div></div>
+          <div class="form-actions"><button class="btn fill" type="submit">Send Prayer Request</button><div class="form-status" id="prayerFormStatus" role="status" aria-live="polite"></div></div>
         </form>
       </div>
     </dialog>
@@ -2962,6 +3140,7 @@ function addMinistryDialogs(){
       const item = TESTIMONIALS.find(t => t.id === id);
       if(item){
         item.publicDisplayText = document.getElementById('testimonyPublicDisplayText')?.value || item.publicDisplayText || item.message || '';
+        item.reviewDate = document.getElementById('testimonyDateInput')?.value || item.reviewDate;
       }
       setTestimonyStatus(id, testimonyStatusBtn.dataset.testimonyStatus);
       document.getElementById('testimonyStatusMessage').textContent = 'Status updated.';
@@ -2972,10 +3151,24 @@ function addMinistryDialogs(){
       const item = CLASS_REVIEWS.find(r => r.id === id);
       if(item){
         item.publicDisplayText = document.getElementById('reviewPublicDisplayText')?.value || item.publicDisplayText || item.message || '';
+        item.reviewDate = document.getElementById('reviewDateInput')?.value || item.reviewDate;
       }
       setReviewStatus(id, reviewStatusBtn.dataset.reviewStatus);
       document.getElementById('reviewStatusMessage').textContent = 'Status updated.';
     }
+  });
+  document.addEventListener('change', event => {
+    if(event.target.id !== 'testimonyReplaceVideoInput') return;
+    const file = event.target.files && event.target.files[0];
+    if(!file || !file.type.startsWith('video/')) return;
+    const id = document.getElementById('testimonyDetailDialog').dataset.testimonyId;
+    const item = TESTIMONIALS.find(t => t.id === id);
+    if(!item) return;
+    VIDEO_PREVIEW_URLS[item.id] = URL.createObjectURL(file);
+    item.hasVideoPreview = true;
+    persistMinistryData();
+    document.getElementById('testimonyStatusMessage').textContent = 'Video preview replaced for this browser session.';
+    renderPublishedTestimonials();
   });
 }
 
@@ -3845,8 +4038,15 @@ function renderBookingOptions(){
   bookingOptionsEl.innerHTML = types.map((t, i) => (
     '<label class="booking-option">' +
       '<input type="radio" name="sessionType" value="' + escapeHtml(t.id) + '"' + (i === 0 ? ' checked' : '') + ' />' +
-      '<span><strong>' + escapeHtml(t.name) + '</strong><small>' + escapeHtml(t.description || '') +
-      (t.price ? ' — $' + Number(t.price).toFixed(2) : '') + '</small></span>' +
+      '<span class="booking-option-body">' +
+        '<strong>' + escapeHtml(t.name) + '</strong>' +
+        (t.durationMinutes ? '<span class="booking-option-duration">' + t.durationMinutes + ' minutes</span>' : '') +
+        '<small>' + escapeHtml(t.description || '') + '</small>' +
+        '<span class="booking-option-foot">' +
+          '<span class="booking-option-price">' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</span>' +
+          '<span class="booking-option-select">Select</span>' +
+        '</span>' +
+      '</span>' +
     '</label>'
   )).join('');
   bookingOptionsEl.querySelectorAll('input[name="sessionType"]').forEach(radio => {
@@ -4051,6 +4251,16 @@ function updateBookingSummaryPanel(){
 function renderBookingTimeButtons(){
   const wrap = document.getElementById('bookingTimeButtons');
   if(!wrap) return;
+  const heading = document.getElementById('bookingTimesHeading');
+  if(heading){
+    const dateStr = bookingDateInput.value;
+    if(dateStr){
+      const formatted = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(dateStr + 'T12:00:00'));
+      heading.textContent = 'Available Times for ' + formatted;
+    } else {
+      heading.textContent = 'Available Times';
+    }
+  }
   const opts = Array.from(bookingTimeSelect.options).filter(o => o.value);
   if(bookingTimeSelect.disabled || opts.length === 0){
     const msg = bookingTimeSelect.options[0] ? bookingTimeSelect.options[0].text : 'Choose a date first';
