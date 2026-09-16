@@ -1425,6 +1425,7 @@ function dialogsHtml(){
       <div class="dialog-note">Your story is saved to this preview's Owner Portal inbox — the ministry team reviews it before anything is published.</div>
       <form id="testimonyForm">
         <div class="story-form-grid">
+          <div class="form-field full form-section-label">Your Information</div>
           <div class="form-field">
             <label for="storyFirstName">First Name</label>
             <input id="storyFirstName" name="firstName" type="text" placeholder="First name" required />
@@ -1441,6 +1442,7 @@ function dialogsHtml(){
             <label for="storyPhone">Phone (optional)</label>
             <input id="storyPhone" name="phone" type="tel" placeholder="Phone number" />
           </div>
+          <div class="form-field full form-section-label" style="margin-top:8px">Your Testimony</div>
           <div class="form-field">
             <label for="storyTitle">Testimony Title (optional)</label>
             <input id="storyTitle" name="title" type="text" placeholder="A short title for your story" />
@@ -1471,6 +1473,7 @@ function dialogsHtml(){
             <label for="storyMessage">Your testimony or review</label>
             <textarea id="storyMessage" name="message" placeholder="Share the complete story in your own words" required></textarea>
           </div>
+          <div class="form-field full form-section-label" style="margin-top:8px">Media (Optional)</div>
           <div class="form-field">
             <label for="storyMedia">Add a photo or video</label>
             <input id="storyMedia" name="media" type="file" accept="image/*,video/*" />
@@ -3023,10 +3026,11 @@ function addMinistryDialogs(){
           <div class="story-form-grid">
             <div class="form-field full"><textarea id="prayerMessage" name="message" rows="6" class="prayer-message-box" placeholder="Type your prayer request here..." required></textarea></div>
             <div class="form-field full">
-              <div class="option-card-grid option-card-grid-compact">
-                <label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong></span></label>
-                <label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong></span></label>
-                <label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong></span></label>
+              <label class="visibility-group-label">How would you like this handled?</label>
+              <div class="option-card-grid">
+                <label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong><small>May be shared with the ministry community.</small></span></label>
+                <label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong><small>Your name and personal details will be hidden.</small></span></label>
+                <label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong><small>Only visible to the ministry team.</small></span></label>
               </div>
             </div>
             <details class="prayer-optional-fields" style="grid-column:1/-1">
@@ -3986,12 +3990,14 @@ function availabilitySummaryText(){
     const key = r.startTime + '-' + r.endTime;
     (byWindow[key] = byWindow[key] || []).push(DAY_NAMES[r.dayOfWeek]);
   });
-  const tzAbbr = businessTzAbbr();
+  // Spell out "Eastern Time" rather than showing EST/EDT — the ministry's
+  // timezone doesn't change, but which abbreviation is correct does (twice
+  // a year), so the plain name reads right on every visit.
   const parts = Object.keys(byWindow).map(key => {
     const [start, end] = key.split('-');
-    return byWindow[key].join(' & ') + ', ' + minutesToLabel(hhmmToMinutes(start)) + '–' + minutesToLabel(hhmmToMinutes(end)) + (tzAbbr ? ' ' + tzAbbr : '');
+    return byWindow[key].join(' and ') + ', ' + minutesToLabel(hhmmToMinutes(start)) + '–' + minutesToLabel(hhmmToMinutes(end)) + ' Eastern Time';
   });
-  return 'Sessions are held ' + parts.join('; ') + '. Your request is sent for confirmation — you\'ll be contacted at the email you provide.';
+  return 'Sessions are currently available ' + parts.join('; ') + '. Requests are sent for confirmation.';
 }
 
 const bookingDialog = document.getElementById('bookingDialog');
