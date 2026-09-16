@@ -1230,10 +1230,9 @@ function dialogsHtml(){
       <div class="checkout-form-side">
         <div class="oneonone-steps checkout-step-strip" id="bookingStepStrip">
           <div class="oneonone-step" data-step-indicator="session"><div class="oneonone-step-num">1</div><div class="oneonone-step-label">Session</div></div>
-          <div class="oneonone-step" data-step-indicator="date"><div class="oneonone-step-num">2</div><div class="oneonone-step-label">Date</div></div>
-          <div class="oneonone-step" data-step-indicator="time"><div class="oneonone-step-num">3</div><div class="oneonone-step-label">Time</div></div>
-          <div class="oneonone-step" data-step-indicator="details"><div class="oneonone-step-num">4</div><div class="oneonone-step-label">Details &amp; Payment</div></div>
-          <div class="oneonone-step" data-step-indicator="confirm"><div class="oneonone-step-num">5</div><div class="oneonone-step-label">Confirmation</div></div>
+          <div class="oneonone-step" data-step-indicator="date"><div class="oneonone-step-num">2</div><div class="oneonone-step-label">Date &amp; Time</div></div>
+          <div class="oneonone-step" data-step-indicator="details"><div class="oneonone-step-num">3</div><div class="oneonone-step-label">Details &amp; Payment</div></div>
+          <div class="oneonone-step" data-step-indicator="confirm"><div class="oneonone-step-num">4</div><div class="oneonone-step-label">Confirmation</div></div>
         </div>
         <form id="bookingForm">
           <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
@@ -1255,28 +1254,26 @@ function dialogsHtml(){
             <div class="booking-field full" style="margin-bottom:18px">
               <select id="bookingTimeZone" name="timeZone"></select>
             </div>
-            <div class="admin-microlabel checkout-section-label">Choose A Date</div>
-            <div class="booking-field full">
-              <input id="bookingDate" name="date" type="date" required />
+            <div class="booking-date-time-layout">
+              <div>
+                <div class="admin-microlabel checkout-section-label">Choose A Date</div>
+                <div class="booking-field full">
+                  <input id="bookingDate" name="date" type="date" required />
+                </div>
+              </div>
+              <div>
+                <div class="admin-microlabel checkout-section-label">Available Times</div>
+                <p class="admin-hint" style="margin-bottom:14px">All times are shown in Eastern Time.</p>
+                <div class="booking-time-grid" id="bookingTimeButtons"></div>
+                <select id="bookingTime" name="time" required disabled style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true" tabindex="-1">
+                  <option value="">Choose a date first</option>
+                </select>
+                <div class="booking-hold-notice" id="bookingHoldNotice" role="status" aria-live="polite"></div>
+              </div>
             </div>
-            <p class="admin-hint" style="margin-top:10px">You'll only be able to choose from times that are actually open — all times are shown in Eastern Time.</p>
             <div class="booking-step-actions">
               <button type="button" class="admin-btn-ghost" data-booking-back="session">Back</button>
               <button type="button" class="admin-btn-solid checkout-submit" id="bookingStepDateNext" disabled>Continue</button>
-            </div>
-          </div>
-
-          <div class="booking-step" data-booking-step="time" hidden>
-            <div class="admin-microlabel checkout-section-label">Available Times</div>
-            <p class="admin-hint" style="margin-bottom:14px">All times are shown in Eastern Time.</p>
-            <div class="booking-time-grid" id="bookingTimeButtons"></div>
-            <select id="bookingTime" name="time" required disabled style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true" tabindex="-1">
-              <option value="">Choose a date first</option>
-            </select>
-            <div class="booking-hold-notice" id="bookingHoldNotice" role="status" aria-live="polite"></div>
-            <div class="booking-step-actions">
-              <button type="button" class="admin-btn-ghost" data-booking-back="date">Back</button>
-              <button type="button" class="admin-btn-solid checkout-submit" id="bookingStepTimeNext" disabled>Continue</button>
             </div>
           </div>
 
@@ -1444,7 +1441,7 @@ function dialogsHtml(){
           <div class="form-field full">
             <label class="permission-label">
               <input name="permission" type="checkbox" required />
-              <span>I give The Assembly permission to review this submission and contact me before anything is published.</span>
+              <span>I agree to the Testimony Submission Terms and understand that publication requires ministry review.</span>
             </label>
           </div>
         </div>
@@ -2236,16 +2233,766 @@ const closeStoryForm = document.getElementById('closeStoryForm');
 const testimonyForm = document.getElementById('testimonyForm');
 const formStatus = document.getElementById('formStatus');
 
+const MINISTRY_STORAGE_KEYS = {
+  prayerRequests: 'ua_ministry_prayer_requests_v1',
+  testimonials: 'ua_ministry_testimonials_v1',
+  classReviews: 'ua_ministry_class_reviews_v1',
+  policies: 'ua_ministry_policies_v1'
+};
+
+const DEFAULT_MINISTRY_POLICIES = {
+  prayerTerms: {
+    title: 'Prayer Request Terms and Conditions',
+    text: 'I agree that my prayer request is offered with a sincere heart and may be reviewed by the ministry team. I understand that a prayer request does not guarantee a personal response and may be handled publicly, anonymously, or privately depending on the option I selected. I understand that my submitted information is kept private when I choose privacy or anonymity.',
+    lastUpdated: '2026-09-16', active: true
+  },
+  testimonyTerms: {
+    title: 'Testimony Submission Terms',
+    text: 'I agree that my testimony may be reviewed before publication. I understand that my information may be kept private or hidden in public or anonymous display. I understand that publication is at the discretion of The Unveiled Assembly and does not guarantee public posting.',
+    lastUpdated: '2026-09-16', active: true
+  },
+  reviewTerms: {
+    title: 'Class Review Terms',
+    text: 'I agree that my class review may be reviewed before publication. I understand that public posting is optional and that The Unveiled Assembly may choose to keep a review private or anonymous.',
+    lastUpdated: '2026-09-16', active: true
+  },
+  generalTerms: {
+    title: 'General Terms and Conditions',
+    text: 'All ministry forms are intended for prayer, testimony, and class feedback. Information is reviewed by The Unveiled Assembly and may be kept private or published only with ministry approval. No information submitted through these forms is a guarantee of pastoral response or publication.',
+    lastUpdated: '2026-09-16', active: true
+  },
+  noRefund: {
+    title: 'No Refund Policy',
+    text: 'All one-on-one bookings and teaching purchases are final and non-refundable. Requests may be rescheduled only when the ministry approves a new time.',
+    lastUpdated: '2026-09-16', active: true
+  }
+};
+
+const DEFAULT_PRAYER_REQUESTS = [
+  {
+    id: 'prayer-demo-1',
+    firstName: 'Kendra',
+    lastName: 'M.',
+    email: 'kendra@example.com',
+    phone: '+1-555-0100',
+    message: 'Please pray for clarity and peace as I navigate a season of transition and unanswered questions.',
+    visibility: 'private',
+    status: 'new',
+    notes: 'Follow-up to be offered by the prayer team.',
+    createdAt: '2026-09-12T10:15:00.000Z'
+  },
+  {
+    id: 'prayer-demo-2',
+    firstName: 'Anonymous',
+    lastName: '',
+    email: '',
+    phone: '',
+    message: 'I am asking for strength and protection during a difficult financial season.',
+    visibility: 'anonymous',
+    status: 'completed',
+    notes: 'Prayer is complete and archived for follow-up.',
+    createdAt: '2026-09-10T09:30:00.000Z'
+  }
+];
+
+const DEFAULT_TESTIMONIALS = [
+  {
+    id: 'story-demo-1',
+    firstName: 'Sarah',
+    lastName: 'M.',
+    email: 'sarah@example.com',
+    phone: '+1-555-0311',
+    message: 'During the teaching, I felt a deeper sense of peace and clarity about decisions I had been wrestling with for months.',
+    visibility: 'public',
+    status: 'published',
+    publicDisplayText: 'Sarah M. — During the teaching, I felt a deeper sense of peace and clarity about decisions I had been wrestling with for months.',
+    createdAt: '2026-09-08T17:00:00.000Z'
+  },
+  {
+    id: 'story-demo-2',
+    firstName: 'Anonymous',
+    lastName: '',
+    email: '',
+    phone: '',
+    message: 'I did not know how to pray for my situation until I heard the teaching and felt God direct my heart.',
+    visibility: 'anonymous',
+    status: 'private',
+    publicDisplayText: 'Anonymous',
+    createdAt: '2026-09-06T13:14:00.000Z'
+  }
+];
+
+const DEFAULT_CLASS_REVIEWS = [
+  {
+    id: 'review-demo-1',
+    className: 'Discernment',
+    firstName: 'Marcus',
+    lastName: 'R.',
+    email: 'marcus@example.com',
+    phone: '+1-555-0700',
+    message: 'This class brought much-needed clarity to the way I pray and discern what God is speaking.',
+    visibility: 'public',
+    status: 'published',
+    publicDisplayText: 'Marcus R. — This class brought much-needed clarity to the way I pray and discern what God is speaking.',
+    rating: 5,
+    recommendation: 'Yes',
+    createdAt: '2026-09-04T08:20:00.000Z'
+  }
+];
+
+let PRAYER_REQUESTS = loadStoredJson(MINISTRY_STORAGE_KEYS.prayerRequests, DEFAULT_PRAYER_REQUESTS);
+let TESTIMONIALS = loadStoredJson(MINISTRY_STORAGE_KEYS.testimonials, DEFAULT_TESTIMONIALS);
+let CLASS_REVIEWS = loadStoredJson(MINISTRY_STORAGE_KEYS.classReviews, DEFAULT_CLASS_REVIEWS);
+let MINISTRY_POLICIES = loadStoredJson(MINISTRY_STORAGE_KEYS.policies, DEFAULT_MINISTRY_POLICIES);
+
+function loadStoredJson(key, fallback){
+  try {
+    const raw = localStorage.getItem(key);
+    if(!raw) return JSON.parse(JSON.stringify(fallback));
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) || parsed && typeof parsed === 'object' ? parsed : JSON.parse(JSON.stringify(fallback));
+  } catch (err) {
+    return JSON.parse(JSON.stringify(fallback));
+  }
+}
+
+function persistMinistryData(){
+  try {
+    localStorage.setItem(MINISTRY_STORAGE_KEYS.prayerRequests, JSON.stringify(PRAYER_REQUESTS));
+    localStorage.setItem(MINISTRY_STORAGE_KEYS.testimonials, JSON.stringify(TESTIMONIALS));
+    localStorage.setItem(MINISTRY_STORAGE_KEYS.classReviews, JSON.stringify(CLASS_REVIEWS));
+    localStorage.setItem(MINISTRY_STORAGE_KEYS.policies, JSON.stringify(MINISTRY_POLICIES));
+  } catch (err) {
+    console.warn('Preview ministry data could not be saved in localStorage.', err);
+  }
+}
+
+function shortDate(dateText){
+  if(!dateText) return 'Recently';
+  const date = new Date(dateText);
+  if(Number.isNaN(date.getTime())) return dateText;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+}
+
+function getNameLabel(item, fallback = 'Anonymous'){
+  if(!item) return fallback;
+  const visibility = item.visibility || 'public';
+  if(visibility === 'anonymous') return fallback;
+  if(visibility === 'private') return item.firstName ? item.firstName + ' ' + (item.lastName || '').trim() : 'Private submission';
+  return [item.firstName, item.lastName].filter(Boolean).join(' ') || fallback;
+}
+
+function getPublicPreviewLegacy(item){
+  if(!item) return 'Anonymous';
+  if(item.visibility === 'anonymous') return 'Anonymous';
+  if(item.visibility === 'private') return 'Private';
+  const name = [item.firstName, item.lastName].filter(Boolean).join(' ').trim();
+  return name ? name : 'Anonymous';
+}
+
+function formatVisibilityBadge(visibility){
+  const map = {
+    public: 'Public',
+    anonymous: 'Anonymous',
+    private: 'Private'
+  };
+  return map[visibility] || 'Public';
+}
+
+function renderOwnerInboxBadges(){
+  const countMap = {
+    'prayer-requests': PRAYER_REQUESTS.length,
+    'testimonials': TESTIMONIALS.length,
+    'class-reviews': CLASS_REVIEWS.length
+  };
+  Object.entries(countMap).forEach(([key, count]) => {
+    const badge = document.querySelector('[data-owner-nav="' + key + '"] .owner-nav-count');
+    if(badge) badge.textContent = count;
+  });
+}
+
+function initOwnerInboxNavigation(){
+  const sidebar = document.getElementById('ownerSidebar');
+  const content = document.querySelector('.owner-content');
+  if(!sidebar || !content) return;
+  if(!sidebar.querySelector('[data-owner-nav="prayer-requests"]')) {
+    sidebar.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="prayer-requests"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20H6.5A2.5 2.5 0 0 1 4 17.5zm0 0 8 6 8-6"/></svg>Prayer Requests<span class="owner-nav-count">0</span></button>');
+  }
+  if(!sidebar.querySelector('[data-owner-nav="testimonials"]')) {
+    sidebar.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="testimonials"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 18.5V5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5v8A1.5 1.5 0 0 1 17.5 15H9l-4 3.5z"/><path d="M9 8h6M9 11h6"/></svg>Testimonials<span class="owner-nav-count">0</span></button>');
+  }
+  if(!sidebar.querySelector('[data-owner-nav="class-reviews"]')) {
+    sidebar.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="class-reviews"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3.5 14.7 8l5 .7-3.6 3.5 1 4.9-4.7-2.4-4.7 2.4 1-4.9L4.3 8.7l5-.7L12 3.5z"/></svg>Class Reviews<span class="owner-nav-count">0</span></button>');
+  }
+
+  if(!content.querySelector('[data-owner-section="prayer-requests"]')) {
+    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="prayer-requests"><div class="admin-panel-head"><div><span class="portal-label">Prayer Requests</span><p class="admin-panel-intro">Prayer submissions, status tracking, private handling, and ministry follow-up.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-prayer-filter="all">All</button><button type="button" class="admin-tab" data-prayer-filter="new">New</button><button type="button" class="admin-tab" data-prayer-filter="in-progress">In Progress</button><button type="button" class="admin-tab" data-prayer-filter="completed">Completed</button><button type="button" class="admin-tab" data-prayer-filter="archived">Archived</button></div><div id="prayerInboxList"></div></article>');
+  }
+  if(!content.querySelector('[data-owner-section="testimonials"]')) {
+    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="testimonials"><div class="admin-panel-head"><div><span class="portal-label">Testimonials</span><p class="admin-panel-intro">Review, publish, keep private, and manage personal testimony submissions.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-story-filter="all">All</button><button type="button" class="admin-tab" data-story-filter="pending">Pending</button><button type="button" class="admin-tab" data-story-filter="published">Published</button><button type="button" class="admin-tab" data-story-filter="private">Private</button><button type="button" class="admin-tab" data-story-filter="archived">Archived</button></div><div id="testimonyInboxList"></div></article>');
+  }
+  if(!content.querySelector('[data-owner-section="class-reviews"]')) {
+    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="class-reviews"><div class="admin-panel-head"><div><span class="portal-label">Class Reviews</span><p class="admin-panel-intro">Review class feedback, publish approved responses, and keep private entries out of sight.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-review-filter="all">All</button><button type="button" class="admin-tab" data-review-filter="pending">Pending</button><button type="button" class="admin-tab" data-review-filter="published">Published</button><button type="button" class="admin-tab" data-review-filter="private">Private</button><button type="button" class="admin-tab" data-review-filter="archived">Archived</button></div><div id="classReviewInboxList"></div></article>');
+  }
+  if(!content.querySelector('[data-ministry-policy-settings]')) {
+    content.insertAdjacentHTML('beforeend', '<article class="portal-panel" style="grid-column:1/-1" data-owner-section="settings" data-ministry-policy-settings><div class="admin-panel-head"><div><span class="portal-label">Policies &amp; Agreements</span><p class="admin-panel-intro">Edit the terms visitors see on ministry forms. Preview changes persist in this browser only.</p></div></div><div id="ministryPolicySettings"></div></article>');
+    renderMinistryPolicySettings();
+  }
+  renderOwnerInboxBadges();
+}
+
+function renderPrayerInbox(filter = 'all'){
+  const wrap = document.getElementById('prayerInboxList');
+  if(!wrap) return;
+  const items = PRAYER_REQUESTS.filter(item => {
+    if(filter === 'all') return true;
+    if(filter === 'new') return item.status === 'new';
+    if(filter === 'in-progress') return item.status === 'in-progress';
+    if(filter === 'completed') return item.status === 'completed';
+    if(filter === 'archived') return item.status === 'archived';
+    return true;
+  });
+  if(items.length === 0){ wrap.innerHTML = '<p class="admin-hint">No prayer requests in this view yet.</p>'; return; }
+  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(getNameLabel(item, 'Anonymous')) + '</strong><span class="admin-status-pill ' + (item.status === 'completed' ? 'completed' : item.status === 'archived' ? 'cancelled' : 'published') + '">' + escapeHtml((item.status || 'new').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 130)) + (item.message && item.message.length > 130 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-prayer-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-prayer-delete="' + item.id + '">Delete</button></div></div>').join('');
+}
+
+function renderTestimonyInbox(filter = 'all'){
+  const wrap = document.getElementById('testimonyInboxList');
+  if(!wrap) return;
+  const items = TESTIMONIALS.filter(item => {
+    if(filter === 'all') return true;
+    return item.status === filter;
+  });
+  if(items.length === 0){ wrap.innerHTML = '<p class="admin-hint">No testimonies in this view yet.</p>'; return; }
+  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(getPublicPreviewLegacy(item)) + '</strong><span class="admin-status-pill ' + (item.status === 'published' ? 'published' : item.status === 'private' ? 'draft' : item.status === 'archived' ? 'cancelled' : 'draft') + '">' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 150)) + (item.message && item.message.length > 150 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-testimony-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-testimony-delete="' + item.id + '">Delete</button></div></div>').join('');
+}
+
+function renderClassReviewInbox(filter = 'all'){
+  const wrap = document.getElementById('classReviewInboxList');
+  if(!wrap) return;
+  const items = CLASS_REVIEWS.filter(item => {
+    if(filter === 'all') return true;
+    return item.status === filter;
+  });
+  if(items.length === 0){ wrap.innerHTML = '<p class="admin-hint">No class reviews in this view yet.</p>'; return; }
+  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(item.className || 'Class Review') + '</strong><span class="admin-status-pill ' + (item.status === 'published' ? 'published' : item.status === 'private' ? 'draft' : item.status === 'archived' ? 'cancelled' : 'draft') + '">' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(getPublicPreviewLegacy(item)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 150)) + (item.message && item.message.length > 150 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-review-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-review-delete="' + item.id + '">Delete</button></div></div>').join('');
+}
+
+function renderMinistryInboxViews(){
+  renderPrayerInbox();
+  renderTestimonyInbox();
+  renderClassReviewInbox();
+  renderOwnerInboxBadges();
+}
+
+function renderMinistryPolicySettings(){
+  const wrap = document.getElementById('ministryPolicySettings');
+  if(!wrap) return;
+  const keys = ['prayerTerms', 'testimonyTerms', 'reviewTerms', 'noRefund', 'generalTerms'];
+  wrap.innerHTML = keys.map(key => {
+    const policy = MINISTRY_POLICIES[key] || { title: '', text: '', lastUpdated: '', active: true };
+    return '<div class="ministry-policy-editor" data-policy-key="' + key + '">' +
+      '<div class="ministry-policy-editor-head"><strong>' + escapeHtml(policy.title || key) + '</strong><label><input type="checkbox" data-policy-active ' + (policy.active !== false ? 'checked' : '') + ' /> Active</label></div>' +
+      '<div class="booking-grid"><div class="booking-field"><label>Title</label><input data-policy-title value="' + escapeHtml(policy.title || '') + '" /></div><div class="booking-field"><label>Last Updated</label><input data-policy-date type="date" value="' + escapeHtml(policy.lastUpdated || '') + '" /></div><div class="booking-field full"><label>Policy Text</label><textarea data-policy-text rows="4">' + escapeHtml(policy.text || '') + '</textarea></div></div>' +
+      '<button type="button" class="admin-btn-solid" data-policy-save="' + key + '">Save Policy</button><span class="form-status" data-policy-status></span></div>';
+  }).join('');
+}
+
+function saveMinistryPolicy(key){
+  const editor = document.querySelector('[data-policy-key="' + key + '"]');
+  if(!editor) return;
+  const policy = MINISTRY_POLICIES[key] || {};
+  policy.title = editor.querySelector('[data-policy-title]').value.trim();
+  policy.text = editor.querySelector('[data-policy-text]').value.trim();
+  policy.lastUpdated = editor.querySelector('[data-policy-date]').value || new Date().toISOString().slice(0, 10);
+  policy.active = editor.querySelector('[data-policy-active]').checked;
+  MINISTRY_POLICIES[key] = policy;
+  if(key === 'noRefund') BOOKING_POLICIES.noRefund = { ...policy };
+  persistMinistryData();
+  saveBookingsPreviewToStorage();
+  const status = editor.querySelector('[data-policy-status]');
+  if(status) status.textContent = 'Saved in preview.';
+}
+
+function setMinistryFilter(type, filter){
+  if(type === 'prayer') renderPrayerInbox(filter);
+  if(type === 'story') renderTestimonyInbox(filter);
+  if(type === 'review') renderClassReviewInbox(filter);
+}
+
+function openPrayerDetailWindow(itemId){
+  const item = PRAYER_REQUESTS.find(p => p.id === itemId);
+  if(!item) return;
+  const dialog = document.getElementById('prayerDetailDialog');
+  const detailFields = document.getElementById('prayerDetailFields');
+  if(!dialog || !detailFields) return;
+  detailFields.innerHTML = '<div class="form-field full"><label>Name</label><input value="' + escapeHtml(getNameLabel(item, 'Anonymous')) + '" readonly /></div>' +
+    '<div class="form-field"><label>Email</label><input value="' + escapeHtml(item.visibility === 'anonymous' ? 'Hidden for anonymous request' : (item.email || 'No email')) + '" readonly /></div>' +
+    '<div class="form-field"><label>Phone</label><input value="' + escapeHtml(item.visibility === 'anonymous' ? 'Hidden for anonymous request' : (item.phone || 'No phone')) + '" readonly /></div>' +
+    '<div class="form-field"><label>Visibility</label><input value="' + escapeHtml(formatVisibilityBadge(item.visibility)) + '" readonly /></div>' +
+    '<div class="form-field"><label>Status</label><input value="' + escapeHtml((item.status || 'new').replace('-', ' ')) + '" readonly /></div>' +
+    '<div class="form-field full"><label>Prayer Request</label><textarea readonly>' + escapeHtml(item.message || '') + '</textarea></div>' +
+    '<div class="form-field full"><label>Internal Note</label><textarea id="prayerInternalNote">' + escapeHtml(item.notes || '') + '</textarea></div>';
+  const saveNoteButton = document.getElementById('savePrayerNoteBtn');
+  if(saveNoteButton) saveNoteButton.onclick = () => {
+    item.notes = document.getElementById('prayerInternalNote').value;
+    persistMinistryData();
+    renderMinistryInboxViews();
+    document.getElementById('prayerStatusMessage').textContent = 'Internal note saved.';
+  };
+  document.getElementById('prayerStatusMessage').textContent = '';
+  dialog.dataset.prayerId = item.id;
+  dialog.showModal();
+}
+
+function openTestimonyDetailWindow(itemId){
+  const item = TESTIMONIALS.find(t => t.id === itemId);
+  if(!item) return;
+  const dialog = document.getElementById('testimonyDetailDialog');
+  const fields = document.getElementById('testimonyDetailFields');
+  if(!dialog || !fields) return;
+  fields.innerHTML = '<div class="form-field full"><label>Display Name</label><input value="' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '" readonly /></div>' +
+    '<div class="form-field"><label>Visibility</label><input value="' + escapeHtml(formatVisibilityBadge(item.visibility)) + '" readonly /></div>' +
+    '<div class="form-field"><label>Status</label><input value="' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '" readonly /></div>' +
+    '<div class="form-field full"><label>Full Testimony</label><textarea readonly>' + escapeHtml(item.message || '') + '</textarea></div>' +
+    '<div class="form-field full"><label>Public Display Text</label><textarea id="testimonyPublicDisplayText">' + escapeHtml(item.publicDisplayText || item.message || '') + '</textarea></div>';
+  document.getElementById('testimonyStatusMessage').textContent = '';
+  dialog.dataset.testimonyId = item.id;
+  dialog.showModal();
+}
+
+function openReviewDetailWindow(itemId){
+  const item = CLASS_REVIEWS.find(r => r.id === itemId);
+  if(!item) return;
+  const dialog = document.getElementById('reviewDetailDialog');
+  const fields = document.getElementById('reviewDetailFields');
+  if(!dialog || !fields) return;
+  fields.innerHTML = '<div class="form-field"><label>Class</label><input value="' + escapeHtml(item.className || 'Class Review') + '" readonly /></div>' +
+    '<div class="form-field"><label>Reviewer</label><input value="' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '" readonly /></div>' +
+    '<div class="form-field"><label>Visibility</label><input value="' + escapeHtml(formatVisibilityBadge(item.visibility)) + '" readonly /></div>' +
+    '<div class="form-field"><label>Status</label><input value="' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '" readonly /></div>' +
+    '<div class="form-field full"><label>Review</label><textarea readonly>' + escapeHtml(item.message || '') + '</textarea></div>' +
+    '<div class="form-field full"><label>Public Display Text</label><textarea id="reviewPublicDisplayText">' + escapeHtml(item.publicDisplayText || item.message || '') + '</textarea></div>';
+  document.getElementById('reviewStatusMessage').textContent = '';
+  dialog.dataset.reviewId = item.id;
+  dialog.showModal();
+}
+
+function setPrayerStatus(itemId, nextStatus){
+  const item = PRAYER_REQUESTS.find(p => p.id === itemId);
+  if(!item) return;
+  item.status = nextStatus;
+  persistMinistryData();
+  renderMinistryInboxViews();
+  if(document.getElementById('prayerDetailDialog')) document.getElementById('prayerDetailDialog').close();
+}
+
+function setTestimonyStatus(itemId, nextStatus){
+  const item = TESTIMONIALS.find(t => t.id === itemId);
+  if(!item) return;
+  item.status = nextStatus;
+  if(nextStatus === 'published') {
+    item.publicDisplayText = item.publicDisplayText || item.message;
+  }
+  persistMinistryData();
+  renderMinistryInboxViews();
+  renderPublishedTestimonials();
+  renderPublishedClassReviews();
+  if(document.getElementById('testimonyDetailDialog')) document.getElementById('testimonyDetailDialog').close();
+}
+
+function setReviewStatus(itemId, nextStatus){
+  const item = CLASS_REVIEWS.find(r => r.id === itemId);
+  if(!item) return;
+  item.status = nextStatus;
+  if(nextStatus === 'published') {
+    item.publicDisplayText = item.publicDisplayText || item.message;
+  }
+  persistMinistryData();
+  renderMinistryInboxViews();
+  renderPublishedTestimonials();
+  renderPublishedClassReviews();
+  if(document.getElementById('reviewDetailDialog')) document.getElementById('reviewDetailDialog').close();
+}
+
+function renderPublishedTestimonials(){
+  const page = document.body.dataset.page;
+  if(page !== 'testimonials' && !document.getElementById('publishedTestimonialsSection')) return;
+  const section = document.getElementById('publishedTestimonialsSection');
+  const list = document.getElementById('publishedTestimonialsList');
+  if(!section || !list) return;
+  const items = TESTIMONIALS.filter(t => t.status === 'published');
+  if(items.length === 0){ list.innerHTML = '<p class="admin-hint">No published testimonies yet.</p>'; return; }
+  list.innerHTML = items.map(item => '<article class="preview-card"><span>' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '</span><h4>' + escapeHtml((item.publicDisplayText || item.message || '').slice(0, 80)) + '</h4><p>' + escapeHtml((item.message || '').slice(0, 220)) + '</p></article>').join('');
+}
+
+function renderPublishedClassReviews(){
+  const list = document.getElementById('publishedClassReviewsList');
+  if(!list) return;
+  const items = CLASS_REVIEWS.filter(r => r.status === 'published');
+  if(items.length === 0){ list.innerHTML = '<p class="admin-hint">No published class reviews yet.</p>'; return; }
+  list.innerHTML = items.map(item => '<article class="preview-card"><span>' + escapeHtml(item.className || 'Class Review') + '</span><h4>' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '</h4><p>' + escapeHtml((item.publicDisplayText || item.message || '').slice(0, 220)) + '</p></article>').join('');
+}
+
+function ensurePublicMinistrySections(){
+  if(document.body.dataset.page === 'testimonials'){
+    const hasSection = document.getElementById('publishedTestimonialsSection');
+    if(!hasSection){
+      const anchor = document.querySelector('section.on-light-section');
+      const html = '<section class="on-light-section" id="publishedTestimonialsSection" style="padding-top:0"><div class="section-inner"><div class="eyebrow reveal" style="margin-bottom:24px">Published Stories</div><div class="preview-cards reveal" id="publishedTestimonialsList"></div></div></section>';
+      if(anchor) anchor.insertAdjacentHTML('afterend', html); else document.body.insertAdjacentHTML('beforeend', html);
+    }
+  }
+  const reviewSection = document.getElementById('publishedClassReviewsSection');
+  if(!reviewSection && document.body.dataset.page === 'teachings'){
+    const target = document.getElementById('teachingCardsSection');
+    const html = '<section class="on-light-section" id="publishedClassReviewsSection" style="padding-top:0"><div class="section-inner"><div class="eyebrow reveal" style="margin-bottom:24px">Class Reviews</div><div class="preview-cards reveal" id="publishedClassReviewsList"></div></div></section>';
+    if(target) target.insertAdjacentHTML('afterend', html); else document.body.insertAdjacentHTML('beforeend', html);
+  }
+  const reviewButtonArea = document.getElementById('classReviewButtonArea');
+  if(!reviewButtonArea && document.body.dataset.page === 'teachings'){
+    const before = document.getElementById('teachingCardsSection');
+    if(before){ before.insertAdjacentHTML('beforeend', '<div class="reveal" style="margin-top:24px;display:flex;justify-content:flex-end"><button class="btn on-light fill" id="openClassReviewFromTeachings" type="button">Leave A Class Review</button></div>'); }
+  }
+  if(!document.getElementById('openClassReviewFromTestimonial')){
+    const testimonialArea = document.querySelector('section.on-light-section:last-of-type .reveal');
+    if(testimonialArea && document.body.dataset.page === 'testimonials'){
+      testimonialArea.insertAdjacentHTML('beforeend', '<button class="btn on-light fill" id="openClassReviewFromTestimonial" type="button" style="margin-left:20px">Leave A Class Review</button>');
+    }
+  }
+}
+
+function bindMinistryFormDialogEvents(){
+  const existingTestimonyForm = document.getElementById('testimonyForm');
+  if(existingTestimonyForm && !existingTestimonyForm.querySelector('[name="visibility"]')){
+    const messageField = existingTestimonyForm.querySelector('#storyMessage');
+    if(messageField){
+      messageField.closest('.form-field').insertAdjacentHTML('afterend', '<div class="form-field full"><label>How would you like this shared?</label><div class="option-card-grid"><label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong><small>Show my name and testimony on the website.</small></span></label><label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong><small>Hide my name and personal details.</small></span></label><label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong><small>Only visible to the ministry team.</small></span></label></div></div><div class="form-field full"><a class="text-link" href="#" id="testimonyTermsLink">Read Terms &amp; Conditions</a></div>');
+    }
+  }
+  document.getElementById('testimonyTermsLink')?.addEventListener('click', event => {
+    event.preventDefault();
+    openPolicyView('testimonyTerms');
+  });
+  if(document.getElementById('prayerRequestForm')) {
+    document.getElementById('prayerRequestForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const request = {
+        id: 'prayer-' + Date.now().toString(36),
+        firstName: String(formData.get('firstName') || '').trim(),
+        lastName: String(formData.get('lastName') || '').trim(),
+        email: String(formData.get('email') || '').trim(),
+        phone: String(formData.get('phone') || '').trim(),
+        message: String(formData.get('message') || '').trim(),
+        visibility: String(formData.get('visibility') || 'public'),
+        status: 'new',
+        notes: '',
+        createdAt: new Date().toISOString()
+      };
+      if(!request.message || !formData.get('terms')){
+        document.getElementById('prayerFormStatus').textContent = 'Please complete the form and agree to the terms.';
+        return;
+      }
+      PRAYER_REQUESTS.unshift(request);
+      persistMinistryData();
+      renderMinistryInboxViews();
+      form.reset();
+      document.getElementById('prayerFormStatus').textContent = 'We received your prayer request and we are praying for you. Confirmation message shown. Email response will be enabled when email automation is connected.';
+      const dialog = document.getElementById('prayerRequestDialog');
+      if(dialog) setTimeout(() => dialog.close(), 1200);
+    });
+  }
+
+  if(document.getElementById('testimonyForm')) {
+    document.getElementById('testimonyForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const item = {
+        id: 'story-' + Date.now().toString(36),
+        firstName: String(formData.get('firstName') || formData.get('name') || '').trim().split(/\s+/)[0],
+        lastName: String(formData.get('lastName') || formData.get('name') || '').trim().split(/\s+/).slice(1).join(' '),
+        email: String(formData.get('email') || '').trim(),
+        phone: String(formData.get('phone') || '').trim(),
+        message: String(formData.get('message') || '').trim(),
+        visibility: String(formData.get('visibility') || 'public'),
+        status: 'pending',
+        publicDisplayText: '',
+        createdAt: new Date().toISOString()
+      };
+      if(!item.message || (!formData.get('permission') && !formData.get('terms'))){
+        document.getElementById('testimonyFormStatus').textContent = 'Please complete the form and agree to the terms.';
+        return;
+      }
+      TESTIMONIALS.unshift(item);
+      persistMinistryData();
+      renderMinistryInboxViews();
+      renderPublishedTestimonials();
+      form.reset();
+      document.getElementById('testimonyFormStatus').textContent = 'Thank you — your testimony was received and is now waiting for review.';
+      const dialog = document.getElementById('storyDialog');
+      if(dialog) setTimeout(() => dialog.close(), 1200);
+    });
+  }
+
+  if(document.getElementById('classReviewForm')) {
+    document.getElementById('classReviewForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const item = {
+        id: 'review-' + Date.now().toString(36),
+        className: String(formData.get('className') || 'Other / type class name').trim(),
+        firstName: String(formData.get('firstName') || '').trim(),
+        lastName: String(formData.get('lastName') || '').trim(),
+        email: String(formData.get('email') || '').trim(),
+        phone: String(formData.get('phone') || '').trim(),
+        message: String(formData.get('message') || '').trim(),
+        visibility: String(formData.get('visibility') || 'public'),
+        status: 'pending',
+        publicDisplayText: '',
+        rating: String(formData.get('rating') || ''),
+        recommendation: String(formData.get('recommendation') || ''),
+        createdAt: new Date().toISOString()
+      };
+      if(!item.message || !formData.get('terms')){
+        document.getElementById('classReviewFormStatus').textContent = 'Please complete the form and agree to the review terms.';
+        return;
+      }
+      CLASS_REVIEWS.unshift(item);
+      persistMinistryData();
+      renderMinistryInboxViews();
+      renderPublishedClassReviews();
+      form.reset();
+      document.getElementById('classReviewFormStatus').textContent = 'Thank you — your class review was received and is waiting for review.';
+      const dialog = document.getElementById('classReviewDialog');
+      if(dialog) setTimeout(() => dialog.close(), 1200);
+    });
+  }
+
+  document.addEventListener('click', event => {
+    const prayerView = event.target.closest('[data-prayer-view]');
+    if(prayerView){ openPrayerDetailWindow(prayerView.dataset.prayerView); return; }
+    const testimonyView = event.target.closest('[data-testimony-view]');
+    if(testimonyView){ openTestimonyDetailWindow(testimonyView.dataset.testimonyView); return; }
+    const reviewView = event.target.closest('[data-review-view]');
+    if(reviewView){ openReviewDetailWindow(reviewView.dataset.reviewView); return; }
+    const prayerFilterBtn = event.target.closest('[data-prayer-filter]');
+    if(prayerFilterBtn){
+      document.querySelectorAll('[data-prayer-filter]').forEach(btn => btn.classList.toggle('active', btn === prayerFilterBtn));
+      setMinistryFilter('prayer', prayerFilterBtn.dataset.prayerFilter);
+    }
+    const storyFilterBtn = event.target.closest('[data-story-filter]');
+    if(storyFilterBtn){
+      document.querySelectorAll('[data-story-filter]').forEach(btn => btn.classList.toggle('active', btn === storyFilterBtn));
+      setMinistryFilter('story', storyFilterBtn.dataset.storyFilter);
+    }
+    const reviewFilterBtn = event.target.closest('[data-review-filter]');
+    if(reviewFilterBtn){
+      document.querySelectorAll('[data-review-filter]').forEach(btn => btn.classList.toggle('active', btn === reviewFilterBtn));
+      setMinistryFilter('review', reviewFilterBtn.dataset.reviewFilter);
+    }
+    if(event.target.closest('[data-open-prayer-form]')){
+      document.getElementById('prayerRequestDialog').showModal();
+    }
+    if(event.target.closest('[data-open-class-review-form]')){
+      document.getElementById('classReviewDialog').showModal();
+    }
+  });
+}
+
+function setupPublicFormButtons(){
+  const buttonTargets = [
+    { page: 'prayer', buttonId: 'prayerOpenRequest', action: 'prayer' },
+    { page: 'connect', buttonId: 'connectOpenPrayer', action: 'prayer' },
+    { page: 'testimonials', buttonId: 'openClassReviewFromTestimonial', action: 'classReview' },
+    { page: 'teachings', buttonId: 'openClassReviewFromTeachings', action: 'classReview' }
+  ];
+  buttonTargets.forEach(({ page, buttonId, action }) => {
+    const pageMatch = document.body.dataset.page === page;
+    const btn = document.getElementById(buttonId);
+    if(pageMatch && btn){
+      btn.addEventListener('click', () => {
+        const dialog = action === 'prayer' ? document.getElementById('prayerRequestDialog') : document.getElementById('classReviewDialog');
+        if(dialog) dialog.showModal();
+      });
+    }
+  });
+  if(document.body.dataset.page === 'connect'){
+    const prayerButton = document.getElementById('connectOpenPrayer');
+    if(prayerButton) prayerButton.addEventListener('click', () => document.getElementById('prayerRequestDialog').showModal());
+  }
+}
+
+function addMinistryDialogs(){
+  document.body.insertAdjacentHTML('beforeend', `
+    <dialog class="story-dialog" id="prayerRequestDialog" aria-labelledby="prayerRequestTitle">
+      <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Prayer Request</div><h3 id="prayerRequestTitle">Request Prayer</h3></div><button class="dialog-close" id="closePrayerRequestDialog" type="button" aria-label="Close prayer form">×</button></div>
+      <div class="dialog-body">
+        <p class="dialog-intro">Share what is on your heart. Your choice of Public, Anonymous, or Private determines how visible it is.</p>
+        <form id="prayerRequestForm">
+          <div class="story-form-grid">
+            <div class="form-field"><label for="prayerFirstName">First Name</label><input id="prayerFirstName" name="firstName" type="text" placeholder="First name" required /></div>
+            <div class="form-field"><label for="prayerLastName">Last Name</label><input id="prayerLastName" name="lastName" type="text" placeholder="Last name" required /></div>
+            <div class="form-field"><label for="prayerEmail">Email</label><input id="prayerEmail" name="email" type="email" placeholder="Email address" required /></div>
+            <div class="form-field"><label for="prayerPhone">Phone</label><input id="prayerPhone" name="phone" type="tel" placeholder="Phone optional" /></div>
+            <div class="form-field full"><label for="prayerMessage">Prayer Request</label><textarea id="prayerMessage" name="message" rows="5" placeholder="Tell us what you are carrying" required></textarea></div>
+            <div class="form-field full">
+              <label>How would you like this handled?</label>
+              <div class="option-card-grid">
+                <label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong><small>May be shared with the ministry community.</small></span></label>
+                <label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong><small>Your name and personal details will be hidden.</small></span></label>
+                <label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong><small>Only visible to the ministry team.</small></span></label>
+              </div>
+            </div>
+            <div class="form-field full"><label class="permission-label"><input name="terms" type="checkbox" required /><span>I agree to the Prayer Request Terms and understand that a submission does not guarantee a personal response.</span></label></div>
+            <div class="form-field full"><a class="text-link" href="#" id="prayerTermsLink" type="button">Read Terms &amp; Conditions</a></div>
+          </div>
+          <div class="form-actions"><button class="btn fill" type="submit">Submit Request</button><div class="form-status" id="prayerFormStatus" role="status" aria-live="polite"></div></div>
+        </form>
+      </div>
+    </dialog>
+
+    <dialog class="story-dialog" id="classReviewDialog" aria-labelledby="classReviewTitle">
+      <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Class Review</div><h3 id="classReviewTitle">Leave A Class Review</h3></div><button class="dialog-close" id="closeClassReviewDialog" type="button" aria-label="Close class review form">×</button></div>
+      <div class="dialog-body">
+        <form id="classReviewForm">
+          <div class="story-form-grid">
+            <div class="form-field"><label for="reviewClassName">Select Class</label><select id="reviewClassName" name="className"><option value="Discernment">Discernment</option><option value="The Prophetic">The Prophetic</option><option value="Hearing the Voice of God">Hearing the Voice of God</option><option value="Spiritual Warfare">Spiritual Warfare</option><option value="Identity in Christ">Identity in Christ</option><option value="Other / type class name">Other / type class name</option></select></div>
+            <div class="form-field"><label for="reviewFirstName">Reviewer First Name</label><input id="reviewFirstName" name="firstName" type="text" placeholder="First name" required /></div>
+            <div class="form-field"><label for="reviewLastName">Reviewer Last Name</label><input id="reviewLastName" name="lastName" type="text" placeholder="Last name" required /></div>
+            <div class="form-field"><label for="reviewEmail">Email</label><input id="reviewEmail" name="email" type="email" placeholder="Email address" required /></div>
+            <div class="form-field"><label for="reviewPhone">Phone</label><input id="reviewPhone" name="phone" type="tel" placeholder="Phone optional" /></div>
+            <div class="form-field"><label for="reviewRating">Rating</label><select id="reviewRating" name="rating"><option value="">Optional</option><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div>
+            <div class="form-field"><label for="reviewRecommendation">Would You Recommend?</label><select id="reviewRecommendation" name="recommendation"><option value="">Optional</option><option>Yes</option><option>No</option><option>Maybe</option></select></div>
+            <div class="form-field full"><label for="reviewMessage">Review Message</label><textarea id="reviewMessage" name="message" rows="6" placeholder="What changed for you?" required></textarea></div>
+            <div class="form-field full">
+              <label>How would you like this shared?</label>
+              <div class="option-card-grid">
+                <label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong><small>Show my name and review on the website.</small></span></label>
+                <label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong><small>Hide my name and personal details.</small></span></label>
+                <label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong><small>Only visible to the ministry team.</small></span></label>
+              </div>
+            </div>
+            <div class="form-field full"><label class="permission-label"><input name="terms" type="checkbox" required /><span>I agree to the Review Submission Terms.</span></label></div>
+          </div>
+          <div class="form-actions"><button class="btn fill" type="submit">Submit Review</button><div class="form-status" id="classReviewFormStatus" role="status" aria-live="polite"></div></div>
+        </form>
+      </div>
+    </dialog>
+
+    <dialog class="booking-dialog" id="prayerDetailDialog" aria-labelledby="prayerDetailTitle" style="max-width:640px">
+      <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Prayer Request</div><h3 id="prayerDetailTitle">View Request</h3></div><button class="dialog-close" id="closePrayerDetailDialog" type="button" aria-label="Close prayer detail">×</button></div>
+      <div class="dialog-body">
+        <div class="story-form-grid" id="prayerDetailFields"></div>
+        <div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-prayer-status="in-progress">Mark As In Progress</button><button class="admin-btn-solid" type="button" data-prayer-status="completed">Mark As Completed</button><button class="admin-btn-ghost" type="button" data-prayer-status="archived">Archive</button><button class="admin-btn-ghost" type="button" id="savePrayerNoteBtn">Save Note</button></div>
+        <div class="form-status" id="prayerStatusMessage" role="status" aria-live="polite"></div>
+      </div>
+    </dialog>
+
+    <dialog class="booking-dialog" id="testimonyDetailDialog" aria-labelledby="testimonyDetailTitle" style="max-width:640px">
+      <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Testimony</div><h3 id="testimonyDetailTitle">Review Submission</h3></div><button class="dialog-close" id="closeTestimonyDetailDialog" type="button" aria-label="Close testimony detail">×</button></div>
+      <div class="dialog-body"><div class="story-form-grid" id="testimonyDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-testimony-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-testimony-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-testimony-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-testimony-status="pending">Set Pending</button></div><div class="form-status" id="testimonyStatusMessage"></div></div>
+    </dialog>
+
+    <dialog class="booking-dialog" id="reviewDetailDialog" aria-labelledby="reviewDetailTitle" style="max-width:640px">
+      <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Class Review</div><h3 id="reviewDetailTitle">Review Submission</h3></div><button class="dialog-close" id="closeReviewDetailDialog" type="button" aria-label="Close review detail">×</button></div>
+      <div class="dialog-body"><div class="story-form-grid" id="reviewDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-review-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-review-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-review-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-review-status="pending">Set Pending</button></div><div class="form-status" id="reviewStatusMessage"></div></div>
+    </dialog>
+  `);
+
+  const prayerTermsLink = document.getElementById('prayerTermsLink');
+  if(prayerTermsLink) prayerTermsLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    openPolicyView('prayerTerms');
+  });
+
+  const testimonyTermsLink = document.getElementById('testimonyTermsLink');
+  if(testimonyTermsLink) testimonyTermsLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    openPolicyView('testimonyTerms');
+  });
+
+  document.getElementById('closePrayerRequestDialog')?.addEventListener('click', () => document.getElementById('prayerRequestDialog').close());
+  document.getElementById('closeClassReviewDialog')?.addEventListener('click', () => document.getElementById('classReviewDialog').close());
+  document.getElementById('closePrayerDetailDialog')?.addEventListener('click', () => document.getElementById('prayerDetailDialog').close());
+  document.getElementById('closeTestimonyDetailDialog')?.addEventListener('click', () => document.getElementById('testimonyDetailDialog').close());
+  document.getElementById('closeReviewDetailDialog')?.addEventListener('click', () => document.getElementById('reviewDetailDialog').close());
+
+  document.addEventListener('click', event => {
+    const policySave = event.target.closest('[data-policy-save]');
+    if(policySave){
+      saveMinistryPolicy(policySave.dataset.policySave);
+      return;
+    }
+    const prayerDelete = event.target.closest('[data-prayer-delete]');
+    if(prayerDelete){
+      PRAYER_REQUESTS = PRAYER_REQUESTS.filter(item => item.id !== prayerDelete.dataset.prayerDelete);
+      persistMinistryData();
+      renderMinistryInboxViews();
+      return;
+    }
+    const testimonyDelete = event.target.closest('[data-testimony-delete]');
+    if(testimonyDelete){
+      TESTIMONIALS = TESTIMONIALS.filter(item => item.id !== testimonyDelete.dataset.testimonyDelete);
+      persistMinistryData();
+      renderMinistryInboxViews();
+      renderPublishedTestimonials();
+      return;
+    }
+    const reviewDelete = event.target.closest('[data-review-delete]');
+    if(reviewDelete){
+      CLASS_REVIEWS = CLASS_REVIEWS.filter(item => item.id !== reviewDelete.dataset.reviewDelete);
+      persistMinistryData();
+      renderMinistryInboxViews();
+      renderPublishedClassReviews();
+      return;
+    }
+    const prayerStatusBtn = event.target.closest('[data-prayer-status]');
+    if(prayerStatusBtn){
+      const id = document.getElementById('prayerDetailDialog').dataset.prayerId;
+      setPrayerStatus(id, prayerStatusBtn.dataset.prayerStatus);
+      document.getElementById('prayerStatusMessage').textContent = 'Status updated.';
+    }
+    const testimonyStatusBtn = event.target.closest('[data-testimony-status]');
+    if(testimonyStatusBtn){
+      const id = document.getElementById('testimonyDetailDialog').dataset.testimonyId;
+      const item = TESTIMONIALS.find(t => t.id === id);
+      if(item){
+        item.publicDisplayText = document.getElementById('testimonyPublicDisplayText')?.value || item.publicDisplayText || item.message || '';
+      }
+      setTestimonyStatus(id, testimonyStatusBtn.dataset.testimonyStatus);
+      document.getElementById('testimonyStatusMessage').textContent = 'Status updated.';
+    }
+    const reviewStatusBtn = event.target.closest('[data-review-status]');
+    if(reviewStatusBtn){
+      const id = document.getElementById('reviewDetailDialog').dataset.reviewId;
+      const item = CLASS_REVIEWS.find(r => r.id === id);
+      if(item){
+        item.publicDisplayText = document.getElementById('reviewPublicDisplayText')?.value || item.publicDisplayText || item.message || '';
+      }
+      setReviewStatus(id, reviewStatusBtn.dataset.reviewStatus);
+      document.getElementById('reviewStatusMessage').textContent = 'Status updated.';
+    }
+  });
+}
+
 if(openStoryForm) openStoryForm.addEventListener('click', () => storyDialog.showModal());
-closeStoryForm.addEventListener('click', () => storyDialog.close());
-storyDialog.addEventListener('click', event => {
+if(closeStoryForm) closeStoryForm.addEventListener('click', () => storyDialog.close());
+if(storyDialog) storyDialog.addEventListener('click', event => {
   if(event.target === storyDialog) storyDialog.close();
 });
-storyDialog.addEventListener('close', () => { formStatus.textContent = ''; });
-testimonyForm.addEventListener('submit', event => {
-  event.preventDefault();
-  formStatus.textContent = "Thank you — this form isn't wired to storage yet, so nothing was saved. Please email your story to contactunveiledassembly@gmail.com for now.";
-});
+if(storyDialog) storyDialog.addEventListener('close', () => { if(formStatus) formStatus.textContent = ''; });
+addMinistryDialogs();
+initOwnerInboxNavigation();
+bindMinistryFormDialogEvents();
+setupPublicFormButtons();
+ensurePublicMinistrySections();
+renderMinistryInboxViews();
+renderPublishedTestimonials();
+renderPublishedClassReviews();
 
 /* ---------------------------------------------------------------
    Helpers
@@ -3093,7 +3840,7 @@ function renderBookingOptions(){
   if(!bookingOptionsEl) return;
   const types = Object.keys(SESSION_TYPES)
     .map(id => ({ id, ...SESSION_TYPES[id] }))
-    .filter(t => t.active !== false)
+    .filter(t => t.active !== false && (t.id === '15-minute' || t.id === '30-minute'))
     .sort((a, b) => (a.order || 0) - (b.order || 0));
   bookingOptionsEl.innerHTML = types.map((t, i) => (
     '<label class="booking-option">' +
@@ -3269,7 +4016,7 @@ async function loadTimeSlots(){
    untouched); this layer only shows/hides panels and keeps the left
    summary panel in sync with what's been chosen so far.
    --------------------------------------------------------------- */
-const BOOKING_WIZARD_STEPS = ['session', 'date', 'time', 'details', 'confirm'];
+const BOOKING_WIZARD_STEPS = ['session', 'date', 'details', 'confirm'];
 let bookingWizardStep = 'session';
 function showBookingWizardStep(name){
   bookingWizardStep = name;
@@ -3308,11 +4055,11 @@ function renderBookingTimeButtons(){
   if(bookingTimeSelect.disabled || opts.length === 0){
     const msg = bookingTimeSelect.options[0] ? bookingTimeSelect.options[0].text : 'Choose a date first';
     wrap.innerHTML = '<p class="admin-hint">' + escapeHtml(msg) + '</p>';
-    document.getElementById('bookingStepTimeNext').disabled = true;
+    document.getElementById('bookingStepDateNext').disabled = true;
     return;
   }
   wrap.innerHTML = opts.map(o => '<button type="button" class="booking-time-btn" data-time="' + escapeHtml(o.value) + '">' + escapeHtml(o.text.split(' (')[0]) + '</button>').join('');
-  document.getElementById('bookingStepTimeNext').disabled = true;
+  document.getElementById('bookingStepDateNext').disabled = true;
 }
 document.getElementById('bookingTimeButtons').addEventListener('click', event => {
   const btn = event.target.closest('.booking-time-btn');
@@ -3326,18 +4073,21 @@ document.getElementById('bookingStepSessionNext').addEventListener('click', () =
   bookingStatus.textContent = '';
   updateBookingSummaryPanel();
   showBookingWizardStep('date');
-});
-document.getElementById('bookingStepDateNext').addEventListener('click', () => {
-  showBookingWizardStep('time');
   loadTimeSlots();
 });
-bookingDateInput.addEventListener('input', () => {
-  document.getElementById('bookingStepDateNext').disabled = !bookingDateInput.value;
-});
-document.getElementById('bookingStepTimeNext').addEventListener('click', () => {
+document.getElementById('bookingStepDateNext').addEventListener('click', () => {
+  if(!bookingTimeSelect.value){
+    bookingStatus.textContent = 'Choose an available time to continue.';
+    return;
+  }
+  bookingStatus.textContent = '';
   updateBookingSummaryPanel();
   showBookingWizardStep('details');
   renderBookingOrderSummary();
+});
+bookingDateInput.addEventListener('input', () => {
+  document.getElementById('bookingStepDateNext').disabled = true;
+  loadTimeSlots();
 });
 document.querySelectorAll('[data-booking-back]').forEach(btn => {
   btn.addEventListener('click', () => showBookingWizardStep(btn.dataset.bookingBack));
@@ -3353,7 +4103,7 @@ function renderBookingOrderSummary(){
     '<div class="checkout-order-total"><span>Total</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</span></div>';
 }
 function openPolicyView(key){
-  const p = BOOKING_POLICIES[key];
+  const p = BOOKING_POLICIES[key] || MINISTRY_POLICIES[key];
   if(!p) return;
   document.getElementById('policyViewTitle').textContent = p.title || (key === 'terms' ? 'Terms and Conditions' : 'No Refund Policy');
   document.getElementById('policyViewText').textContent = p.text || '';
@@ -3369,7 +4119,6 @@ function openBooking(service){
   bookingForm.reset();
   bookingStatus.textContent = '';
   document.getElementById('bookingStepDateNext').disabled = true;
-  document.getElementById('bookingStepTimeNext').disabled = true;
   if(service){
     const serviceChoice = bookingForm.querySelector('input[name="sessionType"][value="' + service + '"]');
     if(serviceChoice) serviceChoice.checked = true;
@@ -3488,7 +4237,7 @@ bookingTimeSelect.addEventListener('change', async () => {
     const hold = await createHold(dateStr, time, sessionTypeId);
     currentHoldDate = dateStr; currentHoldTime = time;
     startHoldCountdown(hold.expiresAt);
-    const nextBtn = document.getElementById('bookingStepTimeNext');
+    const nextBtn = document.getElementById('bookingStepDateNext');
     if(nextBtn) nextBtn.disabled = false;
   } catch (err) {
     bookingStatus.textContent = 'That time was just taken by someone else — please choose another.';
@@ -3585,7 +4334,7 @@ bookingForm.addEventListener('submit', async event => {
   } catch (err) {
     if(err.message === 'slot-taken'){
       bookingStatus.textContent = 'That time was just taken by someone else — pick another.';
-      showBookingWizardStep('time');
+      showBookingWizardStep('date');
       loadTimeSlots();
     } else {
       bookingStatus.textContent = 'Could not submit your request. Please try again.';

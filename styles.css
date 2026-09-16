@@ -384,6 +384,16 @@ footer{background:var(--black);padding:80px 5vw 32px;border-top:1px solid var(--
 .portal-dialog::backdrop,.booking-dialog::backdrop,.story-dialog::backdrop{background:rgba(5,5,5,.86);backdrop-filter:blur(8px)}
 
 .story-dialog{width:min(760px,calc(100% - 32px));max-height:90vh;background:var(--panel);color:var(--ivory);border-color:var(--line-dark)}
+.option-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:8px}
+.option-card{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(255,255,255,.02);cursor:pointer}
+.option-card input{margin-top:3px}
+.option-card strong{display:block;margin-bottom:4px;font-size:14px;color:var(--ivory)}
+.option-card small{display:block;line-height:1.5;color:var(--stone)}
+.owner-nav-count{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:10px;font-weight:700;font-family:var(--sans)}
+.owner-sidebar-item{position:relative}
+.owner-sidebar-item .owner-nav-count{background:rgba(255,255,255,.10)}
+.owner-sidebar-item.active .owner-nav-count{background:#0c0c0e;color:#fff}
+.text-link{color:var(--ivory);text-decoration:underline;text-underline-offset:3px}
 .dialog-head{display:flex;justify-content:space-between;gap:24px;padding:28px 30px 22px;border-bottom:1px solid var(--line-dark)}
 .dialog-head h3{font-family:var(--serif);font-size:36px;font-weight:400;margin:6px 0 0}
 .dialog-close{width:42px;height:42px;border:1px solid var(--line-dark);border-radius:50%;background:transparent;color:var(--ivory);font-size:22px;cursor:pointer}
@@ -1089,6 +1099,16 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
 .admin-teaching-meta{font-family:var(--mono);font-size:11px;color:var(--owner-text-faint);margin-top:4px;letter-spacing:.01em}
 .admin-teaching-actions{display:flex;gap:6px;flex-wrap:wrap}
 .admin-teaching-actions .admin-btn-ghost{padding:7px 12px;font-size:10.5px}
+.ministry-inbox{min-height:240px}
+.ministry-inbox .admin-tabs{display:flex;gap:7px;flex-wrap:wrap}
+.ministry-inbox .admin-teaching-row{background:var(--owner-surface);}
+.ministry-policy-editor{padding:18px 0;border-top:1px solid var(--owner-border)}
+.ministry-policy-editor:first-child{border-top:0;padding-top:0}
+.ministry-policy-editor-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;color:var(--owner-text)}
+.ministry-policy-editor-head strong{font-family:var(--serif);font-size:18px;font-weight:600}
+.ministry-policy-editor-head label{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--owner-text-muted)}
+.ministry-policy-editor-head input{accent-color:var(--owner-accent)}
+.ministry-policy-editor .form-status{display:inline-block;margin-left:10px;color:var(--owner-text-muted)}
 
 /* =================================================================
    Checkout / class registration — clean, white/gray/black/charcoal.
@@ -1139,7 +1159,7 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
 .checkout-step-strip.oneonone-steps{grid-template-columns:repeat(3,1fr);gap:8px;max-width:none}
 .checkout-step-strip .oneonone-step-num{border-color:#e6e6e9;color:#8b8b93;width:26px;height:26px;font-size:11px;margin-bottom:8px;transition:.15s}
 .checkout-step-strip .oneonone-step-label{color:#8b8b93;font-size:10.5px;transition:.15s}
-#bookingStepStrip.oneonone-steps{grid-template-columns:repeat(5,1fr);gap:4px}
+#bookingStepStrip.oneonone-steps{grid-template-columns:repeat(4,1fr);gap:4px}
 .checkout-step-strip .oneonone-step.active .oneonone-step-num{background:#18181b;border-color:#18181b;color:#fff}
 .checkout-step-strip .oneonone-step.active .oneonone-step-label{color:#18181b;font-weight:700}
 .checkout-step-strip .oneonone-step.completed .oneonone-step-num{background:#18181b;border-color:#18181b;color:#fff}
@@ -1150,6 +1170,10 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
 .booking-step-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px}
 .booking-step-actions .admin-btn-solid,.booking-step-actions .admin-btn-ghost{padding:11px 22px;font-size:12px}
 .booking-step-actions .checkout-submit{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:999px}
+.booking-date-time-layout{display:grid;grid-template-columns:minmax(190px,.85fr) minmax(250px,1.15fr);gap:24px;padding:18px;border:1px solid #e6e6e9;border-radius:16px;background:#fafafb}
+.booking-date-time-layout .booking-field input{background:#fff}
+.booking-date-time-layout .booking-time-grid{margin-bottom:0}
+.booking-date-time-layout .booking-hold-notice{min-height:18px}
 .booking-time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .booking-time-btn{
   font-family:var(--sans);font-size:13px;font-weight:600;padding:13px 8px;border-radius:12px;
@@ -1181,6 +1205,9 @@ body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:
   .checkout-grid{grid-template-columns:1fr}
   .checkout-summary{min-height:220px}
   .checkout-form-side{max-height:none}
+}
+@media(max-width:560px){
+  .booking-date-time-layout{grid-template-columns:1fr;gap:18px;padding:14px}
 }
 
 /* ---------- Admin: draft-preview flag on the public detail page ---------- */
