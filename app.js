@@ -1422,20 +1422,28 @@ function dialogsHtml(){
     </div>
     <div class="dialog-body">
       <p class="dialog-intro">You may share a written testimony, a class review, a photograph, or a video. Your submission remains private until The Assembly reviews it and receives permission to publish it.</p>
-      <div class="dialog-note"><strong>Preview only:</strong> submitting this example shows the confirmation experience, but it does not send or save your information yet.</div>
+      <div class="dialog-note">Your story is saved to this preview's Owner Portal inbox — the ministry team reviews it before anything is published.</div>
       <form id="testimonyForm">
         <div class="story-form-grid">
           <div class="form-field">
-            <label for="storyName">Your name</label>
-            <input id="storyName" name="name" type="text" placeholder="First and last name" required />
+            <label for="storyFirstName">First Name</label>
+            <input id="storyFirstName" name="firstName" type="text" placeholder="First name" required />
           </div>
           <div class="form-field">
-            <label for="storyTitle">Title (optional)</label>
-            <input id="storyTitle" name="title" type="text" placeholder="A short title for your story" />
+            <label for="storyLastName">Last Name</label>
+            <input id="storyLastName" name="lastName" type="text" placeholder="Last name" required />
           </div>
           <div class="form-field">
             <label for="storyEmail">Email address</label>
             <input id="storyEmail" name="email" type="email" placeholder="For private follow-up" required />
+          </div>
+          <div class="form-field">
+            <label for="storyPhone">Phone (optional)</label>
+            <input id="storyPhone" name="phone" type="tel" placeholder="Phone number" />
+          </div>
+          <div class="form-field">
+            <label for="storyTitle">Testimony Title (optional)</label>
+            <input id="storyTitle" name="title" type="text" placeholder="A short title for your story" />
           </div>
           <div class="form-field">
             <label for="storyType">What are you sharing?</label>
@@ -1480,7 +1488,7 @@ function dialogsHtml(){
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn" type="submit">Preview Submission</button>
+          <button class="btn" type="submit">Submit Testimony</button>
           <div class="form-status" id="formStatus" role="status" aria-live="polite"></div>
         </div>
       </form>
@@ -2825,7 +2833,7 @@ function ensurePublicMinistrySections(){
   if(!document.getElementById('openClassReviewFromTestimonial')){
     const testimonialArea = document.querySelector('section.on-light-section:last-of-type .reveal');
     if(testimonialArea && document.body.dataset.page === 'testimonials'){
-      testimonialArea.insertAdjacentHTML('beforeend', '<button class="btn on-light fill" id="openClassReviewFromTestimonial" type="button" style="margin-left:20px">Leave A Class Review</button>');
+      testimonialArea.insertAdjacentHTML('beforeend', '<button class="text-link secondary-cta-link" id="openClassReviewFromTestimonial" type="button" style="color:var(--ink-muted);border-color:var(--line-light)">Leave A Class Review →</button>');
     }
   }
 }
@@ -2867,6 +2875,7 @@ function bindMinistryFormDialogEvents(){
       persistMinistryData();
       renderMinistryInboxViews();
       form.reset();
+      console.log('Prayer request submitted');
       document.getElementById('prayerFormStatus').textContent = 'We received your prayer request and we are praying for you.';
       const dialog = document.getElementById('prayerRequestDialog');
       if(dialog) setTimeout(() => dialog.close(), 1200);
@@ -2906,7 +2915,8 @@ function bindMinistryFormDialogEvents(){
       renderMinistryInboxViews();
       renderPublishedTestimonials();
       form.reset();
-      document.getElementById('testimonyFormStatus').textContent = 'Thank you — your testimony was received and is now waiting for review.';
+      console.log('Testimony submitted');
+      document.getElementById('testimonyFormStatus').textContent = 'Thank you for sharing your testimony.';
       const dialog = document.getElementById('storyDialog');
       if(dialog) setTimeout(() => dialog.close(), 1200);
     });
@@ -2985,15 +2995,17 @@ function setupPublicFormButtons(){
     { page: 'testimonials', buttonId: 'openClassReviewFromTestimonial', action: 'classReview' },
     { page: 'teachings', buttonId: 'openClassReviewFromTeachings', action: 'classReview' }
   ];
-  buttonTargets.forEach(({ page, buttonId, action }) => {
-    const pageMatch = document.body.dataset.page === page;
+  buttonTargets.forEach(({ buttonId, action }) => {
+    // Matched on element existence alone — each id only exists on the
+    // page(s) that render it, so a page-name check here was one more
+    // way this could silently fail to wire up.
     const btn = document.getElementById(buttonId);
-    if(pageMatch && btn){
-      btn.addEventListener('click', () => {
-        const dialog = action === 'prayer' ? document.getElementById('prayerRequestDialog') : document.getElementById('classReviewDialog');
-        if(dialog) dialog.showModal();
-      });
-    }
+    if(!btn) return;
+    btn.addEventListener('click', () => {
+      const dialog = action === 'prayer' ? document.getElementById('prayerRequestDialog') : document.getElementById('classReviewDialog');
+      console.log(action === 'prayer' ? 'Prayer request form opened' : 'Class review form opened');
+      if(dialog) dialog.showModal();
+    });
   });
   if(document.body.dataset.page === 'connect'){
     const prayerButton = document.getElementById('connectOpenPrayer');
@@ -3172,20 +3184,27 @@ function addMinistryDialogs(){
   });
 }
 
-if(openStoryForm) openStoryForm.addEventListener('click', () => storyDialog.showModal());
+if(openStoryForm) openStoryForm.addEventListener('click', () => { console.log('Testimony form opened'); storyDialog.showModal(); });
 if(closeStoryForm) closeStoryForm.addEventListener('click', () => storyDialog.close());
 if(storyDialog) storyDialog.addEventListener('click', event => {
   if(event.target === storyDialog) storyDialog.close();
 });
 if(storyDialog) storyDialog.addEventListener('close', () => { if(formStatus) formStatus.textContent = ''; });
-addMinistryDialogs();
-initOwnerInboxNavigation();
-bindMinistryFormDialogEvents();
-setupPublicFormButtons();
-ensurePublicMinistrySections();
-renderMinistryInboxViews();
-renderPublishedTestimonials();
-renderPublishedClassReviews();
+// Each step runs in its own try/catch: a problem in one (e.g. a
+// preview-mode render) must never stop the public Prayer/Testimony/
+// Class Review buttons further down from getting wired up.
+// ensurePublicMinistrySections() must run BEFORE setupPublicFormButtons()
+// — it's what actually inserts the "Leave A Class Review" button on the
+// Testimonials/Teachings pages, and a listener can't attach to a button
+// that isn't in the DOM yet.
+try { addMinistryDialogs(); } catch (err) { console.error('addMinistryDialogs failed', err); }
+try { initOwnerInboxNavigation(); } catch (err) { console.error('initOwnerInboxNavigation failed', err); }
+try { bindMinistryFormDialogEvents(); } catch (err) { console.error('bindMinistryFormDialogEvents failed', err); }
+try { ensurePublicMinistrySections(); } catch (err) { console.error('ensurePublicMinistrySections failed', err); }
+try { setupPublicFormButtons(); } catch (err) { console.error('setupPublicFormButtons failed', err); }
+try { renderMinistryInboxViews(); } catch (err) { console.error('renderMinistryInboxViews failed', err); }
+try { renderPublishedTestimonials(); } catch (err) { console.error('renderPublishedTestimonials failed', err); }
+try { renderPublishedClassReviews(); } catch (err) { console.error('renderPublishedClassReviews failed', err); }
 
 /* ---------------------------------------------------------------
    Helpers
