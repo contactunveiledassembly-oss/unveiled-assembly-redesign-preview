@@ -7169,7 +7169,7 @@ function renderTeachingHero(){
   wrap.innerHTML = teachingHeroMediaHtml(t) +
     '<div class="teaching-hero-content reveal">' +
     '<div class="eyebrow">Upcoming Class</div>' +
-    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
+    '<h1 class="teaching-display teaching-title-mono">' + escapeHtml(t.title || '') + '</h1>' +
     (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '<p class="teaching-hero-desc">' + escapeHtml(t.shortDescription || '') + '</p>' +
     '<div class="teaching-meta-row">' +
@@ -7243,7 +7243,7 @@ function renderTeachingDetailPage(){
     '<header class="teaching-hero teaching-detail-hero">' + teachingHeroMediaHtml(t) +
     '<div class="teaching-hero-content reveal">' +
     '<div class="eyebrow">' + escapeHtml(t.category || 'Teaching') + '</div>' +
-    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
+    '<h1 class="teaching-display teaching-title-mono">' + escapeHtml(t.title || '') + '</h1>' +
     (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '</div></header>' +
     '<section class="on-light-section">' +
