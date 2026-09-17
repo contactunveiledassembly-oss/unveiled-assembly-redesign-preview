@@ -209,25 +209,6 @@ body.demo-mode .nav{top:26px}
 
 .text-link{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;border-bottom:1px solid currentColor;padding-bottom:6px}
 
-/* ---------- Decorative: concentric ring / orb motif ---------- */
-.orb{
-  position:relative; aspect-ratio:1/1; border-radius:50%;
-  background:
-    repeating-radial-gradient(circle at 50% 50%,
-      rgba(245,243,238,.10) 0px, rgba(245,243,238,.10) 1px,
-      transparent 1px, transparent 34px);
-  -webkit-mask-image:radial-gradient(circle, black 62%, transparent 100%);
-  mask-image:radial-gradient(circle, black 62%, transparent 100%);
-}
-.orb::before{
-  content:"";position:absolute;left:50%;top:50%;width:14%;height:14%;
-  transform:translate(-50%,-50%);border-radius:50%;
-  background:radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0) 72%);
-  filter:blur(1px);
-}
-.orb.small{width:220px}
-.orb.large{width:640px}
-
 /* ---------- Ghost / watermark text ---------- */
 .ghost-word{
   position:absolute; font-family:var(--display); text-transform:uppercase;
@@ -252,12 +233,7 @@ section{padding:130px 5vw; position:relative; overflow:hidden}
   padding:120px 5vw 60px; overflow:hidden;
   background:radial-gradient(ellipse at 70% 45%, rgba(255,255,255,.045), transparent 55%), var(--black);
 }
-.hero-orb-wrap{position:absolute; right:-8vw; top:50%; transform:translateY(-50%); width:56vw; max-width:900px; z-index:0; opacity:.9}
 .hero-sub{max-width:480px;color:var(--stone);font-size:15px;line-height:1.7;margin-top:34px}
-
-@media(max-width:640px){
-  .hero-orb-wrap{width:110vw;right:-20vw;opacity:.5}
-}
 
 /* ---------- Split feature block (two columns w/ divider) ---------- */
 .split{display:grid;grid-template-columns:1fr 1fr;position:relative}
@@ -280,7 +256,6 @@ section{padding:130px 5vw; position:relative; overflow:hidden}
   background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.03), transparent 65%);
   border-right:1px solid var(--line-dark); padding:40px;
 }
-.feature-card-visual .orb{width:min(320px,80%)}
 .feature-card-body{padding:56px 48px;display:flex;flex-direction:column;justify-content:center}
 .feature-card-body .eyebrow{margin-bottom:18px}
 .feature-card-body h3{font-family:var(--serif);font-size:clamp(32px,3.4vw,48px);margin-bottom:20px}
@@ -324,14 +299,13 @@ section{padding:130px 5vw; position:relative; overflow:hidden}
    ============================================================ */
 
 /* ---------- Minimal black hero (Sept 2026) ----------
-   Solid black/near-black, no imagery, no warm color — image + colored
-   glow direction was tried and rolled back per approved-mockup notes.
-   Scoped to .hero-cinematic, a modifier added alongside the existing
-   .hero class only in index.html — .hero's own base rule (and its
-   subtle radial-gradient texture) is untouched, so give.html/shop
-   (which reuse bare .hero) are unaffected; .hero-orb-wrap is the same
-   monochrome ring motif give.html already uses, reused here for the
-   "extremely subtle texture" the direction calls for. */
+   Solid black/near-black, no imagery, no warm color, no decorative
+   circle/orb/glow focal point — image, colored glow, and ring/orb
+   motif directions were each tried and rolled back per approved-
+   mockup notes. Scoped to .hero-cinematic, a modifier added alongside
+   the existing .hero class only in index.html — .hero's own base rule
+   (and its subtle radial-gradient texture) is untouched, so give.html/
+   shop (which reuse bare .hero) are unaffected. */
 .hero-cinematic{padding:0}
 
 .hero-content{position:relative; z-index:2; text-align:center; padding:0 6vw; max-width:920px; margin:0 auto}
@@ -377,7 +351,6 @@ section{padding:130px 5vw; position:relative; overflow:hidden}
     linear-gradient(155deg, #1c1a17, #0a0a0a 70%);
   border-right:1px solid var(--line-dark); padding:40px;
 }
-.event-feature-visual .orb{width:min(260px,70%); position:relative}
 .event-feature-card{background:var(--ivory); color:var(--black); padding:56px 50px; display:flex; flex-direction:column; justify-content:center}
 .event-feature-label{font-size:10px; letter-spacing:.28em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:16px}
 .event-feature-card h3{font-size:clamp(30px,4vw,50px); margin-bottom:18px}
