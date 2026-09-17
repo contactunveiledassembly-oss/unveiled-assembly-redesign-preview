@@ -247,8 +247,47 @@ const DEMO_TEACHINGS = {
 let DEMO_TEACHING_ZOOM = {
   'demo-discernment': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '000 000 0000', passcode: 'demo' }
 };
-let DEMO_TEACHING_REGISTRATIONS = [];
-let DEMO_TEACHING_REG_SEQ = 1;
+function demoPastTimestamp(daysAgo, hour, minute){
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
+}
+// Sample class registrations for the Ministry Portal's Registrations area.
+// Same demo/preview shape a real registration gets in createTeachingRegistration
+// below — registeredAt, attendanceStatus and notes are recorded for real on
+// every new registration; only these seed rows and their dates are sample data.
+let DEMO_TEACHING_REGISTRATIONS = [
+  { id: 'demo-reg-1', teachingId: 'demo-discernment', teachingTitle: 'Discernment', teachingDate: DEMO_TEACHINGS['demo-discernment'].date,
+    firstName: 'Kayla', lastName: 'R.', email: 'kayla@example.com', phone: '+15555550123', uid: null,
+    status: 'confirmed', attendanceStatus: 'not-marked', amountPaid: 25, notes: '',
+    registeredAt: demoPastTimestamp(6, 20, 43) },
+  { id: 'demo-reg-2', teachingId: 'demo-discernment', teachingTitle: 'Discernment', teachingDate: DEMO_TEACHINGS['demo-discernment'].date,
+    firstName: 'Marcus', lastName: 'J.', email: 'marcus@example.com', phone: '+15555550188', uid: null,
+    status: 'confirmed', attendanceStatus: 'not-marked', amountPaid: 25, notes: '',
+    registeredAt: demoPastTimestamp(5, 18, 10) },
+  { id: 'demo-reg-3', teachingId: 'demo-discernment', teachingTitle: 'Discernment', teachingDate: DEMO_TEACHINGS['demo-discernment'].date,
+    firstName: 'Jasmine', lastName: 'T.', email: 'jasmine@example.com', phone: '', uid: null,
+    status: 'pending_payment', attendanceStatus: 'not-marked', amountPaid: 0, notes: '',
+    registeredAt: demoPastTimestamp(2, 11, 2) },
+  { id: 'demo-reg-4', teachingId: 'demo-discernment', teachingTitle: 'Discernment', teachingDate: DEMO_TEACHINGS['demo-discernment'].date,
+    firstName: 'Sam', lastName: 'Rivera', email: 'sam@example.com', phone: '+15555550199', uid: null,
+    status: 'cancelled', attendanceStatus: 'not-marked', amountPaid: 0, notes: 'Requested refund — schedule conflict.',
+    registeredAt: demoPastTimestamp(9, 9, 27) },
+  { id: 'demo-reg-5', teachingId: 'demo-discernment', teachingTitle: 'Discernment', teachingDate: DEMO_TEACHINGS['demo-discernment'].date,
+    firstName: 'Taylor', lastName: 'B.', email: 'taylor@example.com', phone: '+15555550142', uid: null,
+    status: 'confirmed', attendanceStatus: 'no-show', amountPaid: 25, notes: '',
+    registeredAt: demoPastTimestamp(8, 13, 55) },
+  { id: 'demo-reg-6', teachingId: 'demo-prophetic', teachingTitle: 'The Prophetic', teachingDate: DEMO_TEACHINGS['demo-prophetic'].date,
+    firstName: 'Amara', lastName: 'Okafor', email: 'amara@example.com', phone: '+15555550166', uid: null,
+    status: 'confirmed', attendanceStatus: 'not-marked', amountPaid: 25, notes: '',
+    registeredAt: demoPastTimestamp(4, 16, 34) },
+  { id: 'demo-reg-7', teachingId: 'demo-identity', teachingTitle: 'Identity in Christ', teachingDate: DEMO_TEACHINGS['demo-identity'].date,
+    firstName: 'Marcus', lastName: 'J.', email: 'marcus@example.com', phone: '+15555550188', uid: null,
+    status: 'confirmed', attendanceStatus: 'attended', amountPaid: 25, notes: 'Asked a great follow-up question about identity vs. performance.',
+    registeredAt: demoPastTimestamp(10, 20, 5) },
+];
+let DEMO_TEACHING_REG_SEQ = 7;
 let DEMO_TEACHING_SEQ = 1;
 
 /* ---------------------------------------------------------------
@@ -697,6 +736,10 @@ function dialogsHtml(){
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
             Bookings
           </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="registrations">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v15.5L14 18l-4.5 2.5L5 18V5A1.5 1.5 0 0 1 6.5 3.5z"/><path d="M9 9h6M9 12.5h6"/></svg>
+            Registrations
+          </button>
           <button type="button" class="owner-sidebar-item" data-owner-nav="people">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
             People
@@ -1095,6 +1138,58 @@ function dialogsHtml(){
           <span class="portal-label">Member Accounts</span>
           <div id="ownerMembersList"><p style="color:#656565">Loading member accounts…</p></div>
         </article>
+        <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="registrations">
+          <div class="admin-panel-head">
+            <div>
+              <span class="portal-label">Class Registrations</span>
+              <p class="admin-panel-intro">See who registered for every class — like appointment details in Calendly, but for classes instead of 1:1 sessions. Kept as its own system, separate from One-on-One Bookings.</p>
+            </div>
+            <div class="admin-panel-head-actions">
+              <button class="admin-btn-ghost" type="button" id="classRegExportBtn">Export Roster (CSV)</button>
+            </div>
+          </div>
+          <div class="admin-mode-notice"><strong>Preview Mode.</strong> Registrations below are saved to this browser only (not a real database) and stick around as you navigate and reload. Payment status reflects the same visual-demonstration checkout used elsewhere — no real charge has occurred.</div>
+          <div class="admin-stat-row" id="classRegStats"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:18px 0 16px">
+            <div class="form-field" style="flex:1;min-width:200px;margin:0">
+              <label for="classRegSearch">Search</label>
+              <input id="classRegSearch" type="text" placeholder="Name, email, or class…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+            </div>
+            <div class="form-field" style="min-width:170px;margin:0">
+              <label for="classRegClassFilter">Class</label>
+              <select id="classRegClassFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"><option value="all">All Classes</option></select>
+            </div>
+            <div class="form-field" style="min-width:150px;margin:0">
+              <label for="classRegStatusFilter">Registration Status</label>
+              <select id="classRegStatusFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                <option value="all">All Statuses</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="pending_payment">Pending</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="refunded">Refunded</option>
+              </select>
+            </div>
+            <div class="form-field" style="min-width:150px;margin:0">
+              <label for="classRegAttendanceFilter">Attendance</label>
+              <select id="classRegAttendanceFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                <option value="all">All</option>
+                <option value="not-marked">Not Marked</option>
+                <option value="attended">Attended</option>
+                <option value="no-show">No Show</option>
+              </select>
+            </div>
+            <div class="form-field" style="min-width:140px;margin:0">
+              <label for="classRegPaymentFilter">Payment</label>
+              <select id="classRegPaymentFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                <option value="all">All</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+              </select>
+            </div>
+          </div>
+          <div id="classRegList"></div>
+        </article>
+
         <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="teachings">
           <div class="admin-panel-head">
             <div>
@@ -1833,6 +1928,36 @@ function dialogsHtml(){
     </div>
   </dialog>
 
+  <dialog class="booking-dialog" id="classRegDetailDialog" aria-labelledby="classRegDetailTitle" style="max-width:640px">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0">Class Registration</div>
+        <h3 id="classRegDetailTitle">Registrant</h3>
+      </div>
+      <button class="booking-close" id="closeClassRegDetail" type="button" aria-label="Close registration detail">×</button>
+    </div>
+    <div class="booking-body">
+      <div class="story-form-grid" id="classRegDetailFields"></div>
+      <div class="admin-microlabel" style="margin:20px 0 10px">Registration Status</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="classRegDetailStatusBtns">
+        <button class="admin-btn-ghost" type="button" data-classreg-status="confirmed">Confirm</button>
+        <button class="admin-btn-ghost" type="button" data-classreg-status="pending_payment">Mark Pending</button>
+        <button class="admin-btn-ghost" type="button" data-classreg-status="cancelled">Cancel Registration</button>
+        <button class="admin-btn-ghost" type="button" data-classreg-status="refunded">Mark Refunded</button>
+      </div>
+      <div class="admin-microlabel" style="margin:20px 0 10px">Attendance</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="classRegDetailAttendanceBtns">
+        <button class="admin-btn-ghost" type="button" data-classreg-attendance="not-marked">Not Marked</button>
+        <button class="admin-btn-ghost" type="button" data-classreg-attendance="attended">Mark Attended</button>
+        <button class="admin-btn-ghost" type="button" data-classreg-attendance="no-show">Mark No-Show</button>
+      </div>
+      <div class="admin-microlabel" style="margin:20px 0 10px">Internal Notes <span style="text-transform:none;letter-spacing:0;color:var(--stone)">— visible only to the ministry team</span></div>
+      <textarea id="classRegDetailNotes" rows="3" style="width:100%;box-sizing:border-box;margin-bottom:12px" placeholder="Add a private note about this registrant or their registration…"></textarea>
+      <button class="admin-btn-solid" type="button" id="classRegDetailSaveNotesBtn">Save Notes</button>
+      <div class="form-status" id="classRegDetailStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
+    </div>
+  </dialog>
+
   <dialog class="booking-dialog admin-dialog" id="mediaUseDialog" aria-labelledby="mediaUseTitle" style="max-width:420px">
     <div class="booking-head">
       <div>
@@ -2058,7 +2183,8 @@ const TEACHING_PREVIEW_DEFAULTS = {
   availabilityOverrides: JSON.parse(JSON.stringify(AVAILABILITY_OVERRIDES)),
   bookings: JSON.parse(JSON.stringify(DEMO_BOOKINGS)),
   blockedDates: JSON.parse(JSON.stringify(DEMO_BLOCKED_DATES)),
-  policies: JSON.parse(JSON.stringify(BOOKING_POLICIES))
+  policies: JSON.parse(JSON.stringify(BOOKING_POLICIES)),
+  classRegistrations: JSON.parse(JSON.stringify(DEMO_TEACHING_REGISTRATIONS))
 };
 const PREVIEW_STORAGE_KEYS = {
   teachings: 'ua_preview_teachings_v1',
@@ -2073,8 +2199,19 @@ const PREVIEW_STORAGE_KEYS = {
   availabilityOverrides: 'ua_preview_availability_overrides_v1',
   bookings: 'ua_preview_bookings_v1',
   blockedDates: 'ua_preview_blocked_dates_v1',
-  policies: 'ua_preview_booking_policies_v1'
+  policies: 'ua_preview_booking_policies_v1',
+  classRegistrations: 'ua_preview_class_registrations_v1'
 };
+function saveTeachingRegistrationsToStorage(){
+  if(!DEMO_MODE) return true;
+  try {
+    localStorage.setItem(PREVIEW_STORAGE_KEYS.classRegistrations, JSON.stringify(DEMO_TEACHING_REGISTRATIONS));
+    return true;
+  } catch (err) {
+    console.error('Could not save class registrations to this browser', err);
+    return false;
+  }
+}
 function savePreviewToStorage(){
   if(!DEMO_MODE) return true;
   try {
@@ -2131,6 +2268,8 @@ function loadPreviewFromStorage(){
     if(bk) DEMO_BOOKINGS = JSON.parse(bk);
     if(bd) DEMO_BLOCKED_DATES = JSON.parse(bd);
     if(pol) BOOKING_POLICIES = JSON.parse(pol);
+    const cr = localStorage.getItem(PREVIEW_STORAGE_KEYS.classRegistrations);
+    if(cr) DEMO_TEACHING_REGISTRATIONS = JSON.parse(cr);
   } catch (err) { /* keep current defaults if storage is corrupt/unavailable */ }
 }
 function resetPreviewData(){
@@ -2149,6 +2288,7 @@ function resetPreviewData(){
   DEMO_BOOKINGS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.bookings));
   DEMO_BLOCKED_DATES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.blockedDates));
   BOOKING_POLICIES = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.policies));
+  DEMO_TEACHING_REGISTRATIONS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.classRegistrations));
   BUSINESS_TZ = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
   if(currentProfile) currentProfile.photoURL = '';
 }
@@ -5065,8 +5205,9 @@ document.getElementById('memberBookingsList').addEventListener('click', async ev
 const DEMO_NOTIFICATIONS = [
   { id: 'n1', title: 'New booking request', detail: 'Jordan Lee requested a 30-Minute One-on-One.', read: false },
   { id: 'n2', title: 'Payment received (sample)', detail: "Sample payment confirmation for Amara Okafor's session.", read: false },
-  { id: 'n3', title: 'Class registration (sample)', detail: 'Sam Rivera registered for Learning to Discern.', read: true },
+  { id: 'n3', title: 'New Class Registration', detail: 'Kayla R. — Discernment, ' + formatTeachingDate(DEMO_TEACHINGS['demo-discernment'].date) + ' · ' + formatTeachingTime(DEMO_TEACHINGS['demo-discernment'].startTime, DEMO_TEACHINGS['demo-discernment'].timeZone) + '. Registered at 8:43 PM ET.', read: true },
 ];
+let DEMO_NOTIF_SEQ = 3;
 function renderOwnerNotifications(){
   const container = document.getElementById('ownerNotificationsList');
   if(!container) return;
@@ -5102,6 +5243,7 @@ const OWNER_SECTION_DESCRIPTIONS = {
   website: 'Control the words and images visitors see on each page.',
   payments: 'Every payment collected through the website, in one place.',
   bookings: 'Manage one-on-one session requests and your weekly availability.',
+  registrations: 'See who registered for every class, and manage attendance.',
   people: 'Everyone who has created an account.',
   media: 'Every image currently uploaded to the website.',
   settings: 'Your sign-in email, phone, and password.'
@@ -5536,6 +5678,7 @@ async function loadOwnerData(){
   renderOwnerWebsitePages();
   renderOwnerMediaGallery();
   renderBookingsPanels();
+  renderClassRegistrationsPanel();
   await Promise.all([loadOwnerBookings(), loadOwnerConfirmed(), loadOwnerMembers(), loadBlockedDates(), renderOwnerDashboardStats()]);
 }
 
@@ -6260,10 +6403,22 @@ async function createTeachingRegistration({ teachingId, firstName, lastName, ema
   const t = TEACHINGS[teachingId] || {};
   const data = {
     teachingId, teachingTitle: t.title || '', teachingDate: t.date || '',
-    firstName, lastName, email, phone, status: 'pending_payment', uid: uid || null
+    firstName, lastName, email, phone, status: 'pending_payment', uid: uid || null,
+    attendanceStatus: 'not-marked', amountPaid: 0, notes: ''
   };
   if(DEMO_MODE){
-    DEMO_TEACHING_REGISTRATIONS.push({ id: 'demo-reg-' + (++DEMO_TEACHING_REG_SEQ), ...data });
+    const registeredAt = new Date().toISOString();
+    DEMO_TEACHING_REGISTRATIONS.push({ id: 'demo-reg-' + (++DEMO_TEACHING_REG_SEQ), ...data, registeredAt });
+    saveTeachingRegistrationsToStorage();
+    renderClassRegistrationsPanel();
+    const timeLabel = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(registeredAt));
+    DEMO_NOTIFICATIONS.unshift({
+      id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'New Class Registration',
+      detail: (firstName + ' ' + (lastName ? lastName.charAt(0) + '.' : '')).trim() + ' — ' + (t.title || 'Class') +
+        (t.date ? ', ' + formatTeachingDate(t.date) : '') + (t.startTime ? ' · ' + formatTeachingTime(t.startTime, t.timeZone) : '') +
+        '. Registered at ' + timeLabel + ' ET.'
+    });
+    renderOwnerNotifications();
     return;
   }
   await setDoc(doc(collection(db, 'teachingRegistrations')), { ...data, registeredAt: serverTimestamp() });
@@ -6797,8 +6952,9 @@ let teachingRegistrantsCache = [];
 function teachingRegistrantRowHtml(r){
   return '<div class="portal-row" style="padding:8px 0">' +
     '<div><strong>' + escapeHtml(r.firstName + ' ' + r.lastName) + '</strong><small>' + escapeHtml(r.email) +
-    (r.phone ? ' · ' + escapeHtml(r.phone) : '') + '</small></div>' +
-    '<span class="portal-access">' + escapeHtml(r.status === 'confirmed' ? 'Confirmed' : r.status === 'cancelled' ? 'Cancelled' : 'Pending Payment') + '</span>' +
+    (r.phone ? ' · ' + escapeHtml(r.phone) : '') +
+    '<br><span style="font-family:var(--font-mono);font-size:10px;letter-spacing:.04em">Registered ' + escapeHtml(formatRegisteredAt(r.registeredAt)) + '</span></small></div>' +
+    '<span class="portal-access">' + escapeHtml(r.status === 'confirmed' ? 'Confirmed' : r.status === 'cancelled' ? 'Cancelled' : r.status === 'refunded' ? 'Refunded' : 'Pending Payment') + '</span>' +
     '</div>';
 }
 
@@ -6832,6 +6988,220 @@ document.getElementById('teachingRegistrantsSearch').addEventListener('input', e
   renderTeachingRegistrantsList(!q ? teachingRegistrantsCache : teachingRegistrantsCache.filter(r =>
     (r.firstName + ' ' + r.lastName + ' ' + r.email).toLowerCase().includes(q)));
 });
+
+/* =================================================================
+   Class Registrations — Owner Portal (Calendly-style roster, kept as
+   its own system separate from One-on-One Bookings per requirement).
+   Reads/writes the same DEMO_TEACHING_REGISTRATIONS array the public
+   checkout writes to via createTeachingRegistration — this is the
+   real registration data, not a parallel demo list — persisted to
+   this browser's localStorage like the rest of the Teaching preview.
+   ================================================================= */
+const CLASS_REG_STATUS_LABELS = { confirmed: 'Confirmed', pending_payment: 'Pending', cancelled: 'Cancelled', refunded: 'Refunded' };
+const CLASS_REG_ATTENDANCE_LABELS = { attended: 'Attended', 'no-show': 'No Show', 'not-marked': 'Not Marked' };
+function formatRegisteredAt(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  if(Number.isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(d) +
+    ' · ' + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(d) + ' ET';
+}
+function classRegPaymentStatus(item){
+  if(item.status === 'refunded') return 'refunded';
+  return Number(item.amountPaid) > 0 ? 'paid' : 'unpaid';
+}
+function classRegPopulateClassFilter(){
+  const sel = document.getElementById('classRegClassFilter');
+  if(!sel) return;
+  const current = sel.value || 'all';
+  const options = Object.values(TEACHINGS).filter(t => !t.archived)
+    .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  sel.innerHTML = '<option value="all">All Classes</option>' +
+    options.map(t => '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.title || 'Untitled') + '</option>').join('');
+  if(options.some(t => t.id === current)) sel.value = current;
+}
+function classRegFilteredList(){
+  const q = (document.getElementById('classRegSearch')?.value || '').trim().toLowerCase();
+  const classId = document.getElementById('classRegClassFilter')?.value || 'all';
+  const status = document.getElementById('classRegStatusFilter')?.value || 'all';
+  const attendance = document.getElementById('classRegAttendanceFilter')?.value || 'all';
+  const payment = document.getElementById('classRegPaymentFilter')?.value || 'all';
+  return DEMO_TEACHING_REGISTRATIONS.filter(r => {
+    if(classId !== 'all' && r.teachingId !== classId) return false;
+    if(status !== 'all' && r.status !== status) return false;
+    if(attendance !== 'all' && (r.attendanceStatus || 'not-marked') !== attendance) return false;
+    if(payment !== 'all' && classRegPaymentStatus(r) !== payment) return false;
+    if(q && !((r.firstName + ' ' + r.lastName + ' ' + r.email + ' ' + r.teachingTitle).toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
+}
+function classRegRowHtml(item){
+  const statusClass = item.status === 'pending_payment' ? 'pending' : item.status;
+  const attendance = item.attendanceStatus || 'not-marked';
+  return '<div class="admin-teaching-row" data-classreg-row="' + escapeHtml(item.id) + '" style="cursor:pointer">' +
+    '<div class="admin-teaching-info">' +
+    '<div class="admin-teaching-title-row"><strong>' + escapeHtml((item.firstName + ' ' + item.lastName).trim() || 'Registrant') + '</strong>' +
+    '<span class="admin-status-pill ' + escapeHtml(statusClass) + '">' + escapeHtml(CLASS_REG_STATUS_LABELS[item.status] || item.status) + '</span>' +
+    '<span class="admin-status-pill ' + escapeHtml(attendance) + '">' + escapeHtml(CLASS_REG_ATTENDANCE_LABELS[attendance] || attendance) + '</span>' +
+    '</div>' +
+    '<div class="admin-teaching-meta">' + escapeHtml(item.teachingTitle || 'Class') +
+    (item.teachingDate ? ' · ' + escapeHtml(formatTeachingDate(item.teachingDate)) : '') + '</div>' +
+    '<p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml(item.email) +
+    (item.phone ? ' · ' + escapeHtml(item.phone) : '') +
+    ' · <span style="font-family:var(--font-mono)">Registered ' + escapeHtml(formatRegisteredAt(item.registeredAt)) + '</span></p>' +
+    '</div>' +
+    '<div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-classreg-view="' + escapeHtml(item.id) + '">View</button></div>' +
+    '</div>';
+}
+function renderClassRegList(){
+  const wrap = document.getElementById('classRegList');
+  if(!wrap) return;
+  const rows = classRegFilteredList();
+  wrap.innerHTML = rows.length === 0
+    ? '<p style="color:var(--owner-text-faint)">No registrations match these filters.</p>'
+    : rows.map(classRegRowHtml).join('');
+}
+function renderClassRegStats(){
+  const wrap = document.getElementById('classRegStats');
+  if(!wrap) return;
+  const classId = document.getElementById('classRegClassFilter')?.value || 'all';
+  if(classId !== 'all' && TEACHINGS[classId]){
+    const t = TEACHINGS[classId];
+    const rows = DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === classId);
+    const active = rows.filter(r => r.status !== 'cancelled');
+    const revenue = active.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
+    const attended = rows.filter(r => r.attendanceStatus === 'attended').length;
+    const capacity = t.unlimitedCapacity !== false ? null : Number(t.capacity) || 0;
+    const available = capacity !== null ? Math.max(0, capacity - active.length) : null;
+    wrap.innerHTML =
+      '<div class="admin-stat-tile"><span>Registered</span><strong>' + active.length + (capacity !== null ? ' / ' + capacity : '') + '</strong></div>' +
+      '<div class="admin-stat-tile"><span>Seats Remaining</span><strong>' + (capacity !== null ? available : 'Unlimited') + '</strong></div>' +
+      '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>' +
+      '<div class="admin-stat-tile"><span>Attended</span><strong>' + attended + '</strong></div>';
+    return;
+  }
+  const active = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status !== 'cancelled');
+  const confirmed = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'confirmed').length;
+  const cancelled = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'cancelled').length;
+  const revenue = active.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
+  wrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Total Registered</span><strong>' + DEMO_TEACHING_REGISTRATIONS.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Confirmed</span><strong>' + confirmed + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Cancelled</span><strong>' + cancelled + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
+}
+function renderClassRegistrationsPanel(){
+  if(!document.getElementById('classRegList')) return;
+  classRegPopulateClassFilter();
+  renderClassRegStats();
+  renderClassRegList();
+}
+function classRegCsvValue(v){
+  const s = String(v == null ? '' : v);
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+function exportClassRegistrationsCsv(){
+  const rows = classRegFilteredList();
+  const header = ['First Name', 'Last Name', 'Email', 'Phone', 'Class', 'Class Date', 'Registered At', 'Registration Status', 'Attendance', 'Payment Status', 'Amount Paid', 'Notes'];
+  const lines = [header.map(classRegCsvValue).join(',')];
+  rows.forEach(r => {
+    lines.push([
+      r.firstName, r.lastName, r.email, r.phone || '', r.teachingTitle,
+      r.teachingDate ? formatTeachingDate(r.teachingDate) : '',
+      formatRegisteredAt(r.registeredAt),
+      CLASS_REG_STATUS_LABELS[r.status] || r.status,
+      CLASS_REG_ATTENDANCE_LABELS[r.attendanceStatus || 'not-marked'],
+      classRegPaymentStatus(r), (Number(r.amountPaid) || 0).toFixed(2), r.notes || ''
+    ].map(classRegCsvValue).join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'class-registrations-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+let classRegDetailId = null;
+function openClassRegDetail(id){
+  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === id);
+  if(!item) return;
+  classRegDetailId = id;
+  document.getElementById('classRegDetailTitle').textContent = (item.firstName + ' ' + item.lastName).trim() || 'Registrant';
+  const g = (label, value) => '<div class="form-field"><label>' + label + '</label><input value="' + escapeHtml(value || '—') + '" readonly /></div>';
+  document.getElementById('classRegDetailFields').innerHTML =
+    g('Registrant', (item.firstName + ' ' + item.lastName).trim()) +
+    g('Class', item.teachingTitle) +
+    g('Class Date', item.teachingDate ? formatTeachingDate(item.teachingDate) : '—') +
+    g('Class Time', (TEACHINGS[item.teachingId] ? formatTeachingTime(TEACHINGS[item.teachingId].startTime, TEACHINGS[item.teachingId].timeZone) : '—')) +
+    g('Registered', formatRegisteredAt(item.registeredAt)) +
+    g('Email', item.email) +
+    g('Phone', item.phone || 'Not provided') +
+    g('Payment', classRegPaymentStatus(item) === 'paid' ? 'Paid' : classRegPaymentStatus(item) === 'refunded' ? 'Refunded' : 'Unpaid') +
+    g('Amount', '$' + (Number(item.amountPaid) || 0).toFixed(2));
+  document.querySelectorAll('#classRegDetailStatusBtns [data-classreg-status]').forEach(btn => {
+    btn.classList.toggle('admin-btn-solid', btn.dataset.classregStatus === item.status);
+    btn.classList.toggle('admin-btn-ghost', btn.dataset.classregStatus !== item.status);
+  });
+  const attendance = item.attendanceStatus || 'not-marked';
+  document.querySelectorAll('#classRegDetailAttendanceBtns [data-classreg-attendance]').forEach(btn => {
+    btn.classList.toggle('admin-btn-solid', btn.dataset.classregAttendance === attendance);
+    btn.classList.toggle('admin-btn-ghost', btn.dataset.classregAttendance !== attendance);
+  });
+  document.getElementById('classRegDetailNotes').value = item.notes || '';
+  document.getElementById('classRegDetailStatus').textContent = '';
+  document.getElementById('classRegDetailDialog').showModal();
+}
+document.getElementById('classRegList')?.addEventListener('click', event => {
+  const row = event.target.closest('[data-classreg-view], [data-classreg-row]');
+  if(row) openClassRegDetail(row.dataset.classregView || row.dataset.classregRow);
+});
+document.getElementById('closeClassRegDetail').addEventListener('click', () => document.getElementById('classRegDetailDialog').close());
+document.getElementById('classRegDetailDialog').addEventListener('click', event => {
+  if(event.target.id === 'classRegDetailDialog') document.getElementById('classRegDetailDialog').close();
+});
+document.getElementById('classRegDetailStatusBtns').addEventListener('click', event => {
+  const btn = event.target.closest('[data-classreg-status]');
+  if(!btn || !classRegDetailId) return;
+  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
+  if(!item) return;
+  item.status = btn.dataset.classregStatus;
+  if(item.status === 'confirmed' && !item.amountPaid){
+    const t = TEACHINGS[item.teachingId];
+    item.amountPaid = t && t.price ? Number(t.price) : item.amountPaid;
+  }
+  if(item.status === 'cancelled' || item.status === 'refunded') item.amountPaid = item.status === 'refunded' ? item.amountPaid : 0;
+  saveTeachingRegistrationsToStorage();
+  openClassRegDetail(classRegDetailId);
+  renderClassRegistrationsPanel();
+  document.getElementById('classRegDetailStatus').textContent = 'Updated.';
+});
+document.getElementById('classRegDetailAttendanceBtns').addEventListener('click', event => {
+  const btn = event.target.closest('[data-classreg-attendance]');
+  if(!btn || !classRegDetailId) return;
+  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
+  if(!item) return;
+  item.attendanceStatus = btn.dataset.classregAttendance;
+  saveTeachingRegistrationsToStorage();
+  openClassRegDetail(classRegDetailId);
+  renderClassRegistrationsPanel();
+  document.getElementById('classRegDetailStatus').textContent = 'Updated.';
+});
+document.getElementById('classRegDetailSaveNotesBtn').addEventListener('click', () => {
+  if(!classRegDetailId) return;
+  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
+  if(!item) return;
+  item.notes = document.getElementById('classRegDetailNotes').value.trim();
+  saveTeachingRegistrationsToStorage();
+  document.getElementById('classRegDetailStatus').textContent = 'Notes saved.';
+  renderClassRegList();
+});
+['classRegSearch'].forEach(id => document.getElementById(id)?.addEventListener('input', renderClassRegList));
+['classRegClassFilter'].forEach(id => document.getElementById(id)?.addEventListener('change', () => { renderClassRegStats(); renderClassRegList(); }));
+['classRegStatusFilter', 'classRegAttendanceFilter', 'classRegPaymentFilter'].forEach(id => document.getElementById(id)?.addEventListener('change', renderClassRegList));
+document.getElementById('classRegExportBtn')?.addEventListener('click', exportClassRegistrationsCsv);
 
 /* ---- List / calendar / tabs ---- */
 let teachingMgrActiveTab = 'upcoming';
@@ -6984,13 +7354,14 @@ document.getElementById('teachingMgrPreviewPageBtn').addEventListener('click', (
   window.open(BASE + 'teachings.html', '_blank');
 });
 document.getElementById('teachingMgrResetPreviewBtn').addEventListener('click', () => {
-  if(!confirm('Reset all preview Teaching data in this browser back to the original samples? This also removes any uploaded Media Library images and your profile photo. This cannot be undone.')) return;
+  if(!confirm('Reset all preview Teaching data in this browser back to the original samples? This also removes any uploaded Media Library images, your profile photo, and any class registrations recorded in this browser. This cannot be undone.')) return;
   resetPreviewData();
   renderTeachingManager();
   renderPublicTeachingPages();
   renderOwnerMediaGallery();
   renderOwnerProfilePhotoPreview();
   updateOwnerSidebarProfile();
+  renderClassRegistrationsPanel();
   portalOwnerStatus.textContent = 'Preview data has been reset to the original samples.';
 });
 document.getElementById('teachingMgrViewList').addEventListener('click', () => {
@@ -7169,7 +7540,7 @@ function renderTeachingHero(){
   wrap.innerHTML = teachingHeroMediaHtml(t) +
     '<div class="teaching-hero-content reveal">' +
     '<div class="eyebrow">Upcoming Class</div>' +
-    '<h1 class="teaching-display teaching-title-mono">' + escapeHtml(t.title || '') + '</h1>' +
+    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
     (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '<p class="teaching-hero-desc">' + escapeHtml(t.shortDescription || '') + '</p>' +
     '<div class="teaching-meta-row">' +
@@ -7243,7 +7614,7 @@ function renderTeachingDetailPage(){
     '<header class="teaching-hero teaching-detail-hero">' + teachingHeroMediaHtml(t) +
     '<div class="teaching-hero-content reveal">' +
     '<div class="eyebrow">' + escapeHtml(t.category || 'Teaching') + '</div>' +
-    '<h1 class="teaching-display teaching-title-mono">' + escapeHtml(t.title || '') + '</h1>' +
+    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
     (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '</div></header>' +
     '<section class="on-light-section">' +
