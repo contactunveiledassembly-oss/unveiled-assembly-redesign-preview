@@ -1422,7 +1422,7 @@ function dialogsHtml(){
     </div>
     <div class="dialog-body">
       <p class="dialog-intro">You may share a written testimony, a class review, a photograph, or a video. Your submission remains private until The Assembly reviews it and receives permission to publish it.</p>
-      <div class="dialog-note">Your story is saved to this preview's Owner Portal inbox — the ministry team reviews it before anything is published.</div>
+      <div class="dialog-note">Your testimony will be sent to the ministry team for review before anything is shared publicly.</div>
       <form id="testimonyForm">
         <div class="story-form-grid">
           <div class="form-field full form-section-label">Your Information</div>
@@ -2487,14 +2487,13 @@ function getPublicPreviewLegacy(item){
   return name ? name : 'Anonymous';
 }
 
-// Public-facing name display only: "Public" shows first name + last
-// initial (e.g. "Kayla R."), "Anonymous" always shows "Anonymous", and
-// "Private" never renders on a public page (callers should already be
-// filtering private items out before this is reached).
+// Public-facing name display only, used once the Owner has published an
+// item: shows first name + last initial (e.g. "Kayla R."), or "Anonymous"
+// when no name was given at all. There's no public visibility picker
+// anymore (submissions are private-for-review by default and the Owner
+// decides what publishes), so this no longer branches on item.visibility.
 function publicNameLabel(item){
   if(!item) return 'Anonymous';
-  if(item.visibility === 'anonymous') return 'Anonymous';
-  if(item.visibility === 'private') return 'Anonymous';
   const first = (item.firstName || '').trim();
   const lastInitial = (item.lastName || '').trim().charAt(0);
   if(!first && !lastInitial) return 'Anonymous';
@@ -2842,17 +2841,6 @@ function ensurePublicMinistrySections(){
 }
 
 function bindMinistryFormDialogEvents(){
-  const existingTestimonyForm = document.getElementById('testimonyForm');
-  if(existingTestimonyForm && !existingTestimonyForm.querySelector('[name="visibility"]')){
-    const messageField = existingTestimonyForm.querySelector('#storyMessage');
-    if(messageField){
-      messageField.closest('.form-field').insertAdjacentHTML('afterend', '<div class="form-field full"><label>How would you like this shared?</label><div class="option-card-grid"><label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong><small>Show my name and testimony on the website.</small></span></label><label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong><small>Hide my name and personal details.</small></span></label><label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong><small>Only visible to the ministry team.</small></span></label></div></div><div class="form-field full"><a class="text-link" href="#" id="testimonyTermsLink">Read Terms &amp; Conditions</a></div>');
-    }
-  }
-  document.getElementById('testimonyTermsLink')?.addEventListener('click', event => {
-    event.preventDefault();
-    openPolicyView('testimonyTerms');
-  });
   if(document.getElementById('prayerRequestForm')) {
     document.getElementById('prayerRequestForm').addEventListener('submit', event => {
       event.preventDefault();
@@ -2865,7 +2853,7 @@ function bindMinistryFormDialogEvents(){
         email: String(formData.get('email') || '').trim(),
         phone: String(formData.get('phone') || '').trim(),
         message: String(formData.get('message') || '').trim(),
-        visibility: String(formData.get('visibility') || 'public'),
+        visibility: 'private',
         status: 'new',
         notes: '',
         createdAt: new Date().toISOString()
@@ -2892,20 +2880,20 @@ function bindMinistryFormDialogEvents(){
       const formData = new FormData(form);
       const item = {
         id: 'story-' + Date.now().toString(36),
-        firstName: String(formData.get('firstName') || formData.get('name') || '').trim().split(/\s+/)[0],
-        lastName: String(formData.get('lastName') || formData.get('name') || '').trim().split(/\s+/).slice(1).join(' '),
+        firstName: String(formData.get('firstName') || '').trim(),
+        lastName: String(formData.get('lastName') || '').trim(),
         email: String(formData.get('email') || '').trim(),
         phone: String(formData.get('phone') || '').trim(),
         title: String(formData.get('title') || '').trim(),
         message: String(formData.get('message') || '').trim(),
-        visibility: String(formData.get('visibility') || 'public'),
+        visibility: 'private',
         status: 'pending',
         publicDisplayText: '',
         hasVideoPreview: false,
         createdAt: new Date().toISOString()
       };
       if(!item.message || (!formData.get('permission') && !formData.get('terms'))){
-        document.getElementById('testimonyFormStatus').textContent = 'Please complete the form and agree to the terms.';
+        document.getElementById('formStatus').textContent = 'Please complete the form and agree to the terms.';
         return;
       }
       const mediaFile = formData.get('media');
@@ -2919,7 +2907,7 @@ function bindMinistryFormDialogEvents(){
       renderPublishedTestimonials();
       form.reset();
       console.log('Testimony submitted');
-      document.getElementById('testimonyFormStatus').textContent = 'Thank you for sharing your testimony.';
+      document.getElementById('formStatus').textContent = 'Thank you for sharing your testimony.';
       const dialog = document.getElementById('storyDialog');
       if(dialog) setTimeout(() => dialog.close(), 1200);
     });
@@ -2938,7 +2926,7 @@ function bindMinistryFormDialogEvents(){
         email: String(formData.get('email') || '').trim(),
         phone: String(formData.get('phone') || '').trim(),
         message: String(formData.get('message') || '').trim(),
-        visibility: String(formData.get('visibility') || 'public'),
+        visibility: 'private',
         status: 'pending',
         publicDisplayText: '',
         rating: String(formData.get('rating') || ''),
@@ -3025,14 +3013,6 @@ function addMinistryDialogs(){
         <form id="prayerRequestForm">
           <div class="story-form-grid">
             <div class="form-field full"><textarea id="prayerMessage" name="message" rows="6" class="prayer-message-box" placeholder="Type your prayer request here..." required></textarea></div>
-            <div class="form-field full">
-              <label class="visibility-group-label">How would you like this handled?</label>
-              <div class="option-card-grid">
-                <label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong><small>May be shared with the ministry community.</small></span></label>
-                <label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong><small>Your name and personal details will be hidden.</small></span></label>
-                <label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong><small>Only visible to the ministry team.</small></span></label>
-              </div>
-            </div>
             <details class="prayer-optional-fields" style="grid-column:1/-1">
               <summary>Add your name or email (optional)</summary>
               <div class="story-form-grid" style="margin-top:14px">
@@ -3052,6 +3032,7 @@ function addMinistryDialogs(){
     <dialog class="story-dialog" id="classReviewDialog" aria-labelledby="classReviewTitle">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Class Review</div><h3 id="classReviewTitle">Leave A Class Review</h3></div><button class="dialog-close" id="closeClassReviewDialog" type="button" aria-label="Close class review form">×</button></div>
       <div class="dialog-body">
+        <p class="dialog-intro">Your review will be sent to the ministry team for review before anything is shared publicly.</p>
         <form id="classReviewForm">
           <div class="story-form-grid">
             <div class="form-field"><label for="reviewClassName">Select Class</label><select id="reviewClassName" name="className"><option value="Discernment">Discernment</option><option value="The Prophetic">The Prophetic</option><option value="Hearing the Voice of God">Hearing the Voice of God</option><option value="Spiritual Warfare">Spiritual Warfare</option><option value="Identity in Christ">Identity in Christ</option><option value="Other / type class name">Other / type class name</option></select></div>
@@ -3062,14 +3043,6 @@ function addMinistryDialogs(){
             <div class="form-field"><label for="reviewRating">Rating</label><select id="reviewRating" name="rating"><option value="">Optional</option><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div>
             <div class="form-field"><label for="reviewRecommendation">Would You Recommend?</label><select id="reviewRecommendation" name="recommendation"><option value="">Optional</option><option>Yes</option><option>No</option><option>Maybe</option></select></div>
             <div class="form-field full"><label for="reviewMessage">Review Message</label><textarea id="reviewMessage" name="message" rows="6" placeholder="What changed for you?" required></textarea></div>
-            <div class="form-field full">
-              <label>How would you like this shared?</label>
-              <div class="option-card-grid">
-                <label class="option-card"><input type="radio" name="visibility" value="public" checked /> <span><strong>Public</strong><small>Show my name and review on the website.</small></span></label>
-                <label class="option-card"><input type="radio" name="visibility" value="anonymous" /> <span><strong>Anonymous</strong><small>Hide my name and personal details.</small></span></label>
-                <label class="option-card"><input type="radio" name="visibility" value="private" /> <span><strong>Private</strong><small>Only visible to the ministry team.</small></span></label>
-              </div>
-            </div>
             <div class="form-field full"><label class="permission-label"><input name="terms" type="checkbox" required /><span>I agree to the Review Submission Terms.</span></label></div>
           </div>
           <div class="form-actions"><button class="btn fill" type="submit">Submit Review</button><div class="form-status" id="classReviewFormStatus" role="status" aria-live="polite"></div></div>
