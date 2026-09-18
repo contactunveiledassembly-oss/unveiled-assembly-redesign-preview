@@ -42,6 +42,12 @@ import {
    --------------------------------------------------------------- */
 const PRODUCTION_HOSTS = ['theunveiledassembly.com', 'www.theunveiledassembly.com'];
 const DEMO_MODE = !PRODUCTION_HOSTS.includes(window.location.hostname);
+// Used by generateConfirmationId() further down. Declared here (rather
+// than beside that function) because the preview-data backfill runs
+// very early during module load and needs this constant already
+// initialized — a `const` isn't hoisted the way a function
+// declaration is, so it has to physically come first.
+const CONFIRMATION_ID_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // no 0/O/1/I
 // Matches the real ADMIN_EMAIL constant declared further down (used here
 // only so demo sign-in can show what the admin Ministry View looks like).
 const DEMO_ADMIN_EMAIL = 'contactunveiledassembly@gmail.com';
@@ -180,7 +186,11 @@ function demoNextWeekdayStr(targetDow, weeksAhead){
 const DEMO_TUE1 = demoNextWeekdayStr(2, 0);
 const DEMO_THU1 = demoNextWeekdayStr(4, 0);
 const DEMO_TUE2 = demoNextWeekdayStr(2, 1);
-let DEMO_BOOKING_SEQ = 1;
+// Matches the 3 hardcoded seed bookings below (demo-1/demo-2/demo-3) —
+// starting at 1 here made the very first real booking collide with
+// seed booking "demo-2" (same id, so lookups/detail views silently
+// resolved to Amara Okafor's seed record instead of the new one).
+let DEMO_BOOKING_SEQ = 3;
 let DEMO_BOOKINGS = [
   { id: 'demo-1', slotId: DEMO_TUE1 + '_14:00', date: DEMO_TUE1, time: '14:00', sessionType: '30-minute', name: 'Jordan Lee', email: 'jordan@example.com', uid: null, status: 'pending' },
   { id: 'demo-2', slotId: DEMO_THU1 + '_15:00', date: DEMO_THU1, time: '15:00', sessionType: '15-minute', name: 'Amara Okafor', email: 'amara@example.com', uid: null, status: 'confirmed' },
@@ -683,7 +693,7 @@ function dialogsHtml(){
         <div>
           <div class="kicker on-light">My Assembly</div>
           <h3>Welcome back<span id="memberWelcomeName"></span>.</h3>
-          <p>Your bookings and ministry resources in one place.</p>
+          <p>Your classes, sessions, and ministry resources in one place.</p>
         </div>
         <span class="portal-account" id="memberAccountLabel">Student Account</span>
       </div>
@@ -691,20 +701,66 @@ function dialogsHtml(){
         <span>Your account isn't verified yet — some features are limited.</span>
         <button type="button" class="link-btn" id="verifyBannerBtn">Verify Now</button>
       </div>
-      <div class="portal-dashboard-grid">
-        <article class="portal-panel wine">
-          <span class="portal-label">My Bookings</span>
-          <div id="memberBookingsList"><p style="color:#d7d7d7">Loading your bookings…</p></div>
-          <div class="portal-inline-actions">
-            <button class="portal-primary" type="button" id="memberBookNew">Book A Session</button>
-          </div>
-        </article>
-        <article class="portal-panel">
-          <span class="portal-label">Classes &amp; Materials</span>
-          <p style="color:#656565">Class scheduling, Zoom links, and materials aren't connected yet — this is next on the build list. Your live bookings above are fully real.</p>
-        </article>
-        ${accountSettingsHtml('member')}
+      <div class="admin-tabs member-tabs" id="memberTabs" role="tablist" style="margin-bottom:20px">
+        <button type="button" class="admin-tab active" data-member-tab="dashboard">Dashboard</button>
+        <button type="button" class="admin-tab" data-member-tab="classes">My Classes</button>
+        <button type="button" class="admin-tab" data-member-tab="sessions">My Sessions</button>
+        <button type="button" class="admin-tab" data-member-tab="notifications">Notifications<span class="owner-nav-count" id="memberNotifCount" hidden>0</span></button>
+        <button type="button" class="admin-tab" data-member-tab="account">Account</button>
       </div>
+
+      <div data-member-panel="dashboard">
+        <div class="portal-dashboard-grid">
+          <article class="portal-panel wine" id="memberNextClassCard"></article>
+          <article class="portal-panel wine">
+            <span class="portal-label">My Sessions</span>
+            <div id="memberBookingsList"><p style="color:#d7d7d7">Loading your bookings…</p></div>
+            <div class="portal-inline-actions">
+              <button class="portal-primary" type="button" id="memberBookNew">Book A Session</button>
+            </div>
+          </article>
+          <article class="portal-panel">
+            <span class="portal-label">Quick Links</span>
+            <div class="member-quick-links">
+              <button type="button" class="text-link on-light" data-member-tab-link="classes">View Class Notes →</button>
+              <button type="button" class="text-link on-light" data-member-tab-link="classes">Past Recordings →</button>
+              <button type="button" class="text-link on-light" data-member-tab-link="account">Update Account →</button>
+              <a class="text-link on-light" href="connect.html">Need Help? →</a>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div data-member-panel="classes" hidden>
+        <div class="admin-tabs" id="memberClassesSubTabs" style="margin-bottom:16px">
+          <button type="button" class="admin-tab active" data-member-classes-tab="upcoming">Upcoming</button>
+          <button type="button" class="admin-tab" data-member-classes-tab="past">Past</button>
+        </div>
+        <div id="memberClassesList"></div>
+      </div>
+
+      <div data-member-panel="sessions" hidden>
+        <div class="admin-tabs" id="memberSessionsSubTabs" style="margin-bottom:16px">
+          <button type="button" class="admin-tab active" data-member-sessions-tab="upcoming">Upcoming</button>
+          <button type="button" class="admin-tab" data-member-sessions-tab="past">Past</button>
+          <button type="button" class="admin-tab" data-member-sessions-tab="cancelled">Cancelled</button>
+        </div>
+        <div id="memberSessionsList"></div>
+      </div>
+
+      <div data-member-panel="notifications" hidden>
+        <article class="portal-panel">
+          <span class="portal-label">Notifications</span>
+          <div id="memberNotificationsList"></div>
+        </article>
+      </div>
+
+      <div data-member-panel="account" hidden>
+        <div class="portal-dashboard-grid">
+          ${accountSettingsHtml('member')}
+        </div>
+      </div>
+
       <div class="portal-status" id="portalMemberStatus" role="status" aria-live="polite"></div>
     </div>
 
@@ -836,12 +892,20 @@ function dialogsHtml(){
             <button type="button" class="admin-tab" data-bookings-tab="appointments">Appointments</button>
             <button type="button" class="admin-tab" data-bookings-tab="calendar">Calendar</button>
             <button type="button" class="admin-tab" data-bookings-tab="availability">Availability</button>
+            <button type="button" class="admin-tab" data-bookings-tab="payments">Payments</button>
             <button type="button" class="admin-tab" data-bookings-tab="types">Session Types</button>
             <button type="button" class="admin-tab" data-bookings-tab="blocked">Blocked Dates</button>
             <button type="button" class="admin-tab" data-bookings-tab="policies">Policies</button>
             <button type="button" class="admin-tab" data-bookings-tab="notifications">Notifications</button>
             <button type="button" class="admin-tab" data-bookings-tab="clients">Clients</button>
             <button type="button" class="admin-tab" data-bookings-tab="reports">Reports</button>
+            <button type="button" class="admin-tab" data-bookings-tab="lookup">Lookup</button>
+          </div>
+
+          <div class="admin-edit-panel" data-bookings-panel="payments" hidden>
+            <p class="admin-hint" style="margin-bottom:14px">Every one-on-one payment, connected back to its appointment and confirmation ID.</p>
+            <div class="admin-stat-row" id="bookingsPaymentsStats"></div>
+            <div id="bookingsPaymentsList" style="margin-top:18px"></div>
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="overview">
@@ -1128,6 +1192,13 @@ function dialogsHtml(){
             <div class="admin-subsection-label" style="border-top:0;padding-top:0">Most Requested Session Types</div>
             <div id="bookingsReportsTypes"></div>
           </div>
+          <div class="admin-edit-panel" data-bookings-panel="lookup" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">Find a one-on-one booking by name, email, phone, or confirmation ID — kept separate from class registrations, same lookup pattern.</p>
+            <div class="form-field" style="max-width:420px;margin-bottom:16px">
+              <input id="bookingsLookupSearch" type="text" placeholder="Name, email, phone, or confirmation ID…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+            </div>
+            <div id="bookingsLookupResults"></div>
+          </div>
         </article>
         <article class="portal-panel" data-owner-section="dashboard">
           <span class="portal-label">Notification Center <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></span>
@@ -1149,45 +1220,88 @@ function dialogsHtml(){
             </div>
           </div>
           <div class="admin-mode-notice"><strong>Preview Mode.</strong> Registrations below are saved to this browser only (not a real database) and stick around as you navigate and reload. Payment status reflects the same visual-demonstration checkout used elsewhere — no real charge has occurred.</div>
-          <div class="admin-stat-row" id="classRegStats"></div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:18px 0 16px">
-            <div class="form-field" style="flex:1;min-width:200px;margin:0">
-              <label for="classRegSearch">Search</label>
-              <input id="classRegSearch" type="text" placeholder="Name, email, or class…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
-            </div>
-            <div class="form-field" style="min-width:170px;margin:0">
-              <label for="classRegClassFilter">Class</label>
-              <select id="classRegClassFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"><option value="all">All Classes</option></select>
-            </div>
-            <div class="form-field" style="min-width:150px;margin:0">
-              <label for="classRegStatusFilter">Registration Status</label>
-              <select id="classRegStatusFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                <option value="all">All Statuses</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="pending_payment">Pending</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="refunded">Refunded</option>
-              </select>
-            </div>
-            <div class="form-field" style="min-width:150px;margin:0">
-              <label for="classRegAttendanceFilter">Attendance</label>
-              <select id="classRegAttendanceFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                <option value="all">All</option>
-                <option value="not-marked">Not Marked</option>
-                <option value="attended">Attended</option>
-                <option value="no-show">No Show</option>
-              </select>
-            </div>
-            <div class="form-field" style="min-width:140px;margin:0">
-              <label for="classRegPaymentFilter">Payment</label>
-              <select id="classRegPaymentFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-              </select>
+          <div class="admin-tabs" id="classRegSubNav" role="tablist" style="margin:16px 0">
+            <button type="button" class="admin-tab active" data-classreg-tab="overview">Overview</button>
+            <button type="button" class="admin-tab" data-classreg-tab="registrations">Registrations</button>
+            <button type="button" class="admin-tab" data-classreg-tab="attendance">Attendance</button>
+            <button type="button" class="admin-tab" data-classreg-tab="payments">Payments</button>
+            <button type="button" class="admin-tab" data-classreg-tab="lookup">Lookup</button>
+          </div>
+
+          <div class="admin-edit-panel" data-classreg-panel="overview">
+            <div class="admin-stat-row" id="classRegOverviewStats"></div>
+            <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:22px" class="owner-dashboard-lower">
+              <div>
+                <div class="admin-subsection-label" style="border-top:0;padding-top:0">Next Class</div>
+                <div id="classRegNextClass"></div>
+                <div class="admin-subsection-label">Recent Registrations</div>
+                <div id="classRegRecentList"></div>
+              </div>
+              <div>
+                <div class="admin-subsection-label" style="border-top:0;padding-top:0">Recent Activity</div>
+                <div id="classRegRecentActivity"></div>
+              </div>
             </div>
           </div>
-          <div id="classRegList"></div>
+
+          <div class="admin-edit-panel" data-classreg-panel="registrations" hidden>
+            <div class="admin-stat-row" id="classRegStats"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:18px 0 16px">
+              <div class="form-field" style="flex:1;min-width:200px;margin:0">
+                <label for="classRegSearch">Search</label>
+                <input id="classRegSearch" type="text" placeholder="Name, email, phone, confirmation ID, or class…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+              </div>
+              <div class="form-field" style="min-width:170px;margin:0">
+                <label for="classRegClassFilter">Class</label>
+                <select id="classRegClassFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"><option value="all">All Classes</option></select>
+              </div>
+              <div class="form-field" style="min-width:150px;margin:0">
+                <label for="classRegStatusFilter">Registration Status</label>
+                <select id="classRegStatusFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                  <option value="all">All Statuses</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="pending_payment">Pending</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="refunded">Refunded</option>
+                </select>
+              </div>
+              <div class="form-field" style="min-width:140px;margin:0">
+                <label for="classRegPaymentFilter">Payment</label>
+                <select id="classRegPaymentFilter" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                  <option value="all">All</option>
+                  <option value="paid">Paid</option>
+                  <option value="unpaid">Unpaid</option>
+                </select>
+              </div>
+            </div>
+            <div id="classRegList"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-classreg-panel="attendance" hidden>
+            <p class="admin-hint" style="margin-bottom:14px">Mark who showed up. Cancelled registrations are left out.</p>
+            <div class="admin-tabs" id="classRegAttendanceSubTabs" role="tablist" style="margin-bottom:16px">
+              <button type="button" class="admin-tab active" data-attendance-filter="all">All</button>
+              <button type="button" class="admin-tab" data-attendance-filter="not-marked">Not Marked</button>
+              <button type="button" class="admin-tab" data-attendance-filter="attended">Attended</button>
+              <button type="button" class="admin-tab" data-attendance-filter="no-show">No Show</button>
+            </div>
+            <div id="classRegAttendanceList"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-classreg-panel="payments" hidden>
+            <p class="admin-hint" style="margin-bottom:14px">Every class payment, connected back to its registration and confirmation ID.</p>
+            <div class="admin-stat-row" id="classRegPaymentsStats"></div>
+            <div id="classRegPaymentsList" style="margin-top:18px"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-classreg-panel="lookup" hidden>
+            <p class="admin-hint" style="margin-bottom:14px">Search by confirmation ID, first/last/full name, email, or phone.</p>
+            <div class="form-field" style="max-width:420px;margin-bottom:16px">
+              <label for="classRegLookupSearch">Search</label>
+              <input id="classRegLookupSearch" type="text" placeholder="e.g. UA-DIS-7F3A, Jhanee Miller, or a phone number" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+            </div>
+            <div id="classRegLookupResults"><p class="admin-hint">Enter a confirmation ID, name, email, or phone number to search.</p></div>
+          </div>
         </article>
 
         <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="teachings">
@@ -1474,6 +1588,10 @@ function dialogsHtml(){
                 <input type="checkbox" id="bookingAgreeNoRefund" required />
                 <span>I understand that all bookings are final and non-refundable. <button type="button" class="link-btn" id="bookingViewNoRefund">Read No Refund Policy</button></span>
               </label>
+              <label class="booking-policy-check">
+                <input type="checkbox" id="bookingAgreeSms" />
+                <span>I agree to receive booking confirmation and reminder text messages related to this session. Not marketing — transactional only.</span>
+              </label>
             </div>
 
             <div class="booking-step-actions">
@@ -1488,19 +1606,27 @@ function dialogsHtml(){
           </div>
 
           <div class="booking-step booking-confirm-step" data-booking-step="confirm" hidden>
-            <div class="booking-confirm-check">✓</div>
-            <h3 class="serif-heading" style="margin-bottom:6px">You're Booked.</h3>
-            <p class="admin-hint" style="margin-bottom:20px">Your session is reserved — here's a summary for your records.</p>
-            <div class="checkout-order-summary" id="bookingConfirmSummary"></div>
-            <div class="checkout-next-steps">
-              <div class="admin-microlabel checkout-section-label">What Happens Next?</div>
-              <div class="checkout-next-row">
-                <span>Instant Confirmation</span>
-                <span>Calendar Invite</span>
-                <span>Prepare For Your Session</span>
+            <div class="ticket-confirm-check">✓</div>
+            <div class="admin-microlabel" style="text-align:center;margin-bottom:6px">Session Confirmed</div>
+            <h3 class="serif-heading" id="bookingConfirmTitle" style="text-align:center;margin-bottom:22px">30-Minute One-on-One</h3>
+            <div class="ticket-card">
+              <div class="ticket-row"><span>Attendee</span><strong id="bookingConfirmName"></strong></div>
+              <div class="ticket-row"><span>When</span><strong id="bookingConfirmWhen"></strong></div>
+              <div class="ticket-row"><span>Email</span><strong id="bookingConfirmEmail"></strong></div>
+              <div class="ticket-row"><span>Payment Status</span><strong id="bookingConfirmPayment"></strong></div>
+              <div class="ticket-id-block">
+                <span>Confirmation ID</span>
+                <strong id="bookingConfirmId"></strong>
+                <button type="button" class="ticket-copy-btn" id="bookingCopyIdBtn">Copy Confirmation ID</button>
               </div>
             </div>
-            <button type="button" class="admin-btn-solid" id="bookingConfirmCloseBtn" style="margin-top:20px">Done</button>
+            <p class="admin-hint" style="text-align:center;margin:18px 0">A confirmation has been sent to your email<span id="bookingConfirmSmsNote"></span>.</p>
+            <div class="checkout-order-summary" id="bookingConfirmSummary" hidden></div>
+            <div class="ticket-confirm-actions">
+              <button type="button" class="btn on-light fill" id="bookingViewSessionsBtn">View My Sessions</button>
+              <button type="button" class="btn on-light" id="bookingAddCalendarBtn">Add To Calendar</button>
+            </div>
+            <button type="button" class="admin-btn-ghost" id="bookingConfirmCloseBtn" style="margin-top:14px;width:100%">Done</button>
           </div>
         </form>
       </div>
@@ -1679,6 +1805,13 @@ function dialogsHtml(){
 
           <div class="checkout-order-summary" id="teachingRegisterOrderSummary"></div>
 
+          <div class="booking-policy-checks">
+            <label class="booking-policy-check">
+              <input type="checkbox" id="teachingRegisterAgreeSms" />
+              <span>I agree to receive booking/class confirmation and reminder text messages related to this registration. Not marketing — transactional only.</span>
+            </label>
+          </div>
+
           <div class="booking-actions checkout-actions">
             <button class="btn on-light fill checkout-submit" type="submit" id="teachingRegisterSubmitBtn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
@@ -1696,6 +1829,29 @@ function dialogsHtml(){
             </div>
           </div>
         </form>
+        <div class="ticket-confirm" id="teachingRegisterConfirmStep" hidden>
+          <div class="ticket-confirm-check">✓</div>
+          <div class="admin-microlabel" style="text-align:center;margin-bottom:6px">Registration Confirmed</div>
+          <h3 class="serif-heading" id="teachingRegisterConfirmTitle" style="text-align:center;margin-bottom:2px">Discernment</h3>
+          <p class="admin-hint" id="teachingRegisterConfirmSubtitle" style="text-align:center;margin-bottom:22px"></p>
+          <div class="ticket-card">
+            <div class="ticket-row"><span>Attendee</span><strong id="teachingRegisterConfirmName"></strong></div>
+            <div class="ticket-row"><span>When</span><strong id="teachingRegisterConfirmWhen"></strong></div>
+            <div class="ticket-row"><span>Format</span><strong id="teachingRegisterConfirmFormat"></strong></div>
+            <div class="ticket-row"><span>Payment Status</span><strong id="teachingRegisterConfirmPayment"></strong></div>
+            <div class="ticket-id-block">
+              <span>Confirmation ID</span>
+              <strong id="teachingRegisterConfirmId"></strong>
+              <button type="button" class="ticket-copy-btn" id="teachingRegisterCopyIdBtn">Copy Confirmation ID</button>
+            </div>
+          </div>
+          <p class="admin-hint" style="text-align:center;margin:18px 0">A confirmation has been sent to your email<span id="teachingRegisterConfirmSmsNote"></span>.</p>
+          <div class="ticket-confirm-actions">
+            <button type="button" class="btn on-light fill" id="teachingRegisterViewClassesBtn">View My Classes</button>
+            <button type="button" class="btn on-light" id="teachingRegisterAddCalendarBtn">Add To Calendar</button>
+          </div>
+          <button type="button" class="admin-btn-ghost" id="teachingRegisterConfirmCloseBtn" style="margin-top:14px;width:100%">Done</button>
+        </div>
       </div>
     </div>
   </dialog>
@@ -1723,6 +1879,7 @@ function dialogsHtml(){
           <button type="button" class="admin-step" data-edit-tab="registration"><span class="admin-step-num">5</span> Registration</button>
           <button type="button" class="admin-step" data-edit-tab="zoomlocation"><span class="admin-step-num">6</span> Zoom &amp; Location</button>
           <button type="button" class="admin-step" data-edit-tab="preview"><span class="admin-step-num">7</span> Preview</button>
+          <button type="button" class="admin-step" data-edit-tab="classroom"><span class="admin-step-num">8</span> Classroom Content</button>
         </div>
         <div class="admin-editor-panels">
 
@@ -1859,6 +2016,29 @@ function dialogsHtml(){
           <p class="admin-hint" style="margin-top:14px">Registration opens to visitors once this teaching's status is "Registration Open" — set that at the bottom of this window.</p>
         </div>
 
+        <div class="admin-edit-panel" data-edit-panel="classroom" hidden>
+          <p class="admin-hint" style="margin-bottom:16px">Notes, study guides, and resources published here appear only to students currently registered for this class (registration status not cancelled) — not the general public, and not students in other classes.</p>
+          <div class="booking-grid">
+            <div class="booking-field"><label for="classroomAddKind">Type</label>
+              <select id="classroomAddKind">
+                <option value="note">Text Note</option>
+                <option value="lesson-summary">Lesson Summary</option>
+                <option value="study-guide">Study Guide</option>
+                <option value="scripture">Scripture Focus</option>
+                <option value="resource">Resource / Downloadable File (link)</option>
+              </select>
+            </div>
+            <div class="booking-field"><label for="classroomAddTitle">Title</label><input id="classroomAddTitle" type="text" placeholder="e.g. Lesson Summary — Week 1" /></div>
+            <div class="booking-field full" id="classroomAddBodyField"><label for="classroomAddBody">Content</label><textarea id="classroomAddBody" rows="4" placeholder="Note text, study guide content, or scripture quote…"></textarea></div>
+            <div class="booking-field" id="classroomAddRefField" hidden><label for="classroomAddRef">Scripture Reference</label><input id="classroomAddRef" type="text" placeholder="e.g. 1 Thessalonians 5:21" /></div>
+            <div class="booking-field full" id="classroomAddUrlField" hidden><label for="classroomAddUrl">File / Resource URL</label><input id="classroomAddUrl" type="url" placeholder="https://… (PDF, doc, or shared link)" /></div>
+          </div>
+          <button class="admin-btn-solid" type="button" id="classroomAddPublishBtn" style="margin-top:8px">Publish To Class</button>
+          <div class="form-status" id="classroomAddStatus" style="margin-top:8px"></div>
+          <div class="admin-microlabel" style="margin:24px 0 10px">Published Content</div>
+          <div id="teachingEditClassroomList"></div>
+        </div>
+
         <div class="admin-edit-panel" data-edit-panel="zoomlocation" hidden>
           <div class="booking-grid">
             <div class="booking-field"><label for="teachingEditFormat">Format</label>
@@ -1928,7 +2108,7 @@ function dialogsHtml(){
     </div>
   </dialog>
 
-  <dialog class="booking-dialog" id="classRegDetailDialog" aria-labelledby="classRegDetailTitle" style="max-width:640px">
+  <dialog class="booking-dialog detail-drawer" id="classRegDetailDialog" aria-labelledby="classRegDetailTitle">
     <div class="booking-head">
       <div>
         <div class="kicker" style="margin-bottom:0">Class Registration</div>
@@ -1936,25 +2116,103 @@ function dialogsHtml(){
       </div>
       <button class="booking-close" id="closeClassRegDetail" type="button" aria-label="Close registration detail">×</button>
     </div>
-    <div class="booking-body">
-      <div class="story-form-grid" id="classRegDetailFields"></div>
-      <div class="admin-microlabel" style="margin:20px 0 10px">Registration Status</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="classRegDetailStatusBtns">
-        <button class="admin-btn-ghost" type="button" data-classreg-status="confirmed">Confirm</button>
-        <button class="admin-btn-ghost" type="button" data-classreg-status="pending_payment">Mark Pending</button>
-        <button class="admin-btn-ghost" type="button" data-classreg-status="cancelled">Cancel Registration</button>
-        <button class="admin-btn-ghost" type="button" data-classreg-status="refunded">Mark Refunded</button>
+    <div class="booking-body detail-drawer-body">
+      <div id="classRegDetailFields"></div>
+      <div class="detail-section">
+        <div class="detail-section-title">Registration Status</div>
+        <div class="detail-action-row" id="classRegDetailStatusBtns">
+          <button class="admin-btn-ghost" type="button" data-classreg-status="confirmed">Confirm</button>
+          <button class="admin-btn-ghost" type="button" data-classreg-status="pending_payment">Mark Pending</button>
+          <button class="admin-btn-ghost" type="button" data-classreg-status="cancelled">Cancel Registration</button>
+          <button class="admin-btn-ghost" type="button" data-classreg-status="refunded">Mark Refunded</button>
+        </div>
       </div>
-      <div class="admin-microlabel" style="margin:20px 0 10px">Attendance</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="classRegDetailAttendanceBtns">
-        <button class="admin-btn-ghost" type="button" data-classreg-attendance="not-marked">Not Marked</button>
-        <button class="admin-btn-ghost" type="button" data-classreg-attendance="attended">Mark Attended</button>
-        <button class="admin-btn-ghost" type="button" data-classreg-attendance="no-show">Mark No-Show</button>
+      <div class="detail-section">
+        <div class="detail-section-title">Attendance</div>
+        <div class="detail-action-row" id="classRegDetailAttendanceBtns">
+          <button class="admin-btn-ghost" type="button" data-classreg-attendance="not-marked">Not Marked</button>
+          <button class="admin-btn-ghost" type="button" data-classreg-attendance="attended">Mark Attended</button>
+          <button class="admin-btn-ghost" type="button" data-classreg-attendance="no-show">Mark No-Show</button>
+        </div>
       </div>
-      <div class="admin-microlabel" style="margin:20px 0 10px">Internal Notes <span style="text-transform:none;letter-spacing:0;color:var(--stone)">— visible only to the ministry team</span></div>
-      <textarea id="classRegDetailNotes" rows="3" style="width:100%;box-sizing:border-box;margin-bottom:12px" placeholder="Add a private note about this registrant or their registration…"></textarea>
-      <button class="admin-btn-solid" type="button" id="classRegDetailSaveNotesBtn">Save Notes</button>
+      <div class="detail-section">
+        <div class="detail-section-title-row">
+          <div class="detail-section-title">Confirmation History <span class="detail-section-note">— Preview Mode simulation, not real delivery</span></div>
+          <button class="admin-btn-ghost" type="button" id="classRegResendBtn">Resend Confirmation</button>
+        </div>
+        <div class="admin-hint" id="classRegResendStatus" style="margin-bottom:10px"></div>
+        <div id="classRegDetailNotifLog"></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">Internal Notes <span class="detail-section-note">— visible only to the ministry team</span></div>
+        <textarea id="classRegDetailNotes" rows="3" style="margin-bottom:12px" placeholder="Add a private note about this registrant or their registration…"></textarea>
+        <button class="admin-btn-solid" type="button" id="classRegDetailSaveNotesBtn">Save Notes</button>
+      </div>
       <div class="form-status" id="classRegDetailStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
+    </div>
+  </dialog>
+
+  <dialog class="booking-dialog detail-drawer" id="bookingDetailDialog" aria-labelledby="bookingDetailTitle">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0">One-on-One Booking</div>
+        <h3 id="bookingDetailTitle">Appointment</h3>
+      </div>
+      <button class="booking-close" id="closeBookingDetail" type="button" aria-label="Close booking detail">×</button>
+    </div>
+    <div class="booking-body detail-drawer-body">
+      <div id="bookingDetailFields"></div>
+      <div class="detail-section">
+        <div class="detail-section-title-row">
+          <div class="detail-section-title">Confirmation History <span class="detail-section-note">— Preview Mode simulation, not real delivery</span></div>
+          <button class="admin-btn-ghost" type="button" id="bookingDetailResendBtn">Resend Confirmation</button>
+        </div>
+        <div class="admin-hint" id="bookingDetailResendStatus" style="margin-bottom:10px"></div>
+        <div id="bookingDetailNotifLog"></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">Internal Notes <span class="detail-section-note">— visible only to the ministry team</span></div>
+        <textarea id="bookingDetailNotes" rows="3" style="margin-bottom:12px" placeholder="Add a private note about this appointment…"></textarea>
+        <button class="admin-btn-solid" type="button" id="bookingDetailSaveNotesBtn">Save Notes</button>
+      </div>
+      <div class="form-status" id="bookingDetailStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
+    </div>
+  </dialog>
+
+  <dialog class="booking-dialog classroom-dialog" id="classroomDialog" aria-labelledby="classroomTitle" style="max-width:760px">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0" id="classroomBreadcrumb">My Classes</div>
+        <h3 class="serif-heading" id="classroomTitle">Classroom</h3>
+        <p class="admin-hint" id="classroomSubtitle" style="margin-top:4px"></p>
+      </div>
+      <button class="booking-close" id="closeClassroom" type="button" aria-label="Close classroom">×</button>
+    </div>
+    <div class="booking-body">
+      <div class="classroom-meta-row" id="classroomMetaRow"></div>
+      <div class="admin-tabs" id="classroomTabs" style="margin:18px 0 20px">
+        <button type="button" class="admin-tab active" data-classroom-tab="overview">Overview</button>
+        <button type="button" class="admin-tab" data-classroom-tab="notes">Notes</button>
+        <button type="button" class="admin-tab" data-classroom-tab="resources">Resources</button>
+        <button type="button" class="admin-tab" data-classroom-tab="messages">Messages</button>
+      </div>
+      <div data-classroom-panel="overview">
+        <div class="admin-microlabel" style="margin-bottom:8px">About This Class</div>
+        <p class="admin-hint" id="classroomAbout" style="margin-bottom:20px"></p>
+        <div class="admin-microlabel" style="margin-bottom:8px" id="classroomScriptureLabel" hidden>Scripture Focus</div>
+        <blockquote class="classroom-scripture" id="classroomScripture" hidden></blockquote>
+        <div class="admin-microlabel" style="margin:20px 0 8px">Lesson Summary</div>
+        <div id="classroomLessonSummary"></div>
+      </div>
+      <div data-classroom-panel="notes" hidden>
+        <div id="classroomNotesList"></div>
+      </div>
+      <div data-classroom-panel="resources" hidden>
+        <div id="classroomResourcesList"></div>
+      </div>
+      <div data-classroom-panel="messages" hidden>
+        <p style="color:#656565">Class messaging isn't connected yet — this is next on the build list. For now, reach the ministry team from the Connect page.</p>
+      </div>
     </div>
   </dialog>
 
@@ -2291,8 +2549,36 @@ function resetPreviewData(){
   DEMO_TEACHING_REGISTRATIONS = JSON.parse(JSON.stringify(TEACHING_PREVIEW_DEFAULTS.classRegistrations));
   BUSINESS_TZ = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
   if(currentProfile) currentProfile.photoURL = '';
+  backfillPreviewConfirmationFields();
 }
-if(DEMO_MODE) loadPreviewFromStorage();
+// The confirmation ID / notification log / payment fields used by the
+// Owner Portal's Lookup, Payments, and Confirmation History views were
+// added after these registrations/bookings' seed data (and this
+// browser's already-saved preview data) existed — this fills in
+// anything missing exactly once, so old records behave identically to
+// ones created through the live forms instead of showing blank fields.
+function backfillPreviewConfirmationFields(){
+  let changed = false;
+  DEMO_TEACHING_REGISTRATIONS.forEach(r => {
+    if(!r.confirmationId){ r.confirmationId = generateConfirmationId(classConfirmationPrefix(TEACHINGS[r.teachingId] || { title: r.teachingTitle })); changed = true; }
+    if(!r.notificationLog){ r.notificationLog = buildInitialNotificationLog(false); changed = true; }
+    if(r.transactionId === undefined){ r.transactionId = Number(r.amountPaid) > 0 ? synthesizeTransactionId() : null; changed = true; }
+    if(r.smsConsent === undefined){ r.smsConsent = false; changed = true; }
+  });
+  DEMO_BOOKINGS.forEach(b => {
+    if(!b.confirmationId){ b.confirmationId = generateConfirmationId('1ON1'); changed = true; }
+    if(!b.notificationLog){ b.notificationLog = buildInitialNotificationLog(false); changed = true; }
+    if(b.amountPaid === undefined){ b.amountPaid = 0; changed = true; }
+    if(b.transactionId === undefined){ b.transactionId = null; changed = true; }
+    if(b.paymentRefunded === undefined){ b.paymentRefunded = false; changed = true; }
+    if(b.status === 'confirmed' && !b.amountPaid){ markBookingPaid(b); changed = true; }
+    if(b.notes === undefined){ b.notes = ''; changed = true; }
+    if(b.bookedAt === undefined){ b.bookedAt = new Date().toISOString(); changed = true; }
+    if(b.smsConsent === undefined){ b.smsConsent = false; changed = true; }
+  });
+  if(changed){ saveTeachingRegistrationsToStorage(); saveBookingsPreviewToStorage(); }
+}
+if(DEMO_MODE){ loadPreviewFromStorage(); backfillPreviewConfirmationFields(); }
 
 async function loadTeachingPageConfig(){
   try {
@@ -3329,6 +3615,182 @@ try { renderPublishedClassReviews(); } catch (err) { console.error('renderPublis
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
+
+/* ---------------------------------------------------------------
+   Confirmation IDs + notification log — shared by class
+   registrations and one-on-one bookings. Short, branded, readable
+   codes (UA-<PREFIX>-<4 chars>) stored on the record itself, not
+   derived from name/email, so they work as a real lookup key. The
+   notification log is a simulated preview of what an email/SMS
+   provider would report back — nothing here sends a real message;
+   see pushConfirmationNotifications below for the "Preview Mode"
+   framing shown next to every entry.
+   --------------------------------------------------------------- */
+function generateConfirmationId(prefix){
+  let code = '';
+  for(let i = 0; i < 4; i++) code += CONFIRMATION_ID_CHARS[Math.floor(Math.random() * CONFIRMATION_ID_CHARS.length)];
+  return 'UA-' + prefix + '-' + code;
+}
+// Shown on the confirmation ticket itself. No real payment processor is
+// connected yet (see the disabled card-demo fieldset above every
+// checkout form), so a price > 0 is honestly "pending" rather than
+// "confirmed" here — matches what the Owner Portal shows for the same
+// record (classRegPaymentStatus/bookingPaymentStatus), so the public
+// ticket and the admin view never contradict each other.
+function previewPaymentStatusLabel(price){
+  return Number(price) > 0 ? 'Pending — Payment Not Yet Connected' : 'No Payment Required';
+}
+// Small "Copy Confirmation ID" affordance shared by both ticket
+// screens and the registrant/booking detail drawers.
+function copyConfirmationId(text, btn){
+  const done = ok => {
+    if(!btn) return;
+    const original = btn.dataset.originalLabel || btn.textContent;
+    btn.dataset.originalLabel = original;
+    btn.textContent = ok ? 'Copied!' : 'Could not copy';
+    setTimeout(() => { btn.textContent = original; }, 1800);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(() => done(true)).catch(() => done(false));
+  } else {
+    try {
+      const tmp = document.createElement('textarea');
+      tmp.value = text; tmp.style.position = 'fixed'; tmp.style.opacity = '0';
+      document.body.appendChild(tmp); tmp.select();
+      document.execCommand('copy');
+      tmp.remove();
+      done(true);
+    } catch (err) { done(false); }
+  }
+}
+function classConfirmationPrefix(t){
+  const source = ((t && (t.category || t.title)) || 'CLS').toUpperCase().replace(/[^A-Z]/g, '');
+  return (source.slice(0, 4) || 'CLS');
+}
+// Builds the notification log for a brand-new registration/booking:
+// a confirmation "sent" the moment it's created (email always, SMS
+// only if consent was given), plus a 24-hour reminder in "scheduled"
+// state. computeReminderStatus re-evaluates that reminder against the
+// actual class/session time on every render, so it flips to "sent"
+// once the real preview clock crosses the 24-hour mark — no server,
+// no real delivery, just an honest simulated state machine.
+function buildInitialNotificationLog(smsConsent){
+  const now = new Date().toISOString();
+  const log = [{ type: 'confirmation', channel: 'email', status: 'sent', at: now }];
+  if(smsConsent) log.push({ type: 'confirmation', channel: 'sms', status: 'sent', at: now });
+  log.push({ type: 'reminder-24h', channel: 'email', status: 'scheduled', at: null });
+  if(smsConsent) log.push({ type: 'reminder-24h', channel: 'sms', status: 'scheduled', at: null });
+  return log;
+}
+// Recomputes reminder entries' status against a target date/time
+// (never mutates stored data — this is display-only, recalculated
+// fresh every time so it always reflects "now").
+function reminderStatusForTarget(targetDate){
+  if(!targetDate || Number.isNaN(targetDate.getTime())) return 'scheduled';
+  const hoursUntil = (targetDate.getTime() - Date.now()) / 3600000;
+  if(hoursUntil <= 0) return 'passed';
+  if(hoursUntil <= 24) return 'sent';
+  return 'scheduled';
+}
+function notificationLogWithLiveReminders(log, targetDate){
+  return (log || []).map(entry => entry.type === 'reminder-24h'
+    ? { ...entry, status: reminderStatusForTarget(targetDate) }
+    : entry);
+}
+
+/* ---------------------------------------------------------------
+   Member notifications — the member-facing counterpart to the
+   Owner's Notification Center. Same "Preview Mode" honesty: these
+   are real records kept per-member in this browser's localStorage,
+   not real push/email delivery.
+   --------------------------------------------------------------- */
+const MEMBER_NOTIFICATIONS_KEY = 'ua_preview_member_notifications_v1';
+let MEMBER_NOTIFICATIONS = [];
+(function loadMemberNotifications(){
+  try {
+    const raw = localStorage.getItem(MEMBER_NOTIFICATIONS_KEY);
+    if(raw) MEMBER_NOTIFICATIONS = JSON.parse(raw);
+  } catch (err) { /* keep empty */ }
+})();
+function saveMemberNotifications(){
+  try { localStorage.setItem(MEMBER_NOTIFICATIONS_KEY, JSON.stringify(MEMBER_NOTIFICATIONS)); } catch (err) { /* ignore */ }
+}
+function pushMemberNotification(uid, type, title, detail){
+  if(!uid) return; // guests have nowhere to receive it until they have an account
+  MEMBER_NOTIFICATIONS.unshift({ id: 'mn-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), uid, type, title, detail, createdAt: new Date().toISOString(), read: false });
+  saveMemberNotifications();
+  if(currentUser && currentUser.uid === uid) renderMemberNotifications();
+}
+
+/* ---------------------------------------------------------------
+   Classroom content (notes/resources) — Owner publishes per class;
+   only members with a non-cancelled registration for that class can
+   see it. No separate "enrollment" table: a live, non-cancelled
+   registration IS the enrollment, checked fresh every time.
+   --------------------------------------------------------------- */
+const CLASSROOM_CONTENT_KEY = 'ua_preview_classroom_content_v1';
+const DEFAULT_CLASSROOM_CONTENT = {
+  'demo-discernment': [
+    { id: 'cc-1', kind: 'note', title: 'Lesson Summary', body: 'Discernment is the Spirit-given ability to distinguish truth from error, and God’s voice from every other voice — instinct, emotion, and assumption included. This week we walked through a simple framework: Test, Weigh, Confirm.', publishedAt: '2026-09-10T14:00:00.000Z' },
+    { id: 'cc-2', kind: 'resource', title: 'Study Guide (PDF)', url: 'https://example.com/discernment-study-guide.pdf', publishedAt: '2026-09-10T14:05:00.000Z' },
+    { id: 'cc-3', kind: 'scripture', title: 'Scripture Focus', body: '“Test everything; hold fast what is good.”', ref: '1 Thessalonians 5:21', publishedAt: '2026-09-10T14:00:00.000Z' }
+  ]
+};
+let CLASSROOM_CONTENT = JSON.parse(JSON.stringify(DEFAULT_CLASSROOM_CONTENT));
+(function loadClassroomContent(){
+  try {
+    const raw = localStorage.getItem(CLASSROOM_CONTENT_KEY);
+    if(raw) CLASSROOM_CONTENT = JSON.parse(raw);
+  } catch (err) { /* keep defaults */ }
+})();
+function saveClassroomContent(){
+  try { localStorage.setItem(CLASSROOM_CONTENT_KEY, JSON.stringify(CLASSROOM_CONTENT)); } catch (err) { /* ignore */ }
+}
+// A member is "enrolled" in a class if they have any registration for
+// it (by uid, or by email for a guest registration before an account
+// existed) that isn't cancelled.
+function memberRegistrationsFor(teachingId, uid, email){
+  return DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === teachingId && r.status !== 'cancelled' &&
+    ((uid && r.uid === uid) || (!r.uid && email && r.email && r.email.toLowerCase() === email.toLowerCase())));
+}
+function classroomAccessAllowed(teachingId, uid, email){
+  return memberRegistrationsFor(teachingId, uid, email).length > 0;
+}
+
+/* ---------------------------------------------------------------
+   Add to Calendar — real .ics download, no external calendar API.
+   Start time is computed from the actual ET wall-clock date/time via
+   etWallTimeToDate (DST-correct), never a hardcoded EST/EDT offset.
+   --------------------------------------------------------------- */
+function icsTimestamp(date){
+  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
+function downloadIcsEvent({ title, description, location, dateStr, hhmm, durationMinutes }){
+  const start = etWallTimeToDate(dateStr, hhmmToMinutes(hhmm));
+  const end = new Date(start.getTime() + (durationMinutes || 60) * 60000);
+  const escapeIcs = s => String(s || '').replace(/[\\,;]/g, m => '\\' + m).replace(/\n/g, '\\n');
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//The Unveiled Assembly//Preview//EN',
+    'BEGIN:VEVENT',
+    'UID:' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '@theunveiledassembly.com',
+    'DTSTAMP:' + icsTimestamp(new Date()),
+    'DTSTART:' + icsTimestamp(start),
+    'DTEND:' + icsTimestamp(end),
+    'SUMMARY:' + escapeIcs(title),
+    'DESCRIPTION:' + escapeIcs(description || ''),
+    'LOCATION:' + escapeIcs(location || ''),
+    'END:VEVENT', 'END:VCALENDAR'
+  ];
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 60) + '.ics';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 function minutesToLabel(mins){
   const h24 = Math.floor(mins / 60);
   const m = mins % 60;
@@ -3458,7 +3920,11 @@ function refreshPortalTabs(){
 function enterDashboard(){
   showPortalView(currentProfile.role === 'admin' ? 'owner' : 'member');
   loadMemberBookings();
-  if(currentProfile.role === 'admin') loadOwnerData();
+  if(currentProfile.role === 'admin'){
+    loadOwnerData();
+  } else {
+    renderMemberDashboardPanels();
+  }
   updateVerifyBanner();
 }
 
@@ -4462,6 +4928,35 @@ document.getElementById('bookingViewTerms').addEventListener('click', () => open
 document.getElementById('bookingViewNoRefund').addEventListener('click', () => openPolicyView('noRefund'));
 document.getElementById('closePolicyView').addEventListener('click', () => document.getElementById('policyViewDialog').close());
 document.getElementById('bookingConfirmCloseBtn').addEventListener('click', () => bookingDialog.close());
+document.getElementById('bookingCopyIdBtn').addEventListener('click', event => {
+  copyConfirmationId(document.getElementById('bookingConfirmId').textContent, event.currentTarget);
+});
+document.getElementById('bookingAddCalendarBtn').addEventListener('click', () => {
+  const b = DEMO_BOOKINGS.find(x => x.id === bookingForm.dataset.lastBookingId);
+  if(!b) return;
+  downloadIcsEvent({ title: sessionTypeName(b.sessionType), description: 'The Unveiled Assembly — ' + sessionTypeName(b.sessionType), location: 'Live on Zoom', dateStr: b.date, hhmm: b.time, durationMinutes: SESSION_TYPES[b.sessionType]?.durationMinutes || 30 });
+});
+document.getElementById('bookingViewSessionsBtn').addEventListener('click', () => {
+  bookingDialog.close();
+  if(currentUser){
+    openPortal();
+    showMemberTab('sessions');
+  } else {
+    // One-on-ones never require an account up front — this is the
+    // "invite to create/claim an account after confirmation" path
+    // from the requirement, not a hard gate like class registration.
+    showAuthPanel('register');
+    showPortalView('prospect');
+    memberPortalDialog.showModal();
+    const emailField = document.getElementById('regEmail');
+    if(emailField && !emailField.value) emailField.value = document.getElementById('bookingConfirmEmail').textContent || '';
+    const nameParts = (document.getElementById('bookingConfirmName').textContent || '').trim().split(/\s+/);
+    const firstField = document.getElementById('regFirstName');
+    const lastField = document.getElementById('regLastName');
+    if(firstField && !firstField.value) firstField.value = nameParts[0] || '';
+    if(lastField && !lastField.value) lastField.value = nameParts.slice(1).join(' ') || '';
+  }
+});
 
 function openBooking(service){
   bookingForm.reset();
@@ -4593,27 +5088,41 @@ bookingTimeSelect.addEventListener('change', async () => {
   }
 });
 
-async function createBooking({ name, email, phone, reason, sessionType, date, time, status, uid, clientTimeZone }){
+async function createBooking({ name, email, phone, reason, sessionType, date, time, status, uid, clientTimeZone, smsConsent }){
   const slotId = date + '_' + time;
   const startAtUTC = etWallTimeToDate(date, hhmmToMinutes(time));
+  const confirmationId = generateConfirmationId('1ON1');
   if(DEMO_MODE){
     if(DEMO_BOOKINGS.some(b => b.slotId === slotId && b.status !== 'declined' && b.status !== 'cancelled')){
       throw new Error('slot-taken');
     }
-    DEMO_BOOKINGS.push({ id: 'demo-' + (++DEMO_BOOKING_SEQ), slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone });
+    const bookedAt = new Date().toISOString();
+    const notificationLog = buildInitialNotificationLog(smsConsent);
+    const record = { id: 'demo-' + (++DEMO_BOOKING_SEQ), slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone, confirmationId, smsConsent: !!smsConsent, notificationLog, bookedAt, amountPaid: 0, transactionId: null, notes: '' };
+    if(status === 'confirmed') markBookingPaid(record);
+    DEMO_BOOKINGS.push(record);
     DEMO_HOLDS = DEMO_HOLDS.filter(h => h.id !== holdIdFor(date, time));
     saveBookingsPreviewToStorage();
-    return;
+    pushMemberNotification(uid, 'registration-confirmed', 'Session Confirmed', sessionTypeName(sessionType) + ' — ' + confirmationId);
+    const timeLabel = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(bookedAt));
+    DEMO_NOTIFICATIONS.unshift({
+      id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'New One-on-One Booking',
+      detail: name + ' — ' + sessionTypeName(sessionType) + ', ' + formatLocalDateTime(date, time, clientTimeZone) +
+        '. Booked at ' + timeLabel + ' ET. Confirmation: ' + confirmationId
+    });
+    renderOwnerNotifications();
+    return record;
   }
+  const bookingRef = doc(collection(db, 'bookings'));
   await runTransaction(db, async (tx) => {
     const slotRef = doc(db, 'slots', slotId);
     const slotSnap = await tx.get(slotRef);
     if(slotSnap.exists()) throw new Error('slot-taken');
     tx.set(slotRef, { date, time, sessionType, uid: uid || null, createdAt: serverTimestamp() });
-    const bookingRef = doc(collection(db, 'bookings'));
-    tx.set(bookingRef, { slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone: clientTimeZone || null, createdAt: serverTimestamp() });
+    tx.set(bookingRef, { slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone: clientTimeZone || null, confirmationId, smsConsent: !!smsConsent, createdAt: serverTimestamp() });
   });
   try { await deleteDoc(doc(db, 'bookingHolds', holdIdFor(date, time))); } catch (err) { /* ok if already gone */ }
+  return { id: bookingRef.id, slotId, date, time, sessionType, name, email, phone, reason, uid, status, confirmationId, smsConsent: !!smsConsent };
 }
 
 const BOOKING_COOLDOWN_MS = 60000;
@@ -4661,19 +5170,21 @@ bookingForm.addEventListener('submit', async event => {
   bookingSubmitBtn.disabled = true;
   bookingStatus.textContent = 'Requesting your session…';
   const clientTimeZone = selectedBookingTimeZone();
+  const smsConsent = document.getElementById('bookingAgreeSms').checked;
   try {
-    await createBooking({
+    const record = await createBooking({
       name, email, phone, reason, sessionType: service, date: dateStr, time,
-      status: 'pending', uid: currentUser ? currentUser.uid : null, clientTimeZone
+      status: 'pending', uid: currentUser ? currentUser.uid : null, clientTimeZone, smsConsent
     });
     markThrottled('lastBookingSubmit');
-    const bookingRef = 'UA-' + Date.now().toString(36).toUpperCase();
-    document.getElementById('bookingConfirmSummary').innerHTML =
-      '<div class="checkout-order-row"><span>Session</span><span>' + escapeHtml(sessionTypeName(service)) + '</span></div>' +
-      '<div class="checkout-order-row"><span>When</span><span>' + escapeHtml(formatLocalDateTime(dateStr, time, clientTimeZone)) + '</span></div>' +
-      '<div class="checkout-order-row"><span>Email</span><span>' + escapeHtml(email) + '</span></div>' +
-      '<div class="checkout-order-row"><span>Phone</span><span>' + escapeHtml(phone) + '</span></div>' +
-      '<div class="checkout-order-total"><span>Booking Reference</span><span>' + bookingRef + '</span></div>';
+    document.getElementById('bookingConfirmTitle').textContent = sessionTypeName(service);
+    document.getElementById('bookingConfirmName').textContent = name;
+    document.getElementById('bookingConfirmWhen').textContent = formatLocalDateTime(dateStr, time, clientTimeZone);
+    document.getElementById('bookingConfirmEmail').textContent = email;
+    document.getElementById('bookingConfirmPayment').textContent = previewPaymentStatusLabel(SESSION_TYPES[service] && SESSION_TYPES[service].price);
+    document.getElementById('bookingConfirmId').textContent = record.confirmationId;
+    document.getElementById('bookingConfirmSmsNote').textContent = smsConsent ? ' and phone' : '';
+    bookingForm.dataset.lastBookingId = record.id;
     bookingStatus.textContent = '';
     showBookingWizardStep('confirm');
     bookingForm.reset();
@@ -5193,6 +5704,253 @@ document.getElementById('memberBookingsList').addEventListener('click', async ev
     portalMemberStatus.textContent = 'Could not update that booking.';
     event.target.disabled = false;
   }
+});
+
+/* =================================================================
+   Member Portal — My Classes / My Sessions / Notifications / Account
+   tabs, the Classroom page, and the dashboard's Next Class card. All
+   of this reads DEMO_TEACHING_REGISTRATIONS / DEMO_BOOKINGS /
+   MEMBER_NOTIFICATIONS directly — no separate "enrollment" table.
+   ================================================================= */
+function showMemberTab(name){
+  document.querySelectorAll('#memberTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.memberTab === name));
+  document.querySelectorAll('[data-member-panel]').forEach(p => { p.hidden = p.dataset.memberPanel !== name; });
+  if(name === 'classes') renderMemberClassesList();
+  if(name === 'sessions') renderMemberSessionsList();
+  if(name === 'notifications') renderMemberNotifications();
+}
+document.getElementById('memberTabs').addEventListener('click', event => {
+  const btn = event.target.closest('[data-member-tab]');
+  if(btn) showMemberTab(btn.dataset.memberTab);
+});
+document.addEventListener('click', event => {
+  const link = event.target.closest('[data-member-tab-link]');
+  if(link) showMemberTab(link.dataset.memberTabLink);
+});
+
+function myTeachingRegistrations(){
+  if(!currentUser) return [];
+  return DEMO_TEACHING_REGISTRATIONS.filter(r => r.uid === currentUser.uid ||
+    (!r.uid && currentProfile && r.email && currentProfile.email && r.email.toLowerCase() === currentProfile.email.toLowerCase()));
+}
+function myBookings(){
+  if(!currentUser) return [];
+  return DEMO_BOOKINGS.filter(b => b.uid === currentUser.uid ||
+    (!b.uid && currentProfile && b.email && currentProfile.email && b.email.toLowerCase() === currentProfile.email.toLowerCase()));
+}
+function isUpcomingTeaching(t){
+  if(!t) return true;
+  const today = new Date().toISOString().slice(0, 10);
+  return t.date >= today;
+}
+function renderMemberNextClassCard(){
+  const card = document.getElementById('memberNextClassCard');
+  if(!card) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = myTeachingRegistrations()
+    .filter(r => r.status !== 'cancelled' && r.teachingDate >= today)
+    .sort((a, b) => (a.teachingDate + (TEACHINGS[a.teachingId]?.startTime || '')).localeCompare(b.teachingDate + (TEACHINGS[b.teachingId]?.startTime || '')))[0];
+  if(!upcoming){
+    card.innerHTML = '<span class="portal-label">Next Class</span><p style="color:#d7d7d7">You\'re not registered for an upcoming class yet.</p>' +
+      '<div class="portal-inline-actions"><a class="portal-primary" href="teachings.html">Browse Teachings</a></div>';
+    return;
+  }
+  const t = TEACHINGS[upcoming.teachingId] || {};
+  const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
+  card.innerHTML =
+    '<span class="portal-label">Next Class</span>' +
+    '<h4 class="serif-heading" style="margin-bottom:2px">' + escapeHtml(t.title || upcoming.teachingTitle) + '</h4>' +
+    (t.subtitle ? '<p style="color:var(--stone);font-style:italic;margin-bottom:12px">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    '<p style="color:#d7d7d7;margin-bottom:4px">' + escapeHtml(formatTeachingDate(upcoming.teachingDate)) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</p>' +
+    '<p style="color:var(--stone);margin-bottom:16px">' + escapeHtml(formatLabel) + '</p>' +
+    '<div class="member-reminder-note"><strong>24-Hour Reminder</strong><span>You\'ll receive a reminder 24 hours before the class via email' + (upcoming.smsConsent ? ' and text' : '') + '.</span></div>' +
+    '<div class="portal-inline-actions">' +
+    '<button class="portal-primary" type="button" data-member-view-classroom="' + escapeHtml(upcoming.teachingId) + '">View Class</button>' +
+    '<button class="portal-secondary" type="button" data-member-add-calendar-teaching="' + escapeHtml(upcoming.teachingId) + '">Add To Calendar</button>' +
+    '</div>';
+}
+function memberClassRowHtml(r){
+  const t = TEACHINGS[r.teachingId] || {};
+  const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
+  const statusClass = r.status === 'confirmed' ? 'confirmed' : r.status === 'cancelled' ? 'cancelled' : 'pending';
+  const statusLabel = r.status === 'confirmed' ? 'Registered' : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  return '<article class="portal-panel member-record-card" data-member-view-classroom="' + escapeHtml(r.teachingId) + '" style="cursor:pointer">' +
+    '<div class="member-record-head">' +
+    '<div><strong>' + escapeHtml(t.title || r.teachingTitle) + '</strong>' + (t.subtitle ? '<span class="member-record-sub">' + escapeHtml(t.subtitle) + '</span>' : '') + '</div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span>' +
+    '</div>' +
+    '<p class="member-record-meta">' + escapeHtml(formatTeachingDate(r.teachingDate)) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + ' · ' + escapeHtml(formatLabel) + '</p>' +
+    '<p class="member-record-conf">Confirmation <strong>' + escapeHtml(r.confirmationId || '—') + '</strong></p>' +
+    '</article>';
+}
+function renderMemberClassesList(){
+  const wrap = document.getElementById('memberClassesList');
+  if(!wrap) return;
+  const activeTab = document.querySelector('#memberClassesSubTabs .admin-tab.active');
+  const mode = activeTab ? activeTab.dataset.memberClassesTab : 'upcoming';
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = myTeachingRegistrations().filter(r => mode === 'upcoming' ? r.teachingDate >= today : r.teachingDate < today)
+    .sort((a, b) => mode === 'upcoming' ? a.teachingDate.localeCompare(b.teachingDate) : b.teachingDate.localeCompare(a.teachingDate));
+  wrap.innerHTML = rows.length === 0
+    ? '<p style="color:var(--stone)">No ' + mode + ' classes yet.</p>'
+    : rows.map(memberClassRowHtml).join('');
+}
+document.getElementById('memberClassesSubTabs').addEventListener('click', event => {
+  const btn = event.target.closest('[data-member-classes-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#memberClassesSubTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  renderMemberClassesList();
+});
+function memberSessionRowHtml(b){
+  const statusClass = b.status === 'confirmed' ? 'confirmed' : b.status === 'cancelled' ? 'cancelled' : b.status === 'declined' ? 'cancelled' : 'pending';
+  const statusLabel = b.status === 'confirmed' ? 'Confirmed' : b.status === 'cancelled' ? 'Cancelled' : b.status === 'declined' ? 'Declined' : 'Pending';
+  return '<article class="portal-panel member-record-card">' +
+    '<div class="member-record-head">' +
+    '<div><strong>' + escapeHtml(sessionTypeName(b.sessionType)) + '</strong></div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span>' +
+    '</div>' +
+    '<p class="member-record-meta">' + escapeHtml(formatLocalDateTime(b.date, b.time, b.clientTimeZone)) + '</p>' +
+    '<p class="member-record-conf">Confirmation <strong>' + escapeHtml(b.confirmationId || '—') + '</strong></p>' +
+    '<div class="portal-inline-actions" style="margin-top:10px">' +
+    '<button class="portal-secondary" type="button" data-member-add-calendar-booking="' + escapeHtml(b.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">Add To Calendar</button>' +
+    '</div></article>';
+}
+function renderMemberSessionsList(){
+  const wrap = document.getElementById('memberSessionsList');
+  if(!wrap) return;
+  const activeTab = document.querySelector('#memberSessionsSubTabs .admin-tab.active');
+  const mode = activeTab ? activeTab.dataset.memberSessionsTab : 'upcoming';
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = myBookings().filter(b => {
+    if(mode === 'cancelled') return b.status === 'cancelled' || b.status === 'declined';
+    if(b.status === 'cancelled' || b.status === 'declined') return false;
+    return mode === 'upcoming' ? b.date >= today : b.date < today;
+  }).sort((a, b) => mode === 'past' ? (b.date + b.time).localeCompare(a.date + a.time) : (a.date + a.time).localeCompare(b.date + b.time));
+  wrap.innerHTML = rows.length === 0
+    ? '<p style="color:var(--stone)">No ' + mode + ' sessions.</p>'
+    : rows.map(memberSessionRowHtml).join('');
+}
+document.getElementById('memberSessionsSubTabs').addEventListener('click', event => {
+  const btn = event.target.closest('[data-member-sessions-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#memberSessionsSubTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  renderMemberSessionsList();
+});
+function memberNotificationRowHtml(n){
+  return '<div class="portal-row" data-mn-id="' + escapeHtml(n.id) + '" style="opacity:' + (n.read ? '.6' : '1') + '">' +
+    '<div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + '</small></div>' +
+    '<span class="portal-access">' + escapeHtml(shortDate(n.createdAt)) + '</span>' +
+    '</div>';
+}
+function renderMemberNotifications(){
+  const wrap = document.getElementById('memberNotificationsList');
+  const countEl = document.getElementById('memberNotifCount');
+  if(!currentUser) return;
+  const mine = MEMBER_NOTIFICATIONS.filter(n => n.uid === currentUser.uid);
+  const unread = mine.filter(n => !n.read).length;
+  if(countEl){ countEl.hidden = unread === 0; countEl.textContent = String(unread); }
+  if(!wrap) return;
+  wrap.innerHTML = mine.length === 0
+    ? '<p style="color:#656565">No notifications yet.</p>'
+    : mine.map(memberNotificationRowHtml).join('');
+}
+document.getElementById('memberNotificationsList').addEventListener('click', event => {
+  const row = event.target.closest('[data-mn-id]');
+  if(!row) return;
+  const n = MEMBER_NOTIFICATIONS.find(x => x.id === row.dataset.mnId);
+  if(n && !n.read){ n.read = true; saveMemberNotifications(); renderMemberNotifications(); }
+});
+function renderMemberDashboardPanels(){
+  if(!currentUser) return;
+  renderMemberNextClassCard();
+  renderMemberNotifications();
+}
+document.addEventListener('click', event => {
+  const viewBtn = event.target.closest('[data-member-view-classroom]');
+  if(viewBtn){ openClassroom(viewBtn.dataset.memberViewClassroom); return; }
+  const calBtnT = event.target.closest('[data-member-add-calendar-teaching]');
+  if(calBtnT){
+    const t = TEACHINGS[calBtnT.dataset.memberAddCalendarTeaching];
+    if(t) downloadIcsEvent({ title: t.title, description: 'The Unveiled Assembly — ' + (t.subtitle || t.title), location: t.format === 'zoom' ? 'Live on Zoom' : (t.location || 'The Unveiled Assembly'), dateStr: t.date, hhmm: t.startTime, durationMinutes: 60 });
+    return;
+  }
+  const calBtnB = event.target.closest('[data-member-add-calendar-booking]');
+  if(calBtnB){
+    const b = DEMO_BOOKINGS.find(x => x.id === calBtnB.dataset.memberAddCalendarBooking);
+    if(b) downloadIcsEvent({ title: sessionTypeName(b.sessionType), description: 'The Unveiled Assembly — ' + sessionTypeName(b.sessionType), location: 'Live on Zoom', dateStr: b.date, hhmm: b.time, durationMinutes: SESSION_TYPES[b.sessionType]?.durationMinutes || 30 });
+    return;
+  }
+});
+
+/* ---------------------------------------------------------------
+   Classroom page — Overview / Notes / Resources / Messages.
+   Access is checked fresh every time from the member's own
+   registrations (classroomAccessAllowed), never cached, so someone
+   who registers for a second class immediately sees it and someone
+   whose registration is cancelled loses access on the next check.
+   --------------------------------------------------------------- */
+let classroomTeachingId = null;
+function classroomContentRowHtml(item, kind){
+  if(kind === 'resource'){
+    return '<article class="portal-panel classroom-content-card">' +
+      '<span class="portal-label">Resource · ' + escapeHtml(shortDate(item.publishedAt)) + '</span>' +
+      '<h4 class="serif-heading" style="margin-bottom:10px">' + escapeHtml(item.title) + '</h4>' +
+      '<a class="text-link on-light" href="' + escapeHtml(item.url || '#') + '" target="_blank" rel="noopener noreferrer">Download / Open →</a>' +
+      '</article>';
+  }
+  return '<article class="portal-panel classroom-content-card">' +
+    '<span class="portal-label">Note · ' + escapeHtml(shortDate(item.publishedAt)) + '</span>' +
+    '<h4 class="serif-heading" style="margin-bottom:8px">' + escapeHtml(item.title) + '</h4>' +
+    '<p style="color:#656565;white-space:pre-line">' + escapeHtml(item.body || '') + '</p>' +
+    '</article>';
+}
+function openClassroom(teachingId){
+  const t = TEACHINGS[teachingId];
+  if(!t) return;
+  const email = currentProfile ? currentProfile.email : '';
+  if(!classroomAccessAllowed(teachingId, currentUser ? currentUser.uid : null, email)){
+    if(document.getElementById('portalMemberStatus')) document.getElementById('portalMemberStatus').textContent = "You're not registered for that class yet.";
+    return;
+  }
+  classroomTeachingId = teachingId;
+  const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
+  document.getElementById('classroomTitle').textContent = t.title || 'Classroom';
+  document.getElementById('classroomSubtitle').textContent = t.subtitle || '';
+  document.getElementById('classroomMetaRow').innerHTML =
+    '<span>' + escapeHtml(formatTeachingDate(t.date || '')) + '</span><span>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</span><span>' + escapeHtml(formatLabel) + '</span>';
+  document.getElementById('classroomAbout').textContent = t.fullDescription || t.shortDescription || 'No description yet.';
+  const content = CLASSROOM_CONTENT[teachingId] || [];
+  const scripture = content.find(c => c.kind === 'scripture');
+  const scriptureLabel = document.getElementById('classroomScriptureLabel');
+  const scriptureEl = document.getElementById('classroomScripture');
+  if(scripture){
+    scriptureLabel.hidden = false; scriptureEl.hidden = false;
+    scriptureEl.innerHTML = '“' + escapeHtml(scripture.body) + '”<cite>' + escapeHtml(scripture.ref || '') + '</cite>';
+  } else { scriptureLabel.hidden = true; scriptureEl.hidden = true; }
+  const notes = content.filter(c => c.kind === 'note' || c.kind === 'study-guide' || c.kind === 'lesson-summary');
+  const resources = content.filter(c => c.kind === 'resource' || c.kind === 'file' || c.kind === 'scripture-list');
+  document.getElementById('classroomLessonSummary').innerHTML = notes.length
+    ? notes.map(n => classroomContentRowHtml(n, 'note')).join('')
+    : '<p style="color:#656565">No lesson summary published yet.</p>';
+  document.getElementById('classroomNotesList').innerHTML = notes.length
+    ? notes.map(n => classroomContentRowHtml(n, 'note')).join('')
+    : '<p style="color:#656565">No notes published yet — check back after class.</p>';
+  document.getElementById('classroomResourcesList').innerHTML = resources.length
+    ? resources.map(r => classroomContentRowHtml(r, 'resource')).join('')
+    : '<p style="color:#656565">No resources published yet.</p>';
+  document.querySelectorAll('#classroomTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.classroomTab === 'overview'));
+  document.querySelectorAll('[data-classroom-panel]').forEach(p => { p.hidden = p.dataset.classroomPanel !== 'overview'; });
+  document.getElementById('classroomDialog').showModal();
+}
+document.getElementById('classroomTabs').addEventListener('click', event => {
+  const btn = event.target.closest('[data-classroom-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#classroomTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('[data-classroom-panel]').forEach(p => { p.hidden = p.dataset.classroomPanel !== btn.dataset.classroomTab; });
+});
+document.getElementById('closeClassroom').addEventListener('click', () => document.getElementById('classroomDialog').close());
+document.getElementById('classroomDialog').addEventListener('click', event => {
+  if(event.target.id === 'classroomDialog') document.getElementById('classroomDialog').close();
 });
 
 /* ---------------------------------------------------------------
@@ -5871,7 +6629,7 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
     if(DEMO_MODE){
       const b = DEMO_BOOKINGS.find(x => x.id === bookingId);
       if(confirmBtn){
-        if(b) b.status = 'confirmed';
+        if(b){ b.status = 'confirmed'; markBookingPaid(b); }
         portalOwnerStatus.textContent = 'Booking confirmed.';
         loadOwnerConfirmed();
       } else {
@@ -6060,13 +6818,74 @@ function showBookingsTab(name){
   document.querySelectorAll('[data-bookings-panel]').forEach(p => { p.hidden = p.dataset.bookingsPanel !== name; });
   if(name === 'overview'){ renderBookingsOverviewStats(); renderBookingsToday(); renderBookingsCalendarPreview(); renderBookingsInsights(); }
   if(name === 'calendar') renderBookingsCalendar();
+  if(name === 'payments') renderBookingsPayments();
   if(name === 'clients') renderBookingsClients();
   if(name === 'reports') renderBookingsReports();
   if(name === 'policies') renderBookingPolicies();
+  if(name === 'lookup') renderBookingsLookup();
 }
+function bookingsLookupRowHtml(b){
+  const statusLabel = b.status === 'confirmed' ? 'Confirmed' : b.status === 'declined' ? 'Declined' : b.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  return '<div class="admin-teaching-row" data-booking-view="' + escapeHtml(b.id) + '" style="cursor:pointer"><div class="admin-teaching-info">' +
+    '<div class="admin-teaching-title-row"><strong>' + escapeHtml(b.name || 'Guest') + '</strong>' +
+    '<span class="admin-status-pill ' + escapeHtml(b.status === 'confirmed' ? 'confirmed' : b.status === 'cancelled' || b.status === 'declined' ? 'cancelled' : 'pending') + '">' + statusLabel + '</span></div>' +
+    '<div class="admin-teaching-meta">' + escapeHtml(sessionTypeName(b.sessionType)) + ' · ' + escapeHtml(formatTeachingDate(b.date)) +
+    ' · <span style="font-family:var(--font-mono)">' + escapeHtml(b.confirmationId || '—') + '</span></div>' +
+    '<p style="margin:8px 0 0;color:var(--owner-text-muted)">' + escapeHtml(b.email || '') + (b.phone ? ' · ' + escapeHtml(b.phone) : '') + '</p>' +
+    '</div></div>';
+}
+function renderBookingsLookup(){
+  const wrap = document.getElementById('bookingsLookupResults');
+  if(!wrap) return;
+  const q = (document.getElementById('bookingsLookupSearch')?.value || '').trim().toLowerCase();
+  if(!q){ wrap.innerHTML = '<p class="admin-hint">Type a name, email, phone, or confirmation ID above to search.</p>'; return; }
+  const rows = DEMO_BOOKINGS.filter(b => ((b.name || '') + ' ' + (b.email || '') + ' ' + (b.phone || '') + ' ' + (b.confirmationId || '')).toLowerCase().includes(q))
+    .sort((a, b) => new Date(b.bookedAt || 0) - new Date(a.bookedAt || 0));
+  wrap.innerHTML = rows.length === 0 ? '<p class="admin-hint">No bookings match that search.</p>' : rows.map(bookingsLookupRowHtml).join('');
+}
+document.getElementById('bookingsLookupSearch').addEventListener('input', renderBookingsLookup);
+document.getElementById('bookingsLookupResults').addEventListener('click', event => {
+  const row = event.target.closest('[data-booking-view]');
+  if(row) openBookingDetail(row.dataset.bookingView);
+});
 document.getElementById('bookingsSubNav').addEventListener('click', event => {
   const btn = event.target.closest('.admin-tab');
   if(btn) showBookingsTab(btn.dataset.bookingsTab);
+});
+/* ---- Payments tab ---- */
+function bookingsPaymentRowHtml(b){
+  const paymentStatus = bookingPaymentStatus(b);
+  const label = paymentStatus === 'paid' ? 'Paid' : paymentStatus === 'refunded' ? 'Refunded' : 'Unpaid';
+  return '<div class="admin-teaching-row" data-booking-view="' + escapeHtml(b.id) + '" style="cursor:pointer">' +
+    '<div class="admin-teaching-info">' +
+    '<div class="admin-teaching-title-row"><strong>$' + (Number(b.amountPaid) || 0).toFixed(2) + '</strong>' +
+    '<span class="admin-status-pill ' + escapeHtml(paymentStatus) + '">' + escapeHtml(label) + '</span></div>' +
+    '<div class="admin-teaching-meta">' + escapeHtml(sessionTypeName(b.sessionType)) + ' · ' + escapeHtml(b.name || 'Guest') +
+    ' · <span style="font-family:var(--font-mono)">' + escapeHtml(b.confirmationId || '—') + '</span>' +
+    (b.transactionId ? ' · <span style="font-family:var(--font-mono)">' + escapeHtml(b.transactionId) + '</span>' : '') + '</div>' +
+    '</div></div>';
+}
+function bookingsPaymentsFilteredList(){
+  return DEMO_BOOKINGS.filter(b => Number(b.amountPaid) > 0 || b.status === 'pending')
+    .sort((a, b) => new Date(b.bookedAt || 0) - new Date(a.bookedAt || 0));
+}
+function renderBookingsPayments(){
+  const statsWrap = document.getElementById('bookingsPaymentsStats');
+  const listWrap = document.getElementById('bookingsPaymentsList');
+  if(!listWrap) return;
+  const rows = bookingsPaymentsFilteredList();
+  const paid = rows.filter(b => bookingPaymentStatus(b) === 'paid');
+  const refunded = rows.filter(b => bookingPaymentStatus(b) === 'refunded');
+  const revenue = paid.reduce((sum, b) => sum + (Number(b.amountPaid) || 0), 0);
+  if(statsWrap) statsWrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Paid</span><strong>' + paid.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Refunded</span><strong>' + refunded.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
+  listWrap.innerHTML = rows.length === 0 ? '<p class="admin-hint">No payment activity yet.</p>' : rows.map(bookingsPaymentRowHtml).join('');
+}
+document.getElementById('bookingsPaymentsList').addEventListener('click', event => {
+  const row = event.target.closest('[data-booking-view]');
+  if(row) openBookingDetail(row.dataset.bookingView);
 });
 
 function applyAppointmentsFilter(filter){
@@ -6399,29 +7218,38 @@ async function loadOwnerMembers(){
    real right now (pending payment), and only the payment step is a
    visual demonstration until a real processor is connected.
    --------------------------------------------------------------- */
-async function createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid }){
+async function createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid, smsConsent }){
   const t = TEACHINGS[teachingId] || {};
+  const confirmationId = generateConfirmationId(classConfirmationPrefix(t));
   const data = {
     teachingId, teachingTitle: t.title || '', teachingDate: t.date || '',
     firstName, lastName, email, phone, status: 'pending_payment', uid: uid || null,
-    attendanceStatus: 'not-marked', amountPaid: 0, notes: ''
+    attendanceStatus: 'not-marked', amountPaid: 0, notes: '', confirmationId, smsConsent: !!smsConsent
   };
   if(DEMO_MODE){
     const registeredAt = new Date().toISOString();
-    DEMO_TEACHING_REGISTRATIONS.push({ id: 'demo-reg-' + (++DEMO_TEACHING_REG_SEQ), ...data, registeredAt });
+    const notificationLog = buildInitialNotificationLog(smsConsent);
+    const record = { id: 'demo-reg-' + (++DEMO_TEACHING_REG_SEQ), ...data, registeredAt, notificationLog };
+    DEMO_TEACHING_REGISTRATIONS.push(record);
     saveTeachingRegistrationsToStorage();
     renderClassRegistrationsPanel();
+    // No separate "enrollment" record: a non-cancelled registration IS
+    // the enrollment (see classroomAccessAllowed) — this keeps
+    // registering and enrolling a single atomic step, per requirement.
+    pushMemberNotification(uid, 'registration-confirmed', 'Registration Confirmed', (t.title || 'Class') + ' — ' + confirmationId);
     const timeLabel = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(registeredAt));
     DEMO_NOTIFICATIONS.unshift({
       id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'New Class Registration',
       detail: (firstName + ' ' + (lastName ? lastName.charAt(0) + '.' : '')).trim() + ' — ' + (t.title || 'Class') +
         (t.date ? ', ' + formatTeachingDate(t.date) : '') + (t.startTime ? ' · ' + formatTeachingTime(t.startTime, t.timeZone) : '') +
-        '. Registered at ' + timeLabel + ' ET.'
+        '. Registered at ' + timeLabel + ' ET. Confirmation: ' + confirmationId
     });
     renderOwnerNotifications();
-    return;
+    return record;
   }
-  await setDoc(doc(collection(db, 'teachingRegistrations')), { ...data, registeredAt: serverTimestamp() });
+  const ref = doc(collection(db, 'teachingRegistrations'));
+  await setDoc(ref, { ...data, registeredAt: serverTimestamp() });
+  return { id: ref.id, ...data, registeredAt: new Date().toISOString() };
 }
 
 async function fetchTeachingRegistrations(teachingId){
@@ -6439,10 +7267,35 @@ const teachingRegisterForm = document.getElementById('teachingRegisterForm');
 const teachingRegisterStatus = document.getElementById('teachingRegisterStatus');
 const teachingRegisterSubmitBtn = document.getElementById('teachingRegisterSubmitBtn');
 
+// Classes require a signed-in account before completing registration
+// (member notes/resources access depends on it); one-on-ones do not —
+// see the booking submit handler, which attaches to an account only
+// when one already exists. Stashes intent, shows Sign In / Create
+// Account, and resumePendingTeachingRegistration() continues straight
+// into registration the moment auth succeeds.
+let pendingTeachingRegisterId = null;
+function requireAccountForTeachingRegister(teachingId){
+  pendingTeachingRegisterId = teachingId;
+  showAuthPanel('signin');
+  showPortalView('prospect');
+  const title = memberPortalDialog.querySelector('#memberPortalTitle');
+  if(title) title.textContent = 'Sign in to register for this class.';
+  memberPortalDialog.showModal();
+}
+function resumePendingTeachingRegistration(){
+  if(!pendingTeachingRegisterId) return;
+  const id = pendingTeachingRegisterId;
+  pendingTeachingRegisterId = null;
+  memberPortalDialog.close();
+  openTeachingRegister(id);
+}
 function openTeachingRegister(teachingId){
   const t = TEACHINGS[teachingId];
   if(!t) return;
+  if(!currentUser){ requireAccountForTeachingRegister(teachingId); return; }
   teachingRegisterForm.reset();
+  teachingRegisterForm.hidden = false;
+  document.getElementById('teachingRegisterConfirmStep').hidden = true;
   teachingRegisterStatus.textContent = '';
   teachingRegisterForm.dataset.teachingId = teachingId;
   document.getElementById('teachingRegisterTitle').textContent = t.title || 'Reserve your seat.';
@@ -6485,6 +7338,7 @@ teachingRegisterForm.addEventListener('submit', async event => {
   const teachingId = teachingRegisterForm.dataset.teachingId;
   const t = TEACHINGS[teachingId];
   if(honeypot || !t) return;
+  if(!currentUser){ requireAccountForTeachingRegister(teachingId); return; }
   if(throttledRecently('lastTeachingRegisterSubmit')){
     teachingRegisterStatus.textContent = 'Please wait a moment before submitting another request.';
     return;
@@ -6493,14 +7347,25 @@ teachingRegisterForm.addEventListener('submit', async event => {
   const lastName = document.getElementById('teachingRegisterLastName').value.trim();
   const email = document.getElementById('teachingRegisterEmail').value.trim();
   const phone = toE164(document.getElementById('teachingRegisterPhoneCountry'), document.getElementById('teachingRegisterPhoneNumber'));
+  const smsConsent = document.getElementById('teachingRegisterAgreeSms').checked;
   if(!phone){ teachingRegisterStatus.textContent = 'Enter a valid phone number, including country code.'; return; }
   teachingRegisterSubmitBtn.disabled = true;
   teachingRegisterStatus.textContent = 'Reserving your seat…';
   try {
-    await createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid: currentUser ? currentUser.uid : null });
+    const record = await createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid: currentUser.uid, smsConsent });
     markThrottled('lastTeachingRegisterSubmit');
-    teachingRegisterStatus.textContent = "YOU'RE REGISTERED — " + t.title + ', ' + formatTeachingDate(t.date) + ' · ' +
-      formatTeachingTime(t.startTime, t.timeZone) + '. Your class access information will be sent to ' + email + ' before the class.';
+    teachingRegisterStatus.textContent = '';
+    const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
+    document.getElementById('teachingRegisterConfirmTitle').textContent = t.title || 'Class';
+    document.getElementById('teachingRegisterConfirmSubtitle').textContent = t.subtitle || '';
+    document.getElementById('teachingRegisterConfirmName').textContent = (firstName + ' ' + lastName).trim();
+    document.getElementById('teachingRegisterConfirmWhen').textContent = formatTeachingDate(t.date || '') + ' · ' + formatTeachingTime(t.startTime, t.timeZone);
+    document.getElementById('teachingRegisterConfirmFormat').textContent = formatLabel;
+    document.getElementById('teachingRegisterConfirmPayment').textContent = previewPaymentStatusLabel(t.price);
+    document.getElementById('teachingRegisterConfirmId').textContent = record.confirmationId;
+    document.getElementById('teachingRegisterConfirmSmsNote').textContent = smsConsent ? ' and phone' : '';
+    teachingRegisterForm.hidden = true;
+    document.getElementById('teachingRegisterConfirmStep').hidden = false;
     teachingRegisterForm.reset();
   } catch (err) {
     teachingRegisterStatus.textContent = 'Could not submit your registration. Please try again.';
@@ -6508,6 +7373,25 @@ teachingRegisterForm.addEventListener('submit', async event => {
     teachingRegisterSubmitBtn.disabled = false;
   }
 });
+document.getElementById('teachingRegisterCopyIdBtn').addEventListener('click', event => {
+  copyConfirmationId(document.getElementById('teachingRegisterConfirmId').textContent, event.currentTarget);
+});
+document.getElementById('teachingRegisterAddCalendarBtn').addEventListener('click', () => {
+  const teachingId = teachingRegisterForm.dataset.teachingId;
+  const t = TEACHINGS[teachingId];
+  if(!t) return;
+  downloadIcsEvent({
+    title: t.title, description: 'The Unveiled Assembly — ' + (t.subtitle || t.title),
+    location: t.format === 'zoom' ? 'Live on Zoom' : (t.location || 'The Unveiled Assembly'),
+    dateStr: t.date, hhmm: t.startTime, durationMinutes: 60
+  });
+});
+document.getElementById('teachingRegisterViewClassesBtn').addEventListener('click', () => {
+  teachingRegisterDialog.close();
+  openPortal();
+  showMemberTab('classes');
+});
+document.getElementById('teachingRegisterConfirmCloseBtn').addEventListener('click', () => teachingRegisterDialog.close());
 
 /* ---------------------------------------------------------------
    Teaching Manager — admin. Same real/demo split as the rest of the
@@ -6770,6 +7654,79 @@ async function populateTeachingEditRegistrationTab(t){
   revEl.textContent = t.price ? '$' + (active.length * Number(t.price)).toFixed(2) : 'Free class';
 }
 
+/* ---------------------------------------------------------------
+   Owner: Classroom Content (Teaching Editor → tab 8). Publishing an
+   item here notifies every currently-registered (non-cancelled)
+   member for this class — both an in-portal MEMBER_NOTIFICATIONS
+   entry and a simulated "email" log line, Preview Mode only.
+   --------------------------------------------------------------- */
+const CLASSROOM_KIND_LABELS = { note: 'Text Note', 'lesson-summary': 'Lesson Summary', 'study-guide': 'Study Guide', scripture: 'Scripture Focus', resource: 'Resource' };
+function teachingEditClassroomRowHtml(item){
+  return '<div class="portal-row" data-classroom-content-id="' + escapeHtml(item.id) + '" style="padding:10px 0">' +
+    '<div><strong>' + escapeHtml(item.title) + '</strong><small>' + escapeHtml(CLASSROOM_KIND_LABELS[item.kind] || item.kind) + ' · Published ' + escapeHtml(shortDate(item.publishedAt)) + '</small></div>' +
+    '<button type="button" class="portal-secondary classroom-content-delete" style="min-height:28px;padding:0 10px;font-size:9px">Remove</button>' +
+    '</div>';
+}
+function renderTeachingEditClassroomList(teachingId){
+  const wrap = document.getElementById('teachingEditClassroomList');
+  const addBtn = document.getElementById('classroomAddPublishBtn');
+  if(!wrap) return;
+  if(!teachingId){
+    wrap.innerHTML = '<p style="color:#656565">Save this class first, then come back here to publish notes and resources.</p>';
+    if(addBtn) addBtn.disabled = true;
+    return;
+  }
+  if(addBtn) addBtn.disabled = false;
+  const items = (CLASSROOM_CONTENT[teachingId] || []).slice().sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+  wrap.innerHTML = items.length === 0
+    ? '<p style="color:#656565">Nothing published to this class yet.</p>'
+    : items.map(teachingEditClassroomRowHtml).join('');
+}
+document.getElementById('classroomAddKind').addEventListener('change', () => {
+  const kind = document.getElementById('classroomAddKind').value;
+  document.getElementById('classroomAddUrlField').hidden = kind !== 'resource';
+  document.getElementById('classroomAddBodyField').hidden = kind === 'resource';
+  document.getElementById('classroomAddRefField').hidden = kind !== 'scripture';
+});
+document.getElementById('classroomAddPublishBtn').addEventListener('click', () => {
+  const teachingId = document.getElementById('teachingEditId').value;
+  const t = TEACHINGS[teachingId];
+  if(!teachingId || !t) return;
+  const kind = document.getElementById('classroomAddKind').value;
+  const title = document.getElementById('classroomAddTitle').value.trim();
+  const body = document.getElementById('classroomAddBody').value.trim();
+  const url = document.getElementById('classroomAddUrl').value.trim();
+  const ref = document.getElementById('classroomAddRef').value.trim();
+  if(!title || (kind === 'resource' && !url) || (kind !== 'resource' && !body)){
+    document.getElementById('classroomAddStatus').textContent = 'Add a title, and either content or a resource URL.';
+    return;
+  }
+  const item = { id: 'cc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind, title, body, url, ref, publishedAt: new Date().toISOString() };
+  if(!CLASSROOM_CONTENT[teachingId]) CLASSROOM_CONTENT[teachingId] = [];
+  CLASSROOM_CONTENT[teachingId].unshift(item);
+  saveClassroomContent();
+  document.getElementById('classroomAddTitle').value = '';
+  document.getElementById('classroomAddBody').value = '';
+  document.getElementById('classroomAddUrl').value = '';
+  document.getElementById('classroomAddRef').value = '';
+  renderTeachingEditClassroomList(teachingId);
+  const notifyType = kind === 'resource' ? 'New Resource Added' : 'New Class Notes Available';
+  const enrolled = DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === teachingId && r.status !== 'cancelled' && r.uid);
+  enrolled.forEach(r => pushMemberNotification(r.uid, kind === 'resource' ? 'new-resource' : 'new-notes', notifyType, t.title + ' — "' + title + '". View →'));
+  document.getElementById('classroomAddStatus').textContent = 'Published — ' + enrolled.length + ' enrolled member' + (enrolled.length === 1 ? '' : 's') +
+    ' notified in-portal (simulated email: "New class notes are available for ' + t.title + '. View Notes →" — Preview Mode, no real email sent).';
+});
+document.getElementById('teachingEditClassroomList').addEventListener('click', event => {
+  const btn = event.target.closest('.classroom-content-delete');
+  if(!btn) return;
+  const row = event.target.closest('[data-classroom-content-id]');
+  const teachingId = document.getElementById('teachingEditId').value;
+  if(!teachingId || !CLASSROOM_CONTENT[teachingId]) return;
+  CLASSROOM_CONTENT[teachingId] = CLASSROOM_CONTENT[teachingId].filter(c => c.id !== row.dataset.classroomContentId);
+  saveClassroomContent();
+  renderTeachingEditClassroomList(teachingId);
+});
+
 function fillTeachingEditForm(t, zoom){
   const g = id => document.getElementById(id);
   g('teachingEditId').value = t ? t.id : '';
@@ -6810,6 +7767,7 @@ function fillTeachingEditForm(t, zoom){
   updateTeachingEditStatusPill();
   adminImagePreviewRefreshers.forEach(fn => fn());
   populateTeachingEditRegistrationTab(t);
+  renderTeachingEditClassroomList(t ? t.id : null);
   showTeachingEditTab('content');
 }
 
@@ -7010,6 +7968,31 @@ function classRegPaymentStatus(item){
   if(item.status === 'refunded') return 'refunded';
   return Number(item.amountPaid) > 0 ? 'paid' : 'unpaid';
 }
+function bookingPaymentStatus(item){
+  // Refund is tracked separately from the appointment lifecycle status
+  // (pending/confirmed/completed/cancelled/declined) on purpose — an
+  // appointment can be cancelled without a refund having happened yet,
+  // or refunded after the fact, without touching the existing
+  // Appointments-tab filters that key off `status`.
+  if(item.paymentRefunded) return 'refunded';
+  return Number(item.amountPaid) > 0 ? 'paid' : 'unpaid';
+}
+// No real payment processor is connected (see the disabled card-demo
+// fieldsets on every checkout form) — this stands in for whatever
+// processor reference ID would come back once one is, so the Payments
+// view has something concrete to point at. Clearly "PVW" (preview)
+// prefixed so it's never mistaken for a real transaction id.
+function synthesizeTransactionId(){
+  return 'PVW-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+function markBookingPaid(b){
+  const price = SESSION_TYPES[b.sessionType] ? Number(SESSION_TYPES[b.sessionType].price) || 0 : 0;
+  if(price > 0){
+    b.amountPaid = price;
+    b.paymentRefunded = false;
+    if(!b.transactionId) b.transactionId = synthesizeTransactionId();
+  }
+}
 function classRegPopulateClassFilter(){
   const sel = document.getElementById('classRegClassFilter');
   if(!sel) return;
@@ -7024,31 +8007,44 @@ function classRegFilteredList(){
   const q = (document.getElementById('classRegSearch')?.value || '').trim().toLowerCase();
   const classId = document.getElementById('classRegClassFilter')?.value || 'all';
   const status = document.getElementById('classRegStatusFilter')?.value || 'all';
-  const attendance = document.getElementById('classRegAttendanceFilter')?.value || 'all';
   const payment = document.getElementById('classRegPaymentFilter')?.value || 'all';
   return DEMO_TEACHING_REGISTRATIONS.filter(r => {
     if(classId !== 'all' && r.teachingId !== classId) return false;
     if(status !== 'all' && r.status !== status) return false;
-    if(attendance !== 'all' && (r.attendanceStatus || 'not-marked') !== attendance) return false;
     if(payment !== 'all' && classRegPaymentStatus(r) !== payment) return false;
-    if(q && !((r.firstName + ' ' + r.lastName + ' ' + r.email + ' ' + r.teachingTitle).toLowerCase().includes(q))) return false;
+    if(q && !((r.firstName + ' ' + r.lastName + ' ' + r.email + ' ' + (r.phone || '') + ' ' + (r.confirmationId || '') + ' ' + r.teachingTitle).toLowerCase().includes(q))) return false;
     return true;
   }).sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
 }
+function classRegSearchMatch(r, q){
+  return (r.firstName + ' ' + r.lastName + ' ' + r.email + ' ' + (r.phone || '') + ' ' + (r.confirmationId || '')).toLowerCase().includes(q);
+}
+const NOTIF_TYPE_LABELS = { 'confirmation': 'Confirmation', 'reminder-24h': '24-Hour Reminder', 'resend': 'Resend Confirmation' };
+function notifLogRowHtml(entry){
+  const statusClass = entry.status === 'sent' ? 'confirmed' : entry.status === 'passed' ? 'not-marked' : 'pending';
+  return '<div class="portal-row" style="padding:8px 0">' +
+    '<div><strong>' + escapeHtml(NOTIF_TYPE_LABELS[entry.type] || entry.type) + ' · ' + escapeHtml(entry.channel.toUpperCase()) + '</strong>' +
+    '<small>' + (entry.at ? escapeHtml(formatRegisteredAt(entry.at)) : 'Not sent yet — Preview Mode simulation') + '</small></div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + escapeHtml(entry.status) + '</span>' +
+    '</div>';
+}
+// Deliberately just Name / Confirmation ID / Registered At / Payment /
+// Status / Actions — attendance and notification detail moved to their
+// own Attendance tab and the registrant detail drawer's Confirmation
+// History section, so this row stays scannable at a glance.
 function classRegRowHtml(item){
   const statusClass = item.status === 'pending_payment' ? 'pending' : item.status;
-  const attendance = item.attendanceStatus || 'not-marked';
+  const paymentStatus = classRegPaymentStatus(item);
+  const paymentLabel = paymentStatus === 'paid' ? 'Paid' : paymentStatus === 'refunded' ? 'Refunded' : 'Unpaid';
   return '<div class="admin-teaching-row" data-classreg-row="' + escapeHtml(item.id) + '" style="cursor:pointer">' +
     '<div class="admin-teaching-info">' +
     '<div class="admin-teaching-title-row"><strong>' + escapeHtml((item.firstName + ' ' + item.lastName).trim() || 'Registrant') + '</strong>' +
     '<span class="admin-status-pill ' + escapeHtml(statusClass) + '">' + escapeHtml(CLASS_REG_STATUS_LABELS[item.status] || item.status) + '</span>' +
-    '<span class="admin-status-pill ' + escapeHtml(attendance) + '">' + escapeHtml(CLASS_REG_ATTENDANCE_LABELS[attendance] || attendance) + '</span>' +
+    '<span class="admin-status-pill ' + escapeHtml(paymentStatus) + '">' + escapeHtml(paymentLabel) + '</span>' +
     '</div>' +
     '<div class="admin-teaching-meta">' + escapeHtml(item.teachingTitle || 'Class') +
-    (item.teachingDate ? ' · ' + escapeHtml(formatTeachingDate(item.teachingDate)) : '') + '</div>' +
-    '<p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml(item.email) +
-    (item.phone ? ' · ' + escapeHtml(item.phone) : '') +
-    ' · <span style="font-family:var(--font-mono)">Registered ' + escapeHtml(formatRegisteredAt(item.registeredAt)) + '</span></p>' +
+    ' · <span style="font-family:var(--font-mono)">' + escapeHtml(item.confirmationId || '—') + '</span>' +
+    ' · Registered ' + escapeHtml(formatRegisteredAt(item.registeredAt)) + '</div>' +
     '</div>' +
     '<div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-classreg-view="' + escapeHtml(item.id) + '">View</button></div>' +
     '</div>';
@@ -7060,6 +8056,117 @@ function renderClassRegList(){
   wrap.innerHTML = rows.length === 0
     ? '<p style="color:var(--owner-text-faint)">No registrations match these filters.</p>'
     : rows.map(classRegRowHtml).join('');
+}
+/* ---- Overview tab ---- */
+function renderClassRegOverview(){
+  const statsWrap = document.getElementById('classRegOverviewStats');
+  if(!statsWrap) return;
+  const confirmed = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'confirmed').length;
+  const pending = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'pending_payment').length;
+  const active = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status !== 'cancelled');
+  const revenue = active.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
+  let seatsRemaining = 0;
+  Object.values(TEACHINGS).filter(t => !t.archived && t.unlimitedCapacity === false).forEach(t => {
+    const registered = DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === t.id && r.status !== 'cancelled').length;
+    seatsRemaining += Math.max(0, (Number(t.capacity) || 0) - registered);
+  });
+  statsWrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Total Registered</span><strong>' + DEMO_TEACHING_REGISTRATIONS.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Confirmed</span><strong>' + confirmed + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Pending</span><strong>' + pending + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Seats Remaining</span><strong>' + seatsRemaining + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
+  const upcoming = Object.values(TEACHINGS).filter(t => !t.archived && t.date && !teachingIsPast(t))
+    .sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+  const next = upcoming[0];
+  const nextWrap = document.getElementById('classRegNextClass');
+  if(nextWrap) nextWrap.innerHTML = next
+    ? '<div class="portal-row"><div><strong>' + escapeHtml(next.title) + '</strong><small>' + escapeHtml(formatTeachingDate(next.date)) + ' · ' + escapeHtml(formatTeachingTime(next.startTime, next.timeZone)) + '</small></div></div>'
+    : '<p class="admin-hint">No upcoming classes scheduled.</p>';
+  const recentWrap = document.getElementById('classRegRecentList');
+  if(recentWrap){
+    const recent = [...DEMO_TEACHING_REGISTRATIONS].sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0)).slice(0, 5);
+    recentWrap.innerHTML = recent.length ? recent.map(classRegRowHtml).join('') : '<p class="admin-hint">No registrations yet.</p>';
+  }
+  const activityWrap = document.getElementById('classRegRecentActivity');
+  if(activityWrap){
+    const recentActivity = DEMO_NOTIFICATIONS.filter(n => /Registration|Refund/.test(n.title || '')).slice(0, 6);
+    activityWrap.innerHTML = recentActivity.length
+      ? recentActivity.map(n => '<div class="portal-row"><div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail || '') + '</small></div></div>').join('')
+      : '<p class="admin-hint">No recent activity.</p>';
+  }
+}
+/* ---- Attendance tab ---- */
+let classRegAttendanceActiveFilter = 'all';
+function classRegAttendanceRowHtml(item){
+  const attendance = item.attendanceStatus || 'not-marked';
+  return '<div class="admin-teaching-row" data-classreg-att-row="' + escapeHtml(item.id) + '">' +
+    '<div class="admin-teaching-info" style="cursor:pointer" data-classreg-view="' + escapeHtml(item.id) + '">' +
+    '<div class="admin-teaching-title-row"><strong>' + escapeHtml((item.firstName + ' ' + item.lastName).trim() || 'Registrant') + '</strong>' +
+    '<span class="admin-status-pill ' + escapeHtml(attendance) + '">' + escapeHtml(CLASS_REG_ATTENDANCE_LABELS[attendance] || attendance) + '</span></div>' +
+    '<div class="admin-teaching-meta">' + escapeHtml(item.teachingTitle || 'Class') + (item.teachingDate ? ' · ' + escapeHtml(formatTeachingDate(item.teachingDate)) : '') + '</div>' +
+    '</div>' +
+    '<div class="admin-teaching-actions" style="display:flex;gap:6px;flex-wrap:wrap">' +
+    '<button type="button" class="admin-btn-ghost" data-classreg-quick-attendance="attended" data-classreg-id="' + escapeHtml(item.id) + '">Attended</button>' +
+    '<button type="button" class="admin-btn-ghost" data-classreg-quick-attendance="no-show" data-classreg-id="' + escapeHtml(item.id) + '">No Show</button>' +
+    '</div></div>';
+}
+function classRegAttendanceFilteredList(){
+  const rows = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status !== 'cancelled');
+  if(classRegAttendanceActiveFilter === 'all') return rows;
+  return rows.filter(r => (r.attendanceStatus || 'not-marked') === classRegAttendanceActiveFilter);
+}
+function renderClassRegAttendanceList(){
+  const wrap = document.getElementById('classRegAttendanceList');
+  if(!wrap) return;
+  const rows = classRegAttendanceFilteredList();
+  wrap.innerHTML = rows.length === 0 ? '<p style="color:var(--owner-text-faint)">No registrations to show.</p>' : rows.map(classRegAttendanceRowHtml).join('');
+}
+/* ---- Payments tab ---- */
+function classRegPaymentRowHtml(item){
+  const paymentStatus = classRegPaymentStatus(item);
+  const label = paymentStatus === 'paid' ? 'Paid' : paymentStatus === 'refunded' ? 'Refunded' : 'Unpaid';
+  return '<div class="admin-teaching-row" data-classreg-row="' + escapeHtml(item.id) + '" style="cursor:pointer">' +
+    '<div class="admin-teaching-info">' +
+    '<div class="admin-teaching-title-row"><strong>$' + (Number(item.amountPaid) || 0).toFixed(2) + '</strong>' +
+    '<span class="admin-status-pill ' + escapeHtml(paymentStatus) + '">' + escapeHtml(label) + '</span></div>' +
+    '<div class="admin-teaching-meta">' + escapeHtml(item.teachingTitle || 'Class') + ' · ' + escapeHtml((item.firstName + ' ' + item.lastName).trim()) +
+    ' · <span style="font-family:var(--font-mono)">' + escapeHtml(item.confirmationId || '—') + '</span>' +
+    (item.transactionId ? ' · <span style="font-family:var(--font-mono)">' + escapeHtml(item.transactionId) + '</span>' : '') + '</div>' +
+    '</div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-classreg-view="' + escapeHtml(item.id) + '">View</button></div></div>';
+}
+function classRegPaymentsFilteredList(){
+  return DEMO_TEACHING_REGISTRATIONS.filter(r => Number(r.amountPaid) > 0 || r.status === 'pending_payment')
+    .sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
+}
+function renderClassRegPayments(){
+  const statsWrap = document.getElementById('classRegPaymentsStats');
+  const listWrap = document.getElementById('classRegPaymentsList');
+  if(!listWrap) return;
+  const rows = classRegPaymentsFilteredList();
+  const paid = rows.filter(r => classRegPaymentStatus(r) === 'paid');
+  const refunded = rows.filter(r => classRegPaymentStatus(r) === 'refunded');
+  const revenue = paid.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
+  if(statsWrap) statsWrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Paid</span><strong>' + paid.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Refunded</span><strong>' + refunded.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
+  listWrap.innerHTML = rows.length === 0 ? '<p style="color:var(--owner-text-faint)">No payment activity yet.</p>' : rows.map(classRegPaymentRowHtml).join('');
+}
+/* ---- Lookup tab ---- */
+function classRegLookupFilteredList(){
+  const q = (document.getElementById('classRegLookupSearch')?.value || '').trim().toLowerCase();
+  if(!q) return [];
+  return DEMO_TEACHING_REGISTRATIONS.filter(r => classRegSearchMatch(r, q))
+    .sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
+}
+function renderClassRegLookup(){
+  const wrap = document.getElementById('classRegLookupResults');
+  if(!wrap) return;
+  const q = (document.getElementById('classRegLookupSearch')?.value || '').trim();
+  if(!q){ wrap.innerHTML = '<p class="admin-hint">Enter a confirmation ID, name, email, or phone number to search.</p>'; return; }
+  const rows = classRegLookupFilteredList();
+  wrap.innerHTML = rows.length === 0 ? '<p style="color:var(--owner-text-faint)">No matching registrations.</p>' : rows.map(classRegRowHtml).join('');
 }
 function renderClassRegStats(){
   const wrap = document.getElementById('classRegStats');
@@ -7090,11 +8197,25 @@ function renderClassRegStats(){
     '<div class="admin-stat-tile"><span>Cancelled</span><strong>' + cancelled + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
 }
+let classRegActiveTab = 'overview';
+function showClassRegTab(name){
+  classRegActiveTab = name;
+  document.querySelectorAll('#classRegSubNav .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.classregTab === name));
+  document.querySelectorAll('[data-classreg-panel]').forEach(p => { p.hidden = p.dataset.classregPanel !== name; });
+  renderClassRegistrationsPanel();
+}
+// Refreshes whichever Class Registrations tab is currently showing —
+// called from every place data changes (new registration, status or
+// attendance change, CSV export panel load, preview reset) so those
+// call sites don't need to know which tab is active.
 function renderClassRegistrationsPanel(){
   if(!document.getElementById('classRegList')) return;
   classRegPopulateClassFilter();
-  renderClassRegStats();
-  renderClassRegList();
+  if(classRegActiveTab === 'registrations'){ renderClassRegStats(); renderClassRegList(); }
+  else if(classRegActiveTab === 'attendance') renderClassRegAttendanceList();
+  else if(classRegActiveTab === 'payments') renderClassRegPayments();
+  else if(classRegActiveTab === 'lookup') renderClassRegLookup();
+  else renderClassRegOverview();
 }
 function classRegCsvValue(v){
   const s = String(v == null ? '' : v);
@@ -7125,22 +8246,58 @@ function exportClassRegistrationsCsv(){
   URL.revokeObjectURL(url);
 }
 let classRegDetailId = null;
+function detailFieldHtml(label, value, opts){
+  const mono = opts && opts.mono ? ' mono' : '';
+  const full = opts && opts.full ? ' full' : '';
+  return '<div class="detail-field' + full + '"><span class="detail-field-label">' + escapeHtml(label) +
+    '</span><span class="detail-field-value' + mono + '">' + escapeHtml(value || '—') + '</span></div>';
+}
+function detailSectionHtml(title, fieldsHtml, actionHtml){
+  const heading = actionHtml
+    ? '<div class="detail-section-title-row"><div class="detail-section-title">' + escapeHtml(title) + '</div>' + actionHtml + '</div>'
+    : '<div class="detail-section-title">' + escapeHtml(title) + '</div>';
+  return '<div class="detail-section">' + heading + '<div class="detail-grid">' + fieldsHtml + '</div></div>';
+}
+function appendResendToLog(log, smsConsent){
+  const now = new Date().toISOString();
+  log.push({ type: 'resend', channel: 'email', status: 'sent', at: now });
+  if(smsConsent) log.push({ type: 'resend', channel: 'sms', status: 'sent', at: now });
+  return log;
+}
 function openClassRegDetail(id){
   const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === id);
   if(!item) return;
   classRegDetailId = id;
   document.getElementById('classRegDetailTitle').textContent = (item.firstName + ' ' + item.lastName).trim() || 'Registrant';
-  const g = (label, value) => '<div class="form-field"><label>' + label + '</label><input value="' + escapeHtml(value || '—') + '" readonly /></div>';
+  const t = TEACHINGS[item.teachingId];
+  const formatLabel = t ? (t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class') : '—';
+  const paymentStatus = classRegPaymentStatus(item);
+  const paymentLabel = paymentStatus === 'paid' ? 'Paid' : paymentStatus === 'refunded' ? 'Refunded' : 'Unpaid';
   document.getElementById('classRegDetailFields').innerHTML =
-    g('Registrant', (item.firstName + ' ' + item.lastName).trim()) +
-    g('Class', item.teachingTitle) +
-    g('Class Date', item.teachingDate ? formatTeachingDate(item.teachingDate) : '—') +
-    g('Class Time', (TEACHINGS[item.teachingId] ? formatTeachingTime(TEACHINGS[item.teachingId].startTime, TEACHINGS[item.teachingId].timeZone) : '—')) +
-    g('Registered', formatRegisteredAt(item.registeredAt)) +
-    g('Email', item.email) +
-    g('Phone', item.phone || 'Not provided') +
-    g('Payment', classRegPaymentStatus(item) === 'paid' ? 'Paid' : classRegPaymentStatus(item) === 'refunded' ? 'Refunded' : 'Unpaid') +
-    g('Amount', '$' + (Number(item.amountPaid) || 0).toFixed(2));
+    detailSectionHtml('Registrant',
+      detailFieldHtml('Full Name', (item.firstName + ' ' + item.lastName).trim(), { full: true }) +
+      detailFieldHtml('Email', item.email) +
+      detailFieldHtml('Phone', item.phone || 'Not provided')
+    ) +
+    detailSectionHtml('Registration',
+      detailFieldHtml('Class', item.teachingTitle, { full: true }) +
+      detailFieldHtml('Class Date & Time', item.teachingDate ? formatTeachingDate(item.teachingDate) + (t ? ' · ' + formatTeachingTime(t.startTime, t.timeZone) : '') : '—', { full: true }) +
+      detailFieldHtml('Location', formatLabel) +
+      detailFieldHtml('Registered At', formatRegisteredAt(item.registeredAt)) +
+      detailFieldHtml('Confirmation ID', item.confirmationId, { mono: true, full: true })
+    ) +
+    detailSectionHtml('Payment',
+      detailFieldHtml('Amount', '$' + (Number(item.amountPaid) || 0).toFixed(2)) +
+      detailFieldHtml('Payment Status', paymentLabel) +
+      detailFieldHtml('Payment Method', Number(item.amountPaid) > 0 ? 'Preview Checkout (Card Demo)' : 'Not applicable') +
+      detailFieldHtml('Transaction ID', item.transactionId || 'Not applicable in Preview Mode', { mono: !!item.transactionId })
+    );
+  const target = t ? etWallTimeToDate(item.teachingDate, hhmmToMinutes(t.startTime)) : null;
+  const liveLog = notificationLogWithLiveReminders(item.notificationLog, target);
+  document.getElementById('classRegDetailNotifLog').innerHTML = liveLog.length
+    ? liveLog.map(notifLogRowHtml).join('')
+    : '<p style="color:var(--stone);font-size:12px">No notifications logged.</p>';
+  document.getElementById('classRegResendStatus').textContent = '';
   document.querySelectorAll('#classRegDetailStatusBtns [data-classreg-status]').forEach(btn => {
     btn.classList.toggle('admin-btn-solid', btn.dataset.classregStatus === item.status);
     btn.classList.toggle('admin-btn-ghost', btn.dataset.classregStatus !== item.status);
@@ -7162,18 +8319,124 @@ document.getElementById('closeClassRegDetail').addEventListener('click', () => d
 document.getElementById('classRegDetailDialog').addEventListener('click', event => {
   if(event.target.id === 'classRegDetailDialog') document.getElementById('classRegDetailDialog').close();
 });
+document.getElementById('classRegResendBtn').addEventListener('click', () => {
+  if(!classRegDetailId) return;
+  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
+  if(!item) return;
+  appendResendToLog(item.notificationLog, item.smsConsent);
+  saveTeachingRegistrationsToStorage();
+  openClassRegDetail(classRegDetailId);
+  document.getElementById('classRegResendStatus').textContent = 'Resent — Preview Mode simulation, no real email' +
+    (item.smsConsent ? ' or text message' : ' message') + ' was sent.';
+});
+
+/* ---------------------------------------------------------------
+   One-on-One booking detail drawer — the Bookings-side counterpart to
+   the class registrant drawer above. Same sectioned layout, same
+   Confirmation History / Resend pattern, kept as its own dialog and
+   its own DEMO_BOOKINGS-backed functions per the "keep classes and
+   one-on-ones separate" rule.
+   --------------------------------------------------------------- */
+let bookingDetailId = null;
+function openBookingDetail(id){
+  const item = DEMO_BOOKINGS.find(b => b.id === id);
+  if(!item) return;
+  bookingDetailId = id;
+  document.getElementById('bookingDetailTitle').textContent = item.name || 'Guest';
+  const format = (SESSION_TYPES[item.sessionType] && SESSION_TYPES[item.sessionType].format) || 'zoom';
+  const formatLabel = format === 'phone' ? 'Phone' : format === 'in-person' ? 'In Person' : 'Zoom';
+  const paymentStatus = bookingPaymentStatus(item);
+  const paymentLabel = paymentStatus === 'paid' ? 'Paid' : paymentStatus === 'refunded' ? 'Refunded' : 'Unpaid';
+  const statusLabel = item.status === 'confirmed' ? 'Confirmed' : item.status === 'declined' ? 'Declined' : item.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  document.getElementById('bookingDetailFields').innerHTML =
+    detailSectionHtml('Client',
+      detailFieldHtml('Full Name', item.name, { full: true }) +
+      detailFieldHtml('Email', item.email) +
+      detailFieldHtml('Phone', item.phone || 'Not provided')
+    ) +
+    detailSectionHtml('Appointment',
+      detailFieldHtml('Session', sessionTypeName(item.sessionType), { full: true }) +
+      detailFieldHtml('Date & Time', formatLocalDateTime(item.date, item.time, item.clientTimeZone), { full: true }) +
+      detailFieldHtml('Format', formatLabel) +
+      detailFieldHtml('Status', statusLabel) +
+      detailFieldHtml('Booked At', item.bookedAt ? formatRegisteredAt(item.bookedAt) : '—') +
+      detailFieldHtml('Confirmation ID', item.confirmationId, { mono: true, full: true })
+    ) +
+    detailSectionHtml('Payment',
+      detailFieldHtml('Amount', '$' + (Number(item.amountPaid) || 0).toFixed(2)) +
+      detailFieldHtml('Payment Status', paymentLabel) +
+      detailFieldHtml('Payment Method', Number(item.amountPaid) > 0 ? 'Preview Checkout (Card Demo)' : 'Not applicable') +
+      detailFieldHtml('Transaction ID', item.transactionId || 'Not applicable in Preview Mode', { mono: !!item.transactionId }),
+      '<button class="admin-btn-ghost" type="button" data-booking-refund-id="' + escapeHtml(item.id) + '"' + (paymentStatus !== 'paid' ? ' disabled' : '') + '>Mark Refunded</button>'
+    );
+  const target = item.date && item.time ? etWallTimeToDate(item.date, hhmmToMinutes(item.time)) : null;
+  const liveLog = notificationLogWithLiveReminders(item.notificationLog, target);
+  document.getElementById('bookingDetailNotifLog').innerHTML = liveLog.length
+    ? liveLog.map(notifLogRowHtml).join('')
+    : '<p style="color:var(--stone);font-size:12px">No notifications logged.</p>';
+  document.getElementById('bookingDetailResendStatus').textContent = '';
+  document.getElementById('bookingDetailNotes').value = item.notes || '';
+  document.getElementById('bookingDetailStatus').textContent = '';
+  document.getElementById('bookingDetailDialog').showModal();
+}
+document.getElementById('closeBookingDetail').addEventListener('click', () => document.getElementById('bookingDetailDialog').close());
+document.getElementById('bookingDetailDialog').addEventListener('click', event => {
+  if(event.target.id === 'bookingDetailDialog') document.getElementById('bookingDetailDialog').close();
+});
+document.getElementById('bookingDetailFields').addEventListener('click', event => {
+  const btn = event.target.closest('[data-booking-refund-id]');
+  if(!btn || btn.disabled) return;
+  const item = DEMO_BOOKINGS.find(b => b.id === btn.dataset.bookingRefundId);
+  if(!item) return;
+  item.paymentRefunded = true;
+  saveBookingsPreviewToStorage();
+  openBookingDetail(item.id);
+  document.getElementById('bookingDetailStatus').textContent = 'Marked refunded (Preview Mode — no real refund was issued).';
+});
+document.getElementById('bookingDetailResendBtn').addEventListener('click', () => {
+  if(!bookingDetailId) return;
+  const item = DEMO_BOOKINGS.find(b => b.id === bookingDetailId);
+  if(!item) return;
+  appendResendToLog(item.notificationLog, item.smsConsent);
+  saveBookingsPreviewToStorage();
+  openBookingDetail(bookingDetailId);
+  document.getElementById('bookingDetailResendStatus').textContent = 'Resent — Preview Mode simulation, no real email' +
+    (item.smsConsent ? ' or text message' : ' message') + ' was sent.';
+});
+document.getElementById('bookingDetailSaveNotesBtn').addEventListener('click', () => {
+  if(!bookingDetailId) return;
+  const item = DEMO_BOOKINGS.find(b => b.id === bookingDetailId);
+  if(!item) return;
+  item.notes = document.getElementById('bookingDetailNotes').value.trim();
+  saveBookingsPreviewToStorage();
+  document.getElementById('bookingDetailStatus').textContent = 'Notes saved.';
+});
+
 document.getElementById('classRegDetailStatusBtns').addEventListener('click', event => {
   const btn = event.target.closest('[data-classreg-status]');
   if(!btn || !classRegDetailId) return;
   const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
   if(!item) return;
+  const prevStatus = item.status;
   item.status = btn.dataset.classregStatus;
   if(item.status === 'confirmed' && !item.amountPaid){
     const t = TEACHINGS[item.teachingId];
     item.amountPaid = t && t.price ? Number(t.price) : item.amountPaid;
+    if(item.amountPaid > 0 && !item.transactionId) item.transactionId = synthesizeTransactionId();
   }
   if(item.status === 'cancelled' || item.status === 'refunded') item.amountPaid = item.status === 'refunded' ? item.amountPaid : 0;
   saveTeachingRegistrationsToStorage();
+  if(item.status === 'cancelled' && prevStatus !== 'cancelled'){
+    DEMO_NOTIFICATIONS.unshift({ id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'Registration Cancelled',
+      detail: (item.firstName + ' ' + item.lastName).trim() + ' — ' + item.teachingTitle + '. Confirmation: ' + item.confirmationId });
+    renderOwnerNotifications();
+    pushMemberNotification(item.uid, 'class-cancelled', 'Class Cancelled', item.teachingTitle + ' — your registration was cancelled.');
+  }
+  if(item.status === 'refunded'){
+    DEMO_NOTIFICATIONS.unshift({ id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'Payment Refunded (Preview)',
+      detail: (item.firstName + ' ' + item.lastName).trim() + ' — ' + item.teachingTitle + '. Confirmation: ' + item.confirmationId });
+    renderOwnerNotifications();
+  }
   openClassRegDetail(classRegDetailId);
   renderClassRegistrationsPanel();
   document.getElementById('classRegDetailStatus').textContent = 'Updated.';
@@ -7200,8 +8463,46 @@ document.getElementById('classRegDetailSaveNotesBtn').addEventListener('click', 
 });
 ['classRegSearch'].forEach(id => document.getElementById(id)?.addEventListener('input', renderClassRegList));
 ['classRegClassFilter'].forEach(id => document.getElementById(id)?.addEventListener('change', () => { renderClassRegStats(); renderClassRegList(); }));
-['classRegStatusFilter', 'classRegAttendanceFilter', 'classRegPaymentFilter'].forEach(id => document.getElementById(id)?.addEventListener('change', renderClassRegList));
+['classRegStatusFilter', 'classRegPaymentFilter'].forEach(id => document.getElementById(id)?.addEventListener('change', renderClassRegList));
 document.getElementById('classRegExportBtn')?.addEventListener('click', exportClassRegistrationsCsv);
+document.getElementById('classRegSubNav')?.addEventListener('click', event => {
+  const btn = event.target.closest('[data-classreg-tab]');
+  if(btn) showClassRegTab(btn.dataset.classregTab);
+});
+document.getElementById('classRegAttendanceSubTabs')?.addEventListener('click', event => {
+  const btn = event.target.closest('[data-attendance-filter]');
+  if(!btn) return;
+  classRegAttendanceActiveFilter = btn.dataset.attendanceFilter;
+  document.querySelectorAll('#classRegAttendanceSubTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  renderClassRegAttendanceList();
+});
+document.getElementById('classRegAttendanceList')?.addEventListener('click', event => {
+  const quickBtn = event.target.closest('[data-classreg-quick-attendance]');
+  if(quickBtn){
+    const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === quickBtn.dataset.classregId);
+    if(item){
+      item.attendanceStatus = quickBtn.dataset.classregQuickAttendance;
+      saveTeachingRegistrationsToStorage();
+      renderClassRegAttendanceList();
+    }
+    return;
+  }
+  const row = event.target.closest('[data-classreg-view]');
+  if(row) openClassRegDetail(row.dataset.classregView);
+});
+document.getElementById('classRegPaymentsList')?.addEventListener('click', event => {
+  const row = event.target.closest('[data-classreg-view], [data-classreg-row]');
+  if(row) openClassRegDetail(row.dataset.classregView || row.dataset.classregRow);
+});
+document.getElementById('classRegLookupSearch')?.addEventListener('input', renderClassRegLookup);
+document.getElementById('classRegLookupResults')?.addEventListener('click', event => {
+  const row = event.target.closest('[data-classreg-view], [data-classreg-row]');
+  if(row) openClassRegDetail(row.dataset.classregView || row.dataset.classregRow);
+});
+document.getElementById('classRegRecentList')?.addEventListener('click', event => {
+  const row = event.target.closest('[data-classreg-view], [data-classreg-row]');
+  if(row) openClassRegDetail(row.dataset.classregView || row.dataset.classregRow);
+});
 
 /* ---- List / calendar / tabs ---- */
 let teachingMgrActiveTab = 'upcoming';
@@ -7737,7 +9038,7 @@ onAuthStateChanged(auth, async (user) => {
       // account in and fires this listener immediately — without this
       // guard it would yank the dialog straight to the dashboard before
       // the person ever sees the verify-by-email/text choice.
-      if(!awaitingVerifyChoice) enterDashboard();
+      if(!awaitingVerifyChoice){ enterDashboard(); resumePendingTeachingRegistration(); }
     } else {
       showAuthPanel('signin');
       showPortalView('prospect');

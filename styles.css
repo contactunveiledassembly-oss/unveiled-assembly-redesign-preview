@@ -471,6 +471,44 @@ footer{background:var(--black);padding:48px 5vw 26px;border-top:1px solid var(--
 .portal-dialog,.booking-dialog,.story-dialog{border:1px solid var(--line-light);box-shadow:0 30px 120px rgba(0,0,0,.55);padding:0}
 .portal-dialog::backdrop,.booking-dialog::backdrop,.story-dialog::backdrop{background:rgba(5,5,5,.86);backdrop-filter:blur(8px)}
 
+/* ---------- Modernized detail drawer (registrant / booking detail) ----------
+   Right-side panel on desktop/tablet, full-screen sheet on mobile —
+   replaces a long stacked form with grouped, scannable sections. Reuses
+   the owner-portal light tokens (--owner-*) so it matches every other
+   admin surface without introducing new colors. */
+dialog.detail-drawer{
+  position:fixed; top:0; right:0; bottom:0; left:auto; margin:0;
+  height:100vh; max-height:100vh; width:min(460px, 100vw); max-width:100vw;
+  border-radius:0; border:0; border-left:1px solid var(--owner-border);
+  box-shadow:-24px 0 60px rgba(0,0,0,.18); background:var(--owner-bg); color:var(--owner-text);
+  animation:detailDrawerIn .2s ease;
+}
+dialog.detail-drawer::backdrop{background:rgba(10,10,10,.35)}
+@keyframes detailDrawerIn{from{transform:translateX(28px);opacity:0}to{transform:translateX(0);opacity:1}}
+dialog.detail-drawer .booking-head{background:var(--owner-surface);color:var(--owner-text);border-bottom:1px solid var(--owner-border)}
+dialog.detail-drawer .booking-head h3{font-size:26px}
+dialog.detail-drawer .booking-close{color:var(--owner-text);border-color:var(--owner-border-strong)}
+dialog.detail-drawer .booking-body{padding:20px 22px 28px}
+.detail-drawer-body{overflow-y:auto; height:calc(100vh - 90px)}
+.detail-section{padding:18px 0;border-top:1px solid var(--owner-border)}
+.detail-section:first-child{padding-top:0;border-top:0}
+.detail-section-title-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.detail-section-title{font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--owner-text-faint);margin-bottom:12px}
+.detail-section-title-row .detail-section-title{margin-bottom:0}
+.detail-section-note{text-transform:none;letter-spacing:0;color:var(--owner-text-muted);font-size:11px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+.detail-field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.detail-field.full{grid-column:1/-1}
+.detail-field-label{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--owner-text-faint)}
+.detail-field-value{font-size:13.5px;color:var(--owner-text);word-break:break-word}
+.detail-field-value.mono{font-family:var(--font-mono);letter-spacing:.03em}
+.detail-action-row{display:flex;gap:8px;flex-wrap:wrap}
+.detail-drawer textarea{width:100%;box-sizing:border-box;background:var(--owner-surface);color:var(--owner-text);border:1px solid var(--owner-border-strong);border-radius:var(--owner-radius);padding:10px 12px;font:inherit}
+@media(max-width:640px){
+  dialog.detail-drawer{width:100vw}
+  .detail-grid{grid-template-columns:1fr}
+}
+
 .story-dialog{width:min(760px,calc(100vw - 32px));max-width:100%;max-height:90vh;overflow-y:auto;overflow-x:hidden;background:var(--panel);color:var(--ivory);border-color:var(--line-dark);box-sizing:border-box}
 .story-dialog *{max-width:100%;box-sizing:border-box}
 .form-section-label{font-family:var(--serif);font-size:17px;color:var(--ivory);padding-bottom:8px;border-bottom:1px solid var(--line-dark);margin-bottom:2px}
@@ -570,6 +608,26 @@ footer{background:var(--black);padding:48px 5vw 26px;border-top:1px solid var(--
 .portal-view[hidden]{display:none}
 .portal-view h3{font-family:var(--serif);font-size:clamp(34px,5vw,54px);font-weight:400;line-height:1;margin-bottom:14px}
 .portal-view>p{color:var(--ink-muted);max-width:650px;line-height:1.7}
+
+/* ---------- Classroom dialog (per-class Overview/Notes/Resources/Messages) ---------- */
+.classroom-dialog .classroom-meta-row{
+  display:flex; flex-wrap:wrap; gap:8px 10px; margin-bottom:4px;
+}
+.classroom-dialog .classroom-meta-row span{
+  font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-muted);
+  border:1px solid var(--line-light); border-radius:100px; padding:6px 13px;
+}
+.classroom-scripture{
+  margin:0 0 4px; padding:16px 20px; border-left:2px solid var(--black);
+  background:#f6f6f3; font-family:var(--serif); font-size:18px; line-height:1.6; color:var(--black);
+}
+.classroom-scripture cite{
+  display:block; margin-top:8px; font-family:var(--sans); font-style:normal;
+  font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);
+}
+.classroom-content-card{margin-bottom:12px}
+.classroom-content-card:last-child{margin-bottom:0}
+
 .portal-two{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
 .portal-welcome{background:var(--black);color:var(--ivory);padding:36px}
 .portal-welcome h3{margin-top:60px}
@@ -627,6 +685,47 @@ footer{background:var(--black);padding:48px 5vw 26px;border-top:1px solid var(--
 .portal-panel.wine .portal-row small{color:var(--stone-dim)}
 .portal-panel.wine .portal-request p{color:var(--stone)}
 .portal-panel.wine .portal-access{color:var(--stone)}
+
+/* ---------- Member Portal: Next Class card / Quick Links ---------- */
+.member-reminder-note{
+  margin-top:16px; padding:12px 14px; border-radius:10px;
+  background:rgba(245,243,238,.06); border:1px solid var(--line-dark);
+  font-size:11.5px; letter-spacing:.02em; color:var(--stone); line-height:1.55;
+}
+.member-reminder-note strong{color:var(--ivory); font-weight:600}
+.member-quick-links{display:flex; flex-direction:column; gap:2px; margin-top:6px}
+.member-quick-links button{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+  background:none; border:0; border-top:1px solid var(--line-light); padding:13px 2px;
+  font-family:var(--sans); font-size:13px; font-weight:500; color:var(--black); text-align:left;
+  cursor:pointer; transition:.15s;
+}
+.member-quick-links button:first-child{border-top:0}
+.member-quick-links button:hover{color:var(--ink-muted)}
+.member-quick-links button::after{content:"→"; font-size:13px; color:var(--ink-dim)}
+.portal-panel.wine .member-quick-links button{color:var(--ivory); border-top-color:var(--line-dark)}
+.portal-panel.wine .member-quick-links button:hover{color:var(--stone)}
+.portal-panel.wine .member-quick-links button::after{color:var(--stone-dim)}
+
+/* ---------- Member Portal: My Classes / My Sessions row cards ---------- */
+.member-record-card{
+  border:1px solid var(--line-light); border-radius:12px; padding:16px 18px; margin-bottom:12px;
+  display:flex; flex-direction:column; gap:8px; background:var(--white);
+}
+.member-record-head{display:flex; justify-content:space-between; align-items:flex-start; gap:12px}
+.member-record-head h4{font-family:var(--sans); font-size:15px; font-weight:600; margin:0; color:var(--black)}
+.member-record-sub{font-size:12px; color:var(--ink-dim); margin:0}
+.member-record-meta{
+  display:flex; flex-wrap:wrap; gap:8px 16px; font-size:11px; letter-spacing:.03em;
+  color:var(--ink-muted); margin:2px 0 0;
+}
+.member-record-meta span{white-space:nowrap}
+.member-record-conf{
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:.08em; color:var(--ink-dim);
+  text-transform:uppercase;
+}
+.member-record-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
+.member-record-actions .btn{padding:8px 16px; font-size:11px}
 
 @media(max-width:900px){
   .portal-dashboard-grid,.portal-owner-grid,.portal-two{grid-template-columns:1fr}
@@ -1117,6 +1216,9 @@ footer{background:var(--black);padding:48px 5vw 26px;border-top:1px solid var(--
 .admin-status-pill.attended{color:#166534;background:#dcfce7}
 .admin-status-pill.no-show{color:#991b1b;background:#fee2e2}
 .admin-status-pill.not-marked{color:#4b5563;background:#f3f4f6}
+/* Payment status (Registrations/Bookings → Payments tabs, ticket confirm) */
+.admin-status-pill.paid{color:#166534;background:#dcfce7}
+.admin-status-pill.unpaid{color:#4b5563;background:#f3f4f6}
 
 .admin-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:16px 0 20px}
 .admin-stat-tile{
@@ -1311,12 +1413,44 @@ footer{background:var(--black);padding:48px 5vw 26px;border-top:1px solid var(--
 .booking-policy-check input{margin-top:3px;accent-color:#18181b;flex:0 0 auto}
 .booking-policy-check .link-btn{font-size:inherit;padding:0;display:inline}
 .booking-confirm-step{text-align:center}
-.booking-confirm-check{
+.booking-confirm-check,.ticket-confirm-check{
   width:56px;height:56px;border-radius:50%;background:#18181b;color:#fff;font-size:26px;
   display:flex;align-items:center;justify-content:center;margin:0 auto 18px;
 }
 .booking-confirm-step .checkout-order-summary{text-align:left}
 .booking-confirm-step .checkout-next-steps{text-align:left}
+
+/* ---------- Ticket-style booking/registration confirmation ----------
+   Deliberately more prominent than a plain success message: a real
+   "ticket" card with the confirmation ID as the focal point, used by
+   both the class registration and one-on-one checkout flows. */
+.ticket-confirm{text-align:center}
+.ticket-card{
+  text-align:left; border:1px solid #e6e6e9; border-radius:14px; background:#fafafb;
+  padding:18px 20px; margin:0 0 4px;
+}
+.ticket-row{display:flex;justify-content:space-between;gap:14px;font-size:13px;color:#3a3a3a;padding:9px 0;border-bottom:1px solid #ececef}
+.ticket-row:first-child{padding-top:0}
+.ticket-row span{color:#8a8a92;text-transform:uppercase;font-size:10px;letter-spacing:.08em;flex:0 0 auto;padding-top:2px}
+.ticket-row strong{font-weight:600;text-align:right}
+.ticket-id-block{
+  margin-top:12px; padding-top:14px; border-top:1px dashed #d8d8dc;
+  display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center;
+}
+.ticket-id-block span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8a8a92}
+.ticket-id-block strong{font-family:var(--font-mono);font-weight:700;font-size:22px;letter-spacing:.04em;color:#18181b}
+.ticket-copy-btn{
+  margin-top:4px; background:none; border:0; padding:2px 4px; cursor:pointer;
+  font-family:var(--sans); font-size:10.5px; letter-spacing:.04em; color:#6b6b70;
+  text-decoration:underline; text-underline-offset:2px;
+}
+.ticket-copy-btn:hover{color:#18181b}
+.ticket-confirm-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.ticket-confirm-actions .btn{flex:1;min-width:160px}
+@media(max-width:480px){
+  .ticket-row{flex-direction:column;align-items:flex-start;gap:2px}
+  .ticket-row strong{text-align:left}
+}
 .booking-option{border-radius:14px}
 .checkout-next-steps{margin-top:18px;padding-top:16px;border-top:1px solid #e6e6e9}
 .checkout-next-row{display:flex;gap:16px;flex-wrap:wrap}
