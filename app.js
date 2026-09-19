@@ -52,6 +52,38 @@ const CONFIRMATION_ID_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // no 0/O/1/I
 // only so demo sign-in can show what the admin Ministry View looks like).
 const DEMO_ADMIN_EMAIL = 'contactunveiledassembly@gmail.com';
 
+// Owner "Member View" preview — a pure read-layer lens, never a real
+// auth/session change. While active, the member-facing render
+// functions (myTeachingRegistrations, myBookings, etc.) read through
+// effectiveMemberUid()/effectiveMemberEmail() below instead of
+// currentUser/currentProfile directly, so they render a CHOSEN
+// member's real records while the Owner's actual Firebase/demo auth
+// session, role, and permissions never change. null member = the
+// generic "Demo Member" placeholder (no real records, same empty
+// state a brand-new member would see) until the Owner picks someone
+// from the People system.
+let ownerPreviewActive = false;
+let ownerPreviewMember = null;
+// Lets the Owner see a DRAFT note/resource/announcement rendered inside
+// its real classroom context (per the requirement "without publishing
+// the item") — a transient overlay object only, never written into
+// CLASSROOM_CONTENT/CLASS_ANNOUNCEMENTS, so nothing is actually
+// published just because it was previewed. Cleared whenever the
+// classroom dialog closes so it never leaks into a later, real view.
+let ownerPreviewDraftOverlay = null;
+function effectiveMemberUid(){
+  if(ownerPreviewActive) return ownerPreviewMember ? ownerPreviewMember.uid : '__owner_preview_demo__';
+  return currentUser ? currentUser.uid : null;
+}
+function effectiveMemberEmail(){
+  if(ownerPreviewActive) return ownerPreviewMember ? ownerPreviewMember.email : '';
+  return currentProfile ? currentProfile.email : '';
+}
+function effectiveMemberName(){
+  if(ownerPreviewActive) return ownerPreviewMember ? (ownerPreviewMember.name || ownerPreviewMember.email) : 'Demo Member';
+  return currentProfile ? currentProfile.name : '';
+}
+
 let demoAuthCallback = null;
 // Keeps the preview's fake sign-in alive across page loads (this is a
 // static multi-page site, so every link click reloads app.js from
@@ -500,6 +532,7 @@ function dialogsHtml(){
         <button class="active" type="button" data-portal-target="prospect" id="tabProspect">Sign In</button>
         <button type="button" data-portal-target="member" id="tabMember" hidden>My Assembly</button>
         <button type="button" data-portal-target="owner" id="tabOwner" hidden>Ministry View</button>
+        <button type="button" data-portal-target="memberpreview" id="tabMemberViewPreview" hidden>Member View</button>
       </div>
       <button class="portal-close" id="closeMemberPortal" type="button" aria-label="Close My Assembly">×</button>
     </div>
@@ -689,6 +722,19 @@ function dialogsHtml(){
     </div>
 
     <div class="portal-view" data-portal-view="member" hidden>
+      <div class="member-preview-bar" id="memberPreviewBar" hidden>
+        <div class="member-preview-bar-label">
+          <strong>Member Experience Preview</strong>
+          <span>Viewing: <span id="memberPreviewViewingName">Demo Member</span></span>
+        </div>
+        <div class="member-preview-bar-actions">
+          <div class="member-preview-selector-wrap">
+            <input id="memberPreviewSearch" type="text" placeholder="Search name, email, phone, or confirmation ID…" autocomplete="off" />
+            <div id="memberPreviewSearchResults" hidden></div>
+          </div>
+          <button type="button" class="admin-btn-ghost" id="exitMemberPreviewBtn">Exit Member View</button>
+        </div>
+      </div>
       <div class="portal-head">
         <div>
           <div class="kicker on-light">My Assembly</div>
@@ -769,7 +815,11 @@ function dialogsHtml(){
       </div>
 
       <div data-member-panel="account" hidden>
-        <div class="portal-dashboard-grid">
+        <div id="memberAccountPreviewLocked" hidden class="portal-panel">
+          <span class="portal-label">Profile</span>
+          <p style="color:var(--ink-muted);line-height:1.6">Profile editing isn't available in Member View preview — this reaches real account settings (email/phone/password), which stay tied to your own Owner account no matter who you're previewing. Exit Member View to manage your own profile.</p>
+        </div>
+        <div class="portal-dashboard-grid" id="memberAccountRealForm">
           ${accountSettingsHtml('member')}
         </div>
       </div>
@@ -2157,6 +2207,7 @@ function dialogsHtml(){
             <div class="booking-field" id="classroomAddReleaseAtField" hidden><label for="classroomAddReleaseAt">Release At</label><input id="classroomAddReleaseAt" type="datetime-local" /></div>
           </div>
           <button class="admin-btn-solid" type="button" id="classroomAddPublishBtn" style="margin-top:8px">Publish To Class</button>
+          <button class="admin-btn-ghost" type="button" id="classroomAddPreviewBtn" style="margin-top:8px">Preview In Member View</button>
           <div class="form-status" id="classroomAddStatus" style="margin-top:8px"></div>
           <div class="admin-microlabel" style="margin:24px 0 10px">Published Content</div>
           <div id="teachingEditClassroomList"></div>
@@ -2179,6 +2230,7 @@ function dialogsHtml(){
             <label class="admin-checkbox-field"><input id="classAnnPinned" type="checkbox" /> Pin to top of Overview</label>
           </div>
           <button class="admin-btn-solid" type="button" id="classAnnPublishBtn" style="margin-top:8px">Save Announcement</button>
+          <button class="admin-btn-ghost" type="button" id="classAnnPreviewBtn" style="margin-top:8px">Preview In Member View</button>
           <div class="form-status" id="classAnnStatusMsg" style="margin-top:8px"></div>
           <div class="admin-microlabel" style="margin:24px 0 10px">All Announcements</div>
           <div id="teachingEditAnnouncementsList"></div>
@@ -2377,6 +2429,7 @@ function dialogsHtml(){
     </div>
     <div class="booking-body">
       <div class="classroom-meta-row" id="classroomMetaRow"></div>
+      <p class="member-preview-inline-note" id="classroomPreviewNote" hidden>Owner Preview — actions in this classroom (questions, attendance, checklist) are disabled while previewing.</p>
       <div class="admin-tabs" id="classroomTabs" style="margin:18px 0 20px">
         <button type="button" class="admin-tab active" data-classroom-tab="overview">Overview</button>
         <button type="button" class="admin-tab" data-classroom-tab="preparation">Preparation</button>
@@ -4051,8 +4104,9 @@ function liveWaitlistStatus(w){
 }
 function myWaitlistEntries(){
   if(!currentUser) return [];
-  return CLASS_WAITLIST.filter(w => w.uid === currentUser.uid ||
-    (!w.uid && currentProfile && w.email && currentProfile.email && w.email.toLowerCase() === currentProfile.email.toLowerCase()));
+  const uid = effectiveMemberUid(), email = effectiveMemberEmail();
+  return CLASS_WAITLIST.filter(w => w.uid === uid ||
+    (!w.uid && email && w.email && w.email.toLowerCase() === email.toLowerCase()));
 }
 
 const LEARNING_PATHS_KEY = 'ua_preview_learning_paths_v1';
@@ -4239,7 +4293,8 @@ const portalViews = memberPortalDialog.querySelectorAll('[data-portal-view]');
 const tabProspect = document.getElementById('tabProspect');
 const tabMember = document.getElementById('tabMember');
 const tabOwner = document.getElementById('tabOwner');
-const portalTabs = [tabProspect, tabMember, tabOwner];
+const tabMemberViewPreview = document.getElementById('tabMemberViewPreview');
+const portalTabs = [tabProspect, tabMember, tabOwner, tabMemberViewPreview];
 const portalMemberStatus = document.getElementById('portalMemberStatus');
 const portalOwnerStatus = document.getElementById('portalOwnerStatus');
 const portalLoginStatus = document.getElementById('portalLoginStatus');
@@ -4256,7 +4311,13 @@ let pendingVerifyPhone = null;
 let pendingVerifyEmail = null;
 
 function showPortalView(name){
-  portalViews.forEach(view => { view.hidden = view.dataset.portalView !== name; });
+  // "memberpreview" (the Owner's Member View tab) renders into the exact
+  // same data-portal-view="member" container real members use — it's a
+  // different TAB (so it gets its own active state below), not a
+  // different view, which is what "render the real Member Portal UI,
+  // don't duplicate it" requires.
+  const resolvedView = name === 'memberpreview' ? 'member' : name;
+  portalViews.forEach(view => { view.hidden = view.dataset.portalView !== resolvedView; });
   portalTabs.forEach(tabButton => {
     if(!tabButton) return;
     const selected = tabButton.dataset.portalTarget === name;
@@ -4270,10 +4331,12 @@ function refreshPortalTabs(){
     tabProspect.hidden = true;
     tabMember.hidden = false;
     tabOwner.hidden = currentProfile.role !== 'admin';
+    tabMemberViewPreview.hidden = currentProfile.role !== 'admin';
   } else {
     tabProspect.hidden = false;
     tabMember.hidden = true;
     tabOwner.hidden = true;
+    tabMemberViewPreview.hidden = true;
   }
 }
 
@@ -4294,6 +4357,7 @@ function enterDashboard(){
 
 function openPortal(){
   setMenuOpen(false);
+  ownerPreviewActive = false;
   refreshPortalTabs();
   if(currentUser && currentProfile){
     enterDashboard();
@@ -4312,10 +4376,106 @@ memberPortalDialog.addEventListener('click', event => {
 portalTabs.forEach(tabButton => {
   if(!tabButton) return;
   tabButton.addEventListener('click', () => {
+    if(tabButton.dataset.portalTarget === 'memberpreview'){
+      enterOwnerMemberPreview();
+      return;
+    }
+    // Switching to My Assembly or Ministry View always exits preview —
+    // "My Assembly" must show the Owner's own real (typically empty)
+    // member records, never leftover preview state.
+    ownerPreviewActive = false;
+    document.getElementById('memberPreviewBar').hidden = true;
+    if(currentProfile){
+      document.getElementById('memberWelcomeName').textContent = currentProfile.name ? ', ' + currentProfile.name.split(' ')[0] : '';
+    }
     showPortalView(tabButton.dataset.portalTarget);
-    if(tabButton.dataset.portalTarget === 'member') loadMemberBookings();
+    if(tabButton.dataset.portalTarget === 'member'){ loadMemberBookings(); renderMemberDashboardPanels(); showMemberTab('dashboard'); }
     if(tabButton.dataset.portalTarget === 'owner') loadOwnerData();
   });
+});
+
+/* ---------------------------------------------------------------
+   Owner "Member View" — a read-layer preview, not a real sign-in as
+   that member (see effectiveMemberUid/Email up top). Renders the exact
+   same #memberPortalDialog member view every real member uses; the
+   only new UI is the preview bar and the member selector.
+   --------------------------------------------------------------- */
+function updateMemberPreviewBar(){
+  const bar = document.getElementById('memberPreviewBar');
+  if(!bar) return;
+  bar.hidden = !ownerPreviewActive;
+  document.getElementById('memberPreviewViewingName').textContent = effectiveMemberName();
+  document.getElementById('memberWelcomeName').textContent = ', ' + effectiveMemberName();
+  document.getElementById('memberAccountLabel').textContent = ownerPreviewMember ? 'Member Account (Preview)' : 'Sample Account (Preview)';
+}
+// enterOwnerMemberPreview(memberKey, openTeachingId)
+// - memberKey undefined/omitted: keep whichever preview member is
+//   already selected (sticky), defaulting to "Demo Member" the first
+//   time. Lets "Preview As Member" from Classes jump straight to a
+//   classroom without resetting who's being previewed.
+// - memberKey given (including null from the selector's "Demo Member"
+//   option): explicitly set/clear the previewed member.
+function enterOwnerMemberPreview(memberKey, openTeachingId){
+  if(!currentProfile || currentProfile.role !== 'admin') return;
+  ownerPreviewActive = true;
+  if(memberKey !== undefined){
+    ownerPreviewMember = memberKey ? (resolveAllMemberProfiles().find(m => m.key === memberKey) || null) : null;
+  }
+  showPortalView('memberpreview');
+  updateMemberPreviewBar();
+  renderMemberDashboardPanels();
+  showMemberTab('dashboard');
+  if(!memberPortalDialog.open) memberPortalDialog.showModal();
+  if(openTeachingId) openClassroom(openTeachingId);
+}
+window.enterOwnerMemberPreview = enterOwnerMemberPreview;
+document.getElementById('exitMemberPreviewBtn').addEventListener('click', () => {
+  ownerPreviewActive = false;
+  document.getElementById('memberPreviewBar').hidden = true;
+  showPortalView('owner');
+  loadOwnerData();
+});
+// Search across the same People-system identity resolver used by
+// Owner → People and Global Search — no separate/duplicate member
+// records, per the requirement. Matches name/email/phone AND any
+// confirmation ID tied to that person's registrations or bookings.
+let memberPreviewSearchCache = [];
+function ownerMemberPreviewSearchResults(q){
+  q = q.trim().toLowerCase();
+  const profiles = resolveAllMemberProfiles();
+  if(!q) return profiles.slice(0, 8);
+  return profiles.filter(m => {
+    const { regs, bookings } = memberRecordsForKey(m.key);
+    const confIds = [...regs, ...bookings].map(r => (r.confirmationId || '').toLowerCase()).join(' ');
+    return (m.name + ' ' + m.email + ' ' + (m.phone || '') + ' ' + confIds).toLowerCase().includes(q);
+  }).slice(0, 12);
+}
+function renderMemberPreviewSearch(){
+  const q = document.getElementById('memberPreviewSearch').value;
+  const wrap = document.getElementById('memberPreviewSearchResults');
+  memberPreviewSearchCache = ownerMemberPreviewSearchResults(q);
+  wrap.hidden = false;
+  wrap.innerHTML = '<div class="owner-global-search-row" data-preview-select="demo"><span class="owner-global-search-type">Sample</span><strong>Demo Member</strong></div>' +
+    memberPreviewSearchCache.map((m, idx) => '<div class="owner-global-search-row" data-preview-select="' + idx + '"><span class="owner-global-search-type">Member</span><strong>' + escapeHtml(m.name || m.email) + '</strong></div>').join('');
+}
+document.getElementById('memberPreviewSearch').addEventListener('focus', renderMemberPreviewSearch);
+document.getElementById('memberPreviewSearch').addEventListener('input', renderMemberPreviewSearch);
+document.getElementById('memberPreviewSearchResults').addEventListener('click', event => {
+  const row = event.target.closest('[data-preview-select]');
+  if(!row) return;
+  const val = row.dataset.previewSelect;
+  ownerPreviewMember = val === 'demo' ? null : memberPreviewSearchCache[Number(val)];
+  document.getElementById('memberPreviewSearch').value = '';
+  document.getElementById('memberPreviewSearchResults').hidden = true;
+  updateMemberPreviewBar();
+  renderMemberDashboardPanels();
+  showMemberTab('dashboard');
+});
+document.addEventListener('click', event => {
+  if(!event.target.closest('.member-preview-selector-wrap')){
+    const r = document.getElementById('memberPreviewSearchResults');
+    if(r) r.hidden = true;
+  }
 });
 
 /* ---------------------------------------------------------------
@@ -6083,6 +6243,10 @@ function showMemberTab(name){
   if(name === 'sessions') renderMemberSessionsList();
   if(name === 'questions') renderMemberQuestions();
   if(name === 'notifications') renderMemberNotifications();
+  if(name === 'account'){
+    document.getElementById('memberAccountPreviewLocked').hidden = !ownerPreviewActive;
+    document.getElementById('memberAccountRealForm').hidden = ownerPreviewActive;
+  }
 }
 document.getElementById('memberTabs').addEventListener('click', event => {
   const btn = event.target.closest('[data-member-tab]');
@@ -6095,13 +6259,15 @@ document.addEventListener('click', event => {
 
 function myTeachingRegistrations(){
   if(!currentUser) return [];
-  return DEMO_TEACHING_REGISTRATIONS.filter(r => r.uid === currentUser.uid ||
-    (!r.uid && currentProfile && r.email && currentProfile.email && r.email.toLowerCase() === currentProfile.email.toLowerCase()));
+  const uid = effectiveMemberUid(), email = effectiveMemberEmail();
+  return DEMO_TEACHING_REGISTRATIONS.filter(r => r.uid === uid ||
+    (!r.uid && email && r.email && r.email.toLowerCase() === email.toLowerCase()));
 }
 function myBookings(){
   if(!currentUser) return [];
-  return DEMO_BOOKINGS.filter(b => b.uid === currentUser.uid ||
-    (!b.uid && currentProfile && b.email && currentProfile.email && b.email.toLowerCase() === currentProfile.email.toLowerCase()));
+  const uid = effectiveMemberUid(), email = effectiveMemberEmail();
+  return DEMO_BOOKINGS.filter(b => b.uid === uid ||
+    (!b.uid && email && b.email && b.email.toLowerCase() === email.toLowerCase()));
 }
 function isUpcomingTeaching(t){
   if(!t) return true;
@@ -6163,7 +6329,7 @@ document.addEventListener('click', event => {
 function renderMemberRecentUpdates(){
   const wrap = document.getElementById('memberRecentUpdates');
   if(!wrap || !currentUser) return;
-  const recent = MEMBER_NOTIFICATIONS.filter(n => n.uid === currentUser.uid).slice(0, 5);
+  const recent = MEMBER_NOTIFICATIONS.filter(n => n.uid === effectiveMemberUid()).slice(0, 5);
   wrap.innerHTML = recent.length === 0
     ? '<p style="color:#656565">Nothing new yet.</p>'
     : recent.map(n => '<div class="portal-row"><div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + '</small></div></div>').join('');
@@ -6183,17 +6349,18 @@ function renderMemberWaitlistOfferCard(){
     '<h4 class="serif-heading" style="margin-bottom:10px">' + escapeHtml(t ? t.title : 'Class') + '</h4>' +
     '<p style="color:#d7d7d7;margin-bottom:6px">Your reserved registration opportunity expires in:</p>' +
     '<p style="font-family:var(--font-mono);font-size:26px;margin:0 0 16px" id="memberWaitlistCountdown">' + countdown + '</p>' +
-    '<div class="portal-inline-actions"><button class="portal-primary" type="button" data-waitlist-claim-teaching="' + escapeHtml(offer.teachingId) + '">Register Now</button></div>';
+    '<div class="portal-inline-actions"><button class="portal-primary" type="button" data-waitlist-claim-teaching="' + escapeHtml(offer.teachingId) + '"' +
+    (ownerPreviewActive ? ' disabled data-member-preview-lock' : '') + '>Register Now</button></div>';
 }
 let memberWaitlistCountdownTimer = null;
 document.addEventListener('click', event => {
   const claimBtn = event.target.closest('[data-waitlist-claim-teaching]');
-  if(claimBtn) openTeachingRegister(claimBtn.dataset.waitlistClaimTeaching);
+  if(claimBtn && !ownerPreviewActive) openTeachingRegister(claimBtn.dataset.waitlistClaimTeaching);
 });
 function renderMemberLearningPaths(){
   const wrap = document.getElementById('memberLearningPaths');
   if(!wrap || !currentUser) return;
-  const uid = currentUser.uid, email = currentProfile ? currentProfile.email : '';
+  const uid = effectiveMemberUid(), email = effectiveMemberEmail();
   const myPaths = LEARNING_PATHS.filter(p => p.classIds.some(id => memberRegistrationsFor(id, uid, email).length > 0));
   wrap.innerHTML = myPaths.length === 0 ? '' : myPaths.map(p => {
     const { completed, total } = learningPathProgress(p, uid, email);
@@ -6322,7 +6489,7 @@ function renderMemberNotifications(){
   const wrap = document.getElementById('memberNotificationsList');
   const countEl = document.getElementById('memberNotifCount');
   if(!currentUser) return;
-  const mine = MEMBER_NOTIFICATIONS.filter(n => n.uid === currentUser.uid);
+  const mine = MEMBER_NOTIFICATIONS.filter(n => n.uid === effectiveMemberUid());
   const unread = mine.filter(n => !n.read).length;
   if(countEl){ countEl.hidden = unread === 0; countEl.textContent = String(unread); }
   if(!wrap) return;
@@ -6351,9 +6518,9 @@ function memberQuestionRowHtml(q){
 function renderMemberQuestions(){
   const wrap = document.getElementById('memberQuestionsList');
   if(!wrap || !currentUser) return;
-  const email = currentProfile ? currentProfile.email : '';
+  const uid = effectiveMemberUid(), email = effectiveMemberEmail();
   const mine = CLASS_QUESTIONS.filter(q => q.status !== 'archived' &&
-    (q.uid === currentUser.uid || (!q.uid && email && q.email && q.email.toLowerCase() === email.toLowerCase())))
+    (q.uid === uid || (!q.uid && email && q.email && q.email.toLowerCase() === email.toLowerCase())))
     .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
   wrap.innerHTML = mine.length === 0 ? '<p style="color:var(--stone)">You haven\'t asked any questions yet.</p>' : mine.map(memberQuestionRowHtml).join('');
 }
@@ -6397,11 +6564,12 @@ let classroomTeachingId = null;
 // source of truth, shared with the click-time check nowhere needed
 // here because an unreleased item never gets its real URL rendered
 // into a clickable anchor in the first place.
-function classroomContentRowHtml(item, kind, teaching){
+function classroomContentRowHtml(item, kind, teaching, isDraftPreview){
   const released = isResourceReleased(item, teaching);
   const releaseLabel = resourceReleaseLabel(item, teaching);
+  const draftBadge = isDraftPreview ? '<span class="classroom-draft-badge">DRAFT — PREVIEW ONLY</span>' : '';
   if(kind === 'resource'){
-    return '<article class="portal-panel classroom-content-card">' +
+    return '<article class="portal-panel classroom-content-card">' + draftBadge +
       '<span class="portal-label">Resource · ' + escapeHtml(shortDate(item.publishedAt)) + '</span>' +
       '<h4 class="serif-heading" style="margin-bottom:10px">' + escapeHtml(item.title) + '</h4>' +
       (released
@@ -6409,7 +6577,7 @@ function classroomContentRowHtml(item, kind, teaching){
         : '<p class="classroom-locked-note">🔒 ' + escapeHtml(releaseLabel || 'Not yet available') + '</p>') +
       '</article>';
   }
-  return '<article class="portal-panel classroom-content-card">' +
+  return '<article class="portal-panel classroom-content-card">' + draftBadge +
     '<span class="portal-label">Note · ' + escapeHtml(shortDate(item.publishedAt)) + '</span>' +
     '<h4 class="serif-heading" style="margin-bottom:8px">' + escapeHtml(item.title) + '</h4>' +
     (released
@@ -6420,10 +6588,11 @@ function classroomContentRowHtml(item, kind, teaching){
 function classroomPrepChecklistHtml(teachingId, t){
   const items = (t.prepChecklist && t.prepChecklist.length) ? t.prepChecklist :
     ['Download Study Guide', 'Test Zoom Link', 'Prepare Bible + Notebook', 'Submit A Question', 'Confirm Attendance'];
-  const uid = currentUser ? currentUser.uid : 'guest';
+  const uid = effectiveMemberUid() || 'guest';
   const state = MEMBER_PREP_STATE[prepStateKey(uid, teachingId)] || {};
+  const lock = ownerPreviewActive ? ' disabled data-member-preview-lock' : '';
   return items.map((label, idx) =>
-    '<label class="classroom-checklist-item"><input type="checkbox" data-prep-item-index="' + idx + '"' + (state[idx] ? ' checked' : '') + ' /><span>' + escapeHtml(label) + '</span></label>'
+    '<label class="classroom-checklist-item"><input type="checkbox" data-prep-item-index="' + idx + '"' + (state[idx] ? ' checked' : '') + lock + ' /><span>' + escapeHtml(label) + '</span></label>'
   ).join('');
 }
 function classroomQuestionRowHtml(q){
@@ -6441,15 +6610,16 @@ function classroomQuestionRowHtml(q){
 function renderClassroomQuestions(teachingId){
   const wrap = document.getElementById('classroomQuestionsList');
   if(!wrap) return;
-  const uid = currentUser ? currentUser.uid : null;
-  const email = currentProfile ? currentProfile.email : '';
+  const uid = effectiveMemberUid();
+  const email = effectiveMemberEmail();
   const mine = CLASS_QUESTIONS.filter(q => q.teachingId === teachingId && q.status !== 'archived' &&
     ((uid && q.uid === uid) || (!q.uid && email && q.email && q.email.toLowerCase() === email.toLowerCase())))
     .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
   wrap.innerHTML = mine.length === 0 ? '<p style="color:#656565">You haven\'t asked a question for this class yet.</p>' : mine.map(classroomQuestionRowHtml).join('');
 }
-function classroomAnnouncementRowHtml(a){
+function classroomAnnouncementRowHtml(a, isDraftPreview){
   return '<article class="portal-panel classroom-content-card">' +
+    (isDraftPreview ? '<span class="classroom-draft-badge">DRAFT — PREVIEW ONLY</span>' : '') +
     (a.pinned ? '<span class="classroom-pin-badge">📌 Pinned</span>' : '') +
     '<span class="portal-label">' + escapeHtml(shortDate(a.publishAt || a.createdAt)) + '</span>' +
     '<h4 class="serif-heading" style="margin-bottom:8px">' + escapeHtml(a.title) + '</h4>' +
@@ -6465,11 +6635,17 @@ function renderClassroomAnnouncements(teachingId){
   const wrap = document.getElementById('classroomAnnouncementsList');
   const pinWrap = document.getElementById('classroomPinnedAnnouncement');
   const items = classroomPublishedAnnouncements(teachingId);
-  if(wrap) wrap.innerHTML = items.length === 0 ? '<p style="color:#656565">No announcements yet.</p>' : items.map(classroomAnnouncementRowHtml).join('');
+  // A draft announcement being previewed via "Preview In Member View"
+  // (Teaching Edit → Announcements) shows here, prepended and badged,
+  // without ever having been written to CLASS_ANNOUNCEMENTS.
+  const overlayItem = (ownerPreviewActive && ownerPreviewDraftOverlay &&
+    ownerPreviewDraftOverlay.teachingId === teachingId && ownerPreviewDraftOverlay.listKind === 'announcement') ? ownerPreviewDraftOverlay.item : null;
+  const allItems = overlayItem ? [overlayItem, ...items] : items;
+  if(wrap) wrap.innerHTML = allItems.length === 0 ? '<p style="color:#656565">No announcements yet.</p>' : allItems.map(a => classroomAnnouncementRowHtml(a, a === overlayItem)).join('');
   if(pinWrap){
-    const pinned = items.find(a => a.pinned);
+    const pinned = (overlayItem && overlayItem.pinned) ? overlayItem : items.find(a => a.pinned);
     pinWrap.hidden = !pinned;
-    if(pinned) pinWrap.innerHTML = classroomAnnouncementRowHtml(pinned);
+    if(pinned) pinWrap.innerHTML = classroomAnnouncementRowHtml(pinned, pinned === overlayItem);
   }
 }
 async function renderClassroomZoomInfo(teachingId, t){
@@ -6486,11 +6662,15 @@ async function renderClassroomZoomInfo(teachingId, t){
 function openClassroom(teachingId){
   const t = TEACHINGS[teachingId];
   if(!t) return;
-  const email = currentProfile ? currentProfile.email : '';
+  const email = effectiveMemberEmail();
   // Real access check, not a visual-only gate: no registration for this
   // exact class → refuse before any class content (including Zoom
-  // info) is ever written into the DOM.
-  if(!classroomAccessAllowed(teachingId, currentUser ? currentUser.uid : null, email)){
+  // info) is ever written into the DOM. Owner Member View preview is
+  // the one deliberate bypass — the whole point is letting the Owner
+  // see a classroom's structure/content on behalf of a member who
+  // isn't (or isn't yet) actually enrolled, so a real member's access
+  // is never affected by this.
+  if(!ownerPreviewActive && !classroomAccessAllowed(teachingId, currentUser ? currentUser.uid : null, email)){
     if(document.getElementById('portalMemberStatus')) document.getElementById('portalMemberStatus').textContent = "You're not registered for that class yet.";
     return;
   }
@@ -6512,20 +6692,27 @@ function openClassroom(teachingId){
   renderClassroomZoomInfo(teachingId, t);
   const notes = content.filter(c => c.kind === 'note' || c.kind === 'study-guide' || c.kind === 'lesson-summary');
   const resources = content.filter(c => c.kind === 'resource' || c.kind === 'file' || c.kind === 'scripture-list');
-  document.getElementById('classroomLessonSummary').innerHTML = notes.length
-    ? notes.map(n => classroomContentRowHtml(n, 'note', t)).join('')
-    : '<p style="color:#656565">No lesson summary published yet.</p>';
-  document.getElementById('classroomNotesList').innerHTML = notes.length
-    ? notes.map(n => classroomContentRowHtml(n, 'note', t)).join('')
-    : '<p style="color:#656565">No notes published yet — check back after class.</p>';
-  document.getElementById('classroomResourcesList').innerHTML = resources.length
-    ? resources.map(r => classroomContentRowHtml(r, 'resource', t)).join('')
-    : '<p style="color:#656565">No resources published yet.</p>';
+  // A draft note/resource being previewed via "Preview In Member View"
+  // (Teaching Edit → Classroom Content) shows here, prepended and
+  // badged, without ever having been written to CLASSROOM_CONTENT.
+  const contentOverlay = (ownerPreviewActive && ownerPreviewDraftOverlay &&
+    ownerPreviewDraftOverlay.teachingId === teachingId && ownerPreviewDraftOverlay.listKind === 'content') ? ownerPreviewDraftOverlay.item : null;
+  const overlayIsResource = contentOverlay && contentOverlay.kind === 'resource';
+  const notesHtml = (contentOverlay && !overlayIsResource ? classroomContentRowHtml(contentOverlay, 'note', t, true) : '') +
+    notes.map(n => classroomContentRowHtml(n, 'note', t)).join('');
+  const resourcesHtml = (contentOverlay && overlayIsResource ? classroomContentRowHtml(contentOverlay, 'resource', t, true) : '') +
+    resources.map(r => classroomContentRowHtml(r, 'resource', t)).join('');
+  document.getElementById('classroomLessonSummary').innerHTML = notesHtml || '<p style="color:#656565">No lesson summary published yet.</p>';
+  document.getElementById('classroomNotesList').innerHTML = notesHtml || '<p style="color:#656565">No notes published yet — check back after class.</p>';
+  document.getElementById('classroomResourcesList').innerHTML = resourcesHtml || '<p style="color:#656565">No resources published yet.</p>';
   document.getElementById('classroomPrepChecklist').innerHTML = classroomPrepChecklistHtml(teachingId, t);
-  const reg = memberRegistrationsFor(teachingId, currentUser ? currentUser.uid : null, email)[0];
+  const reg = memberRegistrationsFor(teachingId, effectiveMemberUid(), email)[0];
   const confirmStatusEl = document.getElementById('classroomAttendanceConfirmStatus');
   confirmStatusEl.textContent = reg && reg.attendanceConfirm === 'plan-to-attend' ? "You're marked as planning to attend."
     : reg && reg.attendanceConfirm === 'cannot-attend' ? "You let us know you can't make it." : '';
+  document.querySelectorAll('[data-attendance-confirm]').forEach(b => { b.disabled = ownerPreviewActive; });
+  document.getElementById('classroomQuestionForm').querySelectorAll('input, textarea, select, button[type="submit"]').forEach(el => { el.disabled = ownerPreviewActive; });
+  document.getElementById('classroomPreviewNote').hidden = !ownerPreviewActive;
   renderClassroomQuestions(teachingId);
   renderClassroomAnnouncements(teachingId);
   document.querySelectorAll('#classroomTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.classroomTab === 'overview'));
@@ -6542,10 +6729,13 @@ document.getElementById('closeClassroom').addEventListener('click', () => docume
 document.getElementById('classroomDialog').addEventListener('click', event => {
   if(event.target.id === 'classroomDialog') document.getElementById('classroomDialog').close();
 });
+// Covers every close path (button, backdrop, Esc) in one place, so a
+// draft preview never leaks into a later, real classroom view.
+document.getElementById('classroomDialog').addEventListener('close', () => { ownerPreviewDraftOverlay = null; });
 document.getElementById('classroomPrepChecklist').addEventListener('change', event => {
   const input = event.target.closest('[data-prep-item-index]');
-  if(!input || !classroomTeachingId) return;
-  const uid = currentUser ? currentUser.uid : 'guest';
+  if(!input || !classroomTeachingId || ownerPreviewActive) return;
+  const uid = effectiveMemberUid() || 'guest';
   const key = prepStateKey(uid, classroomTeachingId);
   if(!MEMBER_PREP_STATE[key]) MEMBER_PREP_STATE[key] = {};
   MEMBER_PREP_STATE[key][input.dataset.prepItemIndex] = input.checked;
@@ -6553,9 +6743,9 @@ document.getElementById('classroomPrepChecklist').addEventListener('change', eve
 });
 document.querySelector('[data-classroom-panel="preparation"]').addEventListener('click', event => {
   const btn = event.target.closest('[data-attendance-confirm]');
-  if(!btn || !classroomTeachingId) return;
-  const email = currentProfile ? currentProfile.email : '';
-  const reg = memberRegistrationsFor(classroomTeachingId, currentUser ? currentUser.uid : null, email)[0];
+  if(!btn || !classroomTeachingId || ownerPreviewActive) return;
+  const email = effectiveMemberEmail();
+  const reg = memberRegistrationsFor(classroomTeachingId, effectiveMemberUid(), email)[0];
   if(!reg) return;
   reg.attendanceConfirm = btn.dataset.attendanceConfirm;
   saveTeachingRegistrationsToStorage();
@@ -6564,7 +6754,7 @@ document.querySelector('[data-classroom-panel="preparation"]').addEventListener(
 });
 document.getElementById('classroomQuestionForm').addEventListener('submit', event => {
   event.preventDefault();
-  if(!classroomTeachingId || !currentUser) return;
+  if(!classroomTeachingId || !currentUser || ownerPreviewActive) return;
   const question = document.getElementById('classroomQuestionText').value.trim();
   if(!question) return;
   const t = TEACHINGS[classroomTeachingId];
@@ -8801,6 +8991,36 @@ document.getElementById('classroomAddPublishBtn').addEventListener('click', () =
   document.getElementById('classroomAddStatus').textContent = 'Published — ' + enrolled.length + ' enrolled member' + (enrolled.length === 1 ? '' : 's') +
     ' notified in-portal (simulated email: "New class notes are available for ' + t.title + '. View Notes →" — Preview Mode, no real email sent).';
 });
+document.getElementById('classroomAddPreviewBtn').addEventListener('click', () => {
+  const teachingId = document.getElementById('teachingEditId').value;
+  const t = TEACHINGS[teachingId];
+  if(!teachingId || !t){ document.getElementById('classroomAddStatus').textContent = 'Save this class first.'; return; }
+  const kind = document.getElementById('classroomAddKind').value;
+  const title = document.getElementById('classroomAddTitle').value.trim() || '(untitled — draft preview)';
+  const body = document.getElementById('classroomAddBody').value.trim();
+  const url = document.getElementById('classroomAddUrl').value.trim();
+  const ref = document.getElementById('classroomAddRef').value.trim();
+  const releaseMode = document.getElementById('classroomAddReleaseMode').value;
+  const releaseHours = document.getElementById('classroomAddReleaseHours').value;
+  const releaseAtRaw = document.getElementById('classroomAddReleaseAt').value;
+  // Transient only — never pushed to CLASSROOM_CONTENT/saveClassroomContent,
+  // so nothing here counts as "publishing" this draft.
+  ownerPreviewDraftOverlay = {
+    teachingId, listKind: 'content',
+    item: {
+      id: 'draft-preview', kind, title, body, url, ref, publishedAt: new Date().toISOString(),
+      releaseMode, releaseHours: releaseMode === 'hours-before-class' ? Number(releaseHours) || 24 : null,
+      releaseAt: releaseMode === 'fixed-datetime' && releaseAtRaw ? new Date(releaseAtRaw).toISOString() : null
+    }
+  };
+  document.getElementById('classroomAddStatus').textContent = 'Showing this draft in Member View — it has not been published.';
+  // Close Teaching Edit first — otherwise it stays stacked underneath
+  // the classroom preview (both are dialogs opened on top of the same
+  // #memberPortalDialog) and blocks "Exit Member View" once the
+  // classroom closes.
+  document.getElementById('teachingEditDialog').close();
+  enterOwnerMemberPreview(undefined, teachingId);
+});
 document.getElementById('teachingEditClassroomList').addEventListener('click', event => {
   const btn = event.target.closest('.classroom-content-delete');
   if(!btn) return;
@@ -8922,6 +9142,24 @@ document.getElementById('classAnnPublishBtn').addEventListener('click', () => {
   } else {
     document.getElementById('classAnnStatusMsg').textContent = 'Saved as ' + status + '.';
   }
+});
+document.getElementById('classAnnPreviewBtn').addEventListener('click', () => {
+  const teachingId = document.getElementById('teachingEditId').value;
+  const t = TEACHINGS[teachingId];
+  if(!teachingId || !t){ document.getElementById('classAnnStatusMsg').textContent = 'Save this class first.'; return; }
+  const title = document.getElementById('classAnnTitle').value.trim() || '(untitled — draft preview)';
+  const body = document.getElementById('classAnnBody').value.trim();
+  const pinned = document.getElementById('classAnnPinned').checked;
+  // Transient only — never pushed to CLASS_ANNOUNCEMENTS/saved, so
+  // nothing here counts as "publishing" this draft, regardless of
+  // whatever status (Draft/Scheduled/Published) is selected above.
+  ownerPreviewDraftOverlay = {
+    teachingId, listKind: 'announcement',
+    item: { id: 'draft-preview', title, body, pinned, publishAt: new Date().toISOString(), createdAt: new Date().toISOString() }
+  };
+  document.getElementById('classAnnStatusMsg').textContent = 'Showing this draft in Member View — it has not been published.';
+  document.getElementById('teachingEditDialog').close();
+  enterOwnerMemberPreview(undefined, teachingId);
 });
 document.getElementById('teachingEditAnnouncementsList').addEventListener('click', event => {
   const row = event.target.closest('[data-class-ann-id]');
@@ -9809,6 +10047,7 @@ function teachingMgrRowHtml(t){
     '<div class="admin-teaching-actions">' +
     '<button class="admin-btn-ghost teaching-mgr-edit" type="button">Edit</button>' +
     '<button class="admin-btn-ghost teaching-mgr-preview" type="button">Preview</button>' +
+    '<button class="admin-btn-ghost teaching-mgr-preview-member" type="button">Preview As Member</button>' +
     '<button class="admin-btn-ghost teaching-mgr-registrants" type="button">Registrants</button>' +
     '<button class="admin-btn-ghost teaching-mgr-duplicate" type="button">Duplicate</button>' +
     '<button class="admin-btn-ghost teaching-mgr-archive" type="button">' + (t.archived ? 'Unarchive' : 'Archive') + '</button>' +
@@ -9956,6 +10195,10 @@ document.getElementById('teachingMgrList').addEventListener('click', async event
   const id = row.dataset.teachingId;
   if(event.target.closest('.teaching-mgr-edit')) return openTeachingEditor(id);
   if(event.target.closest('.teaching-mgr-registrants')) return openTeachingRegistrants(id);
+  if(event.target.closest('.teaching-mgr-preview-member')){
+    enterOwnerMemberPreview(null, id);
+    return;
+  }
   if(event.target.closest('.teaching-mgr-preview')){
     window.open(BASE + 'teaching-detail.html?id=' + encodeURIComponent(id), '_blank');
     return;

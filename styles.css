@@ -603,6 +603,40 @@ dialog.detail-drawer .booking-body{padding:20px 22px 28px}
 .portal-switch{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
 .portal-switch button{min-height:40px;padding:0 13px;border:1px solid var(--line-dark);background:transparent;color:var(--stone);cursor:pointer;font-size:10px;letter-spacing:.08em}
 .portal-switch button.active{background:var(--ivory);border-color:var(--ivory);color:var(--black)}
+
+/* ---------- Owner Member View preview bar ---------- */
+.member-preview-bar{
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  padding:12px 22px; margin:-34px -34px 22px; background:#f6f6f3; border-bottom:1px solid var(--line-light);
+}
+.member-preview-bar-label{display:flex; flex-direction:column; gap:2px}
+.member-preview-bar-label strong{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim)}
+.member-preview-bar-label span{font-size:13px; color:var(--black)}
+.member-preview-bar-label span span{font-weight:600}
+.member-preview-bar-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.member-preview-selector-wrap{position:relative}
+.member-preview-selector-wrap input{
+  min-height:36px; min-width:260px; border:1px solid var(--line-light); background:var(--white);
+  padding:0 12px; font:inherit; font-size:12.5px; color:var(--black);
+}
+#memberPreviewSearchResults{
+  position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:30; max-height:280px; overflow-y:auto;
+  background:var(--white); border:1px solid var(--line-light); box-shadow:0 16px 36px rgba(0,0,0,.14);
+}
+.member-preview-inline-note{
+  font-size:11px; letter-spacing:.03em; color:var(--ink-dim); background:#f6f6f3;
+  border:1px solid var(--line-light); padding:9px 13px; margin-bottom:16px;
+}
+.classroom-draft-badge{
+  display:inline-block; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#9a3412;
+  background:#ffedd5; border-radius:100px; padding:4px 10px; margin-bottom:8px;
+}
+@media(max-width:560px){
+  .member-preview-bar{margin:-24px -18px 18px; padding:12px 18px; flex-direction:column; align-items:flex-start}
+  .member-preview-bar-actions{width:100%}
+  .member-preview-selector-wrap{width:100%}
+  .member-preview-selector-wrap input{width:100%; min-width:0; box-sizing:border-box}
+}
 .portal-close{width:40px;height:40px;border:1px solid var(--line-dark);background:transparent;color:var(--ivory);font-size:20px;cursor:pointer}
 .portal-view{padding:34px}
 .portal-view[hidden]{display:none}
