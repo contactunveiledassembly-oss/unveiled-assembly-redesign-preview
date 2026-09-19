@@ -7,6 +7,18 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+    // Firestore rules can't run a `where` query to answer "does this
+    // person have a registration for this class" — only `exists`/`get`
+    // on a KNOWN document path. So enrollment is mirrored into its own
+    // classEnrollments/{teachingId}_{uid} doc with a deterministic ID
+    // (write it alongside the registration itself — see the
+    // createTeachingRegistration() comment in app.js marking where).
+    // A non-cancelled mirror doc IS enrollment; nothing else grants it.
+    function isEnrolledInClass(teachingId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/classEnrollments/$(teachingId + '_' + request.auth.uid)) &&
+        get(/databases/$(database)/documents/classEnrollments/$(teachingId + '_' + request.auth.uid)).data.status != 'cancelled';
+    }
 
     // Member/admin profiles. A user can only ever create/read their own
     // profile (or an admin can read/manage any profile). Nobody can grant
@@ -121,12 +133,97 @@ service cloud.firestore {
     // a field on it) so a public read of a teaching can never expose this
     // — Firestore rules can't redact individual fields of a readable doc,
     // only whole documents, so the private data has to live in its own
-    // document with its own stricter rule. Admin-only for now; expand to
-    // "isAdmin() || confirmed registrant" later when real attendee access
-    // is built — that's a rules change only, not a redesign.
+    // document with its own stricter rule. Now readable by an enrolled,
+    // non-cancelled registrant for that exact class too (fulfills the
+    // "expand later" note this rule used to carry) — never by anyone
+    // browsing the public class page without registering.
     match /teachingZoomInfo/{teachingId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || isEnrolledInClass(teachingId);
       allow write: if isAdmin();
+    }
+
+    // Mirrors teachingRegistrations into a deterministic-ID doc purely so
+    // isEnrolledInClass() above can check it — see that function's
+    // comment. Never written by the client directly; only the same
+    // server-side/trusted write path that creates the registration
+    // itself should write this (kept admin-only here, not "any signed-in
+    // user for their own uid", so a member can't grant themselves access
+    // to a class they never actually paid for/registered to).
+    match /classEnrollments/{enrollmentId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.memberUid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Notes, study guides, and resources published into a class's
+    // classroom. Public metadata about WHICH classes have content is not
+    // exposed — read requires either being the admin or being enrolled
+    // in that exact class, same access rule as the Zoom info above. A
+    // resource's `releaseAt`/`releaseHours` timing is enforced here too,
+    // not just in the UI — an enrolled member still can't read a resource
+    // before its computed release time.
+    match /classroomContent/{teachingId}/items/{itemId} {
+      allow read: if isAdmin() || (isEnrolledInClass(teachingId) &&
+        (resource.data.releaseMode == 'immediate' ||
+         resource.data.releaseMode == null ||
+         (resource.data.releaseMode == 'fixed-datetime' && request.time >= resource.data.releaseAt) ||
+         (resource.data.releaseMode == 'hours-before-class' && request.time >= resource.data.releaseAt)));
+      allow write: if isAdmin();
+    }
+
+    // Private, per-class questions. A member can create one only for a
+    // class they're enrolled in, and only ever read/see their OWN
+    // questions for that class — never another student's. The admin can
+    // read/answer/archive any question for any class.
+    match /classQuestions/{questionId} {
+      allow create: if isEnrolledInClass(request.resource.data.teachingId) &&
+        request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Announcements for a class's classroom. Only enrolled members (or
+    // the admin) can read them, and only once published (draft/scheduled
+    // announcements stay admin-only until their publishAt has passed).
+    match /classAnnouncements/{announcementId} {
+      allow read: if isAdmin() || (isEnrolledInClass(resource.data.teachingId) &&
+        resource.data.status == 'published' && request.time >= resource.data.publishAt);
+      allow write: if isAdmin();
+    }
+
+    // Waitlist entries hold personal data, so same pattern as bookings/
+    // teachingRegistrations: the admin or the entry's own person (once
+    // they're signed in) can read it back. Anyone (including a guest) can
+    // create an entry; only the admin can change its status (send an
+    // offer, remove someone) — a member can never edit their own position
+    // or self-approve an offer.
+    match /classWaitlist/{entryId} {
+      allow create: if request.resource.data.keys().hasAll(['teachingId','name','email','status']) &&
+                      request.resource.data.status == 'waiting';
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Learning paths are just a public, ordered grouping of already-public
+    // classes — public read, admin-only write, no personal data involved.
+    match /learningPaths/{pathId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // In-portal member notifications (registration confirmed, new notes,
+    // question answered, waitlist offer, etc). A member can only ever
+    // read/mark-read their OWN notifications; only the admin (or the
+    // trusted server-side path that creates them alongside the event
+    // they describe) can create one.
+    match /memberNotifications/{notificationId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin() ||
+        (isSignedIn() && resource.data.uid == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']));
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Sitewide Teaching page settings (featured teaching, section

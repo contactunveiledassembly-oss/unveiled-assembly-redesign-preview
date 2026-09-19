@@ -625,8 +625,18 @@ dialog.detail-drawer .booking-body{padding:20px 22px 28px}
   display:block; margin-top:8px; font-family:var(--sans); font-style:normal;
   font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);
 }
-.classroom-content-card{margin-bottom:12px}
+.classroom-content-card{margin-bottom:12px;position:relative}
 .classroom-content-card:last-child{margin-bottom:0}
+.classroom-locked-note{color:var(--ink-dim);font-size:12.5px;font-style:italic;margin:0}
+.classroom-pin-badge{display:inline-block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:6px}
+.classroom-question-answer{margin-top:12px;padding:12px 14px;border-left:2px solid var(--black);background:#f6f6f3}
+.classroom-question-answer p{margin:4px 0 0;color:#3a3a3a}
+.classroom-checklist-item{
+  display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-top:1px solid var(--line-light);
+  font-size:14px;color:var(--black);cursor:pointer;
+}
+.classroom-checklist-item:first-child{border-top:0}
+.classroom-checklist-item input{margin-top:3px;accent-color:var(--black);flex:0 0 auto}
 
 .portal-two{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
 .portal-welcome{background:var(--black);color:var(--ivory);padding:36px}
@@ -1234,6 +1244,23 @@ dialog.detail-drawer .booking-body{padding:20px 22px 28px}
 .admin-checkbox-field{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--owner-text);padding-top:22px}
 .admin-checkbox-field input{accent-color:var(--owner-accent)}
 .admin-subsection-label{font-family:var(--sans);font-size:12px;letter-spacing:.03em;font-weight:600;color:var(--owner-text);margin:24px 0 12px;padding-top:18px;border-top:1px solid var(--owner-border)}
+
+/* ---------- Owner Portal global search ---------- */
+.owner-global-search{position:relative;padding:0 22px;margin-top:-6px}
+.owner-global-search input{
+  width:100%;box-sizing:border-box;min-height:44px;border:1px solid var(--owner-border-strong);border-radius:var(--owner-radius);
+  background:var(--owner-surface);color:var(--owner-text);padding:0 16px;font:inherit;font-size:13.5px;
+}
+.owner-global-search input:focus{outline:2px solid var(--owner-accent);outline-offset:-1px}
+.owner-global-search-results,#ownerGlobalSearchResults{
+  position:absolute;left:22px;right:22px;top:calc(100% + 4px);z-index:40;max-height:360px;overflow-y:auto;
+  background:var(--owner-surface);border:1px solid var(--owner-border-strong);border-radius:var(--owner-radius);
+  box-shadow:0 18px 40px rgba(0,0,0,.14);
+}
+.owner-global-search-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-top:1px solid var(--owner-border);cursor:pointer}
+.owner-global-search-row:first-child{border-top:0}
+.owner-global-search-row:hover{background:var(--owner-surface-sunken)}
+.owner-global-search-type{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--owner-text-faint);flex:0 0 auto;min-width:120px}
 
 /* ---------- Editor dialog chrome: vertical step navigation ---------- */
 .admin-editor-head{display:flex;justify-content:space-between;align-items:flex-start}

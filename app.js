@@ -705,13 +705,20 @@ function dialogsHtml(){
         <button type="button" class="admin-tab active" data-member-tab="dashboard">Dashboard</button>
         <button type="button" class="admin-tab" data-member-tab="classes">My Classes</button>
         <button type="button" class="admin-tab" data-member-tab="sessions">My Sessions</button>
+        <button type="button" class="admin-tab" data-member-tab="questions">Questions</button>
         <button type="button" class="admin-tab" data-member-tab="notifications">Notifications<span class="owner-nav-count" id="memberNotifCount" hidden>0</span></button>
-        <button type="button" class="admin-tab" data-member-tab="account">Account</button>
+        <button type="button" class="admin-tab" data-member-tab="account">Profile</button>
       </div>
 
       <div data-member-panel="dashboard">
         <div class="portal-dashboard-grid">
+          <article class="portal-panel wine" id="memberWaitlistOfferCard" hidden></article>
           <article class="portal-panel wine" id="memberNextClassCard"></article>
+          <article class="portal-panel wine" id="memberNextSessionCard"></article>
+          <article class="portal-panel">
+            <span class="portal-label">Recent Updates</span>
+            <div id="memberRecentUpdates"></div>
+          </article>
           <article class="portal-panel wine">
             <span class="portal-label">My Sessions</span>
             <div id="memberBookingsList"><p style="color:#d7d7d7">Loading your bookings…</p></div>
@@ -724,7 +731,7 @@ function dialogsHtml(){
             <div class="member-quick-links">
               <button type="button" class="text-link on-light" data-member-tab-link="classes">View Class Notes →</button>
               <button type="button" class="text-link on-light" data-member-tab-link="classes">Past Recordings →</button>
-              <button type="button" class="text-link on-light" data-member-tab-link="account">Update Account →</button>
+              <button type="button" class="text-link on-light" data-member-tab-link="account">Update Profile →</button>
               <a class="text-link on-light" href="connect.html">Need Help? →</a>
             </div>
           </article>
@@ -736,6 +743,7 @@ function dialogsHtml(){
           <button type="button" class="admin-tab active" data-member-classes-tab="upcoming">Upcoming</button>
           <button type="button" class="admin-tab" data-member-classes-tab="past">Past</button>
         </div>
+        <div id="memberLearningPaths"></div>
         <div id="memberClassesList"></div>
       </div>
 
@@ -746,6 +754,11 @@ function dialogsHtml(){
           <button type="button" class="admin-tab" data-member-sessions-tab="cancelled">Cancelled</button>
         </div>
         <div id="memberSessionsList"></div>
+      </div>
+
+      <div data-member-panel="questions" hidden>
+        <p class="admin-hint" style="margin-bottom:14px">Questions you've submitted across every class. Ask a new one from inside that class's Classroom → Questions.</p>
+        <div id="memberQuestionsList"></div>
       </div>
 
       <div data-member-panel="notifications" hidden>
@@ -764,6 +777,24 @@ function dialogsHtml(){
       <div class="portal-status" id="portalMemberStatus" role="status" aria-live="polite"></div>
     </div>
 
+    <dialog class="booking-dialog" id="confirmationRecapDialog" aria-labelledby="confirmationRecapTitle" style="max-width:420px">
+      <div class="booking-head">
+        <div><div class="kicker" style="margin-bottom:0">Confirmation</div><h3 id="confirmationRecapTitle">Confirmation</h3></div>
+        <button class="booking-close" id="closeConfirmationRecap" type="button" aria-label="Close confirmation">×</button>
+      </div>
+      <div class="booking-body">
+        <div class="ticket-card">
+          <div class="ticket-row"><span>When</span><strong id="confirmationRecapWhen"></strong></div>
+          <div class="ticket-row"><span>Status</span><strong id="confirmationRecapStatus"></strong></div>
+          <div class="ticket-id-block">
+            <span>Confirmation ID</span>
+            <strong id="confirmationRecapId"></strong>
+            <button type="button" class="ticket-copy-btn" id="confirmationRecapCopyBtn">Copy Confirmation ID</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
     <div class="portal-view" data-portal-view="owner" hidden>
       <div class="portal-head">
         <div>
@@ -772,6 +803,10 @@ function dialogsHtml(){
           <p id="ownerSectionDescription">Everything you need to run the website, in one place.</p>
         </div>
         <span class="portal-account">Private Owner View</span>
+      </div>
+      <div class="owner-global-search">
+        <input id="ownerGlobalSearch" type="text" placeholder="Search members, confirmation IDs, classes, prayer requests, testimonials…" autocomplete="off" />
+        <div id="ownerGlobalSearchResults" hidden></div>
       </div>
       <div class="owner-shell">
         <button type="button" class="owner-sidebar-toggle" id="ownerSidebarToggle">
@@ -799,6 +834,10 @@ function dialogsHtml(){
           <button type="button" class="owner-sidebar-item" data-owner-nav="people">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
             People
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="paths">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="20" cy="12" r="1.6"/><circle cx="19" cy="18" r="1.6"/></svg>
+            Learning Paths
           </button>
           <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
@@ -829,6 +868,11 @@ function dialogsHtml(){
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
           <h3 style="font-family:var(--serif);font-size:26px;font-weight:600;color:var(--owner-text);margin:0 0 4px" id="ownerDashboardWelcome">Welcome back.</h3>
           <p class="admin-panel-intro" style="margin-bottom:18px">Here's what's happening with your ministry.</p>
+          <div class="admin-subsection-label" style="border-top:0;padding-top:0">Today</div>
+          <div class="admin-stat-row" id="ownerTodayStats"></div>
+          <div class="admin-subsection-label">Action Required</div>
+          <div id="ownerActionRequired"></div>
+          <div class="admin-subsection-label">Overview</div>
           <div class="admin-stat-row" id="ownerDashboardStats"></div>
           <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:22px" class="owner-dashboard-lower">
             <div>
@@ -1200,14 +1244,41 @@ function dialogsHtml(){
             <div id="bookingsLookupResults"></div>
           </div>
         </article>
-        <article class="portal-panel" data-owner-section="dashboard">
+        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
           <span class="portal-label">Notification Center <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></span>
-          <p style="color:#656565;margin-bottom:14px">A preview of what admin alerts will look like once real email/SMS notifications are connected. These are sample entries, not live activity.</p>
-          <div id="ownerNotificationsList"></div>
+          <p style="color:#656565;margin-bottom:14px">A preview of what admin alerts and outbound member notifications will look like once real email/SMS delivery is connected. These are sample/simulated entries, not live activity.</p>
+          <div class="admin-tabs" id="ownerNotifCenterTabs" style="margin-bottom:16px">
+            <button type="button" class="admin-tab active" data-notif-center-tab="alerts">Owner Alerts</button>
+            <button type="button" class="admin-tab" data-notif-center-tab="history">Member Notification History</button>
+          </div>
+          <div data-notif-center-panel="alerts">
+            <div id="ownerNotificationsList"></div>
+          </div>
+          <div data-notif-center-panel="history" hidden>
+            <div id="ownerNotifHistoryList"></div>
+          </div>
         </article>
-        <article class="portal-panel" data-owner-section="people">
-          <span class="portal-label">Member Accounts</span>
+        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="people">
+          <span class="portal-label">People</span>
+          <p class="admin-panel-intro" style="margin-bottom:14px">One record per person, built from their account plus every class registration, booking, and payment tied to their uid or email — click anyone to open their profile.</p>
+          <div class="form-field" style="max-width:360px;margin-bottom:14px">
+            <label for="ownerPeopleSearch">Search</label>
+            <input id="ownerPeopleSearch" type="text" placeholder="Name, email, or phone…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+          </div>
           <div id="ownerMembersList"><p style="color:#656565">Loading member accounts…</p></div>
+        </article>
+        <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="paths">
+          <div class="admin-panel-head">
+            <div>
+              <span class="portal-label">Learning Paths</span>
+              <p class="admin-panel-intro">Group classes into a guided sequence. Not every class needs one — assign or remove classes freely.</p>
+            </div>
+          </div>
+          <div class="booking-grid" style="margin-bottom:8px">
+            <div class="booking-field full"><label for="pathNewTitle">New Path Title</label><input id="pathNewTitle" type="text" placeholder="e.g. Foundations" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+          </div>
+          <button class="admin-btn-ghost" type="button" id="pathNewBtn">+ Create Learning Path</button>
+          <div id="ownerLearningPathsList" style="margin-top:20px"></div>
         </article>
         <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="registrations">
           <div class="admin-panel-head">
@@ -1856,6 +1927,37 @@ function dialogsHtml(){
     </div>
   </dialog>
 
+  <dialog class="booking-dialog checkout-dialog" id="waitlistJoinDialog" aria-labelledby="waitlistJoinTitle" style="max-width:520px">
+    <button class="booking-close checkout-close" id="closeWaitlistJoin" type="button" aria-label="Close waitlist">×</button>
+    <div class="booking-body" style="padding:40px 34px">
+      <div class="eyebrow">Waitlist</div>
+      <h2 class="teaching-display" id="waitlistJoinTitle" style="margin-bottom:6px">Join The Waitlist.</h2>
+      <p class="admin-hint" id="waitlistJoinIntro" style="margin-bottom:20px"></p>
+      <form id="waitlistJoinForm">
+        <div class="booking-grid">
+          <div class="booking-field"><label for="waitlistJoinName">Full name</label><input id="waitlistJoinName" type="text" required /></div>
+          <div class="booking-field"><label for="waitlistJoinEmail">Email address</label><input id="waitlistJoinEmail" type="email" required /></div>
+          <div class="booking-field full">
+            <label for="waitlistJoinPhoneNumber">Phone number</label>
+            <div class="phone-input-row">
+              <select id="waitlistJoinPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
+              <input id="waitlistJoinPhoneNumber" type="tel" required />
+            </div>
+          </div>
+        </div>
+        <button class="btn fill" type="submit" style="margin-top:16px;width:100%">Join Waitlist</button>
+        <div class="booking-status" id="waitlistJoinStatus" role="status" aria-live="polite"></div>
+      </form>
+      <div id="waitlistJoinConfirm" hidden style="text-align:center">
+        <div class="ticket-confirm-check">✓</div>
+        <div class="admin-microlabel" style="text-align:center;margin-bottom:10px">You're On The Waitlist</div>
+        <p style="font-size:34px;font-weight:700;font-family:var(--font-mono);margin:0 0 14px" id="waitlistJoinPosition">#1</p>
+        <p class="admin-hint" style="margin-bottom:18px">We'll reach out the moment a seat opens up — you'll have a limited time to claim it.</p>
+        <button type="button" class="admin-btn-ghost" id="waitlistJoinCloseBtn" style="width:100%">Done</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="booking-dialog admin-dialog" id="teachingEditDialog" aria-labelledby="teachingEditTitle" style="max-width:820px">
     <div class="booking-head admin-editor-head">
       <div>
@@ -1880,6 +1982,9 @@ function dialogsHtml(){
           <button type="button" class="admin-step" data-edit-tab="zoomlocation"><span class="admin-step-num">6</span> Zoom &amp; Location</button>
           <button type="button" class="admin-step" data-edit-tab="preview"><span class="admin-step-num">7</span> Preview</button>
           <button type="button" class="admin-step" data-edit-tab="classroom"><span class="admin-step-num">8</span> Classroom Content</button>
+          <button type="button" class="admin-step" data-edit-tab="questions"><span class="admin-step-num">9</span> Questions<span class="owner-nav-count" id="teachingEditQuestionsCount" hidden>0</span></button>
+          <button type="button" class="admin-step" data-edit-tab="announcements"><span class="admin-step-num">10</span> Announcements</button>
+          <button type="button" class="admin-step" data-edit-tab="waitlist"><span class="admin-step-num">11</span> Waitlist<span class="owner-nav-count" id="teachingEditWaitlistCount" hidden>0</span></button>
         </div>
         <div class="admin-editor-panels">
 
@@ -2017,7 +2122,16 @@ function dialogsHtml(){
         </div>
 
         <div class="admin-edit-panel" data-edit-panel="classroom" hidden>
-          <p class="admin-hint" style="margin-bottom:16px">Notes, study guides, and resources published here appear only to students currently registered for this class (registration status not cancelled) — not the general public, and not students in other classes.</p>
+          <div class="admin-subsection-label" style="border-top:0;padding-top:0">Preparation Checklist</div>
+          <p class="admin-hint" style="margin-bottom:10px">One item per line — shown to enrolled members in their Classroom → Preparation tab.</p>
+          <div class="booking-field full">
+            <textarea id="teachingEditPrepChecklist" rows="4" placeholder="Download Study Guide&#10;Test Zoom Link&#10;Prepare Bible + Notebook&#10;Submit A Question&#10;Confirm Attendance"></textarea>
+          </div>
+          <button class="admin-btn-ghost" type="button" id="teachingEditPrepChecklistSaveBtn" style="margin-top:8px">Save Checklist</button>
+          <div class="form-status" id="teachingEditPrepChecklistStatus" style="margin-top:6px"></div>
+
+          <div class="admin-subsection-label">Notes &amp; Resources</div>
+          <p class="admin-hint" style="margin-bottom:16px">Published here, visible only to students currently registered for this class (registration status not cancelled) — not the general public, and not students in other classes.</p>
           <div class="booking-grid">
             <div class="booking-field"><label for="classroomAddKind">Type</label>
               <select id="classroomAddKind">
@@ -2032,11 +2146,48 @@ function dialogsHtml(){
             <div class="booking-field full" id="classroomAddBodyField"><label for="classroomAddBody">Content</label><textarea id="classroomAddBody" rows="4" placeholder="Note text, study guide content, or scripture quote…"></textarea></div>
             <div class="booking-field" id="classroomAddRefField" hidden><label for="classroomAddRef">Scripture Reference</label><input id="classroomAddRef" type="text" placeholder="e.g. 1 Thessalonians 5:21" /></div>
             <div class="booking-field full" id="classroomAddUrlField" hidden><label for="classroomAddUrl">File / Resource URL</label><input id="classroomAddUrl" type="url" placeholder="https://… (PDF, doc, or shared link)" /></div>
+            <div class="booking-field"><label for="classroomAddReleaseMode">Release</label>
+              <select id="classroomAddReleaseMode">
+                <option value="immediate">Immediately</option>
+                <option value="hours-before-class">Hours Before Class</option>
+                <option value="fixed-datetime">Specific Date &amp; Time</option>
+              </select>
+            </div>
+            <div class="booking-field" id="classroomAddReleaseHoursField" hidden><label for="classroomAddReleaseHours">Hours Before Class</label><input id="classroomAddReleaseHours" type="number" min="1" value="24" /></div>
+            <div class="booking-field" id="classroomAddReleaseAtField" hidden><label for="classroomAddReleaseAt">Release At</label><input id="classroomAddReleaseAt" type="datetime-local" /></div>
           </div>
           <button class="admin-btn-solid" type="button" id="classroomAddPublishBtn" style="margin-top:8px">Publish To Class</button>
           <div class="form-status" id="classroomAddStatus" style="margin-top:8px"></div>
           <div class="admin-microlabel" style="margin:24px 0 10px">Published Content</div>
           <div id="teachingEditClassroomList"></div>
+        </div>
+
+        <div class="admin-edit-panel" data-edit-panel="questions" hidden>
+          <p class="admin-hint" style="margin-bottom:16px">Private questions from members enrolled in this class. Answering here also shows the answer inside their Classroom.</p>
+          <div id="teachingEditQuestionsList"></div>
+        </div>
+
+        <div class="admin-edit-panel" data-edit-panel="announcements" hidden>
+          <p class="admin-hint" style="margin-bottom:16px">Shown inside this class's Classroom → Announcements. A pinned announcement also appears at the top of the Overview tab.</p>
+          <div class="booking-grid">
+            <div class="booking-field full"><label for="classAnnTitle">Title</label><input id="classAnnTitle" type="text" placeholder="e.g. Zoom room opens 15 minutes early" /></div>
+            <div class="booking-field full"><label for="classAnnBody">Body</label><textarea id="classAnnBody" rows="3"></textarea></div>
+            <div class="booking-field"><label for="classAnnStatus">Status</label>
+              <select id="classAnnStatus"><option value="draft">Draft</option><option value="scheduled">Scheduled</option><option value="published" selected>Published</option></select>
+            </div>
+            <div class="booking-field" id="classAnnScheduleField" hidden><label for="classAnnPublishAt">Publish At</label><input id="classAnnPublishAt" type="datetime-local" /></div>
+            <label class="admin-checkbox-field"><input id="classAnnPinned" type="checkbox" /> Pin to top of Overview</label>
+          </div>
+          <button class="admin-btn-solid" type="button" id="classAnnPublishBtn" style="margin-top:8px">Save Announcement</button>
+          <div class="form-status" id="classAnnStatusMsg" style="margin-top:8px"></div>
+          <div class="admin-microlabel" style="margin:24px 0 10px">All Announcements</div>
+          <div id="teachingEditAnnouncementsList"></div>
+        </div>
+
+        <div class="admin-edit-panel" data-edit-panel="waitlist" hidden>
+          <p class="admin-hint" style="margin-bottom:16px">Fills automatically once this class reaches capacity — the public "Register Now" button becomes "Join Waitlist." Position is always live, based on join order among people still waiting.</p>
+          <div class="admin-stat-row" id="teachingEditWaitlistStats"></div>
+          <div id="teachingEditWaitlistList" style="margin-top:16px"></div>
         </div>
 
         <div class="admin-edit-panel" data-edit-panel="zoomlocation" hidden>
@@ -2179,6 +2330,42 @@ function dialogsHtml(){
     </div>
   </dialog>
 
+  <dialog class="booking-dialog detail-drawer" id="personProfileDialog" aria-labelledby="personProfileTitle" style="width:min(560px,100vw)">
+    <div class="booking-head">
+      <div>
+        <div class="kicker" style="margin-bottom:0">People</div>
+        <h3 id="personProfileTitle">Member</h3>
+        <p class="admin-hint" id="personProfileMeta" style="margin-top:4px"></p>
+      </div>
+      <button class="booking-close" id="closePersonProfile" type="button" aria-label="Close member profile">×</button>
+    </div>
+    <div class="booking-body detail-drawer-body">
+      <div class="admin-tabs" id="personProfileTabs" role="tablist" style="margin-bottom:18px">
+        <button type="button" class="admin-tab active" data-person-tab="overview">Overview</button>
+        <button type="button" class="admin-tab" data-person-tab="classes">Classes</button>
+        <button type="button" class="admin-tab" data-person-tab="sessions">Sessions</button>
+        <button type="button" class="admin-tab" data-person-tab="payments">Payments</button>
+        <button type="button" class="admin-tab" data-person-tab="activity">Activity</button>
+        <button type="button" class="admin-tab" data-person-tab="notes">Notes</button>
+      </div>
+      <div data-person-panel="overview">
+        <div class="admin-stat-row" id="personProfileStats"></div>
+      </div>
+      <div data-person-panel="classes" hidden><div id="personProfileClasses"></div></div>
+      <div data-person-panel="sessions" hidden><div id="personProfileSessions"></div></div>
+      <div data-person-panel="payments" hidden><div id="personProfilePayments"></div></div>
+      <div data-person-panel="activity" hidden>
+        <p class="admin-hint" style="margin-bottom:14px">A private prayer request appears here only as an event — open Prayer Requests to read its content.</p>
+        <div id="personProfileActivity"></div>
+      </div>
+      <div data-person-panel="notes" hidden>
+        <textarea id="personProfileNotes" rows="4" style="margin-bottom:10px" placeholder="Add a private note about this person…"></textarea>
+        <button class="admin-btn-solid" type="button" id="personProfileSaveNotesBtn">Save Notes</button>
+        <div class="form-status" id="personProfileNotesStatus" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="booking-dialog classroom-dialog" id="classroomDialog" aria-labelledby="classroomTitle" style="max-width:760px">
     <div class="booking-head">
       <div>
@@ -2192,17 +2379,33 @@ function dialogsHtml(){
       <div class="classroom-meta-row" id="classroomMetaRow"></div>
       <div class="admin-tabs" id="classroomTabs" style="margin:18px 0 20px">
         <button type="button" class="admin-tab active" data-classroom-tab="overview">Overview</button>
+        <button type="button" class="admin-tab" data-classroom-tab="preparation">Preparation</button>
         <button type="button" class="admin-tab" data-classroom-tab="notes">Notes</button>
         <button type="button" class="admin-tab" data-classroom-tab="resources">Resources</button>
-        <button type="button" class="admin-tab" data-classroom-tab="messages">Messages</button>
+        <button type="button" class="admin-tab" data-classroom-tab="questions">Questions</button>
+        <button type="button" class="admin-tab" data-classroom-tab="announcements">Announcements</button>
       </div>
       <div data-classroom-panel="overview">
+        <div id="classroomPinnedAnnouncement" hidden></div>
         <div class="admin-microlabel" style="margin-bottom:8px">About This Class</div>
         <p class="admin-hint" id="classroomAbout" style="margin-bottom:20px"></p>
         <div class="admin-microlabel" style="margin-bottom:8px" id="classroomScriptureLabel" hidden>Scripture Focus</div>
         <blockquote class="classroom-scripture" id="classroomScripture" hidden></blockquote>
+        <div class="admin-microlabel" style="margin:20px 0 8px" id="classroomZoomLabel" hidden>Zoom Access</div>
+        <div id="classroomZoomInfo" hidden></div>
         <div class="admin-microlabel" style="margin:20px 0 8px">Lesson Summary</div>
         <div id="classroomLessonSummary"></div>
+      </div>
+      <div data-classroom-panel="preparation" hidden>
+        <div class="admin-microlabel" style="margin-bottom:10px">Class Preparation</div>
+        <div id="classroomPrepChecklist"></div>
+        <div class="admin-microlabel" style="margin:24px 0 10px">Confirm Attendance</div>
+        <p class="admin-hint" style="margin-bottom:12px">Let us know if you're able to make it — this updates the class roster and does not cancel your registration.</p>
+        <div class="detail-action-row">
+          <button type="button" class="admin-btn-ghost" data-attendance-confirm="plan-to-attend">I Plan To Attend</button>
+          <button type="button" class="admin-btn-ghost" data-attendance-confirm="cannot-attend">I Cannot Attend</button>
+        </div>
+        <p class="admin-hint" id="classroomAttendanceConfirmStatus" style="margin-top:10px"></p>
       </div>
       <div data-classroom-panel="notes" hidden>
         <div id="classroomNotesList"></div>
@@ -2210,8 +2413,25 @@ function dialogsHtml(){
       <div data-classroom-panel="resources" hidden>
         <div id="classroomResourcesList"></div>
       </div>
-      <div data-classroom-panel="messages" hidden>
-        <p style="color:#656565">Class messaging isn't connected yet — this is next on the build list. For now, reach the ministry team from the Connect page.</p>
+      <div data-classroom-panel="questions" hidden>
+        <div class="admin-microlabel" style="margin-bottom:8px">Ask A Question</div>
+        <p class="admin-hint" style="margin-bottom:14px">Private — only the ministry team can see your question. They'll answer here in your classroom.</p>
+        <form id="classroomQuestionForm">
+          <div class="booking-grid">
+            <div class="booking-field"><label for="classroomQuestionTiming">When</label>
+              <select id="classroomQuestionTiming"><option value="before">Ask Before Class</option><option value="after">Ask After Class</option></select>
+            </div>
+            <div class="booking-field"><label for="classroomQuestionTopic">Topic (optional)</label><input id="classroomQuestionTopic" type="text" placeholder="e.g. Discernment vs. Anxiety" /></div>
+            <div class="booking-field full"><label for="classroomQuestionText">Your question</label><textarea id="classroomQuestionText" rows="3" required></textarea></div>
+          </div>
+          <button class="admin-btn-solid" type="submit" style="margin-top:8px">Submit Question</button>
+          <div class="form-status" id="classroomQuestionStatus" style="margin-top:8px"></div>
+        </form>
+        <div class="admin-microlabel" style="margin:24px 0 10px">Your Questions</div>
+        <div id="classroomQuestionsList"></div>
+      </div>
+      <div data-classroom-panel="announcements" hidden>
+        <div id="classroomAnnouncementsList"></div>
       </div>
     </div>
   </dialog>
@@ -2623,13 +2843,13 @@ function featuredTeaching(){
   return (id && TEACHINGS[id] && TEACHINGS[id].status !== 'draft') ? TEACHINGS[id] : upcomingTeachingsList()[0] || null;
 }
 function teachingStatusButtonLabel(t){
-  if(t.status === 'sold-out') return 'SOLD OUT';
   if(t.status === 'completed') return 'CLASS COMPLETED';
   if(t.status === 'cancelled') return 'CANCELLED';
+  if(t.status === 'sold-out' || classIsFull(t)) return 'JOIN WAITLIST';
   return 'REGISTER NOW';
 }
 function teachingStatusButtonDisabled(t){
-  return t.status === 'sold-out' || t.status === 'completed' || t.status === 'cancelled';
+  return t.status === 'completed' || t.status === 'cancelled';
 }
 function formatTeachingDate(dateStr){
   try {
@@ -3755,6 +3975,150 @@ function memberRegistrationsFor(teachingId, uid, email){
 }
 function classroomAccessAllowed(teachingId, uid, email){
   return memberRegistrationsFor(teachingId, uid, email).length > 0;
+}
+
+/* ---------------------------------------------------------------
+   Member/Owner systems phase — Questions, Announcements, Waitlist,
+   Learning Paths, and per-member Preparation Checklist state. Same
+   established pattern as CLASSROOM_CONTENT above: one localStorage
+   key per system, loaded once at module init, saved on every write.
+   Every public feature here has a matching Owner management tool —
+   see Teaching Edit's Questions/Announcements/Waitlist tabs below.
+   --------------------------------------------------------------- */
+const CLASS_QUESTIONS_KEY = 'ua_preview_class_questions_v1';
+let CLASS_QUESTIONS = [
+  { id: 'q-1', teachingId: 'demo-discernment', uid: null, name: 'Kayla R.', email: 'kayla@example.com',
+    question: 'How do I tell the difference between discernment and just being anxious about something?', topic: 'Discernment vs. Anxiety',
+    timing: 'before', submittedAt: '2026-09-12T15:00:00.000Z', status: 'answered',
+    answer: 'Great question — we\'ll cover this directly in the "Test, Weigh, Confirm" framework. Anxiety tends to spiral and fixate; discernment brings a settled clarity, even about hard things.', answeredAt: '2026-09-13T10:00:00.000Z' },
+  { id: 'q-2', teachingId: 'demo-discernment', uid: null, name: 'Marcus J.', email: 'marcus@example.com',
+    question: 'Can you go over an example from Scripture where someone had to discern between two voices?', topic: '',
+    timing: 'before', submittedAt: '2026-09-14T09:20:00.000Z', status: 'pending', answer: '', answeredAt: null }
+];
+(function loadClassQuestions(){
+  try { const raw = localStorage.getItem(CLASS_QUESTIONS_KEY); if(raw) CLASS_QUESTIONS = JSON.parse(raw); } catch (err) { /* keep defaults */ }
+})();
+function saveClassQuestions(){
+  try { localStorage.setItem(CLASS_QUESTIONS_KEY, JSON.stringify(CLASS_QUESTIONS)); } catch (err) { /* ignore */ }
+}
+
+const CLASS_ANNOUNCEMENTS_KEY = 'ua_preview_class_announcements_v1';
+let CLASS_ANNOUNCEMENTS = [
+  { id: 'ann-1', teachingId: 'demo-discernment', title: 'Zoom room opens 15 minutes early', body: 'Feel free to join the Zoom room starting at 7:15 PM ET to settle in before we begin at 7:30.',
+    pinned: true, status: 'published', publishAt: '2026-09-11T12:00:00.000Z', createdAt: '2026-09-11T12:00:00.000Z' }
+];
+(function loadClassAnnouncements(){
+  try { const raw = localStorage.getItem(CLASS_ANNOUNCEMENTS_KEY); if(raw) CLASS_ANNOUNCEMENTS = JSON.parse(raw); } catch (err) { /* keep defaults */ }
+})();
+function saveClassAnnouncements(){
+  try { localStorage.setItem(CLASS_ANNOUNCEMENTS_KEY, JSON.stringify(CLASS_ANNOUNCEMENTS)); } catch (err) { /* ignore */ }
+}
+
+const CLASS_WAITLIST_KEY = 'ua_preview_class_waitlist_v1';
+let CLASS_WAITLIST = [];
+(function loadClassWaitlist(){
+  try { const raw = localStorage.getItem(CLASS_WAITLIST_KEY); if(raw) CLASS_WAITLIST = JSON.parse(raw); } catch (err) { /* keep defaults */ }
+})();
+function saveClassWaitlist(){
+  try { localStorage.setItem(CLASS_WAITLIST_KEY, JSON.stringify(CLASS_WAITLIST)); } catch (err) { /* ignore */ }
+}
+function classSeatsRemaining(t){
+  if(!t || t.unlimitedCapacity !== false) return null;
+  const active = DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === t.id && r.status !== 'cancelled').length;
+  return Math.max(0, (Number(t.capacity) || 0) - active);
+}
+function classIsFull(t){
+  const remaining = classSeatsRemaining(t);
+  return remaining !== null && remaining <= 0;
+}
+function waitlistFor(teachingId){
+  return CLASS_WAITLIST.filter(w => w.teachingId === teachingId).sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt));
+}
+// Position is always computed live from join order among still-"waiting"
+// entries, never stored — so it can never drift out of sync when
+// someone ahead is offered a seat, registers, or is removed.
+function waitlistPosition(entry){
+  const waiting = waitlistFor(entry.teachingId).filter(w => w.status === 'waiting');
+  const idx = waiting.findIndex(w => w.id === entry.id);
+  return idx === -1 ? null : idx + 1;
+}
+// Same "recompute live, never mutate stored data" pattern as the
+// 24-hour reminder status — an offer's expiry is a function of the
+// clock, not an event, so it's derived fresh every time it's checked.
+function liveWaitlistStatus(w){
+  if(w.status === 'offer-sent' && w.offerExpiresAt && Date.now() > new Date(w.offerExpiresAt).getTime()) return 'expired';
+  return w.status;
+}
+function myWaitlistEntries(){
+  if(!currentUser) return [];
+  return CLASS_WAITLIST.filter(w => w.uid === currentUser.uid ||
+    (!w.uid && currentProfile && w.email && currentProfile.email && w.email.toLowerCase() === currentProfile.email.toLowerCase()));
+}
+
+const LEARNING_PATHS_KEY = 'ua_preview_learning_paths_v1';
+let LEARNING_PATHS = [
+  { id: 'path-prophetic-development', title: 'Prophetic Development',
+    description: 'A guided sequence for growing in hearing God\'s voice, discerning it clearly, and walking it out with maturity.',
+    classIds: ['demo-voice', 'demo-discernment', 'demo-prophetic', 'demo-warfare', 'demo-identity'] }
+];
+(function loadLearningPaths(){
+  try { const raw = localStorage.getItem(LEARNING_PATHS_KEY); if(raw) LEARNING_PATHS = JSON.parse(raw); } catch (err) { /* keep defaults */ }
+})();
+function saveLearningPaths(){
+  try { localStorage.setItem(LEARNING_PATHS_KEY, JSON.stringify(LEARNING_PATHS)); } catch (err) { /* ignore */ }
+}
+function learningPathsForClass(teachingId){
+  return LEARNING_PATHS.filter(p => p.classIds.includes(teachingId));
+}
+// A class counts as "completed" toward a path once the member has a
+// non-cancelled registration for it AND the class date has passed —
+// real, derivable state rather than a separate flag that could drift
+// out of sync with the registration/attendance record.
+function learningPathProgress(path, uid, email){
+  const total = path.classIds.length;
+  const completed = path.classIds.filter(id => {
+    const t = TEACHINGS[id];
+    if(!t) return false;
+    return memberRegistrationsFor(id, uid, email).length > 0 && !isUpcomingTeaching(t);
+  }).length;
+  return { completed, total };
+}
+
+const MEMBER_PREP_STATE_KEY = 'ua_preview_member_prep_state_v1';
+let MEMBER_PREP_STATE = {};
+(function loadMemberPrepState(){
+  try { const raw = localStorage.getItem(MEMBER_PREP_STATE_KEY); if(raw) MEMBER_PREP_STATE = JSON.parse(raw); } catch (err) { /* keep defaults */ }
+})();
+function saveMemberPrepState(){
+  try { localStorage.setItem(MEMBER_PREP_STATE_KEY, JSON.stringify(MEMBER_PREP_STATE)); } catch (err) { /* ignore */ }
+}
+function prepStateKey(uid, teachingId){ return uid + '|' + teachingId; }
+
+// Timed resource release — a resource item may be "immediate" (the
+// default, matches every existing published note/resource), released
+// a fixed number of hours before the class starts, or at a specific
+// scheduled date/time. isResourceReleased is the single source of
+// truth used both to decide what to render AND, in the click handler
+// that opens/downloads a resource, to refuse the action outright if
+// it isn't released yet — so this isn't just a visually-hidden button.
+function resourceReleaseAt(item, teaching){
+  if(!item.releaseMode || item.releaseMode === 'immediate') return null;
+  if(item.releaseMode === 'fixed-datetime') return item.releaseAt ? new Date(item.releaseAt) : null;
+  if(item.releaseMode === 'hours-before-class' && teaching && teaching.date && teaching.startTime){
+    const classStart = etWallTimeToDate(teaching.date, hhmmToMinutes(teaching.startTime));
+    return new Date(classStart.getTime() - (Number(item.releaseHours) || 0) * 3600000);
+  }
+  return null;
+}
+function isResourceReleased(item, teaching){
+  const at = resourceReleaseAt(item, teaching);
+  return !at || Date.now() >= at.getTime();
+}
+function resourceReleaseLabel(item, teaching){
+  const at = resourceReleaseAt(item, teaching);
+  if(!at) return null;
+  if(Date.now() >= at.getTime()) return null;
+  return 'Available ' + new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(at) + ' ET';
 }
 
 /* ---------------------------------------------------------------
@@ -5715,8 +6079,9 @@ document.getElementById('memberBookingsList').addEventListener('click', async ev
 function showMemberTab(name){
   document.querySelectorAll('#memberTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.memberTab === name));
   document.querySelectorAll('[data-member-panel]').forEach(p => { p.hidden = p.dataset.memberPanel !== name; });
-  if(name === 'classes') renderMemberClassesList();
+  if(name === 'classes'){ renderMemberClassesList(); renderMemberLearningPaths(); }
   if(name === 'sessions') renderMemberSessionsList();
+  if(name === 'questions') renderMemberQuestions();
   if(name === 'notifications') renderMemberNotifications();
 }
 document.getElementById('memberTabs').addEventListener('click', event => {
@@ -5757,30 +6122,140 @@ function renderMemberNextClassCard(){
   }
   const t = TEACHINGS[upcoming.teachingId] || {};
   const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
+  const statusLabel = upcoming.status === 'confirmed' ? 'Registered' : upcoming.status === 'pending_payment' ? 'Pending' : upcoming.status;
   card.innerHTML =
     '<span class="portal-label">Next Class</span>' +
     '<h4 class="serif-heading" style="margin-bottom:2px">' + escapeHtml(t.title || upcoming.teachingTitle) + '</h4>' +
     (t.subtitle ? '<p style="color:var(--stone);font-style:italic;margin-bottom:12px">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '<p style="color:#d7d7d7;margin-bottom:4px">' + escapeHtml(formatTeachingDate(upcoming.teachingDate)) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</p>' +
-    '<p style="color:var(--stone);margin-bottom:16px">' + escapeHtml(formatLabel) + '</p>' +
+    '<p style="color:var(--stone);margin-bottom:12px">' + escapeHtml(formatLabel) + '</p>' +
+    '<p style="color:var(--stone);font-size:12px;margin:0 0 2px">Status <strong style="color:#d7d7d7">' + escapeHtml(statusLabel) + '</strong></p>' +
+    '<p class="member-record-conf" style="margin-bottom:16px">Confirmation <strong>' + escapeHtml(upcoming.confirmationId || '—') + '</strong></p>' +
     '<div class="member-reminder-note"><strong>24-Hour Reminder</strong><span>You\'ll receive a reminder 24 hours before the class via email' + (upcoming.smsConsent ? ' and text' : '') + '.</span></div>' +
     '<div class="portal-inline-actions">' +
-    '<button class="portal-primary" type="button" data-member-view-classroom="' + escapeHtml(upcoming.teachingId) + '">View Class</button>' +
+    '<button class="portal-primary" type="button" data-member-view-classroom="' + escapeHtml(upcoming.teachingId) + '">Enter Classroom</button>' +
     '<button class="portal-secondary" type="button" data-member-add-calendar-teaching="' + escapeHtml(upcoming.teachingId) + '">Add To Calendar</button>' +
     '</div>';
 }
+function renderMemberNextSessionCard(){
+  const card = document.getElementById('memberNextSessionCard');
+  if(!card) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = myBookings().filter(b => b.status !== 'cancelled' && b.status !== 'declined' && b.date >= today)
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
+  if(!upcoming){
+    card.innerHTML = '<span class="portal-label">Next One-on-One</span><p style="color:#d7d7d7">No upcoming session booked.</p>' +
+      '<div class="portal-inline-actions"><button class="portal-primary" type="button" id="memberNextSessionBookBtn">Book A Session</button></div>';
+    return;
+  }
+  card.innerHTML =
+    '<span class="portal-label">Next One-on-One</span>' +
+    '<h4 class="serif-heading" style="margin-bottom:12px">' + escapeHtml(sessionTypeName(upcoming.sessionType)) + '</h4>' +
+    '<p style="color:#d7d7d7;margin-bottom:12px">' + escapeHtml(formatLocalDateTime(upcoming.date, upcoming.time, upcoming.clientTimeZone)) + '</p>' +
+    '<p class="member-record-conf" style="margin-bottom:16px">Confirmation <strong>' + escapeHtml(upcoming.confirmationId || '—') + '</strong></p>' +
+    '<div class="portal-inline-actions">' +
+    '<button class="portal-secondary" type="button" data-member-add-calendar-booking="' + escapeHtml(upcoming.id) + '">Add To Calendar</button>' +
+    '</div>';
+}
+document.addEventListener('click', event => {
+  if(event.target.closest('#memberNextSessionBookBtn')) document.getElementById('memberBookNew')?.click();
+});
+function renderMemberRecentUpdates(){
+  const wrap = document.getElementById('memberRecentUpdates');
+  if(!wrap || !currentUser) return;
+  const recent = MEMBER_NOTIFICATIONS.filter(n => n.uid === currentUser.uid).slice(0, 5);
+  wrap.innerHTML = recent.length === 0
+    ? '<p style="color:#656565">Nothing new yet.</p>'
+    : recent.map(n => '<div class="portal-row"><div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + '</small></div></div>').join('');
+}
+function renderMemberWaitlistOfferCard(){
+  const card = document.getElementById('memberWaitlistOfferCard');
+  if(!card) return;
+  const offer = myWaitlistEntries().find(w => liveWaitlistStatus(w) === 'offer-sent');
+  if(!offer){ card.hidden = true; return; }
+  card.hidden = false;
+  const t = TEACHINGS[offer.teachingId];
+  const msLeft = Math.max(0, new Date(offer.offerExpiresAt).getTime() - Date.now());
+  const h = Math.floor(msLeft / 3600000), m = Math.floor((msLeft % 3600000) / 60000), s = Math.floor((msLeft % 60000) / 1000);
+  const countdown = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  card.innerHTML =
+    '<span class="portal-label">A Seat Is Available</span>' +
+    '<h4 class="serif-heading" style="margin-bottom:10px">' + escapeHtml(t ? t.title : 'Class') + '</h4>' +
+    '<p style="color:#d7d7d7;margin-bottom:6px">Your reserved registration opportunity expires in:</p>' +
+    '<p style="font-family:var(--font-mono);font-size:26px;margin:0 0 16px" id="memberWaitlistCountdown">' + countdown + '</p>' +
+    '<div class="portal-inline-actions"><button class="portal-primary" type="button" data-waitlist-claim-teaching="' + escapeHtml(offer.teachingId) + '">Register Now</button></div>';
+}
+let memberWaitlistCountdownTimer = null;
+document.addEventListener('click', event => {
+  const claimBtn = event.target.closest('[data-waitlist-claim-teaching]');
+  if(claimBtn) openTeachingRegister(claimBtn.dataset.waitlistClaimTeaching);
+});
+function renderMemberLearningPaths(){
+  const wrap = document.getElementById('memberLearningPaths');
+  if(!wrap || !currentUser) return;
+  const uid = currentUser.uid, email = currentProfile ? currentProfile.email : '';
+  const myPaths = LEARNING_PATHS.filter(p => p.classIds.some(id => memberRegistrationsFor(id, uid, email).length > 0));
+  wrap.innerHTML = myPaths.length === 0 ? '' : myPaths.map(p => {
+    const { completed, total } = learningPathProgress(p, uid, email);
+    return '<article class="portal-panel member-record-card" style="margin-bottom:14px">' +
+      '<div class="member-record-head"><div><strong>' + escapeHtml(p.title) + '</strong></div>' +
+      '<span class="admin-status-pill draft">' + completed + ' of ' + total + ' Classes Completed</span></div>' +
+      '</article>';
+  }).join('');
+}
+function openConfirmationRecap(kind, id){
+  let title, when, status, confId;
+  if(kind === 'class'){
+    const r = DEMO_TEACHING_REGISTRATIONS.find(x => x.id === id);
+    if(!r) return;
+    const t = TEACHINGS[r.teachingId] || {};
+    title = t.title || r.teachingTitle;
+    when = formatTeachingDate(r.teachingDate) + ' · ' + formatTeachingTime(t.startTime, t.timeZone);
+    status = r.status === 'confirmed' ? 'Registered' : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
+    confId = r.confirmationId;
+  } else {
+    const b = DEMO_BOOKINGS.find(x => x.id === id);
+    if(!b) return;
+    title = sessionTypeName(b.sessionType);
+    when = formatLocalDateTime(b.date, b.time, b.clientTimeZone);
+    status = b.status === 'confirmed' ? 'Confirmed' : b.status === 'cancelled' ? 'Cancelled' : b.status === 'declined' ? 'Declined' : 'Pending';
+    confId = b.confirmationId;
+  }
+  document.getElementById('confirmationRecapTitle').textContent = title;
+  document.getElementById('confirmationRecapWhen').textContent = when;
+  document.getElementById('confirmationRecapStatus').textContent = status;
+  document.getElementById('confirmationRecapId').textContent = confId || '—';
+  document.getElementById('confirmationRecapDialog').showModal();
+}
+document.getElementById('closeConfirmationRecap').addEventListener('click', () => document.getElementById('confirmationRecapDialog').close());
+document.getElementById('confirmationRecapDialog').addEventListener('click', event => {
+  if(event.target.id === 'confirmationRecapDialog') document.getElementById('confirmationRecapDialog').close();
+});
+document.getElementById('confirmationRecapCopyBtn').addEventListener('click', event => {
+  copyConfirmationId(document.getElementById('confirmationRecapId').textContent, event.currentTarget);
+});
+document.addEventListener('click', event => {
+  const classConfBtn = event.target.closest('[data-member-view-confirmation-class]');
+  if(classConfBtn){ event.stopPropagation(); openConfirmationRecap('class', classConfBtn.dataset.memberViewConfirmationClass); return; }
+  const sessionConfBtn = event.target.closest('[data-member-view-confirmation-session]');
+  if(sessionConfBtn){ event.stopPropagation(); openConfirmationRecap('session', sessionConfBtn.dataset.memberViewConfirmationSession); }
+});
 function memberClassRowHtml(r){
   const t = TEACHINGS[r.teachingId] || {};
   const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
   const statusClass = r.status === 'confirmed' ? 'confirmed' : r.status === 'cancelled' ? 'cancelled' : 'pending';
   const statusLabel = r.status === 'confirmed' ? 'Registered' : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
-  return '<article class="portal-panel member-record-card" data-member-view-classroom="' + escapeHtml(r.teachingId) + '" style="cursor:pointer">' +
+  return '<article class="portal-panel member-record-card">' +
     '<div class="member-record-head">' +
     '<div><strong>' + escapeHtml(t.title || r.teachingTitle) + '</strong>' + (t.subtitle ? '<span class="member-record-sub">' + escapeHtml(t.subtitle) + '</span>' : '') + '</div>' +
     '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span>' +
     '</div>' +
     '<p class="member-record-meta">' + escapeHtml(formatTeachingDate(r.teachingDate)) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + ' · ' + escapeHtml(formatLabel) + '</p>' +
     '<p class="member-record-conf">Confirmation <strong>' + escapeHtml(r.confirmationId || '—') + '</strong></p>' +
+    '<div class="member-record-actions">' +
+    (r.status !== 'cancelled' ? '<button class="portal-secondary" type="button" data-member-view-classroom="' + escapeHtml(r.teachingId) + '" style="min-height:32px;padding:0 12px;font-size:9px">Open Classroom</button>' : '') +
+    '<button class="portal-secondary" type="button" data-member-view-confirmation-class="' + escapeHtml(r.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">View Confirmation</button>' +
+    '</div>' +
     '</article>';
 }
 function renderMemberClassesList(){
@@ -5813,6 +6288,7 @@ function memberSessionRowHtml(b){
     '<p class="member-record-conf">Confirmation <strong>' + escapeHtml(b.confirmationId || '—') + '</strong></p>' +
     '<div class="portal-inline-actions" style="margin-top:10px">' +
     '<button class="portal-secondary" type="button" data-member-add-calendar-booking="' + escapeHtml(b.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">Add To Calendar</button>' +
+    '<button class="portal-secondary" type="button" data-member-view-confirmation-session="' + escapeHtml(b.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">View Confirmation</button>' +
     '</div></article>';
 }
 function renderMemberSessionsList(){
@@ -5860,10 +6336,36 @@ document.getElementById('memberNotificationsList').addEventListener('click', eve
   const n = MEMBER_NOTIFICATIONS.find(x => x.id === row.dataset.mnId);
   if(n && !n.read){ n.read = true; saveMemberNotifications(); renderMemberNotifications(); }
 });
+function memberQuestionRowHtml(q){
+  const t = TEACHINGS[q.teachingId];
+  const statusClass = q.status === 'answered' || q.status === 'addressed-in-class' ? 'confirmed' : q.status === 'archived' ? 'cancelled' : 'pending';
+  const statusLabel = q.status === 'answered' ? 'Answered' : q.status === 'addressed-in-class' ? 'Addressed In Class' : q.status === 'archived' ? 'Archived' : 'Pending';
+  return '<article class="portal-panel member-record-card">' +
+    '<div class="member-record-head"><div><strong>' + escapeHtml(t ? t.title : q.teachingId) + '</strong>' +
+    '<span class="member-record-sub">' + (q.timing === 'after' ? 'Asked After Class' : 'Asked Before Class') + ' · ' + escapeHtml(shortDate(q.submittedAt)) + '</span></div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span></div>' +
+    '<p class="member-record-meta">' + escapeHtml(q.question) + '</p>' +
+    (q.answer ? '<div class="classroom-question-answer"><span class="portal-label">Answer</span><p>' + escapeHtml(q.answer) + '</p></div>' : '') +
+    '</article>';
+}
+function renderMemberQuestions(){
+  const wrap = document.getElementById('memberQuestionsList');
+  if(!wrap || !currentUser) return;
+  const email = currentProfile ? currentProfile.email : '';
+  const mine = CLASS_QUESTIONS.filter(q => q.status !== 'archived' &&
+    (q.uid === currentUser.uid || (!q.uid && email && q.email && q.email.toLowerCase() === email.toLowerCase())))
+    .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  wrap.innerHTML = mine.length === 0 ? '<p style="color:var(--stone)">You haven\'t asked any questions yet.</p>' : mine.map(memberQuestionRowHtml).join('');
+}
 function renderMemberDashboardPanels(){
   if(!currentUser) return;
   renderMemberNextClassCard();
+  renderMemberNextSessionCard();
+  renderMemberRecentUpdates();
+  renderMemberWaitlistOfferCard();
   renderMemberNotifications();
+  if(memberWaitlistCountdownTimer) clearInterval(memberWaitlistCountdownTimer);
+  memberWaitlistCountdownTimer = setInterval(renderMemberWaitlistOfferCard, 1000);
 }
 document.addEventListener('click', event => {
   const viewBtn = event.target.closest('[data-member-view-classroom]');
@@ -5890,24 +6392,104 @@ document.addEventListener('click', event => {
    whose registration is cancelled loses access on the next check.
    --------------------------------------------------------------- */
 let classroomTeachingId = null;
-function classroomContentRowHtml(item, kind){
+// Kept genuinely absent from the DOM (not just visually hidden) until
+// released — resourceReleaseLabel/isResourceReleased are the single
+// source of truth, shared with the click-time check nowhere needed
+// here because an unreleased item never gets its real URL rendered
+// into a clickable anchor in the first place.
+function classroomContentRowHtml(item, kind, teaching){
+  const released = isResourceReleased(item, teaching);
+  const releaseLabel = resourceReleaseLabel(item, teaching);
   if(kind === 'resource'){
     return '<article class="portal-panel classroom-content-card">' +
       '<span class="portal-label">Resource · ' + escapeHtml(shortDate(item.publishedAt)) + '</span>' +
       '<h4 class="serif-heading" style="margin-bottom:10px">' + escapeHtml(item.title) + '</h4>' +
-      '<a class="text-link on-light" href="' + escapeHtml(item.url || '#') + '" target="_blank" rel="noopener noreferrer">Download / Open →</a>' +
+      (released
+        ? '<a class="text-link on-light" href="' + escapeHtml(item.url || '#') + '" target="_blank" rel="noopener noreferrer">Download / Open →</a>'
+        : '<p class="classroom-locked-note">🔒 ' + escapeHtml(releaseLabel || 'Not yet available') + '</p>') +
       '</article>';
   }
   return '<article class="portal-panel classroom-content-card">' +
     '<span class="portal-label">Note · ' + escapeHtml(shortDate(item.publishedAt)) + '</span>' +
     '<h4 class="serif-heading" style="margin-bottom:8px">' + escapeHtml(item.title) + '</h4>' +
-    '<p style="color:#656565;white-space:pre-line">' + escapeHtml(item.body || '') + '</p>' +
+    (released
+      ? '<p style="color:#656565;white-space:pre-line">' + escapeHtml(item.body || '') + '</p>'
+      : '<p class="classroom-locked-note">🔒 ' + escapeHtml(releaseLabel || 'Not yet available') + '</p>') +
     '</article>';
+}
+function classroomPrepChecklistHtml(teachingId, t){
+  const items = (t.prepChecklist && t.prepChecklist.length) ? t.prepChecklist :
+    ['Download Study Guide', 'Test Zoom Link', 'Prepare Bible + Notebook', 'Submit A Question', 'Confirm Attendance'];
+  const uid = currentUser ? currentUser.uid : 'guest';
+  const state = MEMBER_PREP_STATE[prepStateKey(uid, teachingId)] || {};
+  return items.map((label, idx) =>
+    '<label class="classroom-checklist-item"><input type="checkbox" data-prep-item-index="' + idx + '"' + (state[idx] ? ' checked' : '') + ' /><span>' + escapeHtml(label) + '</span></label>'
+  ).join('');
+}
+function classroomQuestionRowHtml(q){
+  const statusClass = q.status === 'answered' || q.status === 'addressed-in-class' ? 'confirmed' : q.status === 'archived' ? 'cancelled' : 'pending';
+  const statusLabel = q.status === 'answered' ? 'Answered' : q.status === 'addressed-in-class' ? 'Addressed In Class' : q.status === 'archived' ? 'Archived' : 'Pending';
+  return '<article class="portal-panel classroom-content-card">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">' +
+    '<span class="portal-label" style="margin-bottom:0">' + (q.timing === 'after' ? 'Asked After Class' : 'Asked Before Class') + ' · ' + escapeHtml(shortDate(q.submittedAt)) + '</span>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span></div>' +
+    (q.topic ? '<p style="color:var(--stone);font-style:italic;margin:8px 0 4px">' + escapeHtml(q.topic) + '</p>' : '') +
+    '<p style="margin:8px 0 0">' + escapeHtml(q.question) + '</p>' +
+    (q.answer ? '<div class="classroom-question-answer"><span class="portal-label">Answer</span><p>' + escapeHtml(q.answer) + '</p></div>' : '') +
+    '</article>';
+}
+function renderClassroomQuestions(teachingId){
+  const wrap = document.getElementById('classroomQuestionsList');
+  if(!wrap) return;
+  const uid = currentUser ? currentUser.uid : null;
+  const email = currentProfile ? currentProfile.email : '';
+  const mine = CLASS_QUESTIONS.filter(q => q.teachingId === teachingId && q.status !== 'archived' &&
+    ((uid && q.uid === uid) || (!q.uid && email && q.email && q.email.toLowerCase() === email.toLowerCase())))
+    .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  wrap.innerHTML = mine.length === 0 ? '<p style="color:#656565">You haven\'t asked a question for this class yet.</p>' : mine.map(classroomQuestionRowHtml).join('');
+}
+function classroomAnnouncementRowHtml(a){
+  return '<article class="portal-panel classroom-content-card">' +
+    (a.pinned ? '<span class="classroom-pin-badge">📌 Pinned</span>' : '') +
+    '<span class="portal-label">' + escapeHtml(shortDate(a.publishAt || a.createdAt)) + '</span>' +
+    '<h4 class="serif-heading" style="margin-bottom:8px">' + escapeHtml(a.title) + '</h4>' +
+    '<p style="color:#656565;white-space:pre-line">' + escapeHtml(a.body || '') + '</p>' +
+    '</article>';
+}
+function classroomPublishedAnnouncements(teachingId){
+  const now = Date.now();
+  return CLASS_ANNOUNCEMENTS.filter(a => a.teachingId === teachingId && a.status === 'published' && (!a.publishAt || new Date(a.publishAt).getTime() <= now))
+    .sort((a, b) => (b.pinned - a.pinned) || (new Date(b.publishAt || b.createdAt) - new Date(a.publishAt || a.createdAt)));
+}
+function renderClassroomAnnouncements(teachingId){
+  const wrap = document.getElementById('classroomAnnouncementsList');
+  const pinWrap = document.getElementById('classroomPinnedAnnouncement');
+  const items = classroomPublishedAnnouncements(teachingId);
+  if(wrap) wrap.innerHTML = items.length === 0 ? '<p style="color:#656565">No announcements yet.</p>' : items.map(classroomAnnouncementRowHtml).join('');
+  if(pinWrap){
+    const pinned = items.find(a => a.pinned);
+    pinWrap.hidden = !pinned;
+    if(pinned) pinWrap.innerHTML = classroomAnnouncementRowHtml(pinned);
+  }
+}
+async function renderClassroomZoomInfo(teachingId, t){
+  const zoomLabel = document.getElementById('classroomZoomLabel');
+  const zoomWrap = document.getElementById('classroomZoomInfo');
+  if(t.format !== 'zoom' && t.format !== 'hybrid'){ zoomLabel.hidden = true; zoomWrap.hidden = true; return; }
+  const zoom = await fetchTeachingZoomInfo(teachingId);
+  if(!zoom || !zoom.zoomUrl){ zoomLabel.hidden = true; zoomWrap.hidden = true; return; }
+  zoomLabel.hidden = false; zoomWrap.hidden = false;
+  zoomWrap.innerHTML = '<div class="portal-row"><div><strong>Zoom Link</strong><small>' +
+    (zoom.meetingId ? 'Meeting ID ' + escapeHtml(zoom.meetingId) : '') + (zoom.passcode ? ' · Passcode ' + escapeHtml(zoom.passcode) : '') + '</small></div>' +
+    '<a class="portal-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center" href="' + escapeHtml(zoom.zoomUrl) + '" target="_blank" rel="noopener noreferrer">Open Zoom →</a></div>';
 }
 function openClassroom(teachingId){
   const t = TEACHINGS[teachingId];
   if(!t) return;
   const email = currentProfile ? currentProfile.email : '';
+  // Real access check, not a visual-only gate: no registration for this
+  // exact class → refuse before any class content (including Zoom
+  // info) is ever written into the DOM.
   if(!classroomAccessAllowed(teachingId, currentUser ? currentUser.uid : null, email)){
     if(document.getElementById('portalMemberStatus')) document.getElementById('portalMemberStatus').textContent = "You're not registered for that class yet.";
     return;
@@ -5927,17 +6509,25 @@ function openClassroom(teachingId){
     scriptureLabel.hidden = false; scriptureEl.hidden = false;
     scriptureEl.innerHTML = '“' + escapeHtml(scripture.body) + '”<cite>' + escapeHtml(scripture.ref || '') + '</cite>';
   } else { scriptureLabel.hidden = true; scriptureEl.hidden = true; }
+  renderClassroomZoomInfo(teachingId, t);
   const notes = content.filter(c => c.kind === 'note' || c.kind === 'study-guide' || c.kind === 'lesson-summary');
   const resources = content.filter(c => c.kind === 'resource' || c.kind === 'file' || c.kind === 'scripture-list');
   document.getElementById('classroomLessonSummary').innerHTML = notes.length
-    ? notes.map(n => classroomContentRowHtml(n, 'note')).join('')
+    ? notes.map(n => classroomContentRowHtml(n, 'note', t)).join('')
     : '<p style="color:#656565">No lesson summary published yet.</p>';
   document.getElementById('classroomNotesList').innerHTML = notes.length
-    ? notes.map(n => classroomContentRowHtml(n, 'note')).join('')
+    ? notes.map(n => classroomContentRowHtml(n, 'note', t)).join('')
     : '<p style="color:#656565">No notes published yet — check back after class.</p>';
   document.getElementById('classroomResourcesList').innerHTML = resources.length
-    ? resources.map(r => classroomContentRowHtml(r, 'resource')).join('')
+    ? resources.map(r => classroomContentRowHtml(r, 'resource', t)).join('')
     : '<p style="color:#656565">No resources published yet.</p>';
+  document.getElementById('classroomPrepChecklist').innerHTML = classroomPrepChecklistHtml(teachingId, t);
+  const reg = memberRegistrationsFor(teachingId, currentUser ? currentUser.uid : null, email)[0];
+  const confirmStatusEl = document.getElementById('classroomAttendanceConfirmStatus');
+  confirmStatusEl.textContent = reg && reg.attendanceConfirm === 'plan-to-attend' ? "You're marked as planning to attend."
+    : reg && reg.attendanceConfirm === 'cannot-attend' ? "You let us know you can't make it." : '';
+  renderClassroomQuestions(teachingId);
+  renderClassroomAnnouncements(teachingId);
   document.querySelectorAll('#classroomTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.classroomTab === 'overview'));
   document.querySelectorAll('[data-classroom-panel]').forEach(p => { p.hidden = p.dataset.classroomPanel !== 'overview'; });
   document.getElementById('classroomDialog').showModal();
@@ -5951,6 +6541,49 @@ document.getElementById('classroomTabs').addEventListener('click', event => {
 document.getElementById('closeClassroom').addEventListener('click', () => document.getElementById('classroomDialog').close());
 document.getElementById('classroomDialog').addEventListener('click', event => {
   if(event.target.id === 'classroomDialog') document.getElementById('classroomDialog').close();
+});
+document.getElementById('classroomPrepChecklist').addEventListener('change', event => {
+  const input = event.target.closest('[data-prep-item-index]');
+  if(!input || !classroomTeachingId) return;
+  const uid = currentUser ? currentUser.uid : 'guest';
+  const key = prepStateKey(uid, classroomTeachingId);
+  if(!MEMBER_PREP_STATE[key]) MEMBER_PREP_STATE[key] = {};
+  MEMBER_PREP_STATE[key][input.dataset.prepItemIndex] = input.checked;
+  saveMemberPrepState();
+});
+document.querySelector('[data-classroom-panel="preparation"]').addEventListener('click', event => {
+  const btn = event.target.closest('[data-attendance-confirm]');
+  if(!btn || !classroomTeachingId) return;
+  const email = currentProfile ? currentProfile.email : '';
+  const reg = memberRegistrationsFor(classroomTeachingId, currentUser ? currentUser.uid : null, email)[0];
+  if(!reg) return;
+  reg.attendanceConfirm = btn.dataset.attendanceConfirm;
+  saveTeachingRegistrationsToStorage();
+  document.getElementById('classroomAttendanceConfirmStatus').textContent = btn.dataset.attendanceConfirm === 'plan-to-attend'
+    ? "Thanks — you're marked as planning to attend." : "Got it — thanks for letting us know. Your registration is unaffected.";
+});
+document.getElementById('classroomQuestionForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if(!classroomTeachingId || !currentUser) return;
+  const question = document.getElementById('classroomQuestionText').value.trim();
+  if(!question) return;
+  const t = TEACHINGS[classroomTeachingId];
+  const q = {
+    id: 'q-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    teachingId: classroomTeachingId, uid: currentUser.uid,
+    name: (currentProfile && currentProfile.name) || '', email: (currentProfile && currentProfile.email) || '',
+    question, topic: document.getElementById('classroomQuestionTopic').value.trim(),
+    timing: document.getElementById('classroomQuestionTiming').value,
+    submittedAt: new Date().toISOString(), status: 'pending', answer: '', answeredAt: null
+  };
+  CLASS_QUESTIONS.unshift(q);
+  saveClassQuestions();
+  DEMO_NOTIFICATIONS.unshift({ id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'New Class Question',
+    detail: (q.name || 'A member') + ' asked a question about ' + (t ? t.title : 'a class') + '.' });
+  renderOwnerNotifications();
+  document.getElementById('classroomQuestionForm').reset();
+  document.getElementById('classroomQuestionStatus').textContent = 'Question submitted — the ministry team will answer here in your classroom.';
+  renderClassroomQuestions(classroomTeachingId);
 });
 
 /* ---------------------------------------------------------------
@@ -5985,6 +6618,56 @@ document.addEventListener('click', event => {
   renderOwnerNotifications();
 });
 
+// Member Notification History — every outbound (simulated) notification
+// to a member in one place: registration/booking confirmations, 24-hour
+// reminders (recomputed live, same as everywhere else), resends, and
+// every in-portal MEMBER_NOTIFICATIONS entry (new notes, announcements,
+// answered questions, waitlist offers…). Separate from the Owner
+// Alerts feed above, which is the owner's own to-do-style inbox.
+function ownerNotifHistoryRows(){
+  const rows = [];
+  DEMO_TEACHING_REGISTRATIONS.forEach(r => {
+    const target = TEACHINGS[r.teachingId] ? etWallTimeToDate(r.teachingDate, hhmmToMinutes(TEACHINGS[r.teachingId].startTime)) : null;
+    (r.notificationLog || []).forEach(log => rows.push({
+      recipient: (r.firstName + ' ' + r.lastName).trim() || r.email,
+      notification: NOTIF_TYPE_LABELS[log.type] || log.type, channel: log.channel, at: log.at,
+      status: log.type === 'reminder-24h' ? reminderStatusForTarget(target) : log.status
+    }));
+  });
+  DEMO_BOOKINGS.forEach(b => {
+    const target = b.date && b.time ? etWallTimeToDate(b.date, hhmmToMinutes(b.time)) : null;
+    (b.notificationLog || []).forEach(log => rows.push({
+      recipient: b.name || b.email, notification: NOTIF_TYPE_LABELS[log.type] || log.type, channel: log.channel, at: log.at,
+      status: log.type === 'reminder-24h' ? reminderStatusForTarget(target) : log.status
+    }));
+  });
+  const profiles = resolveAllMemberProfiles();
+  MEMBER_NOTIFICATIONS.forEach(n => {
+    const profile = profiles.find(m => m.uid === n.uid);
+    rows.push({ recipient: profile ? (profile.name || profile.email) : 'Member', notification: n.title, channel: 'portal', at: n.createdAt, status: 'sent' });
+  });
+  return rows.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+}
+function ownerNotifHistoryRowHtml(row){
+  const statusClass = row.status === 'sent' ? 'confirmed' : row.status === 'passed' ? 'not-marked' : row.status === 'failed' ? 'cancelled' : 'pending';
+  return '<div class="portal-row"><div><strong>' + escapeHtml(row.recipient) + ' — ' + escapeHtml(row.notification) + '</strong>' +
+    '<small>' + escapeHtml((row.channel || '').toUpperCase()) + (row.at ? ' · ' + escapeHtml(formatRegisteredAt(row.at)) : ' · Scheduled') + '</small></div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + escapeHtml(row.status) + '</span></div>';
+}
+function renderOwnerNotifHistory(){
+  const wrap = document.getElementById('ownerNotifHistoryList');
+  if(!wrap) return;
+  const rows = ownerNotifHistoryRows().slice(0, 150);
+  wrap.innerHTML = rows.length === 0 ? '<p style="color:#656565">No notification activity yet.</p>' : rows.map(ownerNotifHistoryRowHtml).join('');
+}
+document.getElementById('ownerNotifCenterTabs').addEventListener('click', event => {
+  const btn = event.target.closest('[data-notif-center-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#ownerNotifCenterTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('[data-notif-center-panel]').forEach(p => { p.hidden = p.dataset.notifCenterPanel !== btn.dataset.notifCenterTab; });
+  if(btn.dataset.notifCenterTab === 'history') renderOwnerNotifHistory();
+});
+
 /* ---------------------------------------------------------------
    Ministry (admin) view: pending bookings, roster, blockouts
    --------------------------------------------------------------- */
@@ -6013,6 +6696,60 @@ function showOwnerSection(name){
   if(desc) desc.textContent = OWNER_SECTION_DESCRIPTIONS[name] || '';
   closeOwnerSidebarDrawer();
 }
+
+/* ---------------------------------------------------------------
+   Owner Portal — global search. Client-side only (searches the same
+   in-memory arrays every panel already renders from), grouped by
+   record type, and deliberately shows only a title/type per result —
+   never private content (a prayer request's message, for example) —
+   clicking opens the real, authorized detail view for that record.
+   --------------------------------------------------------------- */
+function ownerGlobalSearchResults(q){
+  q = q.trim().toLowerCase();
+  if(!q) return [];
+  const results = [];
+  resolveAllMemberProfiles().filter(m => (m.name + ' ' + m.email + ' ' + (m.phone || '')).toLowerCase().includes(q)).slice(0, 6)
+    .forEach(m => results.push({ type: 'Member', title: m.name || m.email, action: () => { showOwnerSection('people'); openPersonProfile(m.key); } }));
+  DEMO_TEACHING_REGISTRATIONS.filter(r => (r.confirmationId || '').toLowerCase().includes(q)).slice(0, 6)
+    .forEach(r => results.push({ type: 'Class Registration', title: r.confirmationId + ' — ' + ((r.firstName + ' ' + r.lastName).trim() || r.email),
+      action: () => { showOwnerSection('registrations'); showClassRegTab('registrations'); openClassRegDetail(r.id); } }));
+  DEMO_BOOKINGS.filter(b => (b.confirmationId || '').toLowerCase().includes(q)).slice(0, 6)
+    .forEach(b => results.push({ type: 'One-on-One Booking', title: b.confirmationId + ' — ' + (b.name || b.email),
+      action: () => { showOwnerSection('bookings'); showBookingsTab('lookup'); openBookingDetail(b.id); } }));
+  Object.values(TEACHINGS).filter(t => (t.title || '').toLowerCase().includes(q)).slice(0, 6)
+    .forEach(t => results.push({ type: 'Class', title: t.title, action: () => { showOwnerSection('teachings'); openTeachingEditor(t.id); } }));
+  PRAYER_REQUESTS.filter(p => (getNameLabel(p, '') + ' ' + (p.email || '')).toLowerCase().includes(q)).slice(0, 4)
+    .forEach(p => results.push({ type: 'Prayer Request', title: getNameLabel(p, 'Anonymous'), action: () => { showOwnerSection('prayer-requests'); openPrayerDetailWindow(p.id); } }));
+  TESTIMONIALS.filter(t => (getNameLabel(t, '') + ' ' + (t.email || '')).toLowerCase().includes(q)).slice(0, 4)
+    .forEach(t => results.push({ type: 'Testimonial', title: getNameLabel(t, 'Anonymous'), action: () => { showOwnerSection('testimonials'); openTestimonyDetailWindow(t.id); } }));
+  CLASS_REVIEWS.filter(r => ((r.className || '') + ' ' + getNameLabel(r, '')).toLowerCase().includes(q)).slice(0, 4)
+    .forEach(r => results.push({ type: 'Class Review', title: r.className || 'Class Review', action: () => { showOwnerSection('class-reviews'); openReviewDetailWindow(r.id); } }));
+  return results.slice(0, 24);
+}
+let ownerGlobalSearchCache = [];
+function renderOwnerGlobalSearch(){
+  const input = document.getElementById('ownerGlobalSearch');
+  const wrap = document.getElementById('ownerGlobalSearchResults');
+  const q = input.value.trim();
+  if(!q){ wrap.hidden = true; wrap.innerHTML = ''; return; }
+  ownerGlobalSearchCache = ownerGlobalSearchResults(q);
+  wrap.hidden = false;
+  wrap.innerHTML = ownerGlobalSearchCache.length === 0
+    ? '<p class="admin-hint" style="padding:12px 16px">No matches.</p>'
+    : ownerGlobalSearchCache.map((r, idx) => '<div class="owner-global-search-row" data-search-idx="' + idx + '"><span class="owner-global-search-type">' + escapeHtml(r.type) + '</span><strong>' + escapeHtml(r.title) + '</strong></div>').join('');
+}
+document.getElementById('ownerGlobalSearch').addEventListener('input', renderOwnerGlobalSearch);
+document.getElementById('ownerGlobalSearchResults').addEventListener('click', event => {
+  const row = event.target.closest('[data-search-idx]');
+  if(!row) return;
+  const r = ownerGlobalSearchCache[Number(row.dataset.searchIdx)];
+  if(r && r.action) r.action();
+  document.getElementById('ownerGlobalSearch').value = '';
+  document.getElementById('ownerGlobalSearchResults').hidden = true;
+});
+document.addEventListener('click', event => {
+  if(!event.target.closest('.owner-global-search')) document.getElementById('ownerGlobalSearchResults').hidden = true;
+});
 function openOwnerSidebarDrawer(){
   document.getElementById('ownerSidebar').classList.add('open');
   document.getElementById('ownerSidebarBackdrop').classList.add('open');
@@ -6023,7 +6760,10 @@ function closeOwnerSidebarDrawer(){
 }
 document.getElementById('ownerSidebar').addEventListener('click', event => {
   const btn = event.target.closest('.owner-sidebar-item');
-  if(btn) showOwnerSection(btn.dataset.ownerNav);
+  if(!btn) return;
+  showOwnerSection(btn.dataset.ownerNav);
+  if(btn.dataset.ownerNav === 'paths') renderOwnerLearningPaths();
+  if(btn.dataset.ownerNav === 'dashboard'){ renderOwnerTodayView(); renderOwnerActionRequired(); }
 });
 document.getElementById('ownerSidebarToggle').addEventListener('click', openOwnerSidebarDrawer);
 document.getElementById('ownerSidebarBackdrop').addEventListener('click', closeOwnerSidebarDrawer);
@@ -6344,9 +7084,82 @@ document.getElementById('appearanceAccentRow').addEventListener('click', event =
 });
 applyOwnerAppearance();
 
+/* ---------------------------------------------------------------
+   Owner Dashboard — Today + Action Required. Pulls from systems that
+   already exist (prayer requests, testimonials, class reviews,
+   registrations, waitlist) rather than inventing a parallel data
+   model — an action item always links straight to its real record.
+   --------------------------------------------------------------- */
+function renderOwnerTodayView(){
+  const wrap = document.getElementById('ownerTodayStats');
+  if(!wrap) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const todaysClasses = Object.values(TEACHINGS).filter(t => t.date === today && t.status !== 'draft' && t.status !== 'cancelled').length;
+  const todaysSessions = DEMO_BOOKINGS.filter(b => b.date === today && b.status === 'confirmed').length;
+  const unreadPrayer = PRAYER_REQUESTS.filter(p => p.status === 'new').length;
+  const newRegsToday = DEMO_TEACHING_REGISTRATIONS.filter(r => (r.registeredAt || '').slice(0, 10) === today).length;
+  const pendingTestimonials = TESTIMONIALS.filter(t => t.status === 'pending').length;
+  const pendingReviews = CLASS_REVIEWS.filter(r => r.status === 'pending').length;
+  wrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Today\'s Classes</span><strong>' + todaysClasses + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Today\'s 1:1s</span><strong>' + todaysSessions + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Unread Prayer Requests</span><strong>' + unreadPrayer + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>New Registrations</span><strong>' + newRegsToday + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Pending Testimonials</span><strong>' + pendingTestimonials + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Pending Class Reviews</span><strong>' + pendingReviews + '</strong></div>';
+}
+let ownerActionItemsCache = [];
+function ownerActionItems(){
+  const items = [];
+  const today = new Date().toISOString().slice(0, 10);
+  DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'pending_payment' && r.teachingDate >= today).forEach(r =>
+    items.push({ priority: 'needs-attention', label: 'Unpaid registration — ' + ((r.firstName + ' ' + r.lastName).trim() || r.email) + ' · ' + (r.teachingTitle || 'Class'),
+      action: () => { showOwnerSection('registrations'); showClassRegTab('registrations'); openClassRegDetail(r.id); } }));
+  PRAYER_REQUESTS.filter(p => p.status === 'new').forEach(p =>
+    items.push({ priority: 'urgent', label: 'Unanswered prayer request — ' + getNameLabel(p, 'Anonymous'),
+      action: () => { showOwnerSection('prayer-requests'); openPrayerDetailWindow(p.id); } }));
+  TESTIMONIALS.filter(t => t.status === 'pending').forEach(t =>
+    items.push({ priority: 'needs-attention', label: 'Testimony awaiting approval — ' + getNameLabel(t, 'Anonymous'),
+      action: () => { showOwnerSection('testimonials'); openTestimonyDetailWindow(t.id); } }));
+  CLASS_REVIEWS.filter(r => r.status === 'pending').forEach(r =>
+    items.push({ priority: 'needs-attention', label: 'Class review awaiting approval — ' + (r.className || 'Class'),
+      action: () => { showOwnerSection('class-reviews'); openReviewDetailWindow(r.id); } }));
+  Object.values(TEACHINGS).filter(t => t.unlimitedCapacity === false && !t.archived && t.status !== 'cancelled' && t.status !== 'completed').forEach(t => {
+    const remaining = classSeatsRemaining(t);
+    if(remaining !== null && remaining > 0 && remaining <= 2){
+      items.push({ priority: 'needs-attention', label: 'Class nearly full — ' + t.title + ' (' + remaining + ' seat' + (remaining === 1 ? '' : 's') + ' left)',
+        action: () => { showOwnerSection('teachings'); openTeachingEditor(t.id); } });
+    }
+    if(remaining !== null && remaining > 0 && waitlistFor(t.id).some(w => liveWaitlistStatus(w) === 'waiting')){
+      items.push({ priority: 'normal', label: 'Waitlist seat available — ' + t.title,
+        action: async () => { showOwnerSection('teachings'); await openTeachingEditor(t.id); showTeachingEditTab('waitlist'); } });
+    }
+  });
+  const order = { urgent: 0, 'needs-attention': 1, normal: 2 };
+  return items.sort((a, b) => order[a.priority] - order[b.priority]);
+}
+const ACTION_PRIORITY_LABELS = { urgent: 'Urgent', 'needs-attention': 'Needs Attention', normal: 'Normal' };
+function renderOwnerActionRequired(){
+  const wrap = document.getElementById('ownerActionRequired');
+  if(!wrap) return;
+  ownerActionItemsCache = ownerActionItems();
+  wrap.innerHTML = ownerActionItemsCache.length === 0
+    ? '<p class="admin-hint">Nothing needs your attention right now.</p>'
+    : ownerActionItemsCache.map((item, idx) => '<div class="portal-row" data-action-idx="' + idx + '" style="cursor:pointer"><div><strong>' + escapeHtml(item.label) + '</strong></div>' +
+      '<span class="admin-status-pill ' + (item.priority === 'urgent' ? 'cancelled' : item.priority === 'needs-attention' ? 'pending' : 'draft') + '">' + ACTION_PRIORITY_LABELS[item.priority] + '</span></div>').join('');
+}
+document.getElementById('ownerActionRequired').addEventListener('click', event => {
+  const row = event.target.closest('[data-action-idx]');
+  if(!row) return;
+  const item = ownerActionItemsCache[Number(row.dataset.actionIdx)];
+  if(item && item.action) item.action();
+});
+
 async function renderOwnerDashboardStats(){
   const wrap = document.getElementById('ownerDashboardStats');
   if(!wrap) return;
+  renderOwnerTodayView();
+  renderOwnerActionRequired();
   const welcome = document.getElementById('ownerDashboardWelcome');
   if(welcome && currentProfile){
     const firstName = (currentProfile.name || '').split(' ')[0];
@@ -7183,15 +7996,49 @@ document.getElementById('blockedDatesList').addEventListener('click', async even
   }
 });
 
+/* ---------------------------------------------------------------
+   People — one derived profile per person instead of a bare account
+   list. Identity resolves the way section 18 of the spec asks: uid
+   first when one exists anywhere in their records, normalized email
+   otherwise. Never merges two people just because their names match.
+   --------------------------------------------------------------- */
+function normalizeEmail(email){ return (email || '').trim().toLowerCase(); }
+function resolveAllMemberProfiles(){
+  const byKey = new Map();
+  const upsert = (key, patch) => {
+    if(!key) return;
+    const existing = byKey.get(key) || { key, uid: null, name: '', email: '', phone: '', role: 'member' };
+    if(patch.uid) existing.uid = patch.uid;
+    if(patch.name && !existing.name) existing.name = patch.name;
+    if(patch.email && !existing.email) existing.email = patch.email;
+    if(patch.phone && !existing.phone) existing.phone = patch.phone;
+    if(patch.role === 'admin') existing.role = 'admin';
+    byKey.set(key, existing);
+  };
+  DEMO_MEMBERS.forEach(m => upsert(m.id, { uid: m.id, name: m.name, email: m.email, role: m.role }));
+  DEMO_TEACHING_REGISTRATIONS.forEach(r => upsert(r.uid || normalizeEmail(r.email), { uid: r.uid, name: (r.firstName + ' ' + r.lastName).trim(), email: r.email, phone: r.phone }));
+  DEMO_BOOKINGS.forEach(b => upsert(b.uid || normalizeEmail(b.email), { uid: b.uid, name: b.name, email: b.email, phone: b.phone }));
+  CLASS_WAITLIST.forEach(w => upsert(w.uid || normalizeEmail(w.email), { uid: w.uid, name: w.name, email: w.email, phone: w.phone }));
+  return Array.from(byKey.values()).filter(m => m.name || m.email).sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+}
+function memberRecordsForKey(key){
+  const regs = DEMO_TEACHING_REGISTRATIONS.filter(r => (r.uid && r.uid === key) || (!r.uid && normalizeEmail(r.email) === key));
+  const bookings = DEMO_BOOKINGS.filter(b => (b.uid && b.uid === key) || (!b.uid && normalizeEmail(b.email) === key));
+  return { regs, bookings };
+}
+function ownerPersonRowHtml(m){
+  const { regs, bookings } = memberRecordsForKey(m.key);
+  const total = regs.length + bookings.length;
+  return '<div class="portal-row" data-person-key="' + escapeHtml(m.key) + '" style="cursor:pointer">' +
+    '<div><strong>' + escapeHtml(m.name || m.email) + '</strong><small>' + escapeHtml(m.email) + (m.phone ? ' · ' + escapeHtml(m.phone) : '') + '</small></div>' +
+    '<span class="portal-access">' + (m.role === 'admin' ? 'Admin' : total + ' record' + (total === 1 ? '' : 's')) + '</span>' +
+    '</div>';
+}
 async function loadOwnerMembers(){
   const container = document.getElementById('ownerMembersList');
   container.innerHTML = '<p style="color:#656565">Loading member accounts…</p>';
   if(DEMO_MODE){
-    const items = [...DEMO_MEMBERS].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    container.innerHTML = items.map(u =>
-      '<div class="portal-row"><div><strong>' + escapeHtml(u.name || u.email) + '</strong><small>' + escapeHtml(u.email) +
-      '</small></div><span class="portal-access">' + (u.role === 'admin' ? 'Admin' : 'Member') + '</span></div>'
-    ).join('');
+    renderOwnerPeopleList();
     return;
   }
   try {
@@ -7211,6 +8058,158 @@ async function loadOwnerMembers(){
     container.innerHTML = '<p style="color:#656565">Could not load member accounts.</p>';
   }
 }
+function renderOwnerPeopleList(){
+  const wrap = document.getElementById('ownerMembersList');
+  if(!wrap) return;
+  const q = (document.getElementById('ownerPeopleSearch')?.value || '').trim().toLowerCase();
+  let items = resolveAllMemberProfiles();
+  if(q) items = items.filter(m => (m.name + ' ' + m.email + ' ' + (m.phone || '')).toLowerCase().includes(q));
+  wrap.innerHTML = items.length === 0 ? '<p style="color:#656565">No member accounts yet.</p>' : items.map(ownerPersonRowHtml).join('');
+}
+document.getElementById('ownerPeopleSearch')?.addEventListener('input', renderOwnerPeopleList);
+document.getElementById('ownerMembersList')?.addEventListener('click', event => {
+  const row = event.target.closest('[data-person-key]');
+  if(row) openPersonProfile(row.dataset.personKey);
+});
+
+/* ---------------------------------------------------------------
+   People profile drawer — Overview / Classes / Sessions / Payments /
+   Activity / Notes. Activity is a unified but privacy-aware timeline:
+   a prayer request shows only as "Prayer Request Submitted" — its
+   content stays behind the real Prayer Requests area (section 17).
+   --------------------------------------------------------------- */
+const PERSON_NOTES_KEY = 'ua_preview_person_notes_v1';
+let PERSON_NOTES = {};
+(function loadPersonNotes(){
+  try { const raw = localStorage.getItem(PERSON_NOTES_KEY); if(raw) PERSON_NOTES = JSON.parse(raw); } catch (err) { /* keep defaults */ }
+})();
+function savePersonNotes(){
+  try { localStorage.setItem(PERSON_NOTES_KEY, JSON.stringify(PERSON_NOTES)); } catch (err) { /* ignore */ }
+}
+function personActivityTimeline(key, profile){
+  const events = [];
+  const { regs, bookings } = memberRecordsForKey(key);
+  regs.forEach(r => {
+    events.push({ at: r.registeredAt, label: 'Registered for ' + (r.teachingTitle || 'a class'), meta: r.confirmationId });
+    if(Number(r.amountPaid) > 0) events.push({ at: r.registeredAt, label: 'Paid $' + Number(r.amountPaid).toFixed(2) + ' for ' + (r.teachingTitle || 'a class'), meta: r.confirmationId });
+    if(r.status === 'cancelled') events.push({ at: r.registeredAt, label: 'Cancelled registration for ' + (r.teachingTitle || 'a class'), meta: r.confirmationId });
+  });
+  bookings.forEach(b => {
+    events.push({ at: b.bookedAt, label: 'Booked ' + sessionTypeName(b.sessionType), meta: b.confirmationId });
+    if(Number(b.amountPaid) > 0) events.push({ at: b.bookedAt, label: 'Paid $' + Number(b.amountPaid).toFixed(2) + ' for ' + sessionTypeName(b.sessionType), meta: b.confirmationId });
+  });
+  const emailLower = normalizeEmail(profile.email);
+  if(emailLower){
+    PRAYER_REQUESTS.filter(p => normalizeEmail(p.email) === emailLower).forEach(p => events.push({ at: p.createdAt, label: 'Prayer Request Submitted', meta: null }));
+    TESTIMONIALS.filter(t => normalizeEmail(t.email) === emailLower).forEach(t => events.push({ at: t.createdAt, label: 'Testimony Submitted', meta: null }));
+    CLASS_REVIEWS.filter(c => normalizeEmail(c.email) === emailLower).forEach(c => events.push({ at: c.createdAt, label: 'Class Review Submitted', meta: null }));
+  }
+  return events.filter(e => e.at).sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+let personProfileKey = null;
+function openPersonProfile(key){
+  const profile = resolveAllMemberProfiles().find(m => m.key === key);
+  if(!profile) return;
+  personProfileKey = key;
+  document.getElementById('personProfileTitle').textContent = profile.name || profile.email;
+  document.getElementById('personProfileMeta').textContent = profile.email + (profile.phone ? ' · ' + profile.phone : '') + (profile.role === 'admin' ? ' · Admin' : ' · Member');
+  const { regs, bookings } = memberRecordsForKey(key);
+  const revenue = [...regs, ...bookings].reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
+  document.getElementById('personProfileStats').innerHTML =
+    '<div class="admin-stat-tile"><span>Classes</span><strong>' + regs.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Sessions</span><strong>' + bookings.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Total Paid</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
+  document.getElementById('personProfileClasses').innerHTML = regs.length === 0 ? '<p style="color:var(--owner-text-faint)">No class registrations.</p>' : regs.map(classRegRowHtml).join('');
+  document.getElementById('personProfileSessions').innerHTML = bookings.length === 0 ? '<p style="color:var(--owner-text-faint)">No sessions booked.</p>' : bookings.map(bookingsLookupRowHtml).join('');
+  const paid = [...regs, ...bookings].filter(r => Number(r.amountPaid) > 0);
+  document.getElementById('personProfilePayments').innerHTML = paid.length === 0 ? '<p style="color:var(--owner-text-faint)">No payments yet.</p>' :
+    paid.map(r => '<div class="portal-row"><div><strong>$' + Number(r.amountPaid).toFixed(2) + '</strong><small>' + escapeHtml(r.teachingTitle || sessionTypeName(r.sessionType)) + ' · ' + escapeHtml(r.confirmationId || '') + '</small></div></div>').join('');
+  const timeline = personActivityTimeline(key, profile);
+  document.getElementById('personProfileActivity').innerHTML = timeline.length === 0 ? '<p style="color:var(--owner-text-faint)">No activity yet.</p>' :
+    timeline.map(e => '<div class="portal-row"><div><strong>' + escapeHtml(e.label) + '</strong><small>' + escapeHtml(shortDate(e.at)) + (e.meta ? ' · ' + escapeHtml(e.meta) : '') + '</small></div></div>').join('');
+  document.getElementById('personProfileNotes').value = PERSON_NOTES[key] || '';
+  document.getElementById('personProfileNotesStatus').textContent = '';
+  document.querySelectorAll('#personProfileTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.personTab === 'overview'));
+  document.querySelectorAll('[data-person-panel]').forEach(p => { p.hidden = p.dataset.personPanel !== 'overview'; });
+  document.getElementById('personProfileDialog').showModal();
+}
+document.getElementById('personProfileTabs').addEventListener('click', event => {
+  const btn = event.target.closest('[data-person-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#personProfileTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('[data-person-panel]').forEach(p => { p.hidden = p.dataset.personPanel !== btn.dataset.personTab; });
+});
+document.getElementById('closePersonProfile').addEventListener('click', () => document.getElementById('personProfileDialog').close());
+document.getElementById('personProfileDialog').addEventListener('click', event => {
+  if(event.target.id === 'personProfileDialog') document.getElementById('personProfileDialog').close();
+});
+document.getElementById('personProfileClasses').addEventListener('click', event => {
+  const row = event.target.closest('[data-classreg-view], [data-classreg-row]');
+  if(row) openClassRegDetail(row.dataset.classregView || row.dataset.classregRow);
+});
+document.getElementById('personProfileSessions').addEventListener('click', event => {
+  const row = event.target.closest('[data-booking-view]');
+  if(row) openBookingDetail(row.dataset.bookingView);
+});
+document.getElementById('personProfileSaveNotesBtn').addEventListener('click', () => {
+  if(!personProfileKey) return;
+  PERSON_NOTES[personProfileKey] = document.getElementById('personProfileNotes').value.trim();
+  savePersonNotes();
+  document.getElementById('personProfileNotesStatus').textContent = 'Saved.';
+});
+
+/* ---------------------------------------------------------------
+   Owner: Learning Paths management — kept deliberately simple
+   (create, assign/remove classes, delete) per the "simple interface"
+   rule; no manual reordering yet, classes display in stored order.
+   --------------------------------------------------------------- */
+function pathAvailableClasses(){
+  return Object.values(TEACHINGS).filter(t => !t.archived && t.status !== 'draft').sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+}
+function ownerLearningPathRowHtml(p){
+  const classes = pathAvailableClasses();
+  const checks = classes.map(t =>
+    '<label class="admin-checkbox-field" style="display:block;margin:4px 0"><input type="checkbox" class="path-class-check" data-path-id="' + escapeHtml(p.id) + '" data-class-id="' + escapeHtml(t.id) + '"' +
+    (p.classIds.includes(t.id) ? ' checked' : '') + ' /> ' + escapeHtml(t.title) + '</label>'
+  ).join('');
+  return '<div class="detail-section" data-path-id="' + escapeHtml(p.id) + '" style="padding:16px 0">' +
+    '<div class="detail-section-title-row"><div class="detail-section-title">' + escapeHtml(p.title) + ' · ' + p.classIds.length + ' Classes</div>' +
+    '<button type="button" class="admin-btn-ghost path-delete">Delete Path</button></div>' +
+    (p.description ? '<p class="admin-hint" style="margin-bottom:10px">' + escapeHtml(p.description) + '</p>' : '') +
+    '<div class="admin-microlabel" style="margin-bottom:6px">Classes In This Path</div>' + checks +
+    '</div>';
+}
+function renderOwnerLearningPaths(){
+  const wrap = document.getElementById('ownerLearningPathsList');
+  if(!wrap) return;
+  wrap.innerHTML = LEARNING_PATHS.length === 0 ? '<p style="color:var(--owner-text-faint)">No learning paths yet.</p>' : LEARNING_PATHS.map(ownerLearningPathRowHtml).join('');
+}
+document.getElementById('pathNewBtn').addEventListener('click', () => {
+  const title = document.getElementById('pathNewTitle').value.trim();
+  if(!title) return;
+  LEARNING_PATHS.push({ id: 'path-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, description: '', classIds: [] });
+  saveLearningPaths();
+  document.getElementById('pathNewTitle').value = '';
+  renderOwnerLearningPaths();
+});
+document.getElementById('ownerLearningPathsList').addEventListener('change', event => {
+  const check = event.target.closest('.path-class-check');
+  if(!check) return;
+  const path = LEARNING_PATHS.find(p => p.id === check.dataset.pathId);
+  if(!path) return;
+  if(check.checked){ if(!path.classIds.includes(check.dataset.classId)) path.classIds.push(check.dataset.classId); }
+  else path.classIds = path.classIds.filter(id => id !== check.dataset.classId);
+  saveLearningPaths();
+  renderOwnerLearningPaths();
+});
+document.getElementById('ownerLearningPathsList').addEventListener('click', event => {
+  const btn = event.target.closest('.path-delete');
+  if(!btn) return;
+  const row = event.target.closest('[data-path-id]');
+  LEARNING_PATHS = LEARNING_PATHS.filter(p => p.id !== row.dataset.pathId);
+  saveLearningPaths();
+  renderOwnerLearningPaths();
+});
 
 /* ---------------------------------------------------------------
    Teaching registration — public. Mirrors the one-on-one booking
@@ -7249,6 +8248,22 @@ async function createTeachingRegistration({ teachingId, firstName, lastName, ema
   }
   const ref = doc(collection(db, 'teachingRegistrations'));
   await setDoc(ref, { ...data, registeredAt: serverTimestamp() });
+  // Classes require sign-in before registering (see
+  // requireAccountForTeachingRegister below), so uid is always present
+  // here. Mirrors this registration into classEnrollments/{teachingId}_
+  // {uid} — a deterministic-ID doc that firestore.rules' isEnrolledInClass()
+  // checks via exists()/get(), since rules can't run a `where` query
+  // against teachingRegistrations to answer "is this uid enrolled in
+  // this class." This is what actually gates classroom/Zoom/resource
+  // access in production — TODO before launch: write this doc for real
+  // once Firestore is connected (not yet exercised, since DEMO_MODE
+  // never reaches this branch).
+  if(uid){
+    await setDoc(doc(db, 'classEnrollments', teachingId + '_' + uid), {
+      memberUid: uid, teachingId, registrationId: ref.id, confirmationId,
+      status: 'confirmed', paymentStatus: 'pending', enrolledAt: serverTimestamp()
+    });
+  }
   return { id: ref.id, ...data, registeredAt: new Date().toISOString() };
 }
 
@@ -7325,11 +8340,61 @@ window.openTeachingRegister = openTeachingRegister;
 
 document.addEventListener('click', event => {
   const trigger = event.target.closest('.teaching-register-btn');
-  if(trigger && trigger.dataset.teachingId) openTeachingRegister(trigger.dataset.teachingId);
+  if(!trigger || !trigger.dataset.teachingId) return;
+  const t = TEACHINGS[trigger.dataset.teachingId];
+  if(t && (t.status === 'sold-out' || classIsFull(t))) openWaitlistJoin(trigger.dataset.teachingId);
+  else openTeachingRegister(trigger.dataset.teachingId);
 });
 document.getElementById('closeTeachingRegister').addEventListener('click', () => teachingRegisterDialog.close());
 teachingRegisterDialog.addEventListener('click', event => {
   if(event.target === teachingRegisterDialog) teachingRegisterDialog.close();
+});
+
+/* ---------------------------------------------------------------
+   Class waitlist — public join flow. Shown instead of registration
+   once a class is full (manually marked "sold-out" or capacity
+   reached). Owner side: Teaching Edit → Waitlist tab, above.
+   --------------------------------------------------------------- */
+let waitlistJoinTeachingId = null;
+function openWaitlistJoin(teachingId){
+  const t = TEACHINGS[teachingId];
+  if(!t) return;
+  waitlistJoinTeachingId = teachingId;
+  document.getElementById('waitlistJoinTitle').textContent = t.title || 'Join The Waitlist.';
+  document.getElementById('waitlistJoinIntro').textContent = 'This class is full. Join the waitlist and we\'ll reach out the moment a seat opens up.';
+  document.getElementById('waitlistJoinForm').reset();
+  document.getElementById('waitlistJoinForm').hidden = false;
+  document.getElementById('waitlistJoinConfirm').hidden = true;
+  document.getElementById('waitlistJoinStatus').textContent = '';
+  if(currentUser && currentProfile){
+    document.getElementById('waitlistJoinName').value = currentProfile.name || '';
+    document.getElementById('waitlistJoinEmail').value = currentProfile.email || '';
+  }
+  document.getElementById('waitlistJoinDialog').showModal();
+}
+document.getElementById('waitlistJoinForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const name = document.getElementById('waitlistJoinName').value.trim();
+  const email = document.getElementById('waitlistJoinEmail').value.trim();
+  const phone = toE164(document.getElementById('waitlistJoinPhoneCountry'), document.getElementById('waitlistJoinPhoneNumber'));
+  if(!phone){ document.getElementById('waitlistJoinStatus').textContent = 'Enter a valid phone number, including country code.'; return; }
+  const entry = {
+    id: 'wl-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), teachingId: waitlistJoinTeachingId,
+    name, email, phone, uid: currentUser ? currentUser.uid : null, joinedAt: new Date().toISOString(), status: 'waiting', offerExpiresAt: null
+  };
+  CLASS_WAITLIST.push(entry);
+  saveClassWaitlist();
+  const t = TEACHINGS[waitlistJoinTeachingId];
+  DEMO_NOTIFICATIONS.unshift({ id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'New Waitlist Signup', detail: name + ' joined the waitlist for ' + (t ? t.title : 'a class') + '.' });
+  renderOwnerNotifications();
+  document.getElementById('waitlistJoinPosition').textContent = '#' + waitlistPosition(entry);
+  document.getElementById('waitlistJoinForm').hidden = true;
+  document.getElementById('waitlistJoinConfirm').hidden = false;
+});
+document.getElementById('waitlistJoinCloseBtn').addEventListener('click', () => document.getElementById('waitlistJoinDialog').close());
+document.getElementById('closeWaitlistJoin').addEventListener('click', () => document.getElementById('waitlistJoinDialog').close());
+document.getElementById('waitlistJoinDialog').addEventListener('click', event => {
+  if(event.target.id === 'waitlistJoinDialog') document.getElementById('waitlistJoinDialog').close();
 });
 
 teachingRegisterForm.addEventListener('submit', async event => {
@@ -7354,6 +8419,11 @@ teachingRegisterForm.addEventListener('submit', async event => {
   try {
     const record = await createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid: currentUser.uid, smsConsent });
     markThrottled('lastTeachingRegisterSubmit');
+    // If this registration fulfills an active waitlist offer, close
+    // that loop out — the seat is now taken, so the offer is done.
+    const claimedOffer = CLASS_WAITLIST.find(w => w.teachingId === teachingId && liveWaitlistStatus(w) === 'offer-sent' &&
+      (w.uid === currentUser.uid || (w.email && w.email.toLowerCase() === email.toLowerCase())));
+    if(claimedOffer){ claimedOffer.status = 'registered'; saveClassWaitlist(); }
     teachingRegisterStatus.textContent = '';
     const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
     document.getElementById('teachingRegisterConfirmTitle').textContent = t.title || 'Class';
@@ -7688,6 +8758,11 @@ document.getElementById('classroomAddKind').addEventListener('change', () => {
   document.getElementById('classroomAddBodyField').hidden = kind === 'resource';
   document.getElementById('classroomAddRefField').hidden = kind !== 'scripture';
 });
+document.getElementById('classroomAddReleaseMode').addEventListener('change', () => {
+  const mode = document.getElementById('classroomAddReleaseMode').value;
+  document.getElementById('classroomAddReleaseHoursField').hidden = mode !== 'hours-before-class';
+  document.getElementById('classroomAddReleaseAtField').hidden = mode !== 'fixed-datetime';
+});
 document.getElementById('classroomAddPublishBtn').addEventListener('click', () => {
   const teachingId = document.getElementById('teachingEditId').value;
   const t = TEACHINGS[teachingId];
@@ -7697,11 +8772,18 @@ document.getElementById('classroomAddPublishBtn').addEventListener('click', () =
   const body = document.getElementById('classroomAddBody').value.trim();
   const url = document.getElementById('classroomAddUrl').value.trim();
   const ref = document.getElementById('classroomAddRef').value.trim();
+  const releaseMode = document.getElementById('classroomAddReleaseMode').value;
+  const releaseHours = document.getElementById('classroomAddReleaseHours').value;
+  const releaseAtRaw = document.getElementById('classroomAddReleaseAt').value;
   if(!title || (kind === 'resource' && !url) || (kind !== 'resource' && !body)){
     document.getElementById('classroomAddStatus').textContent = 'Add a title, and either content or a resource URL.';
     return;
   }
-  const item = { id: 'cc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind, title, body, url, ref, publishedAt: new Date().toISOString() };
+  const item = {
+    id: 'cc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind, title, body, url, ref, publishedAt: new Date().toISOString(),
+    releaseMode, releaseHours: releaseMode === 'hours-before-class' ? Number(releaseHours) || 24 : null,
+    releaseAt: releaseMode === 'fixed-datetime' && releaseAtRaw ? new Date(releaseAtRaw).toISOString() : null
+  };
   if(!CLASSROOM_CONTENT[teachingId]) CLASSROOM_CONTENT[teachingId] = [];
   CLASSROOM_CONTENT[teachingId].unshift(item);
   saveClassroomContent();
@@ -7709,6 +8791,9 @@ document.getElementById('classroomAddPublishBtn').addEventListener('click', () =
   document.getElementById('classroomAddBody').value = '';
   document.getElementById('classroomAddUrl').value = '';
   document.getElementById('classroomAddRef').value = '';
+  document.getElementById('classroomAddReleaseMode').value = 'immediate';
+  document.getElementById('classroomAddReleaseHoursField').hidden = true;
+  document.getElementById('classroomAddReleaseAtField').hidden = true;
   renderTeachingEditClassroomList(teachingId);
   const notifyType = kind === 'resource' ? 'New Resource Added' : 'New Class Notes Available';
   const enrolled = DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === teachingId && r.status !== 'cancelled' && r.uid);
@@ -7725,6 +8810,187 @@ document.getElementById('teachingEditClassroomList').addEventListener('click', e
   CLASSROOM_CONTENT[teachingId] = CLASSROOM_CONTENT[teachingId].filter(c => c.id !== row.dataset.classroomContentId);
   saveClassroomContent();
   renderTeachingEditClassroomList(teachingId);
+});
+document.getElementById('teachingEditPrepChecklistSaveBtn').addEventListener('click', () => {
+  const teachingId = document.getElementById('teachingEditId').value;
+  const t = TEACHINGS[teachingId];
+  if(!teachingId || !t){ document.getElementById('teachingEditPrepChecklistStatus').textContent = 'Save this class first.'; return; }
+  t.prepChecklist = document.getElementById('teachingEditPrepChecklist').value.split('\n').map(s => s.trim()).filter(Boolean);
+  savePreviewToStorage();
+  document.getElementById('teachingEditPrepChecklistStatus').textContent = 'Saved.';
+});
+
+/* ---- Owner: Class Questions (per-class tab) ---- */
+const CLASS_QUESTION_STATUS_LABELS = { pending: 'Pending', answered: 'Answered', 'addressed-in-class': 'Addressed In Class', archived: 'Archived' };
+function teachingEditQuestionRowHtml(q){
+  const statusClass = q.status === 'answered' || q.status === 'addressed-in-class' ? 'confirmed' : q.status === 'archived' ? 'cancelled' : 'pending';
+  return '<div class="detail-section" data-class-question-id="' + escapeHtml(q.id) + '" style="padding:14px 0">' +
+    '<div class="detail-section-title-row"><div class="detail-section-title">' + escapeHtml(q.name || 'Member') + ' · ' + (q.timing === 'after' ? 'After Class' : 'Before Class') + ' · ' + escapeHtml(shortDate(q.submittedAt)) + '</div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + CLASS_QUESTION_STATUS_LABELS[q.status] + '</span></div>' +
+    (q.topic ? '<p style="color:var(--owner-text-muted);font-style:italic;margin:0 0 6px">' + escapeHtml(q.topic) + '</p>' : '') +
+    '<p style="margin:0 0 10px">' + escapeHtml(q.question) + '</p>' +
+    '<div class="booking-field full" style="margin-bottom:8px"><textarea class="class-question-answer-input" rows="2" placeholder="Write an answer…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">' + escapeHtml(q.answer || '') + '</textarea></div>' +
+    '<div class="detail-action-row">' +
+    '<button type="button" class="admin-btn-solid class-question-save-answer">Save Answer</button>' +
+    '<button type="button" class="admin-btn-ghost class-question-mark-addressed">Mark Addressed In Class</button>' +
+    '<button type="button" class="admin-btn-ghost class-question-archive">Archive</button>' +
+    '</div></div>';
+}
+function renderTeachingEditQuestions(teachingId){
+  const wrap = document.getElementById('teachingEditQuestionsList');
+  const badge = document.getElementById('teachingEditQuestionsCount');
+  if(!wrap) return;
+  if(!teachingId){ wrap.innerHTML = '<p style="color:var(--owner-text-faint)">Save this class first.</p>'; if(badge) badge.hidden = true; return; }
+  const items = CLASS_QUESTIONS.filter(q => q.teachingId === teachingId).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  wrap.innerHTML = items.length === 0 ? '<p style="color:var(--owner-text-faint)">No questions yet.</p>' : items.map(teachingEditQuestionRowHtml).join('');
+  const pending = items.filter(q => q.status === 'pending').length;
+  if(badge){ badge.hidden = pending === 0; badge.textContent = String(pending); }
+}
+document.getElementById('teachingEditQuestionsList').addEventListener('click', event => {
+  const row = event.target.closest('[data-class-question-id]');
+  if(!row) return;
+  const q = CLASS_QUESTIONS.find(x => x.id === row.dataset.classQuestionId);
+  if(!q) return;
+  const teachingId = document.getElementById('teachingEditId').value;
+  if(event.target.closest('.class-question-save-answer')){
+    const answer = row.querySelector('.class-question-answer-input').value.trim();
+    q.answer = answer; q.answeredAt = new Date().toISOString();
+    if(answer && q.status === 'pending') q.status = 'answered';
+    saveClassQuestions();
+    if(q.uid) pushMemberNotification(q.uid, 'question-answered', 'Question Answered', (TEACHINGS[teachingId] ? TEACHINGS[teachingId].title : 'Your class') + ' — the ministry team answered your question.');
+    renderTeachingEditQuestions(teachingId);
+  } else if(event.target.closest('.class-question-mark-addressed')){
+    q.status = 'addressed-in-class'; saveClassQuestions(); renderTeachingEditQuestions(teachingId);
+  } else if(event.target.closest('.class-question-archive')){
+    q.status = 'archived'; saveClassQuestions(); renderTeachingEditQuestions(teachingId);
+  }
+});
+
+/* ---- Owner: Class Announcements (per-class tab) ---- */
+document.getElementById('classAnnStatus').addEventListener('change', () => {
+  document.getElementById('classAnnScheduleField').hidden = document.getElementById('classAnnStatus').value !== 'scheduled';
+});
+let classAnnEditingId = null;
+function teachingEditAnnouncementRowHtml(a){
+  const statusClass = a.status === 'published' ? 'published' : a.status === 'scheduled' ? 'pending' : a.status === 'archived' ? 'cancelled' : 'draft';
+  return '<div class="detail-section" data-class-ann-id="' + escapeHtml(a.id) + '" style="padding:14px 0">' +
+    '<div class="detail-section-title-row"><div class="detail-section-title">' + escapeHtml(a.title) + (a.pinned ? ' · 📌 Pinned' : '') + '</div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + escapeHtml(a.status) + '</span></div>' +
+    '<p style="margin:0 0 10px;color:var(--owner-text-muted)">' + escapeHtml(a.body) + '</p>' +
+    '<div class="detail-action-row">' +
+    '<button type="button" class="admin-btn-ghost class-ann-edit">Edit</button>' +
+    '<button type="button" class="admin-btn-ghost class-ann-pin">' + (a.pinned ? 'Unpin' : 'Pin') + '</button>' +
+    (a.status !== 'archived' ? '<button type="button" class="admin-btn-ghost class-ann-archive">Archive</button>' : '') +
+    '</div></div>';
+}
+function renderTeachingEditAnnouncements(teachingId){
+  const wrap = document.getElementById('teachingEditAnnouncementsList');
+  if(!wrap) return;
+  if(!teachingId){ wrap.innerHTML = '<p style="color:var(--owner-text-faint)">Save this class first.</p>'; return; }
+  const items = CLASS_ANNOUNCEMENTS.filter(a => a.teachingId === teachingId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  wrap.innerHTML = items.length === 0 ? '<p style="color:var(--owner-text-faint)">No announcements yet.</p>' : items.map(teachingEditAnnouncementRowHtml).join('');
+}
+document.getElementById('classAnnPublishBtn').addEventListener('click', () => {
+  const teachingId = document.getElementById('teachingEditId').value;
+  const t = TEACHINGS[teachingId];
+  if(!teachingId || !t) return;
+  const title = document.getElementById('classAnnTitle').value.trim();
+  const body = document.getElementById('classAnnBody').value.trim();
+  const status = document.getElementById('classAnnStatus').value;
+  const pinned = document.getElementById('classAnnPinned').checked;
+  const publishAtRaw = document.getElementById('classAnnPublishAt').value;
+  if(!title || !body){ document.getElementById('classAnnStatusMsg').textContent = 'Add a title and body.'; return; }
+  const publishAt = status === 'scheduled' && publishAtRaw ? new Date(publishAtRaw).toISOString() : new Date().toISOString();
+  if(classAnnEditingId){
+    const existing = CLASS_ANNOUNCEMENTS.find(a => a.id === classAnnEditingId);
+    if(existing) Object.assign(existing, { title, body, status, pinned, publishAt });
+    classAnnEditingId = null;
+  } else {
+    CLASS_ANNOUNCEMENTS.unshift({ id: 'ann-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), teachingId, title, body, status, pinned, publishAt, createdAt: new Date().toISOString() });
+  }
+  saveClassAnnouncements();
+  document.getElementById('classAnnTitle').value = '';
+  document.getElementById('classAnnBody').value = '';
+  document.getElementById('classAnnStatus').value = 'published';
+  document.getElementById('classAnnPinned').checked = false;
+  document.getElementById('classAnnScheduleField').hidden = true;
+  renderTeachingEditAnnouncements(teachingId);
+  if(status === 'published'){
+    const enrolled = DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === teachingId && r.status !== 'cancelled' && r.uid);
+    enrolled.forEach(r => pushMemberNotification(r.uid, 'new-announcement', 'New Announcement', t.title + ' — "' + title + '"'));
+    document.getElementById('classAnnStatusMsg').textContent = 'Published — ' + enrolled.length + ' enrolled member' + (enrolled.length === 1 ? '' : 's') + ' notified in-portal.';
+  } else {
+    document.getElementById('classAnnStatusMsg').textContent = 'Saved as ' + status + '.';
+  }
+});
+document.getElementById('teachingEditAnnouncementsList').addEventListener('click', event => {
+  const row = event.target.closest('[data-class-ann-id]');
+  if(!row) return;
+  const a = CLASS_ANNOUNCEMENTS.find(x => x.id === row.dataset.classAnnId);
+  if(!a) return;
+  const teachingId = document.getElementById('teachingEditId').value;
+  if(event.target.closest('.class-ann-edit')){
+    classAnnEditingId = a.id;
+    document.getElementById('classAnnTitle').value = a.title;
+    document.getElementById('classAnnBody').value = a.body;
+    document.getElementById('classAnnStatus').value = a.status;
+    document.getElementById('classAnnPinned').checked = a.pinned;
+    document.getElementById('classAnnScheduleField').hidden = a.status !== 'scheduled';
+    document.getElementById('classAnnStatusMsg').textContent = 'Editing "' + a.title + '" — Save Announcement to update it.';
+  } else if(event.target.closest('.class-ann-pin')){
+    a.pinned = !a.pinned; saveClassAnnouncements(); renderTeachingEditAnnouncements(teachingId);
+  } else if(event.target.closest('.class-ann-archive')){
+    a.status = 'archived'; saveClassAnnouncements(); renderTeachingEditAnnouncements(teachingId);
+  }
+});
+
+/* ---- Owner: Class Waitlist (per-class tab) ---- */
+const CLASS_WAITLIST_STATUS_LABELS = { waiting: 'Waiting', 'offer-sent': 'Offer Sent', registered: 'Registered', expired: 'Expired', removed: 'Removed' };
+function teachingEditWaitlistRowHtml(w){
+  const status = liveWaitlistStatus(w);
+  const statusClass = status === 'registered' ? 'confirmed' : status === 'offer-sent' ? 'pending' : status === 'waiting' ? 'draft' : 'cancelled';
+  const position = status === 'waiting' ? waitlistPosition(w) : null;
+  return '<div class="admin-teaching-row" data-class-waitlist-id="' + escapeHtml(w.id) + '">' +
+    '<div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + (position ? '#' + position + ' — ' : '') + escapeHtml(w.name) + '</strong>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + CLASS_WAITLIST_STATUS_LABELS[status] + '</span></div>' +
+    '<div class="admin-teaching-meta">' + escapeHtml(w.email) + (w.phone ? ' · ' + escapeHtml(w.phone) : '') + ' · Joined ' + escapeHtml(shortDate(w.joinedAt)) + '</div></div>' +
+    '<div class="admin-teaching-actions" style="display:flex;gap:6px;flex-wrap:wrap">' +
+    (status === 'waiting' ? '<button type="button" class="admin-btn-solid class-waitlist-offer">Send Offer</button>' : '') +
+    (status !== 'removed' && status !== 'registered' ? '<button type="button" class="admin-btn-ghost class-waitlist-remove">Remove</button>' : '') +
+    '</div></div>';
+}
+function renderTeachingEditWaitlist(teachingId){
+  const wrap = document.getElementById('teachingEditWaitlistList');
+  const statsWrap = document.getElementById('teachingEditWaitlistStats');
+  const badge = document.getElementById('teachingEditWaitlistCount');
+  if(!wrap) return;
+  if(!teachingId){ wrap.innerHTML = '<p style="color:var(--owner-text-faint)">Save this class first.</p>'; if(statsWrap) statsWrap.innerHTML = ''; if(badge) badge.hidden = true; return; }
+  const items = waitlistFor(teachingId);
+  const waiting = items.filter(w => w.status === 'waiting').length;
+  const offered = items.filter(w => w.status === 'offer-sent').length;
+  if(statsWrap) statsWrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Waiting</span><strong>' + waiting + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Offer Sent</span><strong>' + offered + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Registered From Waitlist</span><strong>' + items.filter(w => w.status === 'registered').length + '</strong></div>';
+  wrap.innerHTML = items.length === 0 ? '<p style="color:var(--owner-text-faint)">Nobody has joined the waitlist for this class yet.</p>' : items.map(teachingEditWaitlistRowHtml).join('');
+  if(badge){ badge.hidden = waiting === 0; badge.textContent = String(waiting); }
+}
+document.getElementById('teachingEditWaitlistList').addEventListener('click', event => {
+  const row = event.target.closest('[data-class-waitlist-id]');
+  if(!row) return;
+  const w = CLASS_WAITLIST.find(x => x.id === row.dataset.classWaitlistId);
+  if(!w) return;
+  const teachingId = document.getElementById('teachingEditId').value;
+  const t = TEACHINGS[teachingId];
+  if(event.target.closest('.class-waitlist-offer')){
+    w.status = 'offer-sent';
+    w.offerExpiresAt = new Date(Date.now() + 2 * 3600000).toISOString();
+    saveClassWaitlist();
+    if(w.uid) pushMemberNotification(w.uid, 'waitlist-offer', 'A Seat Is Available', (t ? t.title : 'A class') + ' — you have 2 hours to claim your spot.');
+    renderTeachingEditWaitlist(teachingId);
+  } else if(event.target.closest('.class-waitlist-remove')){
+    w.status = 'removed'; saveClassWaitlist(); renderTeachingEditWaitlist(teachingId);
+  }
 });
 
 function fillTeachingEditForm(t, zoom){
@@ -7768,6 +9034,12 @@ function fillTeachingEditForm(t, zoom){
   adminImagePreviewRefreshers.forEach(fn => fn());
   populateTeachingEditRegistrationTab(t);
   renderTeachingEditClassroomList(t ? t.id : null);
+  g('teachingEditPrepChecklist').value = t && t.prepChecklist ? t.prepChecklist.join('\n') : '';
+  document.getElementById('teachingEditPrepChecklistStatus').textContent = '';
+  renderTeachingEditQuestions(t ? t.id : null);
+  renderTeachingEditAnnouncements(t ? t.id : null);
+  renderTeachingEditWaitlist(t ? t.id : null);
+  classAnnEditingId = null;
   showTeachingEditTab('content');
 }
 
@@ -7775,6 +9047,10 @@ function showTeachingEditTab(name){
   document.querySelectorAll('#teachingEditTabs .admin-step').forEach(b => b.classList.toggle('active', b.dataset.editTab === name));
   document.querySelectorAll('.admin-edit-panel').forEach(p => { p.hidden = p.dataset.editPanel !== name; });
   if(name === 'preview') renderTeachingEditFullPreview();
+  const teachingId = document.getElementById('teachingEditId').value;
+  if(name === 'questions') renderTeachingEditQuestions(teachingId);
+  if(name === 'announcements') renderTeachingEditAnnouncements(teachingId);
+  if(name === 'waitlist') renderTeachingEditWaitlist(teachingId);
 }
 document.getElementById('teachingEditTabs').addEventListener('click', event => {
   const btn = event.target.closest('.admin-step');
