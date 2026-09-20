@@ -721,7 +721,7 @@ function dialogsHtml(){
       </div>
     </div>
 
-    <div class="portal-view" data-portal-view="member" hidden>
+    <div class="portal-view member-portal-v2" data-portal-view="member" hidden>
       <div class="member-preview-bar" id="memberPreviewBar" hidden>
         <div class="member-preview-bar-label">
           <strong>Member Experience Preview</strong>
@@ -735,51 +735,76 @@ function dialogsHtml(){
           <button type="button" class="admin-btn-ghost" id="exitMemberPreviewBtn">Exit Member View</button>
         </div>
       </div>
-      <div class="portal-head">
-        <div>
-          <div class="kicker on-light">My Assembly</div>
-          <h3>Welcome back<span id="memberWelcomeName"></span>.</h3>
-          <p>Your classes, sessions, and ministry resources in one place.</p>
+
+      <div class="member-topnav">
+        <div class="member-topnav-brand">
+          <img src="${BASE}assets/ua-logo-tight.png" alt="" />
+          <span>The Unveiled Assembly</span>
         </div>
-        <span class="portal-account" id="memberAccountLabel">Student Account</span>
+        <nav class="member-topnav-links" id="memberTabs" role="tablist" aria-label="Member Portal navigation">
+          <button type="button" class="member-nav-link active" data-member-tab="dashboard">Dashboard</button>
+          <button type="button" class="member-nav-link" data-member-tab="classes">My Classes</button>
+          <button type="button" class="member-nav-link" data-member-tab="sessions">My Sessions</button>
+          <button type="button" class="member-nav-link" data-member-tab="resources">My Notes / Resources</button>
+          <button type="button" class="member-nav-link" data-member-tab="notifications">Notifications<span class="owner-nav-count" id="memberNotifCount" hidden>0</span></button>
+          <button type="button" class="member-nav-link" data-member-tab="account">Profile</button>
+        </nav>
+        <div class="member-topnav-account">
+          <span class="member-topnav-badge" id="memberAccountLabel">Student Account</span>
+          <div class="member-topnav-avatar" id="memberTopnavAvatar">M</div>
+          <span class="member-topnav-name" id="memberWelcomeName"></span>
+        </div>
       </div>
+      <div class="member-mobile-nav">
+        <select id="memberMobileNavSelect" aria-label="Member Portal navigation">
+          <option value="dashboard">Dashboard</option>
+          <option value="classes">My Classes</option>
+          <option value="sessions">My Sessions</option>
+          <option value="resources">My Notes / Resources</option>
+          <option value="notifications">Notifications</option>
+          <option value="account">Profile</option>
+        </select>
+      </div>
+
       <div class="verify-banner" id="verifyBanner" hidden>
         <span>Your account isn't verified yet — some features are limited.</span>
         <button type="button" class="link-btn" id="verifyBannerBtn">Verify Now</button>
       </div>
-      <div class="admin-tabs member-tabs" id="memberTabs" role="tablist" style="margin-bottom:20px">
-        <button type="button" class="admin-tab active" data-member-tab="dashboard">Dashboard</button>
-        <button type="button" class="admin-tab" data-member-tab="classes">My Classes</button>
-        <button type="button" class="admin-tab" data-member-tab="sessions">My Sessions</button>
-        <button type="button" class="admin-tab" data-member-tab="questions">Questions</button>
-        <button type="button" class="admin-tab" data-member-tab="notifications">Notifications<span class="owner-nav-count" id="memberNotifCount" hidden>0</span></button>
-        <button type="button" class="admin-tab" data-member-tab="account">Profile</button>
-      </div>
 
       <div data-member-panel="dashboard">
-        <div class="portal-dashboard-grid">
-          <article class="portal-panel wine" id="memberWaitlistOfferCard" hidden></article>
-          <article class="portal-panel wine" id="memberNextClassCard"></article>
-          <article class="portal-panel wine" id="memberNextSessionCard"></article>
-          <article class="portal-panel">
-            <span class="portal-label">Recent Updates</span>
+        <div class="member-hero">
+          <div class="member-hero-copy">
+            <div class="eyebrow">Member Portal</div>
+            <h1 class="member-hero-title">Welcome Back,<br><span id="memberHeroName">Member</span></h1>
+            <div class="hero-identity member-hero-identity">Prayer <span>•</span> Teaching <span>•</span> Presence</div>
+            <p class="member-hero-verse">“Draw near to God, and He will draw near to you.”<cite>James 4:8</cite></p>
+          </div>
+          <div class="member-hero-tagline">Same People.<br>A Deeper You.</div>
+        </div>
+
+        <article class="portal-panel wine" id="memberWaitlistOfferCard" hidden style="margin-bottom:18px"></article>
+
+        <div class="member-dash-grid">
+          <article class="member-panel member-panel-feature" id="memberNextClassCard"></article>
+          <article class="member-panel member-ticket-panel" id="memberDigitalTicket"></article>
+          <article class="member-panel" id="memberNextSessionCard"></article>
+          <article class="member-panel member-panel-compact" id="memberProfileSummaryCard"></article>
+          <article class="member-panel" style="grid-column:span 2">
+            <div class="member-panel-head">
+              <span class="member-panel-label">My Booked Classes</span>
+            </div>
+            <div id="memberBookedClassesCompact"></div>
+          </article>
+          <article class="member-panel">
+            <span class="member-panel-label">Recent Updates</span>
             <div id="memberRecentUpdates"></div>
           </article>
-          <article class="portal-panel wine">
-            <span class="portal-label">My Sessions</span>
-            <div id="memberBookingsList"><p style="color:#d7d7d7">Loading your bookings…</p></div>
-            <div class="portal-inline-actions">
-              <button class="portal-primary" type="button" id="memberBookNew">Book A Session</button>
+          <article class="member-panel" style="grid-column:1/-1">
+            <div class="member-panel-head">
+              <span class="member-panel-label">Resources &amp; Notes</span>
+              <button type="button" class="text-link on-light" data-member-tab-link="resources">View All →</button>
             </div>
-          </article>
-          <article class="portal-panel">
-            <span class="portal-label">Quick Links</span>
-            <div class="member-quick-links">
-              <button type="button" class="text-link on-light" data-member-tab-link="classes">View Class Notes →</button>
-              <button type="button" class="text-link on-light" data-member-tab-link="classes">Past Recordings →</button>
-              <button type="button" class="text-link on-light" data-member-tab-link="account">Update Profile →</button>
-              <a class="text-link on-light" href="connect.html">Need Help? →</a>
-            </div>
+            <div id="memberResourcesSummary"></div>
           </article>
         </div>
       </div>
@@ -789,7 +814,6 @@ function dialogsHtml(){
           <button type="button" class="admin-tab active" data-member-classes-tab="upcoming">Upcoming</button>
           <button type="button" class="admin-tab" data-member-classes-tab="past">Past</button>
         </div>
-        <div id="memberLearningPaths"></div>
         <div id="memberClassesList"></div>
       </div>
 
@@ -800,16 +824,18 @@ function dialogsHtml(){
           <button type="button" class="admin-tab" data-member-sessions-tab="cancelled">Cancelled</button>
         </div>
         <div id="memberSessionsList"></div>
+        <div class="portal-inline-actions" style="margin-top:18px">
+          <button class="portal-primary" type="button" id="memberBookNew">Book A Session</button>
+        </div>
       </div>
 
-      <div data-member-panel="questions" hidden>
-        <p class="admin-hint" style="margin-bottom:14px">Questions you've submitted across every class. Ask a new one from inside that class's Classroom → Questions.</p>
-        <div id="memberQuestionsList"></div>
+      <div data-member-panel="resources" hidden>
+        <div id="memberResourcesList"></div>
       </div>
 
       <div data-member-panel="notifications" hidden>
-        <article class="portal-panel">
-          <span class="portal-label">Notifications</span>
+        <article class="member-panel">
+          <span class="member-panel-label">Notifications</span>
           <div id="memberNotificationsList"></div>
         </article>
       </div>
@@ -827,12 +853,13 @@ function dialogsHtml(){
       <div class="portal-status" id="portalMemberStatus" role="status" aria-live="polite"></div>
     </div>
 
-    <dialog class="booking-dialog" id="confirmationRecapDialog" aria-labelledby="confirmationRecapTitle" style="max-width:420px">
+    <dialog class="booking-dialog member-ticket-dialog" id="confirmationRecapDialog" aria-labelledby="confirmationRecapTitle" style="max-width:420px">
       <div class="booking-head">
-        <div><div class="kicker" style="margin-bottom:0">Confirmation</div><h3 id="confirmationRecapTitle">Confirmation</h3></div>
+        <div><div class="kicker" style="margin-bottom:0">Digital Ticket</div><h3 id="confirmationRecapTitle">Confirmation</h3></div>
         <button class="booking-close" id="closeConfirmationRecap" type="button" aria-label="Close confirmation">×</button>
       </div>
       <div class="booking-body">
+        <div class="member-ticket-qr" aria-hidden="true" style="margin-bottom:20px"><span>QR<br>Preview</span></div>
         <div class="ticket-card">
           <div class="ticket-row"><span>When</span><strong id="confirmationRecapWhen"></strong></div>
           <div class="ticket-row"><span>Status</span><strong id="confirmationRecapStatus"></strong></div>
@@ -842,6 +869,7 @@ function dialogsHtml(){
             <button type="button" class="ticket-copy-btn" id="confirmationRecapCopyBtn">Copy Confirmation ID</button>
           </div>
         </div>
+        <p class="member-ticket-preview-note" style="text-align:center;margin-top:14px">QR shown for Preview Mode only — the confirmation ID is the real lookup method.</p>
       </div>
     </dialog>
 
@@ -4346,7 +4374,6 @@ function refreshPortalTabs(){
 // that knows how to route a signed-in user, rather than duplicating it.
 function enterDashboard(){
   showPortalView(currentProfile.role === 'admin' ? 'owner' : 'member');
-  loadMemberBookings();
   if(currentProfile.role === 'admin'){
     loadOwnerData();
   } else {
@@ -4389,7 +4416,7 @@ portalTabs.forEach(tabButton => {
       document.getElementById('memberWelcomeName').textContent = currentProfile.name ? ', ' + currentProfile.name.split(' ')[0] : '';
     }
     showPortalView(tabButton.dataset.portalTarget);
-    if(tabButton.dataset.portalTarget === 'member'){ loadMemberBookings(); renderMemberDashboardPanels(); showMemberTab('dashboard'); }
+    if(tabButton.dataset.portalTarget === 'member'){ renderMemberDashboardPanels(); showMemberTab('dashboard'); }
     if(tabButton.dataset.portalTarget === 'owner') loadOwnerData();
   });
 });
@@ -5713,7 +5740,7 @@ bookingForm.addEventListener('submit', async event => {
     showBookingWizardStep('confirm');
     bookingForm.reset();
     loadTimeSlots();
-    if(currentUser) loadMemberBookings();
+    if(currentUser){ renderMemberSessionsList(); renderMemberDashboardPanels(); }
   } catch (err) {
     if(err.message === 'slot-taken'){
       bookingStatus.textContent = 'That time was just taken by someone else — pick another.';
@@ -6151,48 +6178,12 @@ if(schedTimezoneSelect){
 /* ---------------------------------------------------------------
    Member dashboard: real bookings
    --------------------------------------------------------------- */
-function memberBookingRowHtml(b, today){
-  const label = sessionTypeName(b.sessionType);
-  const statusLabel = b.status === 'confirmed' ? 'Confirmed' : b.status === 'declined' ? 'Declined' : b.status === 'cancelled' ? 'Cancelled' : 'Pending';
-  const canCancel = (b.status === 'pending' || b.status === 'confirmed') && b.date >= today;
-  const tzNote = b.clientTimeZone ? ' (' + tzAbbrFor(b.clientTimeZone) + ')' : '';
-  return '<div class="portal-row" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
-    '<div><strong>' + escapeHtml(label) + '</strong><small>' + escapeHtml(formatLocalDateTime(b.date, b.time, b.clientTimeZone) + tzNote) + '</small></div>' +
-    '<div style="display:flex;align-items:center;gap:10px">' +
-    '<span class="portal-access">' + statusLabel + '</span>' +
-    (canCancel ? '<button class="portal-secondary member-reschedule-booking" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Reschedule</button>' +
-      '<button class="portal-secondary member-cancel-booking" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Cancel</button>' : '') +
-    '</div></div>';
-}
-
-async function loadMemberBookings(){
-  const container = document.getElementById('memberBookingsList');
-  if(!currentUser){ container.innerHTML = ''; return; }
-  container.innerHTML = '<p style="color:#d7d7d7">Loading your bookings…</p>';
-  const today = new Date().toISOString().slice(0, 10);
-  if(DEMO_MODE){
-    const rows = DEMO_BOOKINGS.filter(b => b.uid === null || b.uid === currentUser.uid)
-      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-    container.innerHTML = rows.length === 0
-      ? '<p style="color:#d7d7d7">No bookings yet — request a session below.</p>'
-      : rows.map(b => memberBookingRowHtml(b, today)).join('');
-    return;
-  }
-  try {
-    const snap = await getDocs(query(collection(db, 'bookings'), where('uid', '==', currentUser.uid)));
-    if(snap.empty){
-      container.innerHTML = '<p style="color:#d7d7d7">No bookings yet — request a session below.</p>';
-      return;
-    }
-    const rows = [];
-    snap.forEach(docSnap => rows.push({ id: docSnap.id, ...docSnap.data() }));
-    rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-    container.innerHTML = rows.map(b => memberBookingRowHtml(b, today)).join('');
-  } catch (err) {
-    container.innerHTML = '<p style="color:#d7d7d7">Could not load your bookings.</p>';
-  }
-}
-
+// The dashboard used to carry a full "all bookings" list of its own
+// (with its own cancel/reschedule handler) alongside the focused
+// "Next One-on-One" card — now that My Sessions is the one place a
+// member manages every session (see memberSessionRowHtml's own
+// cancel/reschedule handler below), that duplicate list is gone and
+// this is the one shared helper both call.
 async function cancelOwnBooking(bookingId, slotId){
   if(DEMO_MODE){
     const b = DEMO_BOOKINGS.find(x => x.id === bookingId);
@@ -6205,31 +6196,6 @@ async function cancelOwnBooking(bookingId, slotId){
   }
 }
 
-document.getElementById('memberBookingsList').addEventListener('click', async event => {
-  const cancelBtn = event.target.closest('.member-cancel-booking');
-  const reschedBtn = event.target.closest('.member-reschedule-booking');
-  if(!cancelBtn && !reschedBtn) return;
-  const row = event.target.closest('[data-booking-id]');
-  const bookingId = row.dataset.bookingId;
-  const slotId = row.dataset.slotId;
-  const sessionType = row.dataset.sessionType;
-  event.target.disabled = true;
-  try {
-    await cancelOwnBooking(bookingId, slotId);
-    loadMemberBookings();
-    if(reschedBtn){
-      memberPortalDialog.close();
-      openBooking(sessionType);
-      bookingStatus.textContent = 'Your old time was cancelled — pick a new one below.';
-    } else {
-      portalMemberStatus.textContent = 'Booking cancelled.';
-    }
-  } catch (err) {
-    portalMemberStatus.textContent = 'Could not update that booking.';
-    event.target.disabled = false;
-  }
-});
-
 /* =================================================================
    Member Portal — My Classes / My Sessions / Notifications / Account
    tabs, the Classroom page, and the dashboard's Next Class card. All
@@ -6237,11 +6203,13 @@ document.getElementById('memberBookingsList').addEventListener('click', async ev
    MEMBER_NOTIFICATIONS directly — no separate "enrollment" table.
    ================================================================= */
 function showMemberTab(name){
-  document.querySelectorAll('#memberTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.memberTab === name));
+  document.querySelectorAll('#memberTabs .member-nav-link').forEach(b => b.classList.toggle('active', b.dataset.memberTab === name));
   document.querySelectorAll('[data-member-panel]').forEach(p => { p.hidden = p.dataset.memberPanel !== name; });
-  if(name === 'classes'){ renderMemberClassesList(); renderMemberLearningPaths(); }
+  const mobileSelect = document.getElementById('memberMobileNavSelect');
+  if(mobileSelect) mobileSelect.value = name;
+  if(name === 'classes') renderMemberClassesList();
   if(name === 'sessions') renderMemberSessionsList();
-  if(name === 'questions') renderMemberQuestions();
+  if(name === 'resources') renderMemberResourcesList();
   if(name === 'notifications') renderMemberNotifications();
   if(name === 'account'){
     document.getElementById('memberAccountPreviewLocked').hidden = !ownerPreviewActive;
@@ -6251,6 +6219,9 @@ function showMemberTab(name){
 document.getElementById('memberTabs').addEventListener('click', event => {
   const btn = event.target.closest('[data-member-tab]');
   if(btn) showMemberTab(btn.dataset.memberTab);
+});
+document.getElementById('memberMobileNavSelect').addEventListener('change', event => {
+  showMemberTab(event.target.value);
 });
 document.addEventListener('click', event => {
   const link = event.target.closest('[data-member-tab-link]');
@@ -6325,6 +6296,128 @@ function renderMemberNextSessionCard(){
 }
 document.addEventListener('click', event => {
   if(event.target.closest('#memberNextSessionBookBtn')) document.getElementById('memberBookNew')?.click();
+});
+// The Digital Ticket mirrors whichever registration Next Class shows —
+// same confirmation ID, same record, just a second, ticket-shaped view
+// of it (per the requirement it never generates a separate ID). The QR
+// block is a static, clearly-labeled Preview Mode placeholder — the
+// confirmation ID stays the real, working lookup method.
+function renderMemberDigitalTicket(){
+  const card = document.getElementById('memberDigitalTicket');
+  if(!card) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = myTeachingRegistrations().filter(r => r.status !== 'cancelled' && r.teachingDate >= today)
+    .sort((a, b) => (a.teachingDate + (TEACHINGS[a.teachingId] ? TEACHINGS[a.teachingId].startTime : '')).localeCompare(b.teachingDate + (TEACHINGS[b.teachingId] ? TEACHINGS[b.teachingId].startTime : '')))[0];
+  if(!upcoming){
+    card.innerHTML = '<span class="member-panel-label">Digital Ticket</span><p class="member-empty-note">Your confirmation ticket will appear here once you register for a class.</p>';
+    return;
+  }
+  const t = TEACHINGS[upcoming.teachingId] || {};
+  card.innerHTML =
+    '<span class="member-panel-label">Digital Ticket</span>' +
+    '<div class="member-ticket-qr" aria-hidden="true"><span>QR<br>Preview</span></div>' +
+    '<p class="member-ticket-class">' + escapeHtml(t.title || upcoming.teachingTitle) + '</p>' +
+    '<p class="member-ticket-date">' + escapeHtml(formatTeachingDate(upcoming.teachingDate)) + '</p>' +
+    '<div class="member-ticket-id-block"><span>Confirmation ID</span><strong>' + escapeHtml(upcoming.confirmationId || '—') + '</strong></div>' +
+    '<p class="member-ticket-preview-note">QR shown for Preview Mode only — the confirmation ID is the real lookup method.</p>' +
+    '<button class="portal-secondary" type="button" data-member-view-confirmation-class="' + escapeHtml(upcoming.id) + '">View Ticket</button>';
+}
+function renderMemberProfileSummary(){
+  const card = document.getElementById('memberProfileSummaryCard');
+  if(!card) return;
+  const name = effectiveMemberName() || 'Member';
+  card.innerHTML =
+    '<span class="member-panel-label">Member</span>' +
+    '<div class="member-profile-summary-row">' +
+    '<div class="member-avatar-circle">' + escapeHtml((name[0] || 'M').toUpperCase()) + '</div>' +
+    '<div><strong>' + escapeHtml(name) + '</strong><span>Member Account</span></div>' +
+    '</div>';
+}
+function memberBookedClassCompactRowHtml(r){
+  const t = TEACHINGS[r.teachingId] || {};
+  const art = teachingCardArt(t);
+  const formatLabel = t.format === 'zoom' ? 'Online (Zoom)' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
+  const statusClass = r.status === 'confirmed' ? 'confirmed' : r.status === 'cancelled' ? 'cancelled' : 'pending';
+  const statusLabel = r.status === 'confirmed' ? 'Confirmed' : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  return '<div class="member-compact-row">' +
+    '<div class="member-compact-thumb' + (art ? '' : ' member-compact-thumb-empty') + '"' + (art ? ' style="background-image:url(\'' + escapeHtml(art) + '\')"' : '') + '></div>' +
+    '<div class="member-compact-info">' +
+    '<strong>' + escapeHtml(t.title || r.teachingTitle) + '</strong>' +
+    '<span>' + escapeHtml(formatTeachingDate(r.teachingDate)) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</span>' +
+    '<span>' + escapeHtml(formatLabel) + '</span>' +
+    '</div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span>' +
+    '<div class="member-compact-actions">' +
+    (r.status !== 'cancelled' ? '<button class="text-link on-light" type="button" data-member-view-classroom="' + escapeHtml(r.teachingId) + '">Open Classroom →</button>' : '') +
+    '<button class="text-link on-light" type="button" data-member-view-confirmation-class="' + escapeHtml(r.id) + '">View Confirmation →</button>' +
+    '</div></div>';
+}
+// "Other" booked classes deliberately excludes whichever one Next
+// Class is already showing, per the requirement — no duplication.
+function renderMemberBookedClassesCompact(){
+  const wrap = document.getElementById('memberBookedClassesCompact');
+  if(!wrap) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = myTeachingRegistrations().filter(r => r.status !== 'cancelled' && r.teachingDate >= today)
+    .sort((a, b) => (a.teachingDate + (TEACHINGS[a.teachingId] ? TEACHINGS[a.teachingId].startTime : '')).localeCompare(b.teachingDate + (TEACHINGS[b.teachingId] ? TEACHINGS[b.teachingId].startTime : '')));
+  const rest = upcoming.slice(1);
+  wrap.innerHTML = rest.length === 0
+    ? '<p class="member-empty-note">No other booked classes right now.</p>'
+    : rest.map(memberBookedClassCompactRowHtml).join('');
+}
+function memberResourceItemRowHtml(item, t){
+  const released = isResourceReleased(item, t);
+  const releaseLabel = resourceReleaseLabel(item, t);
+  const kindLabel = item.kind === 'resource' ? 'Resource' : item.kind === 'study-guide' ? 'Study Guide' : item.kind === 'lesson-summary' ? 'Lesson Summary' : 'Class Notes';
+  return '<div class="member-resource-row">' +
+    '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + kindLabel + '</span></div>' +
+    (released
+      ? (item.kind === 'resource'
+        ? '<a class="text-link on-light" href="' + escapeHtml(item.url || '#') + '" target="_blank" rel="noopener noreferrer">Open →</a>'
+        : '<button class="text-link on-light" type="button" data-member-open-note-classroom="' + escapeHtml(t ? t.id : '') + '">Open In Classroom →</button>')
+      : '<span class="member-locked-tag">🔒 ' + escapeHtml(releaseLabel || 'Locked') + '</span>') +
+    '</div>';
+}
+function memberResourceGroups(){
+  const regs = myTeachingRegistrations().filter(r => r.status !== 'cancelled');
+  const seen = new Set();
+  const groups = [];
+  regs.forEach(r => {
+    if(seen.has(r.teachingId)) return;
+    seen.add(r.teachingId);
+    const t = TEACHINGS[r.teachingId];
+    const items = (CLASSROOM_CONTENT[r.teachingId] || []).filter(c => c.kind === 'resource' || c.kind === 'study-guide' || c.kind === 'note' || c.kind === 'lesson-summary');
+    if(items.length) groups.push({ t, items });
+  });
+  return groups;
+}
+function renderMemberResourcesSummary(){
+  const wrap = document.getElementById('memberResourcesSummary');
+  if(!wrap) return;
+  const flat = [];
+  memberResourceGroups().forEach(g => g.items.forEach(item => flat.push({ item, t: g.t })));
+  const top = flat.slice(0, 4);
+  wrap.innerHTML = top.length === 0
+    ? '<p class="member-empty-note">NO RESOURCES AVAILABLE YET<br><span>Resources connected to your classes will appear here.</span></p>'
+    : top.map(x => memberResourceItemRowHtml(x.item, x.t)).join('');
+}
+function renderMemberResourcesList(){
+  const wrap = document.getElementById('memberResourcesList');
+  if(!wrap) return;
+  const groups = memberResourceGroups();
+  wrap.innerHTML = groups.length === 0
+    ? '<p class="member-empty-note">NO RESOURCES AVAILABLE YET<br><span>Resources connected to your classes will appear here.</span></p>'
+    : groups.map(g => '<div class="member-resource-group">' +
+        '<div class="member-resource-group-title">' + escapeHtml(g.t ? g.t.title : 'Class') + '</div>' +
+        g.items.map(item => memberResourceItemRowHtml(item, g.t)).join('') +
+      '</div>').join('');
+}
+document.addEventListener('click', event => {
+  const btn = event.target.closest('[data-member-open-note-classroom]');
+  if(btn && btn.dataset.memberOpenNoteClassroom){
+    openClassroom(btn.dataset.memberOpenNoteClassroom);
+    setTimeout(() => { document.querySelector('[data-classroom-tab="notes"]')?.click(); }, 50);
+  }
 });
 function renderMemberRecentUpdates(){
   const wrap = document.getElementById('memberRecentUpdates');
@@ -6443,10 +6536,11 @@ document.getElementById('memberClassesSubTabs').addEventListener('click', event 
   document.querySelectorAll('#memberClassesSubTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
   renderMemberClassesList();
 });
-function memberSessionRowHtml(b){
+function memberSessionRowHtml(b, today){
   const statusClass = b.status === 'confirmed' ? 'confirmed' : b.status === 'cancelled' ? 'cancelled' : b.status === 'declined' ? 'cancelled' : 'pending';
   const statusLabel = b.status === 'confirmed' ? 'Confirmed' : b.status === 'cancelled' ? 'Cancelled' : b.status === 'declined' ? 'Declined' : 'Pending';
-  return '<article class="portal-panel member-record-card">' +
+  const canManage = !ownerPreviewActive && (b.status === 'pending' || b.status === 'confirmed') && b.date >= today;
+  return '<article class="portal-panel member-record-card" data-booking-id="' + escapeHtml(b.id) + '" data-slot-id="' + escapeHtml(b.slotId || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
     '<div class="member-record-head">' +
     '<div><strong>' + escapeHtml(sessionTypeName(b.sessionType)) + '</strong></div>' +
     '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span>' +
@@ -6456,6 +6550,8 @@ function memberSessionRowHtml(b){
     '<div class="portal-inline-actions" style="margin-top:10px">' +
     '<button class="portal-secondary" type="button" data-member-add-calendar-booking="' + escapeHtml(b.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">Add To Calendar</button>' +
     '<button class="portal-secondary" type="button" data-member-view-confirmation-session="' + escapeHtml(b.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">View Confirmation</button>' +
+    (canManage ? '<button class="portal-secondary member-reschedule-booking" type="button" style="min-height:32px;padding:0 12px;font-size:9px">Reschedule</button>' +
+      '<button class="portal-secondary member-cancel-booking" type="button" style="min-height:32px;padding:0 12px;font-size:9px">Cancel</button>' : '') +
     '</div></article>';
 }
 function renderMemberSessionsList(){
@@ -6471,8 +6567,38 @@ function renderMemberSessionsList(){
   }).sort((a, b) => mode === 'past' ? (b.date + b.time).localeCompare(a.date + a.time) : (a.date + a.time).localeCompare(b.date + b.time));
   wrap.innerHTML = rows.length === 0
     ? '<p style="color:var(--stone)">No ' + mode + ' sessions.</p>'
-    : rows.map(memberSessionRowHtml).join('');
+    : rows.map(b => memberSessionRowHtml(b, today)).join('');
 }
+// Reschedule = cancel the current time, then reopen the booking wizard
+// to pick a new one — same real mechanism the old dashboard-only
+// booking list used (cancelOwnBooking + openBooking), just wired to
+// this row template now that it's the one place a member manages
+// their sessions from. Disabled entirely during Owner Member View
+// preview (ownerPreviewActive gates canManage above).
+document.getElementById('memberSessionsList').addEventListener('click', async event => {
+  const cancelBtn = event.target.closest('.member-cancel-booking');
+  const reschedBtn = event.target.closest('.member-reschedule-booking');
+  if(!cancelBtn && !reschedBtn) return;
+  const row = event.target.closest('[data-booking-id]');
+  const bookingId = row.dataset.bookingId;
+  const slotId = row.dataset.slotId;
+  const sessionType = row.dataset.sessionType;
+  event.target.disabled = true;
+  try {
+    await cancelOwnBooking(bookingId, slotId);
+    renderMemberSessionsList();
+    if(reschedBtn){
+      memberPortalDialog.close();
+      openBooking(sessionType);
+      bookingStatus.textContent = 'Your old time was cancelled — pick a new one below.';
+    } else {
+      portalMemberStatus.textContent = 'Booking cancelled.';
+    }
+  } catch (err) {
+    portalMemberStatus.textContent = 'Could not update that booking.';
+    event.target.disabled = false;
+  }
+});
 document.getElementById('memberSessionsSubTabs').addEventListener('click', event => {
   const btn = event.target.closest('[data-member-sessions-tab]');
   if(!btn) return;
@@ -6503,32 +6629,29 @@ document.getElementById('memberNotificationsList').addEventListener('click', eve
   const n = MEMBER_NOTIFICATIONS.find(x => x.id === row.dataset.mnId);
   if(n && !n.read){ n.read = true; saveMemberNotifications(); renderMemberNotifications(); }
 });
-function memberQuestionRowHtml(q){
-  const t = TEACHINGS[q.teachingId];
-  const statusClass = q.status === 'answered' || q.status === 'addressed-in-class' ? 'confirmed' : q.status === 'archived' ? 'cancelled' : 'pending';
-  const statusLabel = q.status === 'answered' ? 'Answered' : q.status === 'addressed-in-class' ? 'Addressed In Class' : q.status === 'archived' ? 'Archived' : 'Pending';
-  return '<article class="portal-panel member-record-card">' +
-    '<div class="member-record-head"><div><strong>' + escapeHtml(t ? t.title : q.teachingId) + '</strong>' +
-    '<span class="member-record-sub">' + (q.timing === 'after' ? 'Asked After Class' : 'Asked Before Class') + ' · ' + escapeHtml(shortDate(q.submittedAt)) + '</span></div>' +
-    '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span></div>' +
-    '<p class="member-record-meta">' + escapeHtml(q.question) + '</p>' +
-    (q.answer ? '<div class="classroom-question-answer"><span class="portal-label">Answer</span><p>' + escapeHtml(q.answer) + '</p></div>' : '') +
-    '</article>';
-}
-function renderMemberQuestions(){
-  const wrap = document.getElementById('memberQuestionsList');
-  if(!wrap || !currentUser) return;
-  const uid = effectiveMemberUid(), email = effectiveMemberEmail();
-  const mine = CLASS_QUESTIONS.filter(q => q.status !== 'archived' &&
-    (q.uid === uid || (!q.uid && email && q.email && q.email.toLowerCase() === email.toLowerCase())))
-    .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
-  wrap.innerHTML = mine.length === 0 ? '<p style="color:var(--stone)">You haven\'t asked any questions yet.</p>' : mine.map(memberQuestionRowHtml).join('');
+// Questions live only inside the Classroom now (My Classes → open a
+// class → Questions) — the standalone cross-class "My Questions" view
+// this used to render was removed from the top-level nav per the
+// approved redesign; classroomQuestionRowHtml/renderClassroomQuestions
+// inside the Classroom dialog are unaffected and still fully work.
+function renderMemberHero(){
+  const name = effectiveMemberName();
+  const firstName = (name || '').split(' ')[0] || 'Member';
+  const heroName = document.getElementById('memberHeroName');
+  if(heroName) heroName.textContent = firstName;
+  const avatar = document.getElementById('memberTopnavAvatar');
+  if(avatar) avatar.textContent = (firstName[0] || 'M').toUpperCase();
 }
 function renderMemberDashboardPanels(){
   if(!currentUser) return;
+  renderMemberHero();
   renderMemberNextClassCard();
+  renderMemberDigitalTicket();
   renderMemberNextSessionCard();
+  renderMemberProfileSummary();
+  renderMemberBookedClassesCompact();
   renderMemberRecentUpdates();
+  renderMemberResourcesSummary();
   renderMemberWaitlistOfferCard();
   renderMemberNotifications();
   if(memberWaitlistCountdownTimer) clearInterval(memberWaitlistCountdownTimer);
