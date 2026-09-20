@@ -144,6 +144,7 @@ This is real, working role-based security logic — not a placeholder.
 - Working portal navigation for Dashboard, My Classes, My Sessions, My Notes / Resources, Notifications, and Profile.
 - Existing Firebase-backed registrations, bookings, classroom access, confirmation recap, account settings, and owner "Member View" remain connected to the redesigned interface.
 - Mobile and tablet layouts stack the dashboard cards without removing portal features.
+- Preview mode now includes a fully populated realistic member experience under the sample member "Maya Johnson": upcoming and past classes, a confirmed one-on-one, confirmation IDs, classroom materials, notes/resources, and unread/read notifications. These records are preview-only; production members continue to see only their own Firebase-backed data.
 
 ---
 

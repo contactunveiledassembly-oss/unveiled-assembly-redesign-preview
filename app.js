@@ -113,7 +113,7 @@ function loadDemoSession(){
 }
 function demoUser(overrides){
   return Object.assign({
-    uid: 'demo-' + Math.random().toString(36).slice(2, 10),
+    uid: 'demo-member',
     email: 'demo@example.com',
     displayName: '',
     phoneNumber: null,
@@ -129,7 +129,8 @@ function demoSetUser(user){
 
 async function createUserWithEmailAndPassword(authArg, email, password){
   if(DEMO_MODE){
-    const user = demoUser({ email, role: email.toLowerCase() === DEMO_ADMIN_EMAIL ? 'admin' : 'member' });
+    const isAdmin = email.toLowerCase() === DEMO_ADMIN_EMAIL;
+    const user = demoUser({ uid: isAdmin ? 'demo-admin' : 'demo-member', email, role: isAdmin ? 'admin' : 'member' });
     demoSetUser(user);
     return { user };
   }
@@ -137,7 +138,8 @@ async function createUserWithEmailAndPassword(authArg, email, password){
 }
 async function signInWithEmailAndPassword(authArg, email, password){
   if(DEMO_MODE){
-    const user = demoUser({ email, displayName: 'Demo Member', role: email.toLowerCase() === DEMO_ADMIN_EMAIL ? 'admin' : 'member' });
+    const isAdmin = email.toLowerCase() === DEMO_ADMIN_EMAIL;
+    const user = demoUser({ uid: isAdmin ? 'demo-admin' : 'demo-member', email, displayName: isAdmin ? 'Yaunah' : 'Maya Johnson', role: isAdmin ? 'admin' : 'member' });
     demoSetUser(user);
     return { user };
   }
@@ -227,6 +229,7 @@ let DEMO_BOOKINGS = [
   { id: 'demo-1', slotId: DEMO_TUE1 + '_14:00', date: DEMO_TUE1, time: '14:00', sessionType: '30-minute', name: 'Jordan Lee', email: 'jordan@example.com', uid: null, status: 'pending' },
   { id: 'demo-2', slotId: DEMO_THU1 + '_15:00', date: DEMO_THU1, time: '15:00', sessionType: '15-minute', name: 'Amara Okafor', email: 'amara@example.com', uid: null, status: 'confirmed' },
   { id: 'demo-3', slotId: DEMO_TUE2 + '_16:00', date: DEMO_TUE2, time: '16:00', sessionType: '30-minute', name: 'Sam Rivera', email: 'sam@example.com', uid: null, status: 'confirmed' },
+  { id: 'demo-member-session', slotId: DEMO_TUE1 + '_16:00', date: DEMO_TUE1, time: '16:00', sessionType: '30-minute', name: 'Maya Johnson', email: 'demo@example.com', uid: 'demo-member', status: 'confirmed', clientTimeZone: 'America/New_York', confirmationId: 'TUA-4J8M2Q' },
 ];
 const DEMO_MEMBERS = [
   { id: 'demo-m1', name: 'Jordan Lee', email: 'jordan@example.com', role: 'member' },
@@ -285,6 +288,12 @@ const DEMO_TEACHINGS = {
     fullDescription: 'Rooting your sense of self in who God says you are, not in performance or circumstance.',
     date: demoNextWeekdayStr(4, 4), startTime: '19:30', price: 25,
     status: 'published' },
+  'demo-foundations': { id: 'demo-foundations', ...demoTeachingDefaults(),
+    title: 'Foundations of Faith', subtitle: 'Rooted Before You Rise', category: 'Foundations',
+    shortDescription: 'A practical foundation for understanding grace, identity, prayer, and spiritual maturity.',
+    fullDescription: 'A practical foundation for understanding grace, identity, prayer, and spiritual maturity.',
+    date: new Date(Date.now() - 21 * 86400000).toISOString().slice(0, 10), startTime: '19:00', price: 20,
+    status: 'published' },
 };
 let DEMO_TEACHING_ZOOM = {
   'demo-discernment': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '000 000 0000', passcode: 'demo' }
@@ -328,6 +337,18 @@ let DEMO_TEACHING_REGISTRATIONS = [
     firstName: 'Marcus', lastName: 'J.', email: 'marcus@example.com', phone: '+15555550188', uid: null,
     status: 'confirmed', attendanceStatus: 'attended', amountPaid: 25, notes: 'Asked a great follow-up question about identity vs. performance.',
     registeredAt: demoPastTimestamp(10, 20, 5) },
+  { id: 'demo-member-reg-1', teachingId: 'demo-discernment', teachingTitle: 'Discernment', teachingDate: DEMO_TEACHINGS['demo-discernment'].date,
+    firstName: 'Maya', lastName: 'Johnson', email: 'demo@example.com', phone: '+14785550124', uid: 'demo-member',
+    status: 'confirmed', attendanceStatus: 'not-marked', amountPaid: 25, smsConsent: true, confirmationId: 'TUA-248731', notes: '', registeredAt: demoPastTimestamp(7, 18, 30) },
+  { id: 'demo-member-reg-2', teachingId: 'demo-prophetic', teachingTitle: 'The Prophetic', teachingDate: DEMO_TEACHINGS['demo-prophetic'].date,
+    firstName: 'Maya', lastName: 'Johnson', email: 'demo@example.com', phone: '+14785550124', uid: 'demo-member',
+    status: 'confirmed', attendanceStatus: 'not-marked', amountPaid: 25, confirmationId: 'TUA-58P2LH', notes: '', registeredAt: demoPastTimestamp(4, 16, 15) },
+  { id: 'demo-member-reg-3', teachingId: 'demo-warfare', teachingTitle: 'Spiritual Warfare', teachingDate: DEMO_TEACHINGS['demo-warfare'].date,
+    firstName: 'Maya', lastName: 'Johnson', email: 'demo@example.com', phone: '+14785550124', uid: 'demo-member',
+    status: 'confirmed', attendanceStatus: 'not-marked', amountPaid: 25, confirmationId: 'TUA-91WK6C', notes: '', registeredAt: demoPastTimestamp(3, 14, 42) },
+  { id: 'demo-member-reg-4', teachingId: 'demo-foundations', teachingTitle: 'Foundations of Faith', teachingDate: DEMO_TEACHINGS['demo-foundations'].date,
+    firstName: 'Maya', lastName: 'Johnson', email: 'demo@example.com', phone: '+14785550124', uid: 'demo-member',
+    status: 'confirmed', attendanceStatus: 'attended', amountPaid: 20, confirmationId: 'TUA-77F4ND', notes: '', registeredAt: demoPastTimestamp(35, 12, 10) },
 ];
 let DEMO_TEACHING_REG_SEQ = 7;
 let DEMO_TEACHING_SEQ = 1;
@@ -815,6 +836,7 @@ function dialogsHtml(){
       </div>
 
       <div data-member-panel="classes" hidden>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Learning</span><h2>My Classes</h2><p>Enter your classroom, view tickets, revisit past teachings, and continue where you left off.</p></div><div class="member-page-stat"><strong>04</strong><span>Total Classes</span></div></div>
         <div class="admin-tabs" id="memberClassesSubTabs" style="margin-bottom:16px">
           <button type="button" class="admin-tab active" data-member-classes-tab="upcoming">Upcoming</button>
           <button type="button" class="admin-tab" data-member-classes-tab="past">Past</button>
@@ -823,6 +845,7 @@ function dialogsHtml(){
       </div>
 
       <div data-member-panel="sessions" hidden>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Personal Ministry</span><h2>My Sessions</h2><p>Manage upcoming spiritual-direction appointments and review previous sessions.</p></div><div class="member-page-stat"><strong>01</strong><span>Upcoming</span></div></div>
         <div class="admin-tabs" id="memberSessionsSubTabs" style="margin-bottom:16px">
           <button type="button" class="admin-tab active" data-member-sessions-tab="upcoming">Upcoming</button>
           <button type="button" class="admin-tab" data-member-sessions-tab="past">Past</button>
@@ -835,10 +858,12 @@ function dialogsHtml(){
       </div>
 
       <div data-member-panel="resources" hidden>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Study Library</span><h2>Notes &amp; Resources</h2><p>Your class workbooks, lesson summaries, preparation notes, and Scripture guides in one place.</p></div><div class="member-page-stat"><strong>08</strong><span>Resources</span></div></div>
         <div id="memberResourcesList"></div>
       </div>
 
       <div data-member-panel="notifications" hidden>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Stay Connected</span><h2>Notifications</h2><p>Classroom updates, registration confirmations, released materials, and reminders.</p></div><div class="member-page-stat"><strong id="memberNotificationHeroCount">02</strong><span>Unread</span></div></div>
         <article class="member-panel">
           <span class="member-panel-label">Notifications</span>
           <div id="memberNotificationsList"></div>
@@ -846,6 +871,7 @@ function dialogsHtml(){
       </div>
 
       <div data-member-panel="account" hidden>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Account</span><h2>My Profile</h2><p>Keep your contact information, verification methods, and account preferences current.</p></div><div class="member-page-stat"><strong>100%</strong><span>Complete</span></div></div>
         <div id="memberAccountPreviewLocked" hidden class="portal-panel">
           <span class="portal-label">Profile</span>
           <p style="color:var(--ink-muted);line-height:1.6">Profile editing isn't available in Member View preview — this reaches real account settings (email/phone/password), which stay tied to your own Owner account no matter who you're previewing. Exit Member View to manage your own profile.</p>
@@ -4011,13 +4037,25 @@ function notificationLogWithLiveReminders(log, targetDate){
    not real push/email delivery.
    --------------------------------------------------------------- */
 const MEMBER_NOTIFICATIONS_KEY = 'ua_preview_member_notifications_v1';
-let MEMBER_NOTIFICATIONS = [];
+let MEMBER_NOTIFICATIONS = [
+  { id:'mn-demo-1', uid:'demo-member', type:'resource', title:'Class materials unlocked', detail:'Your Discernment study guide and preparation notes are ready.', createdAt:demoPastTimestamp(0,9,15), read:false },
+  { id:'mn-demo-2', uid:'demo-member', type:'reminder', title:'One-on-one reminder', detail:'Your Spiritual Direction session is coming up. Open My Sessions for details.', createdAt:demoPastTimestamp(1,12,0), read:false },
+  { id:'mn-demo-3', uid:'demo-member', type:'announcement', title:'New classroom announcement', detail:'A preparation checklist was added to The Prophetic classroom.', createdAt:demoPastTimestamp(3,17,30), read:true },
+  { id:'mn-demo-4', uid:'demo-member', type:'registration', title:'Registration confirmed', detail:'Your seat for Spiritual Warfare is confirmed.', createdAt:demoPastTimestamp(5,10,5), read:true }
+];
 (function loadMemberNotifications(){
   try {
     const raw = localStorage.getItem(MEMBER_NOTIFICATIONS_KEY);
     if(raw) MEMBER_NOTIFICATIONS = JSON.parse(raw);
   } catch (err) { /* keep empty */ }
 })();
+if(!MEMBER_NOTIFICATIONS.some(n => n.uid === 'demo-member')){
+  MEMBER_NOTIFICATIONS.push(
+    { id:'mn-demo-1', uid:'demo-member', type:'resource', title:'Class materials unlocked', detail:'Your Discernment study guide and preparation notes are ready.', createdAt:demoPastTimestamp(0,9,15), read:false },
+    { id:'mn-demo-2', uid:'demo-member', type:'reminder', title:'One-on-one reminder', detail:'Your Spiritual Direction session is coming up. Open My Sessions for details.', createdAt:demoPastTimestamp(1,12,0), read:false },
+    { id:'mn-demo-3', uid:'demo-member', type:'announcement', title:'New classroom announcement', detail:'A preparation checklist was added to The Prophetic classroom.', createdAt:demoPastTimestamp(3,17,30), read:true }
+  );
+}
 function saveMemberNotifications(){
   try { localStorage.setItem(MEMBER_NOTIFICATIONS_KEY, JSON.stringify(MEMBER_NOTIFICATIONS)); } catch (err) { /* ignore */ }
 }
@@ -4040,6 +4078,19 @@ const DEFAULT_CLASSROOM_CONTENT = {
     { id: 'cc-1', kind: 'note', title: 'Lesson Summary', body: 'Discernment is the Spirit-given ability to distinguish truth from error, and God’s voice from every other voice — instinct, emotion, and assumption included. This week we walked through a simple framework: Test, Weigh, Confirm.', publishedAt: '2026-09-10T14:00:00.000Z' },
     { id: 'cc-2', kind: 'resource', title: 'Study Guide (PDF)', url: 'https://example.com/discernment-study-guide.pdf', publishedAt: '2026-09-10T14:05:00.000Z' },
     { id: 'cc-3', kind: 'scripture', title: 'Scripture Focus', body: '“Test everything; hold fast what is good.”', ref: '1 Thessalonians 5:21', publishedAt: '2026-09-10T14:00:00.000Z' }
+  ],
+  'demo-prophetic': [
+    { id:'cc-p1', kind:'study-guide', title:'Prophetic Sensitivity Workbook', body:'Reflection prompts and practical exercises for testing what you sense with maturity and wisdom.', publishedAt:'2026-09-16T14:00:00.000Z' },
+    { id:'cc-p2', kind:'note', title:'Preparation Notes', body:'Read 1 Corinthians 14 and write down your questions before class.', publishedAt:'2026-09-16T14:05:00.000Z' },
+    { id:'cc-p3', kind:'resource', title:'Scripture Reference Sheet', url:'#', publishedAt:'2026-09-16T14:10:00.000Z' }
+  ],
+  'demo-warfare': [
+    { id:'cc-w1', kind:'lesson-summary', title:'Armor of God Overview', body:'A Christ-centered overview of Ephesians 6 and what each piece reveals about the character and finished work of Jesus.', publishedAt:'2026-09-17T13:00:00.000Z' },
+    { id:'cc-w2', kind:'resource', title:'Weekly Prayer Guide', url:'#', publishedAt:'2026-09-17T13:05:00.000Z' }
+  ],
+  'demo-foundations': [
+    { id:'cc-f1', kind:'lesson-summary', title:'Foundations Class Summary', body:'A recap of grace, identity, prayer, Scripture, and healthy spiritual formation.', publishedAt:'2026-08-30T11:00:00.000Z' },
+    { id:'cc-f2', kind:'resource', title:'Completed Course Workbook', url:'#', publishedAt:'2026-08-30T11:05:00.000Z' }
   ]
 };
 let CLASSROOM_CONTENT = JSON.parse(JSON.stringify(DEFAULT_CLASSROOM_CONTENT));
@@ -6517,10 +6568,12 @@ document.addEventListener('click', event => {
 });
 function memberClassRowHtml(r){
   const t = TEACHINGS[r.teachingId] || {};
+  const art = teachingCardArt(t);
   const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
   const statusClass = r.status === 'confirmed' ? 'confirmed' : r.status === 'cancelled' ? 'cancelled' : 'pending';
   const statusLabel = r.status === 'confirmed' ? 'Registered' : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
   return '<article class="portal-panel member-record-card">' +
+    '<div class="member-record-art"' + (art ? ' style="background-image:url(\'' + escapeHtml(art) + '\')"' : '') + '></div><div class="member-record-content">' +
     '<div class="member-record-head">' +
     '<div><strong>' + escapeHtml(t.title || r.teachingTitle) + '</strong>' + (t.subtitle ? '<span class="member-record-sub">' + escapeHtml(t.subtitle) + '</span>' : '') + '</div>' +
     '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span>' +
@@ -6530,7 +6583,7 @@ function memberClassRowHtml(r){
     '<div class="member-record-actions">' +
     (r.status !== 'cancelled' ? '<button class="portal-secondary" type="button" data-member-view-classroom="' + escapeHtml(r.teachingId) + '" style="min-height:32px;padding:0 12px;font-size:9px">Open Classroom</button>' : '') +
     '<button class="portal-secondary" type="button" data-member-view-confirmation-class="' + escapeHtml(r.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">View Confirmation</button>' +
-    '</div>' +
+    '</div></div>' +
     '</article>';
 }
 function renderMemberClassesList(){
@@ -6556,6 +6609,7 @@ function memberSessionRowHtml(b, today){
   const statusLabel = b.status === 'confirmed' ? 'Confirmed' : b.status === 'cancelled' ? 'Cancelled' : b.status === 'declined' ? 'Declined' : 'Pending';
   const canManage = !ownerPreviewActive && (b.status === 'pending' || b.status === 'confirmed') && b.date >= today;
   return '<article class="portal-panel member-record-card" data-booking-id="' + escapeHtml(b.id) + '" data-slot-id="' + escapeHtml(b.slotId || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
+    '<div class="member-record-art member-record-session-art"></div><div class="member-record-content">' +
     '<div class="member-record-head">' +
     '<div><strong>' + escapeHtml(sessionTypeName(b.sessionType)) + '</strong></div>' +
     '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span>' +
@@ -6567,7 +6621,7 @@ function memberSessionRowHtml(b, today){
     '<button class="portal-secondary" type="button" data-member-view-confirmation-session="' + escapeHtml(b.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">View Confirmation</button>' +
     (canManage ? '<button class="portal-secondary member-reschedule-booking" type="button" style="min-height:32px;padding:0 12px;font-size:9px">Reschedule</button>' +
       '<button class="portal-secondary member-cancel-booking" type="button" style="min-height:32px;padding:0 12px;font-size:9px">Cancel</button>' : '') +
-    '</div></article>';
+    '</div></div></article>';
 }
 function renderMemberSessionsList(){
   const wrap = document.getElementById('memberSessionsList');
@@ -6633,6 +6687,8 @@ function renderMemberNotifications(){
   const mine = MEMBER_NOTIFICATIONS.filter(n => n.uid === effectiveMemberUid());
   const unread = mine.filter(n => !n.read).length;
   if(countEl){ countEl.hidden = unread === 0; countEl.textContent = String(unread); }
+  const heroCount = document.getElementById('memberNotificationHeroCount');
+  if(heroCount) heroCount.textContent = String(unread).padStart(2, '0');
   if(!wrap) return;
   wrap.innerHTML = mine.length === 0
     ? '<p style="color:#656565">No notifications yet.</p>'

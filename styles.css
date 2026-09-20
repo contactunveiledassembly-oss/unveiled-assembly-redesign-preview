@@ -1062,6 +1062,38 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
   .member-feature-actions{grid-template-columns:1fr}.member-hero-title{font-size:42px}.member-topnav-account{display:none}
 }
 
+/* Realistic populated views for the member portal's inner pages. */
+.member-page-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin:-4px 0 26px;padding:18px 0 28px;border-bottom:1px solid var(--line-dark)}
+.member-page-kicker{display:block;font-size:9px;letter-spacing:.34em;text-transform:uppercase;color:var(--stone-dim);margin-bottom:10px}
+.member-page-intro h2{font-family:var(--sans);font-weight:300;font-size:clamp(34px,4.2vw,58px);line-height:1;margin:0 0 12px;color:var(--ivory)}
+.member-page-intro p{max-width:650px;margin:0;color:var(--stone);font-size:13px;line-height:1.6}
+.member-page-stat{min-width:120px;padding:18px 20px;border:1px solid var(--line-dark);border-radius:10px;text-align:center;background:var(--panel)}
+.member-page-stat strong{display:block;font:300 28px var(--sans);color:var(--ivory)}
+.member-page-stat span{display:block;margin-top:5px;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--stone-dim)}
+[data-portal-view="member"] [data-member-panel]:not([data-member-panel="dashboard"]){max-width:1440px;margin:0 auto}
+[data-portal-view="member"] .member-record-card{display:grid;grid-template-columns:180px 1fr;gap:0;padding:0;overflow:hidden;min-height:190px;border-radius:12px;margin-bottom:14px}
+.member-record-art{min-height:190px;background:linear-gradient(145deg,#353535,#111),url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=700&q=82') center/cover no-repeat;filter:grayscale(1)}
+.member-record-session-art{background-image:linear-gradient(rgba(0,0,0,.1),rgba(0,0,0,.35)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=700&q=82')}
+.member-record-content{padding:24px;display:flex;flex-direction:column;justify-content:center}
+[data-portal-view="member"] .member-record-head h4,[data-portal-view="member"] .member-record-head strong{font-size:20px;font-weight:400}
+[data-portal-view="member"] .member-record-sub{display:block;margin-top:4px;font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+[data-portal-view="member"] .member-record-meta{font-size:12px;margin:18px 0 8px}
+[data-portal-view="member"] .member-record-actions .portal-secondary{border-radius:30px;text-transform:none;letter-spacing:0;font-size:10px!important;padding:0 16px!important}
+[data-member-panel="resources"] #memberResourcesList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+[data-member-panel="resources"] .member-resource-group{margin:0;padding:22px;border:1px solid var(--line-dark);border-radius:12px;background:var(--panel)}
+[data-member-panel="resources"] .member-resource-group-title{font-size:12px;color:var(--ivory);padding-bottom:14px;margin-bottom:4px}
+[data-member-panel="notifications"]>.member-panel{max-width:none;border-radius:12px;padding:10px 24px}
+[data-member-panel="notifications"] .portal-row{min-height:76px;align-items:center;padding:16px 4px}
+[data-member-panel="notifications"] .portal-row strong{font-size:14px;font-weight:500;color:var(--ivory)}
+[data-member-panel="notifications"] .portal-row small{font-size:11px;margin-top:7px;line-height:1.45}
+[data-member-panel="account"] .portal-dashboard-grid{grid-template-columns:1fr;max-width:820px}
+[data-member-panel="account"] .portal-panel{border-radius:12px;padding:28px}
+@media(max-width:700px){
+  .member-page-intro{align-items:flex-start}.member-page-stat{display:none}
+  [data-portal-view="member"] .member-record-card{grid-template-columns:1fr}.member-record-art{min-height:145px}
+  [data-member-panel="resources"] #memberResourcesList{grid-template-columns:1fr}
+}
+
 /* ============================================================
    Stage 4 — internal-page components
    ============================================================ */
