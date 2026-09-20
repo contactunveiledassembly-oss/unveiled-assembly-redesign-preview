@@ -1693,7 +1693,7 @@ function dialogsHtml(){
               <div class="booking-times-column">
                 <div class="admin-microlabel checkout-section-label" id="bookingTimesHeading">Available Times</div>
                 <p class="admin-hint" style="margin-bottom:14px">All times are shown in Eastern Time.</p>
-                <div class="booking-time-grid" id="bookingTimeButtons"></div>
+                <div class="booking-time-grid" id="bookingTimeButtons" role="status" aria-live="polite" aria-atomic="true"></div>
                 <select id="bookingTime" name="time" required disabled style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true" tabindex="-1">
                   <option value="">Choose a date first</option>
                 </select>
