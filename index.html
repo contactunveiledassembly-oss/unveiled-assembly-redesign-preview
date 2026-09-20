@@ -3,38 +3,193 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="The Unveiled Assembly Shop — coming soon." />
-  <title>Shop | The Unveiled Assembly</title>
-  <link rel="icon" type="image/png" href="../assets/ua-logo-original.png" />
+  <meta name="description" content="The Unveiled Assembly of Christ Jesus — Christ revealed. A people unveiled." />
+  <title>The Unveiled Assembly | Christ Revealed. A People Unveiled.</title>
+  <link rel="icon" type="image/png" href="assets/ua-logo-original.png" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css?v=timeslot-fix-20260920" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital@1&family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=booking-layout-fix-20260920" />
 </head>
-<body data-page="shop" data-base="../">
+<body data-page="home">
   <div class="grain"></div>
 
-  <header class="hero" style="min-height:78vh">
-    <div class="eyebrow reveal">The Shop</div>
-    <h1 class="display reveal" style="font-size:clamp(48px,9vw,130px)">Coming<br>Soon.</h1>
-    <p class="hero-sub reveal" style="max-width:540px">A dedicated space for teaching resources, ministry materials, and merchandise is on the way. This page is a visual placeholder — nothing here is connected to payments, inventory, or checkout yet.</p>
-    <div class="reveal" style="margin-top:40px">
-      <a class="btn" href="../index.html">← Back Home</a>
+  <!-- Nav, footer, and dialogs are injected by the cache-busted app.js below. -->
+
+  <header class="hero hero-cinematic" id="home">
+    <div class="hero-content">
+      <h1 class="hero-main reveal">Christ Revealed</h1>
+      <h2 class="hero-secondary reveal">A People Unveiled</h2>
+      <div class="hero-identity reveal">Prayer <span>•</span> Teaching <span>•</span> Presence</div>
+      <p class="hero-support reveal">Gathering hearts in prayer, teaching, and the presence of Jesus.</p>
+      <div class="hero-cta-row reveal">
+        <a class="btn fill" href="gather.html">Enter The Assembly</a>
+        <a class="btn" href="teachings.html">Explore Teachings</a>
+      </div>
     </div>
   </header>
 
-  <section class="on-light-section" style="text-align:center">
-    <div class="reveal">
-      <div class="eyebrow on-light" style="margin-bottom:20px">In The Meantime</div>
-      <h2 class="serif-heading" style="font-size:clamp(30px,4vw,46px);margin-bottom:24px">Explore what's already here.</h2>
-      <div class="cta-row" style="justify-content:center">
-        <a class="btn on-light fill" href="../teachings.html">Teachings</a>
-        <a class="btn on-light" href="../give.html">Give</a>
+  <div class="split-frame">
+    <div class="frame-vlabel" aria-hidden="true"><span>Foundation &amp; Community</span></div>
+    <section class="split" style="padding:0">
+      <div class="split-col reveal">
+        <div class="split-index">01 / Foundation</div>
+        <h3 class="display">What We<br>Believe</h3>
+        <p>Jesus at the center. Grace as the promise. Identity as the fruit.</p>
+        <a class="text-link" href="beliefs.html">Explore Beliefs →</a>
+      </div>
+      <div class="split-col highlight reveal">
+        <div class="split-index">02 / Community</div>
+        <h3 class="display">Gather<br>With Us</h3>
+        <p>Prayer, teaching, worship, and honest spiritual formation.</p>
+        <a class="text-link" href="gather.html">See Gatherings →</a>
+      </div>
+    </section>
+  </div>
+
+  <section class="event-feature">
+    <div class="ghost-word event-ghost" aria-hidden="true">Gather</div>
+    <div class="event-feature-panel reveal">
+      <div class="event-feature-visual" aria-hidden="true"></div>
+      <div class="event-feature-card">
+        <div class="event-feature-label">Upcoming</div>
+        <h3 class="serif-heading">Night of Prayer</h3>
+        <div class="event-feature-meta">
+          <span>7:00 PM</span>
+          <span>The Unveiled Assembly</span>
+          <span>Macon, Georgia</span>
+        </div>
+        <p>A night to seek Him together through worship, prayer, and expectation.</p>
+        <a class="btn on-light fill" href="prayer.html#request">Save Your Spot</a>
       </div>
     </div>
   </section>
 
-  <script type="module" src="../app.js?v=timeslot-fix-20260920"></script>
+  <section style="position:relative">
+    <div class="ghost-word" style="top:6px;left:5vw">Formation</div>
+    <div class="section-inner">
+      <div class="eyebrow reveal" style="margin-bottom:20px">Formation</div>
+      <h2 class="display reveal" style="font-size:clamp(46px,7.2vw,120px);margin-bottom:56px">Revelation<br>That Becomes Life.</h2>
+      <div class="feature-card upcoming-class reveal">
+        <div class="feature-card-visual upcoming-class-visual"></div>
+        <div class="feature-card-body">
+          <div class="eyebrow">Upcoming Class</div>
+          <div class="upcoming-class-meta">Thursday · 7:30 PM EDT</div>
+          <h3 class="upcoming-class-name">Discernment</h3>
+          <p>Recognize the difference between instinct, emotion, assumption, and spiritual discernment through a clear and practical framework.</p>
+          <div class="upcoming-class-price">$25.00 <span>Live on Zoom</span></div>
+          <div class="upcoming-class-actions">
+            <a class="btn fill" href="teaching-detail.html?id=demo-discernment">Save My Spot</a>
+            <a class="text-link" href="teaching-detail.html?id=demo-discernment">View Details →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="collage">
+    <div class="section-head reveal" style="margin-bottom:54px">
+      <div class="eyebrow" style="margin-bottom:20px">Find Your Place</div>
+      <h2 class="display" style="font-size:clamp(36px,5.4vw,72px)">Four Ways<br>To Belong.</h2>
+    </div>
+    <div class="collage-grid reveal">
+      <a class="collage-tile dark" href="prayer.html">
+        <span class="collage-num">01</span>
+        <h3 class="serif-heading">A Place<br>To Pray</h3>
+        <p>Submit requests, join our prayer community, and believe with us for what God can do.</p>
+        <span class="collage-link">Request Prayer →</span>
+      </a>
+      <a class="collage-tile light" href="teachings.html">
+        <span class="collage-num">02</span>
+        <h3 class="serif-heading">Truth For<br>Daily Life</h3>
+        <p>Biblical, practical, and Spirit-led teaching for a deeper walk with Jesus.</p>
+        <span class="collage-link">Explore Teachings →</span>
+      </a>
+      <a class="collage-tile dark" href="one-on-one.html">
+        <span class="collage-num">03</span>
+        <h3 class="serif-heading">Personal<br>Discipleship</h3>
+        <p>Book a one-on-one to receive prayer, encouragement, and guidance.</p>
+        <span class="collage-link">Book A Session →</span>
+      </a>
+      <a class="collage-tile light" href="testimonials.html">
+        <span class="collage-num">04</span>
+        <h3 class="serif-heading">Real People.<br>A Faithful God.</h3>
+        <p>Stories of encounter, healing, and new life from our community.</p>
+        <span class="collage-link">Read Stories →</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="cta-band">
+    <div class="ghost-word">Prayer</div>
+    <div class="cta-band-inner reveal">
+      <div class="eyebrow" style="margin-bottom:22px">You Do Not Have To Carry It Alone</div>
+      <h2 class="display">Let Us Stand<br>With You.</h2>
+      <p>Submit a prayer request or reserve a focused one-on-one ministry session for clarity, prayer, and direction.</p>
+      <div class="cta-row">
+        <a class="btn fill" href="prayer.html#request">Request Prayer</a>
+        <button class="btn book-session" type="button" data-service="30-minute">Book A Session</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="preview-strip">
+    <div class="section-head reveal">
+      <div>
+        <div class="eyebrow on-light">Stories Of Unveiling</div>
+        <h2>Every story has a place.</h2>
+      </div>
+      <p>Written stories, class reviews, and video testimonies — shared with permission, after ministry review.</p>
+    </div>
+    <div class="preview-cards reveal">
+      <div class="preview-card">
+        <span>Video Testimony</span>
+        <h4>Before &amp; After the Class</h4>
+        <p>What understanding looked like before, and what changed afterward.</p>
+      </div>
+      <div class="preview-card">
+        <span>Written Review</span>
+        <h4>In Their Own Words</h4>
+        <p>A featured quote or a longer story, shared in the person's own voice.</p>
+      </div>
+      <div class="preview-card">
+        <span>Photo + Story</span>
+        <h4>A Life Unveiled</h4>
+        <p>A photograph paired with a personal testimony of transformation.</p>
+      </div>
+    </div>
+    <div style="margin-top:40px" class="reveal">
+      <a class="text-link" href="testimonials.html" style="border-color:var(--line-light)">See All Stories →</a>
+    </div>
+  </section>
+
+  <section class="discover">
+    <h2 class="reveal">There is more<br>to discover.</h2>
+    <div class="discover-list reveal">
+      <a class="discover-row" href="teachings.html">
+        <span class="discover-num">01</span>
+        <span class="discover-label serif-heading">Teachings</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </a>
+      <a class="discover-row" href="shop/">
+        <span class="discover-num">02</span>
+        <span class="discover-label serif-heading">The Shop</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </a>
+      <a class="discover-row" href="give.html">
+        <span class="discover-num">03</span>
+        <span class="discover-label serif-heading">Give</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </a>
+      <a class="discover-row" href="connect.html">
+        <span class="discover-num">04</span>
+        <span class="discover-label serif-heading">Connect</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <script type="module" src="app.js?v=booking-layout-fix-20260920"></script>
 </body>
 </html>

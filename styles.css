@@ -1763,6 +1763,11 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
    Checkout / class registration — clean, white/gray/black/charcoal.
    ================================================================= */
 .checkout-dialog{max-width:920px;padding:0;position:relative;border-radius:20px;overflow:hidden}
+/* The one-on-one date step contains a third visual column (summary,
+   calendar, times). Give that dialog enough room so the time column is
+   never clipped by .checkout-form-side's intentional overflow guard. */
+#bookingDialog.checkout-dialog{width:min(1180px,calc(100vw - 32px));max-width:1180px}
+#bookingDialog .checkout-grid{grid-template-columns:minmax(280px,.72fr) minmax(680px,1.55fr)}
 .checkout-close{position:absolute;top:16px;right:16px;z-index:2;background:rgba(20,20,22,.4);border-color:rgba(255,255,255,.4)}
 .checkout-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);min-height:520px}
 .checkout-summary{min-width:0;position:relative;background-color:#141416;background-size:cover;background-position:center;color:#f2f2f4;display:flex;align-items:flex-end}
@@ -1934,6 +1939,12 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
   .checkout-grid{grid-template-columns:1fr}
   .checkout-summary{min-height:220px}
   .checkout-form-side{max-height:none}
+}
+@media(max-width:1100px){
+  #bookingDialog.checkout-dialog{width:min(760px,calc(100vw - 24px));max-width:760px;max-height:94vh;overflow-y:auto}
+  #bookingDialog .checkout-grid{grid-template-columns:1fr}
+  #bookingDialog .checkout-summary{min-height:190px}
+  #bookingDialog .checkout-form-side{max-height:none}
 }
 @media(max-width:560px){
   .booking-date-time-layout{grid-template-columns:1fr;gap:0;padding:0}

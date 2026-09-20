@@ -5289,6 +5289,12 @@ document.getElementById('bookingCalendarGrid').addEventListener('click', async e
   document.getElementById('bookingStepDateNext').disabled = true;
   document.getElementById('bookingTimeButtons').innerHTML = '<p class="admin-hint">Loading available times…</p>';
   await loadTimeSlots();
+  // On stacked/narrow layouts the generated times sit below the calendar.
+  // Bring them into view so the visitor never mistakes a successful date
+  // selection for a dead Continue button.
+  if(window.matchMedia('(max-width: 760px)').matches){
+    document.getElementById('bookingTimesHeading')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 });
 
 if(bookingTimeZoneSelect){
