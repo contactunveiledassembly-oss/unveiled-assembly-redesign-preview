@@ -5243,7 +5243,7 @@ function calendarDatePotentiallyOpen(dateStr){
     const max = new Date(Date.now() + SCHEDULING_SETTINGS.maxAdvanceDays * 86400000).toISOString().slice(0, 10);
     if(dateStr > max) return false;
   }
-  if(DEMO_BLOCKED_DATES.includes(dateStr) || dateInAnyBlockoutRange(dateStr)) return false;
+  if((DEMO_MODE && DEMO_BLOCKED_DATES.includes(dateStr)) || dateInAnyBlockoutRange(dateStr)) return false;
   const selected = bookingForm.querySelector('input[name="sessionType"]:checked');
   const service = selected ? selected.value : null;
   const override = AVAILABILITY_OVERRIDES[dateStr];
@@ -5281,12 +5281,14 @@ document.getElementById('bookingCalendarNext').addEventListener('click', () => {
   bookingCalendarMonth = new Date(bookingCalendarMonth.getFullYear(), bookingCalendarMonth.getMonth() + 1, 1);
   renderBookingCalendar();
 });
-document.getElementById('bookingCalendarGrid').addEventListener('click', event => {
+document.getElementById('bookingCalendarGrid').addEventListener('click', async event => {
   const day = event.target.closest('[data-calendar-date]');
   if(!day || day.disabled) return;
   bookingDateInput.value = day.dataset.calendarDate;
   renderBookingCalendar();
-  bookingDateInput.dispatchEvent(new Event('input', { bubbles:true }));
+  document.getElementById('bookingStepDateNext').disabled = true;
+  document.getElementById('bookingTimeButtons').innerHTML = '<p class="admin-hint">Loading available times…</p>';
+  await loadTimeSlots();
 });
 
 if(bookingTimeZoneSelect){
@@ -5501,13 +5503,20 @@ async function populateTimeSelect(selectEl, dateStr, duration, sessionTypeId, tz
 }
 
 async function loadTimeSlots(){
-  await releaseCurrentHold();
-  const dateStr = bookingDateInput.value;
-  const checkedInput = bookingForm.querySelector('input[name="sessionType"]:checked');
-  if(!checkedInput) return;
-  const service = checkedInput.value;
-  await populateTimeSelect(bookingTimeSelect, dateStr, SESSION_TYPES[service] && SESSION_TYPES[service].durationMinutes, service, selectedBookingTimeZone());
-  renderBookingTimeButtons();
+  try {
+    await releaseCurrentHold();
+    const dateStr = bookingDateInput.value;
+    const checkedInput = bookingForm.querySelector('input[name="sessionType"]:checked');
+    if(!checkedInput) return;
+    const service = checkedInput.value;
+    await populateTimeSelect(bookingTimeSelect, dateStr, SESSION_TYPES[service] && SESSION_TYPES[service].durationMinutes, service, selectedBookingTimeZone());
+    renderBookingTimeButtons();
+  } catch (err) {
+    bookingTimeSelect.innerHTML = '<option value="">Could not load times</option>';
+    bookingTimeSelect.disabled = true;
+    renderBookingTimeButtons();
+    bookingStatus.textContent = 'Available times could not load. Please choose the date again.';
+  }
 }
 
 /* ---------------------------------------------------------------

@@ -150,6 +150,7 @@ This is real, working role-based security logic — not a placeholder.
 - The full-screen Owner header now has permanent `Member View` and `Sign Out` controls. `Member View` opens the exact member portal through the existing read-only owner preview system; `Sign Out` ends the owner session from any owner section without requiring navigation to Account Settings.
 - The public top-left UV logo has a built-in visible fallback, so the brand mark remains present even if its PNG fails to load.
 - One-on-one Date & Time now uses a Calendly-style month calendar with available days, previous/next month controls, selected-date state, and an adjacent scrollable time-slot column. The existing availability rules, blockouts, time-zone conversion, slot holds, and booking submission remain the source of truth.
+- Calendar date clicks now call the time-slot loader directly instead of depending on a synthetic native-input event. Loading and failure states are shown in the time column, and preview-only blocked dates no longer affect production availability.
 
 ---
 
