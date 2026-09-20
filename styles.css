@@ -976,6 +976,92 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
   .member-topnav-brand span{display:none}
 }
 
+/* Member portal fidelity pass: mirrors the approved full-screen mockup. */
+.portal-dialog:has(.portal-view[data-portal-view="member"]:not([hidden])){
+  width:100vw; max-width:none; height:100dvh; max-height:none; margin:0; border:0; border-radius:0;
+  background:#050505; overflow:auto;
+}
+.portal-dialog:has(.portal-view[data-portal-view="member"]:not([hidden]))>.portal-bar{display:none}
+.portal-dialog:has(.portal-view[data-portal-view="member"]:not([hidden])) .member-portal-v2{min-height:100dvh}
+.member-topnav{position:sticky;top:0;z-index:12;background:rgba(5,5,5,.96);backdrop-filter:blur(14px);padding:18px 3.35vw}
+.member-topnav-brand img{width:36px;filter:grayscale(1) brightness(2)}
+.member-topnav-brand span{font-size:12px;letter-spacing:.28em;color:var(--ivory)}
+.member-topnav-links{gap:14px}
+.member-nav-link{font-size:12px;text-transform:none;letter-spacing:0;padding:12px 5px}
+.member-topnav-badge{font-size:11px;letter-spacing:0;text-transform:none;padding:9px 18px;color:var(--silver)}
+.member-topnav-avatar{width:38px;height:38px;background:linear-gradient(145deg,#777,#151515);color:white;border:1px solid #444}
+
+.member-hero{
+  min-height:280px;align-items:center;margin:0;padding:38px 3.35vw 34px;border:0;
+  background:linear-gradient(90deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.78) 29%,rgba(0,0,0,.22) 68%,rgba(0,0,0,.82) 100%),
+  url('https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=2200&q=88') center 42%/cover no-repeat;
+}
+.member-hero-copy .eyebrow{font-size:11px;letter-spacing:.42em;margin-bottom:12px}
+.member-hero-title{font-family:var(--sans);font-size:clamp(44px,5.1vw,76px);font-weight:200;line-height:.95;letter-spacing:.01em;margin:0 0 12px}
+.member-hero-title span{font-weight:200}
+.member-hero-identity{font-size:10px;letter-spacing:.48em;margin:0 0 22px}
+.member-hero-verse{font-family:var(--serif);font-size:13px;max-width:440px}
+.member-hero-tagline{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.36em;color:var(--ivory);line-height:1.9;padding-right:1vw}
+
+.member-dash-grid{grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;padding:0 1.85vw 28px;margin-top:0}
+.member-panel{border-radius:12px;padding:22px;background:linear-gradient(145deg,#171717,#101010);border-color:#2e2e2e;box-shadow:0 12px 38px rgba(0,0,0,.22)}
+.member-panel-feature{grid-column:span 5;min-height:375px}
+.member-booked-panel{grid-column:span 4;min-height:375px}
+.member-ticket-panel{grid-column:span 3;min-height:375px}
+.member-session-panel{grid-column:span 4;min-height:240px}
+.member-updates-panel{grid-column:span 4;min-height:240px}
+.member-quote-panel{grid-column:span 4;min-height:240px}
+.member-resources-panel{grid-column:span 9}
+#memberProfileSummaryCard{grid-column:span 3}
+.member-panel-label{font-size:11px;letter-spacing:.30em;color:var(--ivory);margin:0;text-transform:uppercase}
+.member-panel-head{margin-bottom:18px}
+.member-view-all{border:0;background:transparent;color:var(--silver);font:inherit;font-size:10px;cursor:pointer}
+.member-booked-pill{border:1px solid #3b3b3b;border-radius:50px;padding:6px 12px;color:#ddd;font-size:9px;letter-spacing:.15em;text-transform:uppercase}
+
+.member-feature-body{display:grid;grid-template-columns:34% 1fr;gap:24px;align-items:stretch}
+.member-feature-art{min-height:205px;border-radius:8px;background:linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,.25)),url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=700&q=86') center/cover no-repeat;filter:grayscale(1);position:relative}
+.member-feature-art span{position:absolute;left:10px;bottom:10px;border:1px solid rgba(255,255,255,.65);border-radius:40px;padding:5px 10px;background:rgba(0,0,0,.38);font-size:8px;letter-spacing:.12em;text-transform:uppercase}
+.member-feature-copy h4,.member-session-body h4{font-family:var(--sans);font-size:20px;font-weight:400;margin:2px 0 4px;color:var(--ivory)}
+.member-feature-subtitle{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--stone);margin:0 0 18px}
+.member-feature-meta{list-style:none;padding:0;margin:0;display:grid;gap:8px;color:#d0d0d0;font-size:12px;line-height:1.25}
+.member-feature-actions{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:18px}
+.member-feature-actions button{border-radius:18px;min-height:48px;font-size:12px;text-transform:none;letter-spacing:0}
+
+.member-compact-row{gap:13px;padding:9px 0}
+.member-compact-thumb{width:72px;height:72px;border-radius:7px}
+.member-compact-info strong{font-size:14px}.member-compact-info span{font-size:10px}
+.member-compact-actions{display:none}.member-booked-panel .admin-status-pill{font-size:9px}
+
+.member-ticket-inner{border:1px solid #333;border-radius:8px;min-height:265px;padding:17px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.member-ticket-ministry{font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--stone)}
+.member-ticket-class{text-transform:uppercase;letter-spacing:.14em;font-family:var(--sans);font-size:15px;margin:12px 0 14px}
+.member-ticket-qr{width:105px;height:105px;margin:0 0 12px;display:block;background:#fff;border:7px solid #fff}
+.member-ticket-code{font:500 14px var(--font-mono);letter-spacing:.14em;color:var(--ivory)}
+.member-ticket-instruction{text-align:center;font-size:11px;line-height:1.5;color:var(--stone);margin:14px 0 0}
+
+.member-session-body{display:grid;grid-template-columns:135px 1fr;gap:18px;align-items:center}
+.member-session-art{height:145px;border-radius:8px;filter:grayscale(1);background:url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=500&q=85') center/cover no-repeat}
+.member-session-body p{font-size:11px;color:var(--stone);margin:0 0 16px}
+.member-updates-panel .portal-row{padding:12px 0}.member-updates-panel .portal-row strong{font-size:12px}.member-updates-panel .portal-row small{font-size:10px}
+.member-quote-panel{display:flex;flex-direction:column;justify-content:center;background:linear-gradient(rgba(0,0,0,.38),rgba(0,0,0,.74)),url('https://images.unsplash.com/photo-1464278533981-50106e6176b1?auto=format&fit=crop&w=900&q=82') center/cover no-repeat;filter:grayscale(1)}
+.member-quote-panel blockquote{max-width:360px;font-size:13px;font-weight:600;line-height:1.75;letter-spacing:.30em;text-transform:uppercase;margin:0 auto 34px}
+.member-quote-panel>span{text-align:center;font-size:8px;letter-spacing:.34em;text-transform:uppercase}
+
+@media(max-width:1100px){
+  .member-panel-feature,.member-booked-panel{grid-column:span 7}.member-ticket-panel{grid-column:span 5}
+  .member-session-panel,.member-updates-panel,.member-quote-panel{grid-column:span 4}
+  .member-resources-panel{grid-column:span 8}#memberProfileSummaryCard{grid-column:span 4}
+}
+@media(max-width:800px){
+  .member-dash-grid{grid-template-columns:1fr;padding:0 14px 24px}
+  .member-panel-feature,.member-booked-panel,.member-ticket-panel,.member-session-panel,.member-updates-panel,.member-quote-panel,.member-resources-panel,#memberProfileSummaryCard{grid-column:1}
+  .member-feature-body{grid-template-columns:130px 1fr}.member-topnav{padding:14px 18px}.member-hero{min-height:320px;padding:36px 20px}
+}
+@media(max-width:520px){
+  .member-feature-body,.member-session-body{grid-template-columns:1fr}.member-feature-art{min-height:180px}.member-session-art{height:130px}
+  .member-feature-actions{grid-template-columns:1fr}.member-hero-title{font-size:42px}.member-topnav-account{display:none}
+}
+
 /* ============================================================
    Stage 4 — internal-page components
    ============================================================ */

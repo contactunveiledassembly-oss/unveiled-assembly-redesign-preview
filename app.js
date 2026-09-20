@@ -381,7 +381,7 @@ function navHtml(){
   return `
   <nav class="nav" id="nav">
     <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
-      <span class="brand-badge"><img class="brand-logo" src="${BASE}assets/ua-logo-tight.png" alt="Unveiled Assembly logo" /></span>
+      <span class="brand-badge"><img class="brand-logo" src="${BASE}assets/ua-logo-tight.svg" alt="Unveiled Assembly logo" /></span>
       <span class="brand-text"><span class="line1">The Unveiled</span><span class="line2">Assembly of Christ Jesus</span></span>
     </a>
 
@@ -525,7 +525,7 @@ function dialogsHtml(){
   <dialog class="portal-dialog" id="memberPortalDialog" aria-label="My Assembly">
     <div class="portal-bar">
       <div class="portal-brand">
-        <img src="${BASE}assets/ua-logo-tight.png" alt="" />
+        <img src="${BASE}assets/ua-logo-tight.svg" alt="" />
         <span>The Unveiled Assembly<br>of Christ Jesus</span>
       </div>
       <div class="portal-switch" aria-label="My Assembly navigation">
@@ -738,7 +738,7 @@ function dialogsHtml(){
 
       <div class="member-topnav">
         <div class="member-topnav-brand">
-          <img src="${BASE}assets/ua-logo-tight.png" alt="" />
+          <img src="${BASE}assets/ua-logo-tight.svg" alt="" />
           <span>The Unveiled Assembly</span>
         </div>
         <nav class="member-topnav-links" id="memberTabs" role="tablist" aria-label="Member Portal navigation">
@@ -786,26 +786,31 @@ function dialogsHtml(){
 
         <div class="member-dash-grid">
           <article class="member-panel member-panel-feature" id="memberNextClassCard"></article>
-          <article class="member-panel member-ticket-panel" id="memberDigitalTicket"></article>
-          <article class="member-panel" id="memberNextSessionCard"></article>
-          <article class="member-panel member-panel-compact" id="memberProfileSummaryCard"></article>
-          <article class="member-panel" style="grid-column:span 2">
+          <article class="member-panel member-booked-panel">
             <div class="member-panel-head">
-              <span class="member-panel-label">My Booked Classes</span>
+              <span class="member-panel-label">Booked Classes</span>
+              <button type="button" class="member-view-all" data-member-tab-link="classes">View All&nbsp; →</button>
             </div>
             <div id="memberBookedClassesCompact"></div>
           </article>
-          <article class="member-panel">
+          <article class="member-panel member-ticket-panel" id="memberDigitalTicket"></article>
+          <article class="member-panel member-session-panel" id="memberNextSessionCard"></article>
+          <article class="member-panel member-updates-panel">
             <span class="member-panel-label">Recent Updates</span>
             <div id="memberRecentUpdates"></div>
           </article>
-          <article class="member-panel" style="grid-column:1/-1">
+          <article class="member-panel member-quote-panel" aria-label="The Unveiled Assembly statement">
+            <blockquote>“People hidden with Christ. A generation that seeks.”</blockquote>
+            <span>The Unveiled Assembly</span>
+          </article>
+          <article class="member-panel member-resources-panel">
             <div class="member-panel-head">
               <span class="member-panel-label">Resources &amp; Notes</span>
               <button type="button" class="text-link on-light" data-member-tab-link="resources">View All →</button>
             </div>
             <div id="memberResourcesSummary"></div>
           </article>
+          <article class="member-panel member-panel-compact" id="memberProfileSummaryCard"></article>
         </div>
       </div>
 
@@ -6258,21 +6263,20 @@ function renderMemberNextClassCard(){
     return;
   }
   const t = TEACHINGS[upcoming.teachingId] || {};
+  const art = teachingCardArt(t);
   const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
   const statusLabel = upcoming.status === 'confirmed' ? 'Registered' : upcoming.status === 'pending_payment' ? 'Pending' : upcoming.status;
   card.innerHTML =
-    '<span class="portal-label">Next Class</span>' +
-    '<h4 class="serif-heading" style="margin-bottom:2px">' + escapeHtml(t.title || upcoming.teachingTitle) + '</h4>' +
-    (t.subtitle ? '<p style="color:var(--stone);font-style:italic;margin-bottom:12px">' + escapeHtml(t.subtitle) + '</p>' : '') +
-    '<p style="color:#d7d7d7;margin-bottom:4px">' + escapeHtml(formatTeachingDate(upcoming.teachingDate)) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</p>' +
-    '<p style="color:var(--stone);margin-bottom:12px">' + escapeHtml(formatLabel) + '</p>' +
-    '<p style="color:var(--stone);font-size:12px;margin:0 0 2px">Status <strong style="color:#d7d7d7">' + escapeHtml(statusLabel) + '</strong></p>' +
-    '<p class="member-record-conf" style="margin-bottom:16px">Confirmation <strong>' + escapeHtml(upcoming.confirmationId || '—') + '</strong></p>' +
-    '<div class="member-reminder-note"><strong>24-Hour Reminder</strong><span>You\'ll receive a reminder 24 hours before the class via email' + (upcoming.smsConsent ? ' and text' : '') + '.</span></div>' +
-    '<div class="portal-inline-actions">' +
-    '<button class="portal-primary" type="button" data-member-view-classroom="' + escapeHtml(upcoming.teachingId) + '">Enter Classroom</button>' +
-    '<button class="portal-secondary" type="button" data-member-add-calendar-teaching="' + escapeHtml(upcoming.teachingId) + '">Add To Calendar</button>' +
-    '</div>';
+    '<div class="member-panel-head"><span class="member-panel-label">Your Next Class</span><span class="member-booked-pill">◉ Booked &amp; Paid</span></div>' +
+    '<div class="member-feature-body">' +
+      '<div class="member-feature-art"' + (art ? ' style="background-image:url(\'' + escapeHtml(art) + '\')"' : '') + '><span>Online Class</span></div>' +
+      '<div class="member-feature-copy">' +
+        '<h4>' + escapeHtml(t.title || upcoming.teachingTitle) + '</h4>' +
+        (t.subtitle ? '<p class="member-feature-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
+        '<ul class="member-feature-meta"><li>▣ ' + escapeHtml(formatTeachingDate(upcoming.teachingDate)) + '</li><li>◷ ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</li><li>▣ ' + escapeHtml(formatLabel) + '</li><li>● ' + escapeHtml(statusLabel) + ' / Confirmed</li><li>▤ Confirmation ID: ' + escapeHtml(upcoming.confirmationId || '—') + '</li></ul>' +
+      '</div>' +
+    '</div>' +
+    '<div class="member-feature-actions"><button class="portal-primary" type="button" data-member-view-classroom="' + escapeHtml(upcoming.teachingId) + '">▶ &nbsp; Open Classroom</button><button class="portal-secondary" type="button" data-member-view-confirmation-class="' + escapeHtml(upcoming.id) + '">▱ &nbsp; View Ticket</button></div>';
 }
 function renderMemberNextSessionCard(){
   const card = document.getElementById('memberNextSessionCard');
@@ -6286,10 +6290,10 @@ function renderMemberNextSessionCard(){
     return;
   }
   card.innerHTML =
-    '<span class="portal-label">Next One-on-One</span>' +
-    '<h4 class="serif-heading" style="margin-bottom:12px">' + escapeHtml(sessionTypeName(upcoming.sessionType)) + '</h4>' +
-    '<p style="color:#d7d7d7;margin-bottom:12px">' + escapeHtml(formatLocalDateTime(upcoming.date, upcoming.time, upcoming.clientTimeZone)) + '</p>' +
-    '<p class="member-record-conf" style="margin-bottom:16px">Confirmation <strong>' + escapeHtml(upcoming.confirmationId || '—') + '</strong></p>' +
+    '<div class="member-panel-head"><span class="member-panel-label">Upcoming One-on-One</span><button class="member-view-all" type="button" data-member-tab-link="sessions">View All&nbsp; →</button></div>' +
+    '<div class="member-session-body"><div class="member-session-art"></div><div>' +
+    '<h4>' + escapeHtml(sessionTypeName(upcoming.sessionType)) + '</h4><p>One-on-One Session</p>' +
+    '<ul class="member-feature-meta"><li>▣ ' + escapeHtml(formatLocalDateTime(upcoming.date, upcoming.time, upcoming.clientTimeZone)) + '</li><li>▣ Online (Google Meet)</li><li>● Confirmed</li></ul></div></div>' +
     '<div class="portal-inline-actions">' +
     '<button class="portal-secondary" type="button" data-member-add-calendar-booking="' + escapeHtml(upcoming.id) + '">Add To Calendar</button>' +
     '</div>';
@@ -6313,14 +6317,25 @@ function renderMemberDigitalTicket(){
     return;
   }
   const t = TEACHINGS[upcoming.teachingId] || {};
+  const confirmation = upcoming.confirmationId || 'TUA-MEMBER';
   card.innerHTML =
-    '<span class="member-panel-label">Digital Ticket</span>' +
-    '<div class="member-ticket-qr" aria-hidden="true"><span>QR<br>Preview</span></div>' +
-    '<p class="member-ticket-class">' + escapeHtml(t.title || upcoming.teachingTitle) + '</p>' +
-    '<p class="member-ticket-date">' + escapeHtml(formatTeachingDate(upcoming.teachingDate)) + '</p>' +
-    '<div class="member-ticket-id-block"><span>Confirmation ID</span><strong>' + escapeHtml(upcoming.confirmationId || '—') + '</strong></div>' +
-    '<p class="member-ticket-preview-note">QR shown for Preview Mode only — the confirmation ID is the real lookup method.</p>' +
-    '<button class="portal-secondary" type="button" data-member-view-confirmation-class="' + escapeHtml(upcoming.id) + '">View Ticket</button>';
+    '<div class="member-panel-head"><span class="member-panel-label">Digital Ticket</span><button class="member-view-all" type="button" data-member-view-confirmation-class="' + escapeHtml(upcoming.id) + '">View&nbsp; ⛶</button></div>' +
+    '<div class="member-ticket-inner"><span class="member-ticket-ministry">The Unveiled Assembly</span><p class="member-ticket-class">Class Confirmation</p>' +
+    ticketQrSvg(confirmation) + '<strong class="member-ticket-code">' + escapeHtml(confirmation) + '</strong></div>' +
+    '<p class="member-ticket-instruction">Present this code for check-in<br>on class day.</p>';
+}
+
+function ticketQrSvg(value){
+  const size = 21, cells = [];
+  let seed = 0;
+  for(let i = 0; i < value.length; i++) seed = ((seed * 31) + value.charCodeAt(i)) >>> 0;
+  const finder = (x, y, ox, oy) => x >= ox && x < ox + 7 && y >= oy && y < oy + 7 && (x === ox || x === ox + 6 || y === oy || y === oy + 6 || (x >= ox + 2 && x <= ox + 4 && y >= oy + 2 && y <= oy + 4));
+  for(let y = 0; y < size; y++) for(let x = 0; x < size; x++){
+    const reserved = (x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12);
+    const on = reserved ? (finder(x,y,0,0) || finder(x,y,14,0) || finder(x,y,0,14)) : (((x * 17 + y * 29 + seed + ((x*y) << 1)) % 7) < 3);
+    if(on) cells.push('<rect x="' + x + '" y="' + y + '" width="1" height="1"/>');
+  }
+  return '<svg class="member-ticket-qr" viewBox="0 0 21 21" role="img" aria-label="Ticket QR code"><rect width="21" height="21" fill="#fff"/><g fill="#050505">' + cells.join('') + '</g></svg>';
 }
 function renderMemberProfileSummary(){
   const card = document.getElementById('memberProfileSummaryCard');

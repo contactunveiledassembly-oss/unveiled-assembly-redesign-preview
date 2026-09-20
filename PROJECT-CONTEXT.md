@@ -2,7 +2,7 @@
 
 **Purpose of this file:** This is the permanent handoff document for this project. If an AI chat session is ever lost again, read this file first — it reflects what was actually VERIFIED in the code as of the date below, not what was merely discussed or planned.
 
-**Verified on:** 2026-09-14
+**Verified on:** 2026-09-20
 **Verified by:** direct inspection of the cloned repository files, GitHub's public API, and this Mac's local file system. Nothing in this document is guessed — anything not confirmed in code is explicitly marked PLANNED / NOT YET IMPLEMENTED.
 
 ---
@@ -17,8 +17,8 @@
 
 ### Related, older/other locations (preserved — see Section 12)
 - **Live public site** (older, simpler, single-page): repo `contactunveiledassembly-oss/unveiled-assembly-website`, live at `theunveiledassembly.com`. Local mirror at `~/Documents/Codex/2026-08-25/referenced-chatgpt-conversation-this-is-an-3/outputs/the-assembly-website/` (via the OneDrive-synced Documents folder). **This redesign-preview project is more advanced and is now the one to build on — the live site has not been touched.**
-- **The Gathering entrance prototype** — separate standalone file, not part of this repo yet (see Section 9).
-- **Crowd photo assets** — separate folder, not part of this repo yet (see Section 10).
+- **The Gathering entrance prototype** — integrated as a standalone local preview route (see Section 12).
+- **Crowd photo assets** — copied into this repo while the original package remains preserved (see Section 13).
 
 ---
 
@@ -27,6 +27,7 @@
 - Static multi-page site (plain HTML/CSS/JS — no build step, no framework, no `package.json`).
 - One shared logic file, **`app.js`** (6,430 lines), loaded via `<script type="module">` on every page. Individual page HTML files (index, story, gather, etc.) are mostly thin shells (30–140 lines each) — app.js does the heavy lifting: rendering auth panels, member portal, booking wizard, admin tools, etc., across all pages.
 - One shared stylesheet, **`styles.css`** (1,335 lines).
+- The standalone Gathering entrance uses a locally vendored Three.js runtime at `assets/vendor/three.min.js` for its walk scene; it does not alter the shared site runtime.
 - Backend: **Firebase** (Authentication + Firestore). No custom server — everything runs client-side against Firebase.
 
 ---
@@ -42,6 +43,7 @@
 | `teaching-detail.html` | Single teaching/class detail view |
 | `prayer.html` | Prayer request page |
 | `gather.html` | "Gather" page — community/gatherings info (see Section 9 — this is NOT the immersive crowd animation) |
+| `gathering-entrance.html` | Immersive Gathering entrance preview with the real crowd asset integration |
 | `one-on-one.html` | One-on-one booking page |
 | `give.html` | Giving/donations |
 | `connect.html` | Contact/connect |
@@ -50,6 +52,7 @@
 | `README.md` | One-line repo description only, no build/setup instructions |
 | `firestore.rules` | Firestore security rules |
 | `assets/ua-logo-tight.png` | Site logo (only asset currently in the repo) |
+| `assets/crowd/` | Eleven grayscale-composited WebP crowd figures used by the Gathering entrance |
 
 ---
 
@@ -135,8 +138,12 @@ This is real, working role-based security logic — not a placeholder.
 - "Sign In / Create Account" member portal button present on multiple pages (e.g. `gather.html`).
 - `gather.html` describes the intent: one private account for classes, bookings, Zoom links, materials, recordings, and learning progress.
 
-**PARTIALLY IMPLEMENTED / NEEDS VERIFICATION:**
-- The actual "My Assembly" dashboard contents (saved teachings, announcements, etc.) exist as UI/strings in `app.js` but were not individually traced in this pass — treat as unconfirmed until reviewed line-by-line.
+**ALREADY IMPLEMENTED:**
+- Full-screen cinematic member portal matching the approved monochrome dashboard mockup.
+- Responsive dashboard with worship hero, next class, booked classes, digital QR ticket, upcoming one-on-one, recent updates, ministry statement, resources/notes, and profile summary.
+- Working portal navigation for Dashboard, My Classes, My Sessions, My Notes / Resources, Notifications, and Profile.
+- Existing Firebase-backed registrations, bookings, classroom access, confirmation recap, account settings, and owner "Member View" remain connected to the redesigned interface.
+- Mobile and tablet layouts stack the dashboard cards without removing portal features.
 
 ---
 
@@ -151,24 +158,26 @@ This is real, working role-based security logic — not a placeholder.
 ## 12. The Gather Page vs. The Gathering Entrance Prototype (IMPORTANT — do not confuse these two)
 
 - **`gather.html` (in this repo):** a normal content page about community/gatherings. **Does not contain** the immersive crowd-walkthrough animation. Confirmed by direct inspection — no crowd/flyby/cross-light code present.
-- **"The Gathering" immersive entrance experience** (first-person walk through a crowd toward a lit cross) is a **separate, standalone prototype file, NOT part of this repo:**
-  - `/Users/yaunahlove/Library/CloudStorage/OneDrive-KingdomEmbassy-Ohio/Desktop/gathering-entrance.html` (also mirrored in this session's scratchpad as `gathering-entrance-standalone.html`)
-  - Contains working procedural far/mid/near crowd layers, flyby figures, camera weave, and the cross-light finale, with a `CROWD_ASSETS` object already coded to reference the real crowd photos below by filename.
-  - **Status: PLANNED / NOT YET INTEGRATED.** It has never been linked into either website. Integrating it into `gather.html` (or a new dedicated entrance route) is future work — explicitly not done in this session per instruction.
+- **`gathering-entrance.html` (in this repo):** the existing first-person entrance prototype is integrated as a standalone preview route. The active walk now uses a Three.js perspective camera and real world-space z-depth: 520 randomized crowd members, grounded architectural floor/ceiling/columns, fog, photographic billboards, procedural distant bodies, irregular camera corrections and head bob, and depth-tested occlusion.
+- The two closest flyby events use `flyby-01-close.webp` and `flyby-02-close.webp`; four additional close passes stay procedural. Twenty-one staggered photographic people begin near the camera so shoulders, backs, arms, and raised hands can crop the frame while the camera physically passes them. Mid-depth photographic reuse is mirrored and varied to avoid obvious side-by-side clones; silhouettes are suppressed into the far field. The latest realism pass sets the walk to 15 seconds, reduces camera travel/weave/bob and flyby speed, softens blur, removes in-sequence captions, and lifts neutral charcoal exposure so faces, hair, clothing, hands, and architecture remain readable. Passed bodies soften behind the camera rather than sliding laterally. The completion and Skip Intro paths continue to the real `gather.html` page.
+- **Status: ALREADY IMPLEMENTED for local preview.** Browser verification confirmed the WebGL canvas starts cleanly on desktop and mobile, real photographic people are visible in the cinematic scene, the neutral cross reveal and late warm bloom work, and the full sequence reaches `gather.html`. The original OneDrive prototype remains preserved separately.
 
 ---
 
 ## 13. Crowd Photo Assets (for The Gathering)
 
-Location (not yet copied into this project — left in place per instruction):
-`/Users/yaunahlove/Downloads/gathering-crowd-assets/assets/crowd/`
+Main project location:
+`/Users/yaunahlove/Projects/unveiled-assembly-redesign-preview/assets/crowd/`
+
+Original attached package preserved at:
+`/Users/yaunahlove/Downloads/gathering-crowd-assets-2/assets/crowd/`
 
 All 11 expected files confirmed present:
 - `near-01-locs-raised.webp`, `near-02-braids.webp`, `near-04-curls-bowed.webp`, `near-07-locs-arm.webp`, `near-10-straight-hair.webp`, `near-15-waves.webp`
 - `fore-05-hands-clasped.webp`, `fore-12-hands-raised.webp`, `fore-16-hand-raised.webp`
 - `flyby-01-close.webp`, `flyby-02-close.webp`
 
-These are exactly the filenames already referenced inside `gathering-entrance.html`'s `CROWD_ASSETS` config, so once copied into a project's `assets/crowd/` folder alongside that HTML file, they should "just work" with no code changes — but that step has intentionally not been done yet.
+These are the filenames referenced by the integrated `gathering-entrance.html` `CROWD_ASSETS` and `FLYBY_ASSETS` configurations. They are now copied into the main project and browser-verified as loaded; the original package remains preserved.
 
 ---
 
@@ -194,6 +203,7 @@ These are exactly the filenames already referenced inside `gathering-entrance.ht
 | Older live site source (mirror) | `~/Documents/Codex/2026-08-25/referenced-chatgpt-conversation-this-is-an-3/outputs/the-assembly-website/` (via OneDrive) |
 | The Gathering entrance prototype | `~/Desktop/gathering-entrance.html` (via OneDrive) |
 | Crowd photo assets (11 files) | `~/Downloads/gathering-crowd-assets/assets/crowd/` |
+| Gathering WebGL runtime | `assets/vendor/three.min.js` |
 | GitHub — this project | `github.com/contactunveiledassembly-oss/unveiled-assembly-redesign-preview` |
 | GitHub — older live site | `github.com/contactunveiledassembly-oss/unveiled-assembly-website` |
 | Live custom domain | `theunveiledassembly.com` (points to the OLDER repo, not this one, as of now) |
@@ -202,12 +212,10 @@ These are exactly the filenames already referenced inside `gathering-entrance.ht
 
 ## 17. Known TODO Items (explicitly not done yet — do not assume otherwise)
 
-1. Integrate `gathering-entrance.html` into this project and connect it to (or replace) `gather.html`.
-2. Copy the 11 crowd `.webp` assets into this project's `assets/crowd/` folder.
-3. Build out the Shop (currently a disabled "coming soon" placeholder).
-4. Add Stripe (or another processor) for paid bookings and/or shop checkout.
-5. Verify and document: phone-number verification, profile pictures, moderator/permission system, audit logs, reporting/analytics, pause-all-bookings, blocked date ranges, double-booking prevention, temporary slot holds — all listed here as unconfirmed/planned until someone traces them directly in `app.js`.
-6. Decide when/whether to promote this redesign to the live `theunveiledassembly.com` domain (currently still pointed at the older, simpler repo).
+1. Decide whether and when to promote the integrated Gathering entrance to the live `theunveiledassembly.com` domain (currently still pointed at the older, simpler repo).
+2. Build out the Shop (currently a disabled "coming soon" placeholder).
+3. Add Stripe (or another processor) for paid bookings and/or shop checkout.
+4. Verify and document: phone-number verification, profile pictures, moderator/permission system, audit logs, reporting/analytics, pause-all-bookings, blocked date ranges, double-booking prevention, temporary slot holds — all listed here as unconfirmed/planned until someone traces them directly in `app.js`.
 
 ---
 
