@@ -1094,10 +1094,11 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
   [data-member-panel="resources"] #memberResourcesList{grid-template-columns:1fr}
 }
 
-/* Original Assembly identity mark, cropped to its monogram wherever the UI needs a compact icon. */
-.brand-logo{width:54px;max-width:none;transform:scale(1.55) translateY(8%)}
-.portal-brand,.member-topnav-brand{overflow:hidden}
-.portal-brand img,.member-topnav-brand img{width:42px;height:42px;max-width:none;object-fit:cover;transform:scale(1.72) translateY(8%);clip-path:circle(31% at 50% 38%);filter:grayscale(1) brightness(1.25)}
+/* Exact owner-supplied UA identity mark. */
+.brand-badge{border:0;border-radius:0;background:#050505}
+.brand-logo{width:38px;height:44px;max-width:none;object-fit:contain;transform:none}
+.portal-brand,.member-topnav-brand{overflow:visible}
+.portal-brand img,.member-topnav-brand img{width:34px;height:40px;max-width:none;object-fit:contain;transform:none;clip-path:none;filter:none}
 
 /* Ministry / Owner account: monochrome photographic theme. */
 .portal-dialog:has(.portal-view[data-portal-view="owner"]:not([hidden])){
