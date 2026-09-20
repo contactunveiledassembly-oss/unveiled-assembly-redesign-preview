@@ -147,6 +147,7 @@ This is real, working role-based security logic — not a placeholder.
 - Preview mode now includes a fully populated realistic member experience under the sample member "Maya Johnson": upcoming and past classes, a confirmed one-on-one, confirmation IDs, classroom materials, notes/resources, and unread/read notifications. These records are preview-only; production members continue to see only their own Firebase-backed data.
 - The Ministry/Owner account now uses the same full-screen black-and-white visual system as the member portal, with a monochrome photographic header, dark workspace panels, and responsive owner navigation. All existing administration functions remain connected.
 - The temporary circled "R" mark has been removed. Public navigation, portal navigation, and favicons use the exact owner-supplied white `UA` monogram (`assets/ua-logo-original.png`).
+- The full-screen Owner header now has permanent `Member View` and `Sign Out` controls. `Member View` opens the exact member portal through the existing read-only owner preview system; `Sign Out` ends the owner session from any owner section without requiring navigation to Account Settings.
 
 ---
 

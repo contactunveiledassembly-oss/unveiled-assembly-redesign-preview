@@ -911,7 +911,11 @@ function dialogsHtml(){
           <h3>Ministry Portal</h3>
           <p id="ownerSectionDescription">Everything you need to run the website, in one place.</p>
         </div>
-        <span class="portal-account">Private Owner View</span>
+        <div class="owner-header-controls">
+          <span class="portal-account">Private Owner View</span>
+          <button type="button" class="owner-header-btn" id="ownerHeaderMemberViewBtn">Member View</button>
+          <button type="button" class="owner-header-btn owner-header-signout" id="ownerHeaderSignOutBtn">Sign Out</button>
+        </div>
       </div>
       <div class="owner-global-search">
         <input id="ownerGlobalSearch" type="text" placeholder="Search members, confirmation IDs, classes, prayer requests, testimonials…" autocomplete="off" />
@@ -4431,6 +4435,8 @@ function refreshPortalTabs(){
 function enterDashboard(){
   showPortalView(currentProfile.role === 'admin' ? 'owner' : 'member');
   if(currentProfile.role === 'admin'){
+    const headerSignOut = document.getElementById('ownerHeaderSignOutBtn');
+    if(headerSignOut){ headerSignOut.disabled = false; headerSignOut.textContent = 'Sign Out'; }
     loadOwnerData();
   } else {
     renderMemberDashboardPanels();
@@ -4450,6 +4456,22 @@ function openPortal(){
   }
   memberPortalDialog.showModal();
 }
+document.getElementById('ownerHeaderMemberViewBtn').addEventListener('click', () => enterOwnerMemberPreview(null));
+document.getElementById('ownerHeaderSignOutBtn').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  button.textContent = 'Signing Out…';
+  try {
+    ownerPreviewActive = false;
+    ownerPreviewMember = null;
+    await signOut(auth);
+    memberPortalDialog.close();
+  } catch (err) {
+    button.disabled = false;
+    button.textContent = 'Sign Out';
+    portalOwnerStatus.textContent = 'Could not sign out. Please try again.';
+  }
+});
 if(openMemberPortal) openMemberPortal.addEventListener('click', openPortal);
 navMemberPortal.addEventListener('click', openPortal);
 closeMemberPortal.addEventListener('click', () => memberPortalDialog.close());
