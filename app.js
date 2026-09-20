@@ -402,7 +402,7 @@ function navHtml(){
   return `
   <nav class="nav" id="nav">
     <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
-      <span class="brand-badge"><img class="brand-logo" src="${BASE}assets/ua-logo-original.png" alt="Unveiled Assembly logo" /></span>
+      <span class="brand-badge"><span class="brand-logo-fallback" aria-hidden="true">UV</span><img class="brand-logo" src="${BASE}assets/ua-logo-original.png" alt="Unveiled Assembly logo" /></span>
       <span class="brand-text"><span class="line1">The Unveiled</span><span class="line2">Assembly of Christ Jesus</span></span>
     </a>
 
@@ -1677,13 +1677,20 @@ function dialogsHtml(){
               <select id="bookingTimeZone" name="timeZone"></select>
             </div>
             <div class="booking-date-time-layout">
-              <div>
-                <div class="admin-microlabel checkout-section-label">Choose A Date</div>
-                <div class="booking-field full">
-                  <input id="bookingDate" name="date" type="date" required />
+              <div class="booking-calendar-column">
+                <div class="admin-microlabel checkout-section-label">Select A Date</div>
+                <div class="booking-calendar-card" aria-label="Appointment calendar">
+                  <div class="booking-calendar-head">
+                    <button type="button" id="bookingCalendarPrev" aria-label="Previous month">‹</button>
+                    <strong id="bookingCalendarTitle"></strong>
+                    <button type="button" id="bookingCalendarNext" aria-label="Next month">›</button>
+                  </div>
+                  <div class="booking-calendar-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+                  <div class="booking-calendar-grid" id="bookingCalendarGrid"></div>
+                  <input id="bookingDate" name="date" type="date" required tabindex="-1" aria-hidden="true" />
                 </div>
               </div>
-              <div>
+              <div class="booking-times-column">
                 <div class="admin-microlabel checkout-section-label" id="bookingTimesHeading">Available Times</div>
                 <p class="admin-hint" style="margin-bottom:14px">All times are shown in Eastern Time.</p>
                 <div class="booking-time-grid" id="bookingTimeButtons"></div>
@@ -2596,6 +2603,7 @@ function dialogsHtml(){
 // anything below tries to query them.
 document.body.insertAdjacentHTML('afterbegin', navHtml());
 document.body.insertAdjacentHTML('beforeend', dialogsHtml() + footerHtml());
+document.querySelectorAll('.brand-logo').forEach(img => img.addEventListener('error', () => { img.hidden = true; }));
 if(DEMO_MODE){
   document.body.classList.add('demo-mode');
   document.body.insertAdjacentHTML('afterbegin',
@@ -5221,6 +5229,66 @@ const bookingTimeZoneSelect = document.getElementById('bookingTimeZone');
 
 bookingDateInput.min = new Date().toISOString().slice(0, 10);
 
+/* Calendly-style month calendar. The native date input remains the
+   form's source of truth, but is visually replaced by this calendar so
+   all existing availability, hold, validation, and submission logic is
+   preserved. */
+let bookingCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+function calendarDateString(year, month, day){
+  return year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+}
+function calendarDatePotentiallyOpen(dateStr){
+  if(dateStr < bookingDateInput.min) return false;
+  if(SCHEDULING_SETTINGS.maxAdvanceDays){
+    const max = new Date(Date.now() + SCHEDULING_SETTINGS.maxAdvanceDays * 86400000).toISOString().slice(0, 10);
+    if(dateStr > max) return false;
+  }
+  if(DEMO_BLOCKED_DATES.includes(dateStr) || dateInAnyBlockoutRange(dateStr)) return false;
+  const selected = bookingForm.querySelector('input[name="sessionType"]:checked');
+  const service = selected ? selected.value : null;
+  const override = AVAILABILITY_OVERRIDES[dateStr];
+  if(override) return !override.closed && (override.windows || []).some(w => !w.sessionTypeIds || !w.sessionTypeIds.length || !service || w.sessionTypeIds.includes(service));
+  const dow = new Date(dateStr + 'T12:00:00').getDay();
+  return AVAILABILITY_RULES.some(r => r.dayOfWeek === dow && (!r.sessionTypeIds || !r.sessionTypeIds.length || !service || r.sessionTypeIds.includes(service)));
+}
+function renderBookingCalendar(){
+  const grid = document.getElementById('bookingCalendarGrid');
+  const title = document.getElementById('bookingCalendarTitle');
+  const prev = document.getElementById('bookingCalendarPrev');
+  if(!grid || !title) return;
+  const year = bookingCalendarMonth.getFullYear(), month = bookingCalendarMonth.getMonth();
+  title.textContent = new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric'}).format(bookingCalendarMonth);
+  const todayMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  if(prev) prev.disabled = bookingCalendarMonth <= todayMonth;
+  const firstDow = new Date(year, month, 1).getDay();
+  const days = new Date(year, month + 1, 0).getDate();
+  let html = '';
+  for(let i=0;i<firstDow;i++) html += '<span class="booking-calendar-blank"></span>';
+  for(let day=1;day<=days;day++){
+    const dateStr = calendarDateString(year, month, day);
+    const open = calendarDatePotentiallyOpen(dateStr);
+    const selected = bookingDateInput.value === dateStr;
+    const today = bookingDateInput.min === dateStr;
+    html += '<button type="button" class="booking-calendar-day' + (selected ? ' active' : '') + (today ? ' today' : '') + '" data-calendar-date="' + dateStr + '"' + (open ? '' : ' disabled') + ' aria-label="' + dateStr + '">' + day + '</button>';
+  }
+  grid.innerHTML = html;
+}
+document.getElementById('bookingCalendarPrev').addEventListener('click', () => {
+  bookingCalendarMonth = new Date(bookingCalendarMonth.getFullYear(), bookingCalendarMonth.getMonth() - 1, 1);
+  renderBookingCalendar();
+});
+document.getElementById('bookingCalendarNext').addEventListener('click', () => {
+  bookingCalendarMonth = new Date(bookingCalendarMonth.getFullYear(), bookingCalendarMonth.getMonth() + 1, 1);
+  renderBookingCalendar();
+});
+document.getElementById('bookingCalendarGrid').addEventListener('click', event => {
+  const day = event.target.closest('[data-calendar-date]');
+  if(!day || day.disabled) return;
+  bookingDateInput.value = day.dataset.calendarDate;
+  renderBookingCalendar();
+  bookingDateInput.dispatchEvent(new Event('input', { bubbles:true }));
+});
+
 if(bookingTimeZoneSelect){
   bookingTimeZoneSelect.innerHTML = COMMON_TIMEZONES.map(z =>
     '<option value="' + z.tz + '">' + escapeHtml(z.label) + ' (' + tzAbbrFor(z.tz) + ')</option>'
@@ -5516,6 +5584,7 @@ document.getElementById('bookingStepSessionNext').addEventListener('click', () =
   bookingStatus.textContent = '';
   updateBookingSummaryPanel();
   showBookingWizardStep('date');
+  renderBookingCalendar();
   loadTimeSlots();
 });
 document.getElementById('bookingStepDateNext').addEventListener('click', () => {
@@ -5600,6 +5669,8 @@ function openBooking(service){
     document.getElementById('bookingEmail').value = currentProfile.email || '';
   }
   setDetectedTimeZoneDefault();
+  bookingCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  renderBookingCalendar();
   updateBookingSummaryPanel();
   showBookingWizardStep('session');
   bookingDialog.showModal();

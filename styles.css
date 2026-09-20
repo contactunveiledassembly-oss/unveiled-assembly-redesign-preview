@@ -1095,8 +1095,9 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 }
 
 /* Exact owner-supplied UA identity mark. */
-.brand-badge{border:0;border-radius:0;background:#050505}
-.brand-logo{width:38px;height:44px;max-width:none;object-fit:contain;transform:none}
+.brand-badge{position:relative;border:0;border-radius:0;background:#050505}
+.brand-logo-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:700 16px var(--sans);letter-spacing:-.16em;z-index:0}
+.brand-logo{position:relative;z-index:1;width:38px;height:44px;max-width:none;object-fit:contain;transform:none}
 .portal-brand,.member-topnav-brand{overflow:visible}
 .portal-brand img,.member-topnav-brand img{width:34px;height:40px;max-width:none;object-fit:contain;transform:none;clip-path:none;filter:none}
 
@@ -1824,18 +1825,40 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .booking-step-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px}
 .booking-step-actions .admin-btn-solid,.booking-step-actions .admin-btn-ghost{padding:11px 22px;font-size:12px}
 .booking-step-actions .checkout-submit{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:999px}
-.booking-date-time-layout{display:grid;grid-template-columns:1fr;gap:22px;padding:18px;border:1px solid #e6e6e9;border-radius:16px;background:#fafafb;max-width:480px;margin:0 auto;overflow-x:hidden}
-.booking-date-time-layout .booking-field input{background:#fff}
+.booking-date-time-layout{display:grid;grid-template-columns:minmax(360px,1.25fr) minmax(230px,.75fr);gap:0;border:1px solid #e6e6e9;border-radius:16px;background:#fff;max-width:none;margin:0;overflow:hidden}
+.booking-calendar-column,.booking-times-column{padding:22px}
+.booking-times-column{border-left:1px solid #ececef;background:#fafafb}
+.booking-calendar-card{position:relative}
+.booking-calendar-card>input{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+.booking-calendar-head{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:8px;margin:0 0 18px}
+.booking-calendar-head strong{text-align:center;font:600 16px var(--sans);color:#18181b}
+.booking-calendar-head button{width:38px;height:38px;border:1px solid #e2e2e6;border-radius:50%;background:#fff;color:#18181b;font-size:24px;line-height:1;cursor:pointer}
+.booking-calendar-head button:hover:not(:disabled){border-color:#18181b;background:#f4f4f5}
+.booking-calendar-head button:disabled{opacity:.28;cursor:not-allowed}
+.booking-calendar-weekdays,.booking-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.booking-calendar-weekdays{margin-bottom:7px}
+.booking-calendar-weekdays span{text-align:center;font:600 9px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:#9898a0;padding:5px 0}
+.booking-calendar-day,.booking-calendar-blank{aspect-ratio:1;min-width:0}
+.booking-calendar-day{display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:50%;background:transparent;color:#242429;font:500 12px var(--sans);cursor:pointer;transition:.15s}
+.booking-calendar-day:hover:not(:disabled){border-color:#18181b;background:#f4f4f5}
+.booking-calendar-day.today{border-color:#b9b9c0}
+.booking-calendar-day.active{background:#18181b!important;border-color:#18181b!important;color:#fff!important}
+.booking-calendar-day:disabled{color:#cacacf;text-decoration:line-through;cursor:not-allowed;background:transparent}
 .booking-date-time-layout .booking-time-grid{margin-bottom:0}
 .booking-date-time-layout .booking-hold-notice{min-height:18px}
-.booking-time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.booking-time-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:14px;max-height:305px;overflow-y:auto;padding-right:4px}
 .booking-time-btn{
-  font-family:var(--sans);font-size:13px;font-weight:600;padding:13px 8px;border-radius:12px;
+  font-family:var(--sans);font-size:13px;font-weight:600;padding:13px 10px;border-radius:8px;
   border:1.5px solid var(--line-light);background:var(--white);color:var(--black);cursor:pointer;transition:.15s;
 }
 .booking-time-btn:hover{border-color:var(--black)}
 .booking-time-btn.active{background:var(--black);border-color:var(--black);color:var(--white)}
-@media(max-width:480px){.booking-time-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){
+  .booking-date-time-layout{grid-template-columns:1fr}
+  .booking-times-column{border-left:0;border-top:1px solid #ececef}
+  .booking-time-grid{grid-template-columns:repeat(2,1fr);max-height:none}
+}
+@media(max-width:480px){.booking-time-grid{grid-template-columns:1fr}.booking-calendar-column,.booking-times-column{padding:16px}}
 .booking-policy-checks{display:flex;flex-direction:column;gap:12px;margin:20px 0;padding:16px;border:1px solid #e6e6e9;border-radius:12px;background:#fafafb}
 .booking-policy-check{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;color:#3a3a3a;line-height:1.6;cursor:pointer}
 .booking-policy-check input{margin-top:3px;accent-color:#18181b;flex:0 0 auto}
@@ -1913,7 +1936,7 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
   .checkout-form-side{max-height:none}
 }
 @media(max-width:560px){
-  .booking-date-time-layout{grid-template-columns:1fr;gap:18px;padding:14px}
+  .booking-date-time-layout{grid-template-columns:1fr;gap:0;padding:0}
 }
 
 /* ---------- Admin: draft-preview flag on the public detail page ---------- */

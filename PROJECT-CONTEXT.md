@@ -148,6 +148,8 @@ This is real, working role-based security logic — not a placeholder.
 - The Ministry/Owner account now uses the same full-screen black-and-white visual system as the member portal, with a monochrome photographic header, dark workspace panels, and responsive owner navigation. All existing administration functions remain connected.
 - The temporary circled "R" mark has been removed. Public navigation, portal navigation, and favicons use the exact owner-supplied white `UA` monogram (`assets/ua-logo-original.png`).
 - The full-screen Owner header now has permanent `Member View` and `Sign Out` controls. `Member View` opens the exact member portal through the existing read-only owner preview system; `Sign Out` ends the owner session from any owner section without requiring navigation to Account Settings.
+- The public top-left UV logo has a built-in visible fallback, so the brand mark remains present even if its PNG fails to load.
+- One-on-one Date & Time now uses a Calendly-style month calendar with available days, previous/next month controls, selected-date state, and an adjacent scrollable time-slot column. The existing availability rules, blockouts, time-zone conversion, slot holds, and booking submission remain the source of truth.
 
 ---
 
