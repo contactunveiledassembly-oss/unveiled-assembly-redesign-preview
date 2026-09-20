@@ -1094,6 +1094,58 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
   [data-member-panel="resources"] #memberResourcesList{grid-template-columns:1fr}
 }
 
+/* Original Assembly identity mark, cropped to its monogram wherever the UI needs a compact icon. */
+.brand-logo{width:54px;max-width:none;transform:scale(1.55) translateY(8%)}
+.portal-brand,.member-topnav-brand{overflow:hidden}
+.portal-brand img,.member-topnav-brand img{width:42px;height:42px;max-width:none;object-fit:cover;transform:scale(1.72) translateY(8%);clip-path:circle(31% at 50% 38%);filter:grayscale(1) brightness(1.25)}
+
+/* Ministry / Owner account: monochrome photographic theme. */
+.portal-dialog:has(.portal-view[data-portal-view="owner"]:not([hidden])){
+  width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;border:0;border-radius:0;background:#050505;overflow:auto
+}
+.portal-dialog:has(.portal-view[data-portal-view="owner"]:not([hidden]))>.portal-bar{display:none}
+.portal-view[data-portal-view="owner"]{
+  --owner-bg:#080808;--owner-surface:#141414;--owner-surface-sunken:#0d0d0d;
+  --owner-border:#2a2a2a;--owner-border-strong:#3d3d3d;
+  --owner-text:#f5f3ee;--owner-text-muted:#aaa9a5;--owner-text-faint:#747474;
+  --owner-shadow:0 16px 50px rgba(0,0,0,.34);
+  min-height:100dvh;padding:0;background:#050505;color:var(--owner-text)
+}
+.portal-view[data-portal-view="owner"]>.portal-head{
+  min-height:255px;margin:0;padding:58px 42px 40px;align-items:flex-end;
+  background:linear-gradient(90deg,rgba(0,0,0,.96),rgba(0,0,0,.62) 48%,rgba(0,0,0,.78)),url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=2200&q=88') center 45%/cover no-repeat;
+  border-bottom:1px solid var(--owner-border)
+}
+.portal-view[data-portal-view="owner"]>.portal-head .kicker{color:#d0cfcb;letter-spacing:.34em}
+.portal-view[data-portal-view="owner"]>.portal-head h3{font-family:var(--sans);font-size:clamp(42px,5.5vw,74px);font-weight:250;text-transform:uppercase;letter-spacing:.02em;color:#fff;margin:10px 0 8px}
+.portal-view[data-portal-view="owner"]>.portal-head p{color:#c0bfbb;font-size:13px}
+.portal-view[data-portal-view="owner"]>.portal-head .portal-account{color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:100px;padding:9px 16px;background:rgba(0,0,0,.32)}
+.portal-view[data-portal-view="owner"]>.owner-global-search{margin:22px 34px 14px}
+.portal-view[data-portal-view="owner"]>.owner-global-search input{background:#111;color:#fff;border-color:#333;border-radius:10px}
+.portal-view[data-portal-view="owner"]>.owner-shell{margin:0 34px 34px;border:1px solid var(--owner-border);background:#080808}
+.portal-view[data-portal-view="owner"] .owner-sidebar{background:#090909;border-right:1px solid #282828}
+.portal-view[data-portal-view="owner"] .owner-content{background:linear-gradient(145deg,#0b0b0b,#060606);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .owner-content .portal-panel{background:linear-gradient(145deg,#171717,#101010);border-color:var(--owner-border);box-shadow:var(--owner-shadow);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .owner-content .portal-panel h3,
+.portal-view[data-portal-view="owner"] .admin-subsection-label,
+.portal-view[data-portal-view="owner"] .admin-stat-tile strong,
+.portal-view[data-portal-view="owner"] .admin-website-page-row{color:var(--owner-text)!important}
+.portal-view[data-portal-view="owner"] .admin-stat-tile,
+.portal-view[data-portal-view="owner"] .admin-btn-ghost,
+.portal-view[data-portal-view="owner"] .admin-tab,
+.portal-view[data-portal-view="owner"] .admin-website-pages,
+.portal-view[data-portal-view="owner"] .admin-website-page-row{background:#111;border-color:var(--owner-border);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .admin-tab.active,.portal-view[data-portal-view="owner"] .owner-sidebar-item.active{background:#f5f3ee;color:#080808}
+.portal-view[data-portal-view="owner"] .owner-content input,
+.portal-view[data-portal-view="owner"] .owner-content select,
+.portal-view[data-portal-view="owner"] .owner-content textarea{background:#0b0b0b!important;color:#f5f3ee!important;border-color:#343434!important}
+.portal-view[data-portal-view="owner"] .owner-content input::placeholder,.portal-view[data-portal-view="owner"] .owner-global-search input::placeholder{color:#6f6f6f}
+@media(max-width:820px){
+  .portal-view[data-portal-view="owner"]>.portal-head{min-height:230px;padding:44px 20px 30px;align-items:flex-start;flex-direction:column;justify-content:flex-end}
+  .portal-view[data-portal-view="owner"]>.owner-global-search{margin:16px 14px 10px}
+  .portal-view[data-portal-view="owner"]>.owner-shell{margin:0 14px 20px;border:0}
+}
+
 /* ============================================================
    Stage 4 — internal-page components
    ============================================================ */

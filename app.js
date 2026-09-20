@@ -402,7 +402,7 @@ function navHtml(){
   return `
   <nav class="nav" id="nav">
     <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
-      <span class="brand-badge"><img class="brand-logo" src="${BASE}assets/ua-logo-tight.svg" alt="Unveiled Assembly logo" /></span>
+      <span class="brand-badge"><img class="brand-logo" src="${BASE}assets/ua-logo-original.png" alt="Unveiled Assembly logo" /></span>
       <span class="brand-text"><span class="line1">The Unveiled</span><span class="line2">Assembly of Christ Jesus</span></span>
     </a>
 
@@ -546,7 +546,7 @@ function dialogsHtml(){
   <dialog class="portal-dialog" id="memberPortalDialog" aria-label="My Assembly">
     <div class="portal-bar">
       <div class="portal-brand">
-        <img src="${BASE}assets/ua-logo-tight.svg" alt="" />
+        <img src="${BASE}assets/ua-logo-original.png" alt="" />
         <span>The Unveiled Assembly<br>of Christ Jesus</span>
       </div>
       <div class="portal-switch" aria-label="My Assembly navigation">
@@ -759,7 +759,7 @@ function dialogsHtml(){
 
       <div class="member-topnav">
         <div class="member-topnav-brand">
-          <img src="${BASE}assets/ua-logo-tight.svg" alt="" />
+          <img src="${BASE}assets/ua-logo-original.png" alt="" />
           <span>The Unveiled Assembly</span>
         </div>
         <nav class="member-topnav-links" id="memberTabs" role="tablist" aria-label="Member Portal navigation">
