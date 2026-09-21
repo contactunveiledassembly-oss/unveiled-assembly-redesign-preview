@@ -128,6 +128,73 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    // Night of Prayer — a single admin-configured doc. Public read so the
+    // homepage can show real details once a date exists; empty/missing is
+    // the correct "not scheduled yet" state (the client shows a neutral
+    // message instead of ever inventing a date — see renderNightOfPrayer()
+    // in app.js). Only an admin can set it, same pattern as scheduling.
+    match /nightOfPrayer/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // Prayer requests are always private (never publicly readable, per
+    // ministry policy — not just "admin-only by default" like bookings).
+    // Anonymous submission is allowed (name/email/phone are optional on
+    // the form) — an authorized reader still sees the doc either way,
+    // there's just no name attached when the submitter left it blank.
+    // Folded into isAdmin() for now rather than a separate Prayer Team
+    // role — see PROJECT-CONTEXT.md's Roles and Permissions section for
+    // why that split isn't implemented yet.
+    match /prayerRequests/{requestId} {
+      allow create: if request.resource.data.keys().hasAll(['message','status','createdAt']) &&
+                      request.resource.data.message is string &&
+                      request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 4000 &&
+                      request.resource.data.status == 'new';
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    // Testimonies and class reviews share one visibility model: a new
+    // submission always starts 'pending' and is never publicly readable
+    // until an admin (Testimony Reviewer, once that role exists — see
+    // Roles section) sets it to 'published'. The submitter's chosen
+    // display preference (public-with-name / public-anonymous / private)
+    // lives in `visibility` and is honored by the client's rendering, not
+    // by these rules — this rule only controls WHETHER a document is
+    // readable at all, not how a name is shown once it is.
+    match /testimonials/{itemId} {
+      allow create: if request.resource.data.keys().hasAll(['message','visibility','status','createdAt']) &&
+                      request.resource.data.message is string &&
+                      request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 6000 &&
+                      request.resource.data.status == 'pending';
+      allow read: if isAdmin() || resource.data.status == 'published';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    match /classReviews/{itemId} {
+      allow create: if request.resource.data.keys().hasAll(['message','visibility','status','createdAt']) &&
+                      request.resource.data.message is string &&
+                      request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 6000 &&
+                      request.resource.data.status == 'pending';
+      allow read: if isAdmin() || resource.data.status == 'published';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    // Minimal audit trail for administrative actions (booking cancel/
+    // decline, prayer/testimony status changes, and similar — see
+    // logAdminAction() in app.js for exactly which actions are covered
+    // today; PROJECT-CONTEXT.md tracks what still needs to be added).
+    // Write-only from the client — nobody can edit or delete an entry
+    // once made, including the admin who made it, which is the whole
+    // point of an audit trail. Only an admin can read it back.
+    match /auditLog/{entryId} {
+      allow create: if isAdmin() &&
+                      request.resource.data.keys().hasAll(['action','actorUid','actorEmail','at']) &&
+                      request.resource.data.actorUid == request.auth.uid;
+      allow read: if isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
     // Public-facing Terms and Conditions / No Refund Policy text shown at
     // checkout. Public read so the booking form can display and require
     // agreement to them; only an admin can edit the wording.

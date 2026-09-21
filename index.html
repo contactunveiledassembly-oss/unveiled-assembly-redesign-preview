@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital@1&family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=phase1-booking-security-20260921" />
+  <link rel="stylesheet" href="styles.css?v=phase2-ministry-config-20260921" />
 </head>
 <body data-page="home">
   <div class="grain"></div>
@@ -52,16 +52,9 @@
     <div class="ghost-word event-ghost" aria-hidden="true">Gather</div>
     <div class="event-feature-panel reveal">
       <div class="event-feature-visual" aria-hidden="true"></div>
-      <div class="event-feature-card">
-        <div class="event-feature-label">Upcoming</div>
-        <h3 class="serif-heading">Night of Prayer</h3>
-        <div class="event-feature-meta">
-          <span>7:00 PM</span>
-          <span>The Unveiled Assembly</span>
-          <span>Macon, Georgia</span>
-        </div>
-        <p>A night to seek Him together through worship, prayer, and expectation.</p>
-        <a class="btn on-light fill" href="prayer.html#request">Save Your Spot</a>
+      <div class="event-feature-card" id="nightOfPrayerCard">
+        <!-- Filled in by renderNightOfPrayerCard() in app.js — never a
+             hardcoded date here, since none may actually be scheduled. -->
       </div>
     </div>
   </section>
@@ -190,6 +183,6 @@
     </div>
   </section>
 
-  <script type="module" src="app.js?v=phase1-booking-security-20260921"></script>
+  <script type="module" src="app.js?v=phase2-ministry-config-20260921"></script>
 </body>
 </html>
