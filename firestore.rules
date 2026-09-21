@@ -154,20 +154,28 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
-    // Testimonies and class reviews share one visibility model: a new
-    // submission always starts 'pending' and is never publicly readable
-    // until an admin (Testimony Reviewer, once that role exists — see
-    // Roles section) sets it to 'published'. The submitter's chosen
-    // display preference (public-with-name / public-anonymous / private)
-    // lives in `visibility` and is honored by the client's rendering, not
-    // by these rules — this rule only controls WHETHER a document is
-    // readable at all, not how a name is shown once it is.
+    // Testimonies and class reviews are private source records — full
+    // contact info, internal notes, the submitter's raw text — and are
+    // NEVER publicly readable, even once "published". A Firestore
+    // document is returned whole; there's no way to hand back only some
+    // fields of an otherwise-readable doc, so "public once published"
+    // on THIS collection would have exposed email/phone/consent
+    // metadata to anyone who queried it, regardless of what the client
+    // UI chose to display. What the public actually reads instead is
+    // the sanitized mirror in `publicTestimonials`/`publicClassReviews`
+    // below, which an admin action creates/updates/deletes alongside a
+    // status change here (see setTestimonyStatus()/setReviewStatus() in
+    // app.js) — never written directly by a visitor.
+    function validSubmissionVisibility(d) {
+      return d.visibility in ['public', 'anonymous', 'private'];
+    }
     match /testimonials/{itemId} {
       allow create: if request.resource.data.keys().hasAll(['message','visibility','status','createdAt']) &&
                       request.resource.data.message is string &&
                       request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 6000 &&
+                      validSubmissionVisibility(request.resource.data) &&
                       request.resource.data.status == 'pending';
-      allow read: if isAdmin() || resource.data.status == 'published';
+      allow read: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -175,10 +183,44 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasAll(['message','visibility','status','createdAt']) &&
                       request.resource.data.message is string &&
                       request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 6000 &&
+                      validSubmissionVisibility(request.resource.data) &&
                       request.resource.data.status == 'pending';
-      allow read: if isAdmin() || resource.data.status == 'published';
+      allow read: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
+    }
+    // Sanitized public mirrors — the ONLY thing a guest visitor's browser
+    // ever reads for testimonials/reviews. Deterministic id == the source
+    // submission's id (one mirror per source doc, easy to find/replace/
+    // delete when the source is unpublished). Field set is locked down
+    // with hasOnly + type/length checks specifically because this is the
+    // collection a stranger can read — no email, phone, notes, or raw
+    // private text ever belongs here, and these rules are what actually
+    // guarantee that, not just "the admin UI doesn't happen to copy it
+    // over". Admin-only write for now (this app has no Cloud Functions
+    // yet — see PROJECT-CONTEXT.md — so a plain authenticated-admin
+    // client write is the interim mechanism; a trusted server-side
+    // function performing this copy instead, once one exists, would be
+    // strictly more correct than trusting any signed-in admin's browser).
+    function validPublicMirror(d) {
+      return d.keys().hasOnly(['sourceId','displayName','publicText','title','className','rating','reviewDate','status','publishedAt']) &&
+        d.keys().hasAll(['sourceId','displayName','publicText','status']) &&
+        d.sourceId is string && d.sourceId.size() > 0 &&
+        d.displayName is string && d.displayName.size() > 0 && d.displayName.size() <= 120 &&
+        d.publicText is string && d.publicText.size() > 0 && d.publicText.size() <= 2000 &&
+        d.status == 'published' &&
+        (!('title' in d) || d.title is string) &&
+        (!('className' in d) || d.className is string) &&
+        (!('rating' in d) || d.rating == null || (d.rating is number && d.rating >= 1 && d.rating <= 5)) &&
+        (!('reviewDate' in d) || d.reviewDate is string);
+    }
+    match /publicTestimonials/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin() && validPublicMirror(request.resource.data);
+    }
+    match /publicClassReviews/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin() && validPublicMirror(request.resource.data);
     }
     // Minimal audit trail for administrative actions (booking cancel/
     // decline, prayer/testimony status changes, and similar — see
@@ -230,17 +272,28 @@ service cloud.firestore {
     }
 
     // Booking requests hold personal data (name/email), so only the admin
-    // or the booker themself (if signed in) can read them back. Anyone can
-    // create one (guest booking is allowed), but a non-admin's request must
-    // start 'pending' — only an admin can create one already 'confirmed'
-    // (used by the manual "Add An Appointment" panel in Ministry View).
+    // or the booker themself (if signed in) can read them back. Per the
+    // ministry's confirmed policy, an account is required to book — this
+    // used to also allow an anonymous "guest" create (no auth at all) as
+    // long as status stayed 'pending'; that's gone. A non-admin create
+    // now requires being signed in AND the submitted `uid` matching the
+    // caller's own — nobody can create a booking claiming to be someone
+    // else's account, and nobody can create one with uid left blank/null.
+    // Only an admin can create one already 'confirmed' or with any other
+    // uid (used by the manual "Add An Appointment" panel in Ministry
+    // View, which still works exactly as before — this rule only
+    // tightens the NON-admin path).
     // A signed-in booker may update their OWN booking, but only to flip its
     // status to 'cancelled' — no other field, and not to any other status.
     // Admin can update anything (confirm/decline/reschedule).
     match /bookings/{bookingId} {
       allow create: if request.resource.data.keys().hasAll(
-                        ['name','email','sessionType','date','time','status']) &&
-                      (request.resource.data.status == 'pending' || isAdmin());
+                        ['name','email','sessionType','date','time','status','uid']) &&
+                      (
+                        (isSignedIn() && request.resource.data.uid == request.auth.uid &&
+                         request.resource.data.status == 'pending')
+                        || isAdmin()
+                      );
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin() ||
         (isSignedIn() && resource.data.uid == request.auth.uid &&

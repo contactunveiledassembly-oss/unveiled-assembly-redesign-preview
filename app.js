@@ -1904,10 +1904,10 @@ function dialogsHtml(){
             <textarea id="storyMessage" name="message" placeholder="Share the complete story in your own words" required></textarea>
           </div>
           <div class="form-field full form-section-label" style="margin-top:8px">Media (Optional)</div>
-          <div class="form-field">
+          <div class="form-field" id="storyMediaField">
             <label for="storyMedia">Add a photo or video</label>
             <input id="storyMedia" name="media" type="file" accept="image/*,video/*" />
-            <small class="admin-hint">Video preview only — shown in this browser, not uploaded or hosted yet.</small>
+            <small class="admin-hint" id="storyMediaHint">Video preview only — shown in this browser, not uploaded or hosted yet.</small>
           </div>
           <div class="form-field">
             <label for="storyVideoLink">Or include a video link</label>
@@ -3233,8 +3233,8 @@ const DEFAULT_CLASS_REVIEWS = [
 ];
 
 // Sample data (clearly labeled "Preview build" in the footer, and never
-// this file's only copy — see persistMinistryData()) ONLY ever seeds
-// these in DEMO_MODE. Production starts empty and stays empty until
+// this file's only copy — see submitMinistryRecord()/saveMinistryRecordEdit())
+// ONLY ever seeds these in DEMO_MODE. Production starts empty and stays empty until
 // loadMinistryInboxData()/loadPublishedMinistryContent() below actually
 // fetch the real thing — a visitor must never see DEFAULT_TESTIMONIALS'
 // sample "Sarah..." story rendered as if it were real, even for the one
@@ -3255,7 +3255,17 @@ function loadStoredJson(key, fallback){
   }
 }
 
-function persistMinistryData(){
+// Preview/demo cache only — never the source of truth in production (see
+// submitMinistryRecord()/saveMinistryRecordEdit() below, which are the
+// only things that actually reach Firestore). Renamed from the old
+// persistMinistryData() to make that split explicit: this used to be
+// called after EVERY mutation, in every environment, with no await and
+// no way to know if a real write actually happened underneath it — a
+// visitor could be told their prayer request was received when Firestore
+// had in fact rejected it (e.g. offline, a rules mismatch). It's kept for
+// the local in-memory cache staying warm across ministry-inbox actions,
+// but never stands in for confirmation that Firestore accepted anything.
+function persistMinistryDataLocal(){
   try {
     localStorage.setItem(MINISTRY_STORAGE_KEYS.prayerRequests, JSON.stringify(PRAYER_REQUESTS));
     localStorage.setItem(MINISTRY_STORAGE_KEYS.testimonials, JSON.stringify(TESTIMONIALS));
@@ -3264,43 +3274,88 @@ function persistMinistryData(){
   } catch (err) {
     console.warn('Preview ministry data could not be saved in localStorage.', err);
   }
-  // Preview/demo keeps the localStorage-only behavior above unchanged —
-  // this is the ONLY place production actually persists a prayer request,
-  // testimony, or class review anywhere durable. Before this, these three
-  // arrays were localStorage-only unconditionally (no DEMO_MODE split at
-  // all, unlike every other feature in this file) — meaning a real
-  // visitor's prayer request or testimony never reached the ministry, it
-  // just sat in that one visitor's own browser. See PROJECT-CONTEXT.md.
-  if(!DEMO_MODE) syncMinistryDataToFirestore();
 }
 
-// Every ministry-inbox mutation (status change, internal note, publish
-// text edit, video-preview flag) funnels through persistMinistryData()
-// above without telling it exactly what changed, so this just re-syncs
-// the full current in-memory state of each collection to Firestore,
-// keyed by each item's own client-generated id (setDoc, not addDoc, so
-// the id used for local lookups/deletes stays the same one Firestore
-// uses). Admin-only, low-frequency actions — re-writing the handful of
-// unchanged items alongside the one real change costs nothing meaningful
-// at this scale. Deletions are handled separately at their own call
-// sites (see the [data-prayer-delete] etc. handlers) since a removed
-// item can't be inferred from "what's currently in the array."
-let ministryFirestoreSyncInFlight = null;
-async function syncMinistryDataToFirestore(){
-  if(ministryFirestoreSyncInFlight) return ministryFirestoreSyncInFlight;
-  ministryFirestoreSyncInFlight = (async () => {
-    try {
-      const writes = [
-        ...PRAYER_REQUESTS.map(item => setDoc(doc(db, 'prayerRequests', item.id), item)),
-        ...TESTIMONIALS.map(item => setDoc(doc(db, 'testimonials', item.id), item)),
-        ...CLASS_REVIEWS.map(item => setDoc(doc(db, 'classReviews', item.id), item))
-      ];
-      await Promise.allSettled(writes);
-    } finally {
-      ministryFirestoreSyncInFlight = null;
-    }
-  })();
-  return ministryFirestoreSyncInFlight;
+// The ONE place a new prayer request / testimony / class review actually
+// reaches the ministry in production — awaited, writes ONLY the one new
+// document (never the rest of the array the way the old whole-collection
+// resync did), and hands the caller a real ok/not-ok result instead of
+// assuming success. Demo mode keeps the old in-memory-array + localStorage
+// behavior, unchanged, and is also always "ok" (there's nothing to fail).
+async function submitMinistryRecord(collectionName, targetArray, item){
+  if(DEMO_MODE){
+    targetArray.unshift(item);
+    persistMinistryDataLocal();
+    return { ok: true };
+  }
+  try {
+    await setDoc(doc(db, collectionName, item.id), item);
+    return { ok: true };
+  } catch (err) {
+    console.error('[ministry] could not submit to ' + collectionName, err.code || err);
+    return { ok: false };
+  }
+}
+
+// The admin-inbox counterpart: a status change, internal note, publish-
+// text edit, or video-preview flag writes JUST that one already-mutated
+// item back to Firestore, awaited, with failure surfaced to the caller —
+// replaces the old pattern of firing persistMinistryData() (unawaited)
+// after every such edit and never checking whether it actually landed.
+async function saveMinistryRecordEdit(collectionName, item){
+  persistMinistryDataLocal();
+  if(DEMO_MODE) return { ok: true };
+  try {
+    await setDoc(doc(db, collectionName, item.id), item);
+    return { ok: true };
+  } catch (err) {
+    console.error('[ministry] could not save edit to ' + collectionName + '/' + item.id, err.code || err);
+    return { ok: false };
+  }
+}
+
+// A Firestore document is returned whole — there is no way to hand back
+// only some fields of an otherwise-readable doc. That's exactly why
+// `testimonials`/`classReviews` (full submissions: email, phone, notes,
+// raw private text) are admin-only readable even once "published" (see
+// firestore.rules), and a SEPARATE, deliberately narrow sanitized copy is
+// what the public actually reads. This is the only place that copy gets
+// built — every field on it is named explicitly; nothing is ever copied
+// over by accident the way spreading the source object would risk.
+function sanitizePublicMinistryRecord(item, kind){
+  const displayName = item.visibility === 'anonymous' ? 'Anonymous'
+    : item.visibility === 'public' ? (getPublicPreviewLegacy(item) || 'Anonymous')
+    : 'Anonymous'; // shouldn't be reachable for visibility:'private' — publish is blocked before this runs
+  const sanitized = {
+    sourceId: item.id,
+    displayName,
+    publicText: (item.publicDisplayText || item.message || '').slice(0, 2000),
+    reviewDate: item.reviewDate || (item.createdAt || '').slice(0, 10) || '',
+    status: 'published'
+  };
+  if(kind === 'testimonial'){ sanitized.title = item.title || ''; }
+  if(kind === 'review'){ sanitized.className = item.className || ''; sanitized.rating = item.rating ? Number(item.rating) : null; }
+  return sanitized;
+}
+async function publishPublicMirror(publicCollectionName, item, kind){
+  if(DEMO_MODE) return { ok: true };
+  try {
+    await setDoc(doc(db, publicCollectionName, item.id), sanitizePublicMinistryRecord(item, kind));
+    return { ok: true };
+  } catch (err) {
+    console.error('[ministry] could not publish to ' + publicCollectionName, err.code || err);
+    return { ok: false };
+  }
+}
+async function unpublishPublicMirror(publicCollectionName, itemId){
+  if(DEMO_MODE) return { ok: true };
+  try {
+    await deleteDoc(doc(db, publicCollectionName, itemId));
+    return { ok: true };
+  } catch (err) {
+    console.error('[ministry] could not unpublish from ' + publicCollectionName, err.code || err);
+    return { ok: false };
+  }
 }
 
 // Admin-only load: the Ministry inbox panels call this once when opened
@@ -3329,17 +3384,21 @@ async function loadMinistryInboxData(){
   }
 }
 
-// Public pages (testimonials.html, teachings.html) only ever need the
-// PUBLISHED subset — and per firestore.rules, that's all a guest visitor
-// can read anyway. Keeps the same PUBLIC arrays populated so the
-// existing renderPublishedTestimonials()/renderPublishedClassReviews()
-// (which already filter by status === 'published') work unchanged.
+// Public pages (testimonials.html, teachings.html) read the SANITIZED
+// public mirror collections — publicTestimonials/publicClassReviews —
+// never the private testimonials/classReviews source collections, which
+// firestore.rules now correctly refuse to let a guest read at all (a
+// Firestore doc comes back whole, so "published" alone was never a safe
+// public-read condition on a doc that also carries email/phone/notes).
+// testimonialCardHtml()/classReviewCardHtml() read `displayName`/
+// `publicText` off these sanitized docs directly (falling back to the
+// legacy field names for DEMO_MODE's differently-shaped sample data).
 async function loadPublishedMinistryContent(){
   if(DEMO_MODE) return;
   try {
     const [testimonySnap, reviewSnap] = await Promise.all([
-      getDocs(query(collection(db, 'testimonials'), where('status', '==', 'published'))),
-      getDocs(query(collection(db, 'classReviews'), where('status', '==', 'published')))
+      getDocs(collection(db, 'publicTestimonials')),
+      getDocs(collection(db, 'publicClassReviews'))
     ]);
     TESTIMONIALS = []; testimonySnap.forEach(d => TESTIMONIALS.push({ id: d.id, ...d.data() }));
     CLASS_REVIEWS = []; reviewSnap.forEach(d => CLASS_REVIEWS.push({ id: d.id, ...d.data() }));
@@ -3371,11 +3430,13 @@ function getPublicPreviewLegacy(item){
   return name ? name : 'Anonymous';
 }
 
-// Public-facing name display only, used once the Owner has published an
-// item: shows first name + last initial (e.g. "Kayla R."), or "Anonymous"
-// when no name was given at all. There's no public visibility picker
-// anymore (submissions are private-for-review by default and the Owner
-// decides what publishes), so this no longer branches on item.visibility.
+// DEMO_MODE-only fallback for testimonialCardHtml()/classReviewCardHtml()
+// — production items carry a precomputed `displayName` from
+// sanitizePublicMinistryRecord() instead (built from the submitter's
+// actual visibility choice: public/anonymous/private), which those
+// functions prefer when present. This just shows first name + last
+// initial (e.g. "Kayla R.") for demo sample data, which never goes
+// through that sanitization step.
 function publicNameLabel(item){
   if(!item) return 'Anonymous';
   const first = (item.firstName || '').trim();
@@ -3502,7 +3563,7 @@ function saveMinistryPolicy(key){
   policy.active = editor.querySelector('[data-policy-active]').checked;
   MINISTRY_POLICIES[key] = policy;
   if(key === 'noRefund') BOOKING_POLICIES.noRefund = { ...policy };
-  persistMinistryData();
+  persistMinistryDataLocal();
   saveBookingsPreviewToStorage();
   const status = editor.querySelector('[data-policy-status]');
   if(status) status.textContent = 'Saved in preview.';
@@ -3528,17 +3589,25 @@ function openPrayerDetailWindow(itemId){
     '<div class="form-field full"><label>Prayer Request</label><textarea readonly>' + escapeHtml(item.message || '') + '</textarea></div>' +
     '<div class="form-field full"><label>Internal Note</label><textarea id="prayerInternalNote">' + escapeHtml(item.notes || '') + '</textarea></div>';
   const saveNoteButton = document.getElementById('savePrayerNoteBtn');
-  if(saveNoteButton) saveNoteButton.onclick = () => {
+  if(saveNoteButton) saveNoteButton.onclick = async () => {
     item.notes = document.getElementById('prayerInternalNote').value;
-    persistMinistryData();
+    saveNoteButton.disabled = true;
+    const result = await saveMinistryRecordEdit('prayerRequests', item);
+    saveNoteButton.disabled = false;
     renderMinistryInboxViews();
-    document.getElementById('prayerStatusMessage').textContent = 'Internal note saved.';
+    document.getElementById('prayerStatusMessage').textContent = result.ok ? 'Internal note saved.' : 'Could not save — please try again.';
   };
   document.getElementById('prayerStatusMessage').textContent = '';
   dialog.dataset.prayerId = item.id;
   dialog.showModal();
 }
 
+function visibilitySelectHtml(selectId, current){
+  const opts = [['public', 'Public with name'], ['anonymous', 'Public, anonymous'], ['private', 'Private — never published']];
+  return '<select id="' + selectId + '">' + opts.map(([v, label]) =>
+    '<option value="' + v + '"' + (v === current ? ' selected' : '') + '>' + escapeHtml(label) + '</option>'
+  ).join('') + '</select>';
+}
 function openTestimonyDetailWindow(itemId){
   const item = TESTIMONIALS.find(t => t.id === itemId);
   if(!item) return;
@@ -3548,13 +3617,19 @@ function openTestimonyDetailWindow(itemId){
   const videoLine = item.hasVideoPreview
     ? (VIDEO_PREVIEW_URLS[item.id] ? 'Video attached (preview only, this browser session)' : 'Video attached previously — preview expired, re-upload below to preview again')
     : 'No video attached';
+  // Publishing a submission marked 'private' is blocked in
+  // setTestimonyStatus() unless this is changed first — per ministry
+  // policy, private never goes public on its own. Public/anonymous can
+  // still be adjusted here too (e.g. the admin and submitter agreed on a
+  // different display preference after the fact).
   fields.innerHTML = '<div class="form-field full"><label>Display Name</label><input value="' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '" readonly /></div>' +
-    '<div class="form-field"><label>Visibility</label><input value="' + escapeHtml(formatVisibilityBadge(item.visibility)) + '" readonly /></div>' +
+    '<div class="form-field"><label>Visibility</label>' + visibilitySelectHtml('testimonyVisibilitySelect', item.visibility) + '</div>' +
     '<div class="form-field"><label>Status</label><input value="' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '" readonly /></div>' +
     '<div class="form-field"><label>Date Shown Publicly</label><input type="date" id="testimonyDateInput" value="' + escapeHtml((item.reviewDate || (item.createdAt || '').slice(0, 10))) + '" /></div>' +
     '<div class="form-field full"><label>Full Testimony</label><textarea readonly>' + escapeHtml(item.message || '') + '</textarea></div>' +
     '<div class="form-field full"><label>Public Display Text</label><textarea id="testimonyPublicDisplayText">' + escapeHtml(item.publicDisplayText || item.message || '') + '</textarea></div>' +
-    '<div class="form-field full"><label>Video (Preview Only)</label><p class="admin-hint">' + escapeHtml(videoLine) + '</p><input id="testimonyReplaceVideoInput" type="file" accept="video/*" /></div>';
+    (DEMO_MODE ? '<div class="form-field full"><label>Video (Preview Only)</label><p class="admin-hint">' + escapeHtml(videoLine) + '</p><input id="testimonyReplaceVideoInput" type="file" accept="video/*" /></div>'
+      : '<div class="form-field full"><label>Video</label><p class="admin-hint">No durable video storage is connected yet — see PROJECT-CONTEXT.md.</p></div>');
   document.getElementById('testimonyStatusMessage').textContent = '';
   dialog.dataset.testimonyId = item.id;
   dialog.showModal();
@@ -3568,7 +3643,7 @@ function openReviewDetailWindow(itemId){
   if(!dialog || !fields) return;
   fields.innerHTML = '<div class="form-field"><label>Class</label><input value="' + escapeHtml(item.className || 'Class Review') + '" readonly /></div>' +
     '<div class="form-field"><label>Reviewer</label><input value="' + escapeHtml(item.visibility === 'anonymous' ? 'Anonymous' : getPublicPreviewLegacy(item)) + '" readonly /></div>' +
-    '<div class="form-field"><label>Visibility</label><input value="' + escapeHtml(formatVisibilityBadge(item.visibility)) + '" readonly /></div>' +
+    '<div class="form-field"><label>Visibility</label>' + visibilitySelectHtml('reviewVisibilitySelect', item.visibility) + '</div>' +
     '<div class="form-field"><label>Status</label><input value="' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '" readonly /></div>' +
     '<div class="form-field"><label>Date Shown Publicly</label><input type="date" id="reviewDateInput" value="' + escapeHtml((item.reviewDate || (item.createdAt || '').slice(0, 10))) + '" /></div>' +
     '<div class="form-field full"><label>Review</label><textarea readonly>' + escapeHtml(item.message || '') + '</textarea></div>' +
@@ -3597,44 +3672,69 @@ async function logAdminAction(action, details){
   }
 }
 
-function setPrayerStatus(itemId, nextStatus){
+async function setPrayerStatus(itemId, nextStatus){
   const item = PRAYER_REQUESTS.find(p => p.id === itemId);
-  if(!item) return;
+  if(!item) return { ok: true };
   item.status = nextStatus;
-  persistMinistryData();
+  const result = await saveMinistryRecordEdit('prayerRequests', item);
   logAdminAction('prayer-status-change', { itemId, nextStatus });
   renderMinistryInboxViews();
-  if(document.getElementById('prayerDetailDialog')) document.getElementById('prayerDetailDialog').close();
+  if(result.ok && document.getElementById('prayerDetailDialog')) document.getElementById('prayerDetailDialog').close();
+  return result;
 }
 
-function setTestimonyStatus(itemId, nextStatus){
+// Publishing creates/updates the sanitized public mirror; moving away
+// from 'published' removes it — the private source item is never itself
+// publicly readable (see firestore.rules). A submission marked 'private'
+// can never be published as-is: per ministry policy, that requires the
+// owner to explicitly change the visibility first (the select in
+// openTestimonyDetailWindow() lets them do exactly that before clicking
+// Publish — see the click handler, which updates item.visibility from
+// that select before calling this).
+async function setTestimonyStatus(itemId, nextStatus){
   const item = TESTIMONIALS.find(t => t.id === itemId);
-  if(!item) return;
+  if(!item) return { ok: true };
+  if(nextStatus === 'published' && item.visibility === 'private'){
+    return { ok: false, reason: 'This submission is marked Private — change its visibility above before publishing.' };
+  }
+  const wasPublished = item.status === 'published';
   item.status = nextStatus;
   if(nextStatus === 'published') {
     item.publicDisplayText = item.publicDisplayText || item.message;
   }
-  persistMinistryData();
+  const saveResult = await saveMinistryRecordEdit('testimonials', item);
+  if(!saveResult.ok) return { ok: false, reason: 'Could not save — please try again.' };
+  const mirrorResult = nextStatus === 'published'
+    ? await publishPublicMirror('publicTestimonials', item, 'testimonial')
+    : (wasPublished ? await unpublishPublicMirror('publicTestimonials', itemId) : { ok: true });
   logAdminAction('testimony-status-change', { itemId, nextStatus });
   renderMinistryInboxViews();
-  renderPublishedTestimonials();
-  renderPublishedClassReviews();
-  if(document.getElementById('testimonyDetailDialog')) document.getElementById('testimonyDetailDialog').close();
+  if(DEMO_MODE){ renderPublishedTestimonials(); renderPublishedClassReviews(); }
+  if(mirrorResult.ok && document.getElementById('testimonyDetailDialog')) document.getElementById('testimonyDetailDialog').close();
+  return mirrorResult.ok ? { ok: true } : { ok: false, reason: 'Saved, but the public page could not be updated — please try again.' };
 }
 
-function setReviewStatus(itemId, nextStatus){
+async function setReviewStatus(itemId, nextStatus){
   const item = CLASS_REVIEWS.find(r => r.id === itemId);
-  if(!item) return;
+  if(!item) return { ok: true };
+  if(nextStatus === 'published' && item.visibility === 'private'){
+    return { ok: false, reason: 'This submission is marked Private — change its visibility above before publishing.' };
+  }
+  const wasPublished = item.status === 'published';
   item.status = nextStatus;
   if(nextStatus === 'published') {
     item.publicDisplayText = item.publicDisplayText || item.message;
   }
-  persistMinistryData();
+  const saveResult = await saveMinistryRecordEdit('classReviews', item);
+  if(!saveResult.ok) return { ok: false, reason: 'Could not save — please try again.' };
+  const mirrorResult = nextStatus === 'published'
+    ? await publishPublicMirror('publicClassReviews', item, 'review')
+    : (wasPublished ? await unpublishPublicMirror('publicClassReviews', itemId) : { ok: true });
   logAdminAction('class-review-status-change', { itemId, nextStatus });
   renderMinistryInboxViews();
-  renderPublishedTestimonials();
-  renderPublishedClassReviews();
-  if(document.getElementById('reviewDetailDialog')) document.getElementById('reviewDetailDialog').close();
+  if(DEMO_MODE){ renderPublishedTestimonials(); renderPublishedClassReviews(); }
+  if(mirrorResult.ok && document.getElementById('reviewDetailDialog')) document.getElementById('reviewDetailDialog').close();
+  return mirrorResult.ok ? { ok: true } : { ok: false, reason: 'Saved, but the public page could not be updated — please try again.' };
 }
 
 // Video testimony preview only: the file itself lives in memory for the
@@ -3644,10 +3744,18 @@ function setReviewStatus(itemId, nextStatus){
 // the object URL itself is gone.
 const VIDEO_PREVIEW_URLS = {};
 
+// Reads the sanitized public shape (displayName/publicText — see
+// sanitizePublicMinistryRecord()) when present, falling back to the
+// legacy full-item shape for DEMO_MODE's sample data, which never goes
+// through the mirror-collection step. Production items never carry
+// hasVideoPreview at all (deliberately excluded from the sanitized
+// mirror — no video was ever durably stored, so nothing is shown for
+// it), so the video branch below only ever fires for demo/preview data.
 function testimonialCardHtml(item){
-  const name = publicNameLabel(item);
+  const name = item.displayName || publicNameLabel(item);
   const dateLabel = shortDate(item.reviewDate || item.createdAt);
   const title = item.title ? '<h4>' + escapeHtml(item.title) + '</h4>' : '';
+  const text = item.publicText || item.publicDisplayText || item.message || '';
   const videoUrl = VIDEO_PREVIEW_URLS[item.id];
   let media = '';
   if(item.hasVideoPreview){
@@ -3658,7 +3766,7 @@ function testimonialCardHtml(item){
   return '<article class="preview-card testimony-card">' + media +
     '<span>' + escapeHtml(name) + ' · ' + escapeHtml(dateLabel) + '</span>' +
     title +
-    '<p>' + escapeHtml((item.publicDisplayText || item.message || '').slice(0, 220)) + '</p>' +
+    '<p>' + escapeHtml(text.slice(0, 220)) + '</p>' +
   '</article>';
 }
 
@@ -3678,11 +3786,13 @@ let classReviewsExpanded = false;
 function classReviewCardHtml(item){
   const rating = Number(item.rating) || 0;
   const stars = rating ? '<span class="review-stars" aria-label="' + rating + ' out of 5 stars">' + '★'.repeat(rating) + '☆'.repeat(5 - rating) + '</span>' : '';
+  const name = item.displayName || publicNameLabel(item);
+  const text = item.publicText || item.publicDisplayText || item.message || '';
   return '<article class="preview-card review-card">' +
     '<span>' + escapeHtml(item.className || 'Class Review') + ' · ' + escapeHtml(shortDate(item.reviewDate || item.createdAt)) + '</span>' +
-    '<h4>' + escapeHtml(publicNameLabel(item)) + '</h4>' +
+    '<h4>' + escapeHtml(name) + '</h4>' +
     stars +
-    '<p>' + escapeHtml((item.publicDisplayText || item.message || '').slice(0, 220)) + '</p>' +
+    '<p>' + escapeHtml(text.slice(0, 220)) + '</p>' +
   '</article>';
 }
 
@@ -3746,12 +3856,35 @@ function ensurePublicMinistrySections(){
   }
 }
 
+// Guards each form independently against a second overlapping submit —
+// disabling the submit button already stops a second click, but this
+// also covers Enter-to-submit and any other path back into the same
+// handler while the first write is still in flight, without dropping or
+// silently ignoring the second attempt (it just has to wait its turn:
+// checked at the very top, before anything else runs).
+const ministrySubmitInFlight = { prayer: false, testimony: false, review: false };
+
 function bindMinistryFormDialogEvents(){
+  // No durable media storage exists yet (see PROJECT-CONTEXT.md) — the
+  // field only ever produced an object URL that dies with the browser
+  // tab, so on the real production domain it's disabled outright with a
+  // clear "coming soon" explanation rather than left up and silently
+  // discarding whatever a visitor attaches. DEMO_MODE keeps showing the
+  // in-session preview, clearly labeled as such, for evaluation purposes.
+  const storyMediaInput = document.getElementById('storyMedia');
+  const storyMediaHint = document.getElementById('storyMediaHint');
+  if(storyMediaInput && !DEMO_MODE){
+    storyMediaInput.disabled = true;
+    storyMediaInput.value = '';
+    if(storyMediaHint) storyMediaHint.textContent = 'Photo and video attachments are coming soon — not available yet. Use the video link field below, or mention it in your testimony.';
+  }
   if(document.getElementById('prayerRequestForm')) {
-    document.getElementById('prayerRequestForm').addEventListener('submit', event => {
+    document.getElementById('prayerRequestForm').addEventListener('submit', async event => {
       event.preventDefault();
+      if(ministrySubmitInFlight.prayer) return;
       const form = event.currentTarget;
       const formData = new FormData(form);
+      const status = document.getElementById('prayerFormStatus');
       const request = {
         id: 'prayer-' + Date.now().toString(36),
         firstName: String(formData.get('firstName') || '').trim(),
@@ -3765,25 +3898,37 @@ function bindMinistryFormDialogEvents(){
         createdAt: new Date().toISOString()
       };
       if(!request.message || !formData.get('terms')){
-        document.getElementById('prayerFormStatus').textContent = 'Please complete the form and agree to the terms.';
+        status.textContent = 'Please complete the form and agree to the terms.';
         return;
       }
-      PRAYER_REQUESTS.unshift(request);
-      persistMinistryData();
-      renderMinistryInboxViews();
+      ministrySubmitInFlight.prayer = true;
+      const submitBtn = form.querySelector('[type="submit"]');
+      if(submitBtn) submitBtn.disabled = true;
+      status.textContent = 'Sending…';
+      const result = await submitMinistryRecord('prayerRequests', PRAYER_REQUESTS, request);
+      ministrySubmitInFlight.prayer = false;
+      if(submitBtn) submitBtn.disabled = false;
+      if(!result.ok){
+        // Form data is left exactly as the visitor typed it — no reset,
+        // no close, nothing implying this succeeded.
+        status.textContent = "We couldn't securely send your submission. Please try again.";
+        return;
+      }
+      if(DEMO_MODE) renderMinistryInboxViews();
       form.reset();
-      console.log('Prayer request submitted');
-      document.getElementById('prayerFormStatus').textContent = 'We received your prayer request and we are praying for you.';
+      status.textContent = 'We received your prayer request and we are praying for you.';
       const dialog = document.getElementById('prayerRequestDialog');
       if(dialog) setTimeout(() => dialog.close(), 1200);
     });
   }
 
   if(document.getElementById('testimonyForm')) {
-    document.getElementById('testimonyForm').addEventListener('submit', event => {
+    document.getElementById('testimonyForm').addEventListener('submit', async event => {
       event.preventDefault();
+      if(ministrySubmitInFlight.testimony) return;
       const form = event.currentTarget;
       const formData = new FormData(form);
+      const status = document.getElementById('formStatus');
       const item = {
         id: 'story-' + Date.now().toString(36),
         firstName: String(formData.get('firstName') || '').trim(),
@@ -3798,32 +3943,51 @@ function bindMinistryFormDialogEvents(){
         hasVideoPreview: false,
         createdAt: new Date().toISOString()
       };
-      if(!item.message || (!formData.get('permission') && !formData.get('terms'))){
-        document.getElementById('formStatus').textContent = 'Please complete the form and agree to the terms.';
+      // Exactly one consent checkbox is presented on this form
+      // ("permission") — checking it is required, full stop, not
+      // interchangeable with some other checkbox the form doesn't
+      // actually have.
+      if(!item.message || !formData.get('permission')){
+        status.textContent = 'Please complete the form and agree to the terms.';
         return;
       }
-      const mediaFile = formData.get('media');
-      if(mediaFile && mediaFile instanceof File && mediaFile.type.startsWith('video/') && mediaFile.size > 0){
-        VIDEO_PREVIEW_URLS[item.id] = URL.createObjectURL(mediaFile);
-        item.hasVideoPreview = true;
+      // Media uploads have no durable backend yet (see PROJECT-CONTEXT.md)
+      // — DEMO_MODE may still show the in-session preview for evaluation
+      // purposes, but production never claims a video was "attached"
+      // when the object URL dies with this browser tab.
+      if(DEMO_MODE){
+        const mediaFile = formData.get('media');
+        if(mediaFile && mediaFile instanceof File && mediaFile.type.startsWith('video/') && mediaFile.size > 0){
+          VIDEO_PREVIEW_URLS[item.id] = URL.createObjectURL(mediaFile);
+          item.hasVideoPreview = true;
+        }
       }
-      TESTIMONIALS.unshift(item);
-      persistMinistryData();
-      renderMinistryInboxViews();
-      renderPublishedTestimonials();
+      ministrySubmitInFlight.testimony = true;
+      const submitBtn = form.querySelector('[type="submit"]');
+      if(submitBtn) submitBtn.disabled = true;
+      status.textContent = 'Sending…';
+      const result = await submitMinistryRecord('testimonials', TESTIMONIALS, item);
+      ministrySubmitInFlight.testimony = false;
+      if(submitBtn) submitBtn.disabled = false;
+      if(!result.ok){
+        status.textContent = "We couldn't securely send your submission. Please try again.";
+        return;
+      }
+      if(DEMO_MODE){ renderMinistryInboxViews(); renderPublishedTestimonials(); }
       form.reset();
-      console.log('Testimony submitted');
-      document.getElementById('formStatus').textContent = 'Thank you for sharing your testimony.';
+      status.textContent = 'Thank you for sharing your testimony.';
       const dialog = document.getElementById('storyDialog');
       if(dialog) setTimeout(() => dialog.close(), 1200);
     });
   }
 
   if(document.getElementById('classReviewForm')) {
-    document.getElementById('classReviewForm').addEventListener('submit', event => {
+    document.getElementById('classReviewForm').addEventListener('submit', async event => {
       event.preventDefault();
+      if(ministrySubmitInFlight.review) return;
       const form = event.currentTarget;
       const formData = new FormData(form);
+      const status = document.getElementById('classReviewFormStatus');
       const item = {
         id: 'review-' + Date.now().toString(36),
         className: String(formData.get('className') || 'Other / type class name').trim(),
@@ -3840,15 +4004,23 @@ function bindMinistryFormDialogEvents(){
         createdAt: new Date().toISOString()
       };
       if(!item.message || !formData.get('terms')){
-        document.getElementById('classReviewFormStatus').textContent = 'Please complete the form and agree to the review terms.';
+        status.textContent = 'Please complete the form and agree to the review terms.';
         return;
       }
-      CLASS_REVIEWS.unshift(item);
-      persistMinistryData();
-      renderMinistryInboxViews();
-      renderPublishedClassReviews();
+      ministrySubmitInFlight.review = true;
+      const submitBtn = form.querySelector('[type="submit"]');
+      if(submitBtn) submitBtn.disabled = true;
+      status.textContent = 'Sending…';
+      const result = await submitMinistryRecord('classReviews', CLASS_REVIEWS, item);
+      ministrySubmitInFlight.review = false;
+      if(submitBtn) submitBtn.disabled = false;
+      if(!result.ok){
+        status.textContent = "We couldn't securely send your submission. Please try again.";
+        return;
+      }
+      if(DEMO_MODE){ renderMinistryInboxViews(); renderPublishedClassReviews(); }
       form.reset();
-      document.getElementById('classReviewFormStatus').textContent = 'Thank you for sharing your class review.';
+      status.textContent = 'Thank you for sharing your class review.';
       const dialog = document.getElementById('classReviewDialog');
       if(dialog) setTimeout(() => dialog.close(), 1200);
     });
@@ -4000,7 +4172,7 @@ function addMinistryDialogs(){
   document.getElementById('closeTestimonyDetailDialog')?.addEventListener('click', () => document.getElementById('testimonyDetailDialog').close());
   document.getElementById('closeReviewDetailDialog')?.addEventListener('click', () => document.getElementById('reviewDetailDialog').close());
 
-  document.addEventListener('click', event => {
+  document.addEventListener('click', async event => {
     const policySave = event.target.closest('[data-policy-save]');
     if(policySave){
       saveMinistryPolicy(policySave.dataset.policySave);
@@ -4010,36 +4182,51 @@ function addMinistryDialogs(){
     if(prayerDelete){
       const removedId = prayerDelete.dataset.prayerDelete;
       PRAYER_REQUESTS = PRAYER_REQUESTS.filter(item => item.id !== removedId);
-      persistMinistryData();
-      if(!DEMO_MODE) deleteDoc(doc(db, 'prayerRequests', removedId)).catch(err => console.error('[ministry] could not delete prayer request', err));
+      persistMinistryDataLocal();
+      if(!DEMO_MODE){
+        try { await deleteDoc(doc(db, 'prayerRequests', removedId)); }
+        catch (err) { console.error('[ministry] could not delete prayer request', err.code || err); }
+      }
       renderMinistryInboxViews();
       return;
     }
     const testimonyDelete = event.target.closest('[data-testimony-delete]');
     if(testimonyDelete){
       const removedId = testimonyDelete.dataset.testimonyDelete;
+      const wasPublished = TESTIMONIALS.find(t => t.id === removedId)?.status === 'published';
       TESTIMONIALS = TESTIMONIALS.filter(item => item.id !== removedId);
-      persistMinistryData();
-      if(!DEMO_MODE) deleteDoc(doc(db, 'testimonials', removedId)).catch(err => console.error('[ministry] could not delete testimonial', err));
+      persistMinistryDataLocal();
+      if(!DEMO_MODE){
+        try {
+          await deleteDoc(doc(db, 'testimonials', removedId));
+          if(wasPublished) await deleteDoc(doc(db, 'publicTestimonials', removedId));
+        } catch (err) { console.error('[ministry] could not delete testimonial', err.code || err); }
+      }
       renderMinistryInboxViews();
-      renderPublishedTestimonials();
+      if(DEMO_MODE) renderPublishedTestimonials();
       return;
     }
     const reviewDelete = event.target.closest('[data-review-delete]');
     if(reviewDelete){
       const removedId = reviewDelete.dataset.reviewDelete;
+      const wasPublished = CLASS_REVIEWS.find(r => r.id === removedId)?.status === 'published';
       CLASS_REVIEWS = CLASS_REVIEWS.filter(item => item.id !== removedId);
-      persistMinistryData();
-      if(!DEMO_MODE) deleteDoc(doc(db, 'classReviews', removedId)).catch(err => console.error('[ministry] could not delete class review', err));
+      persistMinistryDataLocal();
+      if(!DEMO_MODE){
+        try {
+          await deleteDoc(doc(db, 'classReviews', removedId));
+          if(wasPublished) await deleteDoc(doc(db, 'publicClassReviews', removedId));
+        } catch (err) { console.error('[ministry] could not delete class review', err.code || err); }
+      }
       renderMinistryInboxViews();
-      renderPublishedClassReviews();
+      if(DEMO_MODE) renderPublishedClassReviews();
       return;
     }
     const prayerStatusBtn = event.target.closest('[data-prayer-status]');
     if(prayerStatusBtn){
       const id = document.getElementById('prayerDetailDialog').dataset.prayerId;
-      setPrayerStatus(id, prayerStatusBtn.dataset.prayerStatus);
-      document.getElementById('prayerStatusMessage').textContent = 'Status updated.';
+      const result = await setPrayerStatus(id, prayerStatusBtn.dataset.prayerStatus);
+      document.getElementById('prayerStatusMessage').textContent = result.ok ? 'Status updated.' : (result.reason || 'Could not save — please try again.');
     }
     const testimonyStatusBtn = event.target.closest('[data-testimony-status]');
     if(testimonyStatusBtn){
@@ -4048,9 +4235,11 @@ function addMinistryDialogs(){
       if(item){
         item.publicDisplayText = document.getElementById('testimonyPublicDisplayText')?.value || item.publicDisplayText || item.message || '';
         item.reviewDate = document.getElementById('testimonyDateInput')?.value || item.reviewDate;
+        const visSelect = document.getElementById('testimonyVisibilitySelect');
+        if(visSelect) item.visibility = visSelect.value;
       }
-      setTestimonyStatus(id, testimonyStatusBtn.dataset.testimonyStatus);
-      document.getElementById('testimonyStatusMessage').textContent = 'Status updated.';
+      const result = await setTestimonyStatus(id, testimonyStatusBtn.dataset.testimonyStatus);
+      document.getElementById('testimonyStatusMessage').textContent = result.ok ? 'Status updated.' : (result.reason || 'Could not save — please try again.');
     }
     const reviewStatusBtn = event.target.closest('[data-review-status]');
     if(reviewStatusBtn){
@@ -4059,13 +4248,15 @@ function addMinistryDialogs(){
       if(item){
         item.publicDisplayText = document.getElementById('reviewPublicDisplayText')?.value || item.publicDisplayText || item.message || '';
         item.reviewDate = document.getElementById('reviewDateInput')?.value || item.reviewDate;
+        const visSelect = document.getElementById('reviewVisibilitySelect');
+        if(visSelect) item.visibility = visSelect.value;
       }
-      setReviewStatus(id, reviewStatusBtn.dataset.reviewStatus);
-      document.getElementById('reviewStatusMessage').textContent = 'Status updated.';
+      const result = await setReviewStatus(id, reviewStatusBtn.dataset.reviewStatus);
+      document.getElementById('reviewStatusMessage').textContent = result.ok ? 'Status updated.' : (result.reason || 'Could not save — please try again.');
     }
   });
   document.addEventListener('change', event => {
-    if(event.target.id !== 'testimonyReplaceVideoInput') return;
+    if(event.target.id !== 'testimonyReplaceVideoInput' || !DEMO_MODE) return;
     const file = event.target.files && event.target.files[0];
     if(!file || !file.type.startsWith('video/')) return;
     const id = document.getElementById('testimonyDetailDialog').dataset.testimonyId;
@@ -4073,7 +4264,7 @@ function addMinistryDialogs(){
     if(!item) return;
     VIDEO_PREVIEW_URLS[item.id] = URL.createObjectURL(file);
     item.hasVideoPreview = true;
-    persistMinistryData();
+    persistMinistryDataLocal();
     document.getElementById('testimonyStatusMessage').textContent = 'Video preview replaced for this browser session.';
     renderPublishedTestimonials();
   });
@@ -5920,8 +6111,42 @@ document.getElementById('bookingTimeButtons').addEventListener('keydown', event 
   selectBookingTimeButton(buttons[nextIndex]);
   buttons[nextIndex].focus();
 });
+// An account is required to book (ministry policy) — a signed-out
+// visitor can still open the dialog and browse session types, but is
+// stopped right here, before ever reaching date/time selection or
+// creating a hold, and prompted to sign in or create an account. This
+// mirrors requireAccountForTeachingRegister()/resumePendingTeachingRegistration()
+// below, the same established pattern already used for class
+// registration. Only the selected SERVICE is preserved across the
+// interruption (not a date/time — none has been picked yet at this
+// point), and everything downstream (recheck availability, create the
+// hold) just happens naturally by continuing through the normal wizard
+// once they're back.
+let pendingBookingService = null;
+function requireAccountForBooking(){
+  pendingBookingService = bookingForm.querySelector('input[name="sessionType"]:checked')?.value || null;
+  bookingDialog.close();
+  showAuthPanel('signin');
+  showPortalView('prospect');
+  const title = memberPortalDialog.querySelector('#memberPortalTitle');
+  if(title) title.textContent = 'Sign in to continue booking your session.';
+  memberPortalDialog.showModal();
+}
+function resumePendingBooking(){
+  if(!pendingBookingService) return;
+  const service = pendingBookingService;
+  pendingBookingService = null;
+  memberPortalDialog.close();
+  openBooking(service);
+  bookingStatus.textContent = '';
+  updateBookingSummaryPanel();
+  showBookingWizardStep('date');
+  renderBookingCalendar();
+  loadTimeSlots();
+}
 document.getElementById('bookingStepSessionNext').addEventListener('click', () => {
   if(!bookingForm.querySelector('input[name="sessionType"]:checked')){ bookingStatus.textContent = 'Choose a session to continue.'; return; }
+  if(!currentUser){ requireAccountForBooking(); return; }
   bookingStatus.textContent = '';
   updateBookingSummaryPanel();
   showBookingWizardStep('date');
@@ -6265,6 +6490,16 @@ bookingForm.addEventListener('submit', async event => {
     bookingStatus.textContent = 'Please agree to the Terms and Conditions and the No Refund Policy to continue.';
     return;
   }
+  // Belt-and-suspenders: requireAccountForBooking() already stops a
+  // signed-out visitor long before this step (see the session-step
+  // Continue handler), and firestore.rules independently rejects a
+  // non-admin create with no uid — but this makes sure the dialog
+  // never even tries, with a clear path back into the auth flow
+  // instead of a confusing rejected-write failure.
+  if(!currentUser){
+    requireAccountForBooking();
+    return;
+  }
   bookingSubmitBtn.disabled = true;
   bookingStatus.textContent = 'Requesting your session…';
   const clientTimeZone = selectedBookingTimeZone();
@@ -6272,7 +6507,7 @@ bookingForm.addEventListener('submit', async event => {
   try {
     const record = await createBooking({
       name, email, phone, reason, sessionType: service, date: dateStr, time,
-      status: 'pending', uid: currentUser ? currentUser.uid : null, clientTimeZone, smsConsent
+      status: 'pending', uid: currentUser.uid, clientTimeZone, smsConsent
     });
     markThrottled('lastBookingSubmit');
     document.getElementById('bookingConfirmTitle').textContent = sessionTypeName(service);
@@ -9256,9 +9491,10 @@ const teachingRegisterStatus = document.getElementById('teachingRegisterStatus')
 const teachingRegisterSubmitBtn = document.getElementById('teachingRegisterSubmitBtn');
 
 // Classes require a signed-in account before completing registration
-// (member notes/resources access depends on it); one-on-ones do not —
-// see the booking submit handler, which attaches to an account only
-// when one already exists. Stashes intent, shows Sign In / Create
+// (member notes/resources access depends on it) — one-on-ones now do
+// too, per ministry policy (see requireAccountForBooking()/
+// resumePendingBooking() near the booking wizard's session step, the
+// same pattern as this function). Stashes intent, shows Sign In / Create
 // Account, and resumePendingTeachingRegistration() continues straight
 // into registration the moment auth succeeds.
 let pendingTeachingRegisterId = null;
@@ -11340,7 +11576,7 @@ onAuthStateChanged(auth, async (user) => {
       // account in and fires this listener immediately — without this
       // guard it would yank the dialog straight to the dashboard before
       // the person ever sees the verify-by-email/text choice.
-      if(!awaitingVerifyChoice){ enterDashboard(); resumePendingTeachingRegistration(); }
+      if(!awaitingVerifyChoice){ enterDashboard(); resumePendingTeachingRegistration(); resumePendingBooking(); }
     } else {
       showAuthPanel('signin');
       showPortalView('prospect');
