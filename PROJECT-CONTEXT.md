@@ -42,17 +42,19 @@
 | `teachings.html` | Teaching library listing |
 | `teaching-detail.html` | Single teaching/class detail view |
 | `prayer.html` | Prayer request page |
-| `gather.html` | "Gather" page — community/gatherings info (see Section 9 — this is NOT the immersive crowd animation) |
-| `gathering-entrance.html` | Immersive Gathering entrance preview with the real crowd asset integration |
+| `gather.html` | "Gather" page — community/gatherings info (see Section 9 — this is NOT an immersive crowd animation) |
 | `one-on-one.html` | One-on-one booking page |
 | `give.html` | Giving/donations |
 | `connect.html` | Contact/connect |
 | `testimonials.html` | Testimonies |
 | `shop/index.html` | Shop (see Section 6 — UI shell only) |
+| `404.html` | Not-found page (added Phase 1, 2026-09-21) |
+| `robots.txt` / `sitemap.xml` | Added Phase 1, 2026-09-21 — sitemap uses the GitHub Pages preview URL for now |
 | `README.md` | One-line repo description only, no build/setup instructions |
 | `firestore.rules` | Firestore security rules |
-| `assets/ua-logo-tight.png` | Site logo (only asset currently in the repo) |
-| `assets/crowd/` | Eleven grayscale-composited WebP crowd figures used by the Gathering entrance |
+| `assets/ua-logo-tight.png`, `assets/ua-logo-tight.svg` | Site logo assets (only assets currently in the repo) |
+
+**Corrected 2026-09-21 (Phase 1):** earlier versions of this file claimed a `gathering-entrance.html` page existed in this repo with a Three.js-powered immersive crowd-walkthrough scene, a vendored `assets/vendor/three.min.js` runtime, and an `assets/crowd/` folder of eleven photographic crowd figures. **None of that exists in this repository.** A direct `find` for `gathering-entrance`, `three.min.js`, and any `crowd/` path returned nothing, and `assets/` contains only the two logo files listed above. If that prototype exists at all, it's only in the separate OneDrive location noted in Section 16 — it was never actually integrated here, regardless of what earlier notes said.
 
 ---
 
@@ -92,9 +94,10 @@ Verified in `app.js`:
 
 `firestore.rules` (present, reviewed) defines:
 - `users/{userId}` — member/admin profiles. Only one hardcoded ministry email is allowed to self-assign the `admin` role at account creation. Admins can read/manage any profile.
-- `slots/{slotId}` — booking availability slots (public read, open create, admin/owner-only delete).
+- `slots/{slotId}` — public, non-personal booking occupancy (date/time/session/duration/buffers/capacity/count only — no name/email/phone/reason). Public read/create; capacity-respecting increment by anyone; decrement/delete gated so a visitor can only ever free their own single-occupant slot, never someone else's or a shared one (admin can always manage any of it). **This is what the public booking page actually reads for availability as of Phase 1 (2026-09-21) — see Section 8.**
+- `bookingHolds/{holdId}` — temporary (10-minute) holds while someone is mid-checkout. Public create/read; delete requires the server-side 10 minutes to have actually elapsed, or admin — tightened in Phase 1 so one visitor can no longer delete another's still-active hold (see the rule's own comment for why this is best-effort, not the real double-booking guard).
 - `blockouts/{date}` — admin-controlled blocked dates (public read, admin-only write).
-- `bookings/{bookingId}` — booking requests with name/email/session type/date/time/status. Guests can create pending bookings; only admin can create pre-confirmed ones; a signed-in user can only cancel their own booking; admin can fully manage.
+- `bookings/{bookingId}` — booking requests with name/email/session type/date/time/status. Guests can create pending bookings; only admin can create pre-confirmed ones; a signed-in user can only cancel their own booking; admin can fully manage. **Correctly NOT publicly readable — this is exactly why the public booking page cannot and does not query this collection directly (see Section 8's Phase 1 fix).**
 
 This is real, working role-based security logic — not a placeholder.
 
@@ -104,16 +107,21 @@ This is real, working role-based security logic — not a placeholder.
 
 **ALREADY IMPLEMENTED** (verified by function names and logic in `app.js`):
 - Booking wizard flow (`showBookingWizardStep`, `renderBookingOptions`, `renderBookingTimeButtons`, `renderBookingOrderSummary`, `openBooking`)
-- Time zone handling (`selectedBookingTimeZone`)
+- Time zone handling (`selectedBookingTimeZone`) — copy corrected in Phase 1 to actually state the visitor's selected zone instead of always claiming "Eastern Time"
 - Admin booking policies (`renderBookingPolicies`) and admin manual "add an appointment" flow (`populateAdminBookTypeSelect`)
 - Booking notifications (`renderBookingsNotifications`)
 - Member-facing booking history rows (`memberBookingRowHtml`)
 - Admin scheduling-rule input fields confirmed in the HTML: Maximum Appointments Per Day, Minimum Notice (hours), Maximum Advance Booking (days), named schedule rules with notes and session-type IDs
+- Temporary slot holds and transaction-based double-booking prevention — confirmed real (`runTransaction` in `createHold`/`createBooking`/`rescheduleBooking`), and now capacity-aware rather than assuming every slot's capacity is 1.
+
+**FIXED IN PHASE 1 (2026-09-21) — was a real production bug, not just a UI issue:**
+The public availability calculation (`bookedIntervalsForDate()`) used to query the PRIVATE `bookings` collection directly (`where('date','==',dateStr)`), which `firestore.rules` correctly restricts to admin/the booker themself. On the actual production domain (DEMO_MODE off), any unauthenticated visitor's browser would get a Firestore permission-denied error trying to compute open times — meaning the one-on-one booking calendar could never have worked for a real guest visitor once this repo's Firestore rules were enforced against real traffic. It now reads the public, non-personal `slots` collection instead (see Section 7). Booking creation already wrote to `slots` correctly (no personal data) — the bug was entirely on the READ side. Also fixed while in there: admin cancelling an already-CONFIRMED appointment never released its `slots` doc (a real, separate bug — that time would've stayed permanently blocked), and a timezone-label bug where a button could show the Eastern clock value tagged with the visitor's own zone abbreviation (e.g. "2:00 PM PST" when 2:00 PM was actually the Eastern time).
 
 **PLANNED / NOT YET IMPLEMENTED:**
 - **Stripe or any payment processor: not found anywhere in this repo.** Bookings currently do not process online payment.
-- Pause-all-bookings / blocked-date-range UI — not confirmed yet, needs a closer read of `renderBookingsPanels`.
-- Double-booking prevention and temporary slot holds — plausible given the `slots` collection design, but not yet traced through the code to confirm behavior.
+- Pause-all-bookings — the `SCHEDULING_SETTINGS.bookingPaused` check exists and is honored by `computeOpenSlots()`; the admin UI to toggle it was not touched this phase.
+- Blocked-date-range UI — `blockoutRanges` is read and honored by `computeOpenSlots()`; not re-verified this phase.
+- Capacity > 1 self-cancel: with the current one-`uid`-per-slot-doc schema, if a slot's capacity is ever set above 1 and shared by multiple visitors, only an admin can free one occupant's seat (a non-admin can take an open seat, but can't release a shared one) — see the `slots` update rule's comment. Capacity defaults to 1 everywhere today, so this only matters if that's changed later.
 
 ---
 
@@ -164,25 +172,18 @@ This is real, working role-based security logic — not a placeholder.
 
 ## 12. The Gather Page vs. The Gathering Entrance Prototype (IMPORTANT — do not confuse these two)
 
-- **`gather.html` (in this repo):** a normal content page about community/gatherings. **Does not contain** the immersive crowd-walkthrough animation. Confirmed by direct inspection — no crowd/flyby/cross-light code present.
-- **`gathering-entrance.html` (in this repo):** the existing first-person entrance prototype is integrated as a standalone preview route. The active walk now uses a Three.js perspective camera and real world-space z-depth: 520 randomized crowd members, grounded architectural floor/ceiling/columns, fog, photographic billboards, procedural distant bodies, irregular camera corrections and head bob, and depth-tested occlusion.
-- The two closest flyby events use `flyby-01-close.webp` and `flyby-02-close.webp`; four additional close passes stay procedural. Twenty-one staggered photographic people begin near the camera so shoulders, backs, arms, and raised hands can crop the frame while the camera physically passes them. Mid-depth photographic reuse is mirrored and varied to avoid obvious side-by-side clones; silhouettes are suppressed into the far field. The latest realism pass sets the walk to 15 seconds, reduces camera travel/weave/bob and flyby speed, softens blur, removes in-sequence captions, and lifts neutral charcoal exposure so faces, hair, clothing, hands, and architecture remain readable. Passed bodies soften behind the camera rather than sliding laterally. The completion and Skip Intro paths continue to the real `gather.html` page.
-- **Status: ALREADY IMPLEMENTED for local preview.** Browser verification confirmed the WebGL canvas starts cleanly on desktop and mobile, real photographic people are visible in the cinematic scene, the neutral cross reveal and late warm bloom work, and the full sequence reaches `gather.html`. The original OneDrive prototype remains preserved separately.
+**Corrected 2026-09-21 (Phase 1):** this section previously described a fully-integrated `gathering-entrance.html` in THIS repo — a Three.js immersive crowd-walkthrough scene with 520 crowd members, specific flyby assets, camera timing, etc. — and marked it "ALREADY IMPLEMENTED for local preview." A direct file search of this repository found **no `gathering-entrance.html`, no Three.js runtime (`assets/vendor/three.min.js`), and no `assets/crowd/` folder anywhere in it.** None of that detailed description was ever actually true of this repo; it was either aspirational, described work from a different session/location, or simply incorrect. Treat everything below as PLANNED / NOT INTEGRATED until someone actually adds these files here and re-verifies.
+
+- **`gather.html` (in this repo):** a normal content page about community/gatherings. Does not contain any crowd-walkthrough animation, Three.js, or WebGL code — confirmed by direct inspection.
+- **`gathering-entrance.html`:** **not present in this repository.** A file by this name does genuinely exist at `~/Library/CloudStorage/OneDrive-KingdomEmbassy-Ohio/Desktop/gathering-entrance.html` (confirmed on disk, 2026-09-21) as a standalone prototype — but it has never been copied into or wired up in this repo, and nothing in this repo references it.
+- Integrating it (if still wanted) is real, not-yet-started work: copying the file in, adding whatever Three.js runtime and crowd image assets it depends on, and linking it from `gather.html` or wherever it's meant to launch from.
 
 ---
 
-## 13. Crowd Photo Assets (for The Gathering)
+## 13. Crowd Photo Assets (for The Gathering) — NOT IN THIS REPO
 
-Main project location:
-`/Users/yaunahlove/Projects/unveiled-assembly-redesign-preview/assets/crowd/`
-
-Original attached package preserved at:
-`/Users/yaunahlove/Downloads/gathering-crowd-assets-2/assets/crowd/`
-
-All 11 expected files confirmed present:
-- `near-01-locs-raised.webp`, `near-02-braids.webp`, `near-04-curls-bowed.webp`, `near-07-locs-arm.webp`, `near-10-straight-hair.webp`, `near-15-waves.webp`
-- `fore-05-hands-clasped.webp`, `fore-12-hands-raised.webp`, `fore-16-hand-raised.webp`
-- `flyby-01-close.webp`, `flyby-02-close.webp`
+**Corrected 2026-09-21 (Phase 1):** previously claimed to be present at `assets/crowd/` in this repo with all 11 files confirmed — that folder does not exist here (`assets/` contains only the two logo files in Section 3). The "original package" path this section used to cite (`~/Downloads/gathering-crowd-assets-2/assets/crowd/`) also does not exist on disk as of this check. If these crowd images still exist somewhere, their real location needs to be rediscovered before Section 12's integration work can happen — do not assume any of the specific filenames below are still findable without checking first:
+`near-01-locs-raised.webp`, `near-02-braids.webp`, `near-04-curls-bowed.webp`, `near-07-locs-arm.webp`, `near-10-straight-hair.webp`, `near-15-waves.webp`, `fore-05-hands-clasped.webp`, `fore-12-hands-raised.webp`, `fore-16-hand-raised.webp`, `flyby-01-close.webp`, `flyby-02-close.webp`.
 
 These are the filenames referenced by the integrated `gathering-entrance.html` `CROWD_ASSETS` and `FLYBY_ASSETS` configurations. They are now copied into the main project and browser-verified as loaded; the original package remains preserved.
 
@@ -208,9 +209,8 @@ These are the filenames referenced by the integrated `gathering-entrance.html` `
 |---|---|
 | **Main working project (this repo)** | `/Users/yaunahlove/Projects/unveiled-assembly-redesign-preview` |
 | Older live site source (mirror) | `~/Documents/Codex/2026-08-25/referenced-chatgpt-conversation-this-is-an-3/outputs/the-assembly-website/` (via OneDrive) |
-| The Gathering entrance prototype | `~/Desktop/gathering-entrance.html` (via OneDrive) |
-| Crowd photo assets (11 files) | `~/Downloads/gathering-crowd-assets/assets/crowd/` |
-| Gathering WebGL runtime | `assets/vendor/three.min.js` |
+| The Gathering entrance prototype (NOT in this repo — see Section 12) | `~/Desktop/gathering-entrance.html` (confirmed on disk 2026-09-21; symlinked to OneDrive) |
+| Crowd photo assets — NOT FOUND anywhere checked (see Section 13) | previously claimed at `~/Downloads/gathering-crowd-assets/assets/crowd/` and `~/Downloads/gathering-crowd-assets-2/assets/crowd/` — neither exists on disk as of 2026-09-21 |
 | GitHub — this project | `github.com/contactunveiledassembly-oss/unveiled-assembly-redesign-preview` |
 | GitHub — older live site | `github.com/contactunveiledassembly-oss/unveiled-assembly-website` |
 | Live custom domain | `theunveiledassembly.com` (points to the OLDER repo, not this one, as of now) |
@@ -219,7 +219,7 @@ These are the filenames referenced by the integrated `gathering-entrance.html` `
 
 ## 17. Known TODO Items (explicitly not done yet — do not assume otherwise)
 
-1. Decide whether and when to promote the integrated Gathering entrance to the live `theunveiledassembly.com` domain (currently still pointed at the older, simpler repo).
+1. The Gathering entrance prototype is NOT integrated into this repo (see Section 12) — decide whether it's still wanted before doing that work, separately from the existing decision about when to promote this repo to the live `theunveiledassembly.com` domain (currently still pointed at the older, simpler repo).
 2. Build out the Shop (currently a disabled "coming soon" placeholder).
 3. Add Stripe (or another processor) for paid bookings and/or shop checkout.
 4. Verify and document: phone-number verification, profile pictures, moderator/permission system, audit logs, reporting/analytics, pause-all-bookings, blocked date ranges, double-booking prevention, temporary slot holds — all listed here as unconfirmed/planned until someone traces them directly in `app.js`.

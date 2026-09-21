@@ -36,15 +36,65 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // A slot doc just marks a date+time as taken (no personal data), so it's
-    // safe for anyone to read (to see availability) and create (to book).
-    // An admin can always delete one (freeing the time back up); a signed-in
-    // user can delete their own slot too (self-service cancel/reschedule).
+    // A slot doc represents current occupancy at one exact date+time —
+    // deliberately no name/email/phone/reason, just enough to compute
+    // public availability (see bookedIntervalsForDate() in app.js), so a
+    // guest visitor can read it directly instead of the private `bookings`
+    // collection (which they're correctly forbidden from querying below).
+    // `count` tracks how many of `capacity` occupants currently hold this
+    // exact time; the client deletes the doc once count would reach 0
+    // rather than leaving a stale 0-count doc around. Field types/ranges
+    // are validated here so a visitor can't write a malformed doc that
+    // would corrupt everyone else's availability calculation.
+    function validSlotFields(d) {
+      return d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        d.time is string && d.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
+        d.sessionType is string && d.sessionType.size() > 0 && d.sessionType.size() < 60 &&
+        d.durationMinutes is number && d.durationMinutes > 0 && d.durationMinutes <= 480 &&
+        d.bufferBeforeMin is number && d.bufferBeforeMin >= 0 && d.bufferBeforeMin <= 480 &&
+        d.bufferAfterMin is number && d.bufferAfterMin >= 0 && d.bufferAfterMin <= 480 &&
+        d.capacity is int && d.capacity > 0 && d.capacity <= 20 &&
+        d.count is int && d.count > 0 && d.count <= d.capacity &&
+        (!('uid' in d) || d.uid == null || d.uid is string);
+    }
     match /slots/{slotId} {
       allow read: if true;
-      allow create: if true;
-      allow update: if false;
-      allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      // A fresh slot always starts at count 1 (the first occupant) — this
+      // is what stops a visitor from creating an arbitrary/malformed doc,
+      // or one that claims to already be at some other occupancy.
+      allow create: if request.resource.data.keys().hasOnly(
+                        ['date','time','sessionType','durationMinutes','bufferBeforeMin','bufferAfterMin','capacity','count','uid','updatedAt']) &&
+                      validSlotFields(request.resource.data) && request.resource.data.count == 1;
+      // Taking one more of a multi-capacity slot only ever increments
+      // count by exactly 1 and can't change what the slot IS (date/time/
+      // session/capacity/duration/buffers) — any visitor may do this,
+      // since it only ever fills an already-open seat, never removes
+      // someone else's. Freeing a shared seat back up (decrementing) is
+      // admin-only: with one `uid` per doc there's no way to prove which
+      // of several occupants is releasing their own seat, so rather than
+      // let any visitor decrement (and effectively bump a stranger off a
+      // shared slot), that case routes through the admin tools. The
+      // common capacity-1 case doesn't need this at all — freeing it is
+      // always a full delete, handled below.
+      allow update: if isAdmin() ||
+        (request.resource.data.keys().hasOnly(
+            ['date','time','sessionType','durationMinutes','bufferBeforeMin','bufferAfterMin','capacity','count','uid','updatedAt']) &&
+          validSlotFields(request.resource.data) &&
+          request.resource.data.date == resource.data.date &&
+          request.resource.data.time == resource.data.time &&
+          request.resource.data.sessionType == resource.data.sessionType &&
+          request.resource.data.capacity == resource.data.capacity &&
+          request.resource.data.durationMinutes == resource.data.durationMinutes &&
+          request.resource.data.bufferBeforeMin == resource.data.bufferBeforeMin &&
+          request.resource.data.bufferAfterMin == resource.data.bufferAfterMin &&
+          request.resource.data.count == resource.data.count + 1);
+      // Deleting fully frees the time back up, so it's only allowed once
+      // count is already down to the last occupant (1) — a stranger can
+      // never delete a slot out from under a still-shared multi-capacity
+      // booking, and the uid check still means only the person who took
+      // the LAST remaining seat (or the admin) can free it.
+      allow delete: if isAdmin() ||
+        (isSignedIn() && resource.data.uid == request.auth.uid && resource.data.count <= 1);
     }
 
     // Dates the ministry has marked unavailable (holidays, travel, etc).
@@ -85,13 +135,30 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
-    // Temporary holds while someone is mid-checkout. Public create/read/
-    // delete (any visitor can hold or release an open slot); only an
-    // admin can change an existing hold's contents.
+    // Temporary (10-minute) holds while someone is mid-checkout. Public
+    // create/read (any visitor can hold an open slot and see what's held),
+    // but a plain `allow delete: if true` used to let ANY visitor delete
+    // ANY other visitor's still-active hold to snipe their time — holds
+    // are intentionally anonymous (no per-visitor identity to check
+    // against), so the only way to stop that without a paid Cloud
+    // Function is to make a hold undeletable by anyone but the admin
+    // until the server clock (not the client-supplied `expiresAt`) says
+    // its 10 minutes are actually up. A visitor who changes their mind
+    // and picks a different time isn't blocked by this — their old hold
+    // just expires on its own shortly after, the same as it already did
+    // for the no-action case, and `activeHoldsForDate()` already ignores
+    // holds past `expiresAt` either way. The real double-booking guard is
+    // the `slots` transaction at booking time, not this hold — this is
+    // best-effort UX to reduce (not eliminate) two visitors racing for
+    // the same time, so this tradeoff costs nothing real.
     match /bookingHolds/{holdId} {
       allow read: if true;
-      allow create: if true;
-      allow delete: if true;
+      allow create: if request.resource.data.keys().hasOnly(['date','time','sessionTypeId','expiresAt','createdAt']) &&
+        request.resource.data.date is string && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        request.resource.data.time is string && request.resource.data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
+        holdId == request.resource.data.date + '_' + request.resource.data.time + '_hold' &&
+        request.resource.data.expiresAt is number;
+      allow delete: if isAdmin() || request.time > resource.data.createdAt + duration.value(10, 'm');
       allow update: if false;
     }
 

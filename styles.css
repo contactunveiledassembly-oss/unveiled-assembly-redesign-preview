@@ -1853,11 +1853,18 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .booking-date-time-layout .booking-hold-notice{min-height:18px}
 .booking-time-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:14px;max-height:305px;overflow-y:auto;padding-right:4px}
 .booking-time-btn{
-  font-family:var(--sans);font-size:13px;font-weight:600;padding:13px 10px;border-radius:8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-family:var(--sans);font-size:13px;font-weight:600;padding:11px 10px;border-radius:8px;
   border:1.5px solid var(--line-light);background:var(--white);color:var(--black);cursor:pointer;transition:.15s;
 }
 .booking-time-btn:hover{border-color:var(--black)}
+.booking-time-btn:focus-visible{outline:2px solid var(--black);outline-offset:2px}
 .booking-time-btn.active{background:var(--black);border-color:var(--black);color:var(--white)}
+/* Only shown when the visitor's chosen zone differs from the ministry's
+   Eastern Time, so the required "equivalent ministry time" note never
+   fights the primary label for attention when it would just repeat it. */
+.booking-time-btn-et{display:block;font:500 10px var(--sans);color:var(--stone);text-transform:none;letter-spacing:0}
+.booking-time-btn.active .booking-time-btn-et{color:rgba(255,255,255,.7)}
 @media(max-width:760px){
   .booking-date-time-layout{grid-template-columns:1fr}
   .booking-times-column{border-left:0;border-top:1px solid #ececef}
