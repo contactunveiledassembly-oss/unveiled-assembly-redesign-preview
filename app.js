@@ -3697,16 +3697,33 @@ async function setTestimonyStatus(itemId, nextStatus){
   if(nextStatus === 'published' && item.visibility === 'private'){
     return { ok: false, reason: 'This submission is marked Private — change its visibility above before publishing.' };
   }
-  const wasPublished = item.status === 'published';
-  item.status = nextStatus;
-  if(nextStatus === 'published') {
-    item.publicDisplayText = item.publicDisplayText || item.message;
+  if(nextStatus !== 'published'){
+    // Privacy-favoring order: the public copy comes down FIRST, always
+    // attempted regardless of what the local item currently thinks its
+    // status is (Firestore's delete is a no-op on a doc that's already
+    // gone, so this is safe and correct to retry). item.status is only
+    // ever changed once that's confirmed — on failure the in-memory item
+    // is left exactly as it was, never showing an unsaved status change,
+    // and the same action can just be clicked again.
+    const mirrorResult = await unpublishPublicMirror('publicTestimonials', itemId);
+    if(!mirrorResult.ok){
+      renderMinistryInboxViews();
+      return { ok: false, reason: "Could not remove the public copy — please try again. Nothing was changed yet." };
+    }
+    item.status = nextStatus;
+    const saveResult = await saveMinistryRecordEdit('testimonials', item);
+    logAdminAction('testimony-status-change', { itemId, nextStatus });
+    renderMinistryInboxViews();
+    if(DEMO_MODE){ renderPublishedTestimonials(); renderPublishedClassReviews(); }
+    if(!saveResult.ok) return { ok: false, reason: 'The public copy was removed, but saving the new status failed — please try again.' };
+    if(document.getElementById('testimonyDetailDialog')) document.getElementById('testimonyDetailDialog').close();
+    return { ok: true };
   }
+  item.status = 'published';
+  item.publicDisplayText = item.publicDisplayText || item.message;
   const saveResult = await saveMinistryRecordEdit('testimonials', item);
   if(!saveResult.ok) return { ok: false, reason: 'Could not save — please try again.' };
-  const mirrorResult = nextStatus === 'published'
-    ? await publishPublicMirror('publicTestimonials', item, 'testimonial')
-    : (wasPublished ? await unpublishPublicMirror('publicTestimonials', itemId) : { ok: true });
+  const mirrorResult = await publishPublicMirror('publicTestimonials', item, 'testimonial');
   logAdminAction('testimony-status-change', { itemId, nextStatus });
   renderMinistryInboxViews();
   if(DEMO_MODE){ renderPublishedTestimonials(); renderPublishedClassReviews(); }
@@ -3720,16 +3737,26 @@ async function setReviewStatus(itemId, nextStatus){
   if(nextStatus === 'published' && item.visibility === 'private'){
     return { ok: false, reason: 'This submission is marked Private — change its visibility above before publishing.' };
   }
-  const wasPublished = item.status === 'published';
-  item.status = nextStatus;
-  if(nextStatus === 'published') {
-    item.publicDisplayText = item.publicDisplayText || item.message;
+  if(nextStatus !== 'published'){
+    const mirrorResult = await unpublishPublicMirror('publicClassReviews', itemId);
+    if(!mirrorResult.ok){
+      renderMinistryInboxViews();
+      return { ok: false, reason: "Could not remove the public copy — please try again. Nothing was changed yet." };
+    }
+    item.status = nextStatus;
+    const saveResult = await saveMinistryRecordEdit('classReviews', item);
+    logAdminAction('class-review-status-change', { itemId, nextStatus });
+    renderMinistryInboxViews();
+    if(DEMO_MODE){ renderPublishedTestimonials(); renderPublishedClassReviews(); }
+    if(!saveResult.ok) return { ok: false, reason: 'The public copy was removed, but saving the new status failed — please try again.' };
+    if(document.getElementById('reviewDetailDialog')) document.getElementById('reviewDetailDialog').close();
+    return { ok: true };
   }
+  item.status = 'published';
+  item.publicDisplayText = item.publicDisplayText || item.message;
   const saveResult = await saveMinistryRecordEdit('classReviews', item);
   if(!saveResult.ok) return { ok: false, reason: 'Could not save — please try again.' };
-  const mirrorResult = nextStatus === 'published'
-    ? await publishPublicMirror('publicClassReviews', item, 'review')
-    : (wasPublished ? await unpublishPublicMirror('publicClassReviews', itemId) : { ok: true });
+  const mirrorResult = await publishPublicMirror('publicClassReviews', item, 'review');
   logAdminAction('class-review-status-change', { itemId, nextStatus });
   renderMinistryInboxViews();
   if(DEMO_MODE){ renderPublishedTestimonials(); renderPublishedClassReviews(); }
@@ -4193,15 +4220,23 @@ function addMinistryDialogs(){
     const testimonyDelete = event.target.closest('[data-testimony-delete]');
     if(testimonyDelete){
       const removedId = testimonyDelete.dataset.testimonyDelete;
-      const wasPublished = TESTIMONIALS.find(t => t.id === removedId)?.status === 'published';
+      // Mirror first, always attempted regardless of the source's current
+      // status (deleting a doc that was never published, or whose mirror
+      // is already gone, is a harmless no-op in Firestore — this makes a
+      // retry after a partial failure safe). The source is only ever
+      // removed once that's confirmed gone, so a failure here can never
+      // orphan a public mirror with no private record left to retry from.
+      if(!DEMO_MODE){
+        const mirrorResult = await unpublishPublicMirror('publicTestimonials', removedId);
+        if(!mirrorResult.ok){
+          alert("Could not remove this testimony's public copy — nothing was deleted. Please try again.");
+          return;
+        }
+        try { await deleteDoc(doc(db, 'testimonials', removedId)); }
+        catch (err) { console.error('[ministry] could not delete testimonial', err.code || err); alert('Could not delete this testimony — please try again.'); return; }
+      }
       TESTIMONIALS = TESTIMONIALS.filter(item => item.id !== removedId);
       persistMinistryDataLocal();
-      if(!DEMO_MODE){
-        try {
-          await deleteDoc(doc(db, 'testimonials', removedId));
-          if(wasPublished) await deleteDoc(doc(db, 'publicTestimonials', removedId));
-        } catch (err) { console.error('[ministry] could not delete testimonial', err.code || err); }
-      }
       renderMinistryInboxViews();
       if(DEMO_MODE) renderPublishedTestimonials();
       return;
@@ -4209,15 +4244,17 @@ function addMinistryDialogs(){
     const reviewDelete = event.target.closest('[data-review-delete]');
     if(reviewDelete){
       const removedId = reviewDelete.dataset.reviewDelete;
-      const wasPublished = CLASS_REVIEWS.find(r => r.id === removedId)?.status === 'published';
+      if(!DEMO_MODE){
+        const mirrorResult = await unpublishPublicMirror('publicClassReviews', removedId);
+        if(!mirrorResult.ok){
+          alert("Could not remove this review's public copy — nothing was deleted. Please try again.");
+          return;
+        }
+        try { await deleteDoc(doc(db, 'classReviews', removedId)); }
+        catch (err) { console.error('[ministry] could not delete class review', err.code || err); alert('Could not delete this review — please try again.'); return; }
+      }
       CLASS_REVIEWS = CLASS_REVIEWS.filter(item => item.id !== removedId);
       persistMinistryDataLocal();
-      if(!DEMO_MODE){
-        try {
-          await deleteDoc(doc(db, 'classReviews', removedId));
-          if(wasPublished) await deleteDoc(doc(db, 'publicClassReviews', removedId));
-        } catch (err) { console.error('[ministry] could not delete class review', err.code || err); }
-      }
       renderMinistryInboxViews();
       if(DEMO_MODE) renderPublishedClassReviews();
       return;

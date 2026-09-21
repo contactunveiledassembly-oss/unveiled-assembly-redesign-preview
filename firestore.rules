@@ -145,11 +145,35 @@ service cloud.firestore {
     // Folded into isAdmin() for now rather than a separate Prayer Team
     // role — see PROJECT-CONTEXT.md's Roles and Permissions section for
     // why that split isn't implemented yet.
+    // Every field the prayer form can actually send (see the submit
+    // handler in app.js) is named here explicitly — hasOnly rejects
+    // anything else, hasAll requires the ones that are never blank.
+    // `id` is checked against the doc's own path id so a visitor can't
+    // write a document whose internal `id` field disagrees with where
+    // it actually lives. Optional string fields (name/email/phone) get
+    // a generous but real max length — plenty for a real submission,
+    // not enough to be used as a junk-data dumping ground.
+    // `docId` is passed in explicitly (from the `{requestId}` wildcard at
+    // the call site below) rather than referenced directly — a function
+    // declared at this scope has no implicit access to a path variable
+    // that only exists inside a nested `match` block; it has to be
+    // handed in as a real parameter, same as `request.resource.data` is.
+    function validPrayerSubmission(d, docId) {
+      return d.keys().hasOnly(['id','firstName','lastName','email','phone','message','visibility','status','notes','createdAt']) &&
+        d.keys().hasAll(['id','message','status','createdAt']) &&
+        d.id is string && d.id == docId &&
+        (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
+        (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
+        (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
+        (!('phone' in d) || (d.phone is string && d.phone.size() <= 40)) &&
+        d.message is string && d.message.size() > 0 && d.message.size() <= 4000 &&
+        (!('visibility' in d) || d.visibility == 'private') && // prayer is always private — see below
+        d.status == 'new' &&
+        (!('notes' in d) || (d.notes is string && d.notes.size() <= 4000)) &&
+        d.createdAt is string && d.createdAt.size() <= 40;
+    }
     match /prayerRequests/{requestId} {
-      allow create: if request.resource.data.keys().hasAll(['message','status','createdAt']) &&
-                      request.resource.data.message is string &&
-                      request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 4000 &&
-                      request.resource.data.status == 'new';
+      allow create: if validPrayerSubmission(request.resource.data, requestId);
       allow read: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
@@ -166,25 +190,51 @@ service cloud.firestore {
     // below, which an admin action creates/updates/deletes alongside a
     // status change here (see setTestimonyStatus()/setReviewStatus() in
     // app.js) — never written directly by a visitor.
-    function validSubmissionVisibility(d) {
-      return d.visibility in ['public', 'anonymous', 'private'];
+    // As with prayer above, every field either form can actually send is
+    // named explicitly (see the two submit handlers in app.js) — nothing
+    // else gets through, and `id` must match the doc's own path.
+    function validTestimonySubmission(d, docId) {
+      return d.keys().hasOnly(['id','firstName','lastName','email','phone','title','message','visibility','status','publicDisplayText','hasVideoPreview','createdAt']) &&
+        d.keys().hasAll(['id','message','visibility','status','createdAt']) &&
+        d.id is string && d.id == docId &&
+        (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
+        (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
+        (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
+        (!('phone' in d) || (d.phone is string && d.phone.size() <= 40)) &&
+        (!('title' in d) || (d.title is string && d.title.size() <= 200)) &&
+        d.message is string && d.message.size() > 0 && d.message.size() <= 6000 &&
+        d.visibility in ['public', 'anonymous', 'private'] &&
+        d.status == 'pending' &&
+        (!('publicDisplayText' in d) || (d.publicDisplayText is string && d.publicDisplayText.size() <= 6000)) &&
+        (!('hasVideoPreview' in d) || d.hasVideoPreview is bool) &&
+        d.createdAt is string && d.createdAt.size() <= 40;
     }
     match /testimonials/{itemId} {
-      allow create: if request.resource.data.keys().hasAll(['message','visibility','status','createdAt']) &&
-                      request.resource.data.message is string &&
-                      request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 6000 &&
-                      validSubmissionVisibility(request.resource.data) &&
-                      request.resource.data.status == 'pending';
+      allow create: if validTestimonySubmission(request.resource.data, itemId);
       allow read: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
+    function validClassReviewSubmission(d, docId) {
+      return d.keys().hasOnly(['id','className','firstName','lastName','email','phone','message','visibility','status','publicDisplayText','rating','recommendation','createdAt']) &&
+        d.keys().hasAll(['id','message','visibility','status','createdAt']) &&
+        d.id is string && d.id == docId &&
+        (!('className' in d) || (d.className is string && d.className.size() <= 200)) &&
+        (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
+        (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
+        (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
+        (!('phone' in d) || (d.phone is string && d.phone.size() <= 40)) &&
+        d.message is string && d.message.size() > 0 && d.message.size() <= 6000 &&
+        d.visibility in ['public', 'anonymous', 'private'] &&
+        d.status == 'pending' &&
+        (!('publicDisplayText' in d) || (d.publicDisplayText is string && d.publicDisplayText.size() <= 6000)) &&
+        // Sent by the form as a string ("1"–"5" or "") — see app.js.
+        (!('rating' in d) || (d.rating is string && d.rating.size() <= 4)) &&
+        (!('recommendation' in d) || (d.recommendation is string && d.recommendation.size() <= 20)) &&
+        d.createdAt is string && d.createdAt.size() <= 40;
+    }
     match /classReviews/{itemId} {
-      allow create: if request.resource.data.keys().hasAll(['message','visibility','status','createdAt']) &&
-                      request.resource.data.message is string &&
-                      request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 6000 &&
-                      validSubmissionVisibility(request.resource.data) &&
-                      request.resource.data.status == 'pending';
+      allow create: if validClassReviewSubmission(request.resource.data, itemId);
       allow read: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
@@ -202,6 +252,10 @@ service cloud.firestore {
     // client write is the interim mechanism; a trusted server-side
     // function performing this copy instead, once one exists, would be
     // strictly more correct than trusting any signed-in admin's browser).
+    // Split into create/update vs delete — a delete has no
+    // request.resource (no replacement document), so validating
+    // request.resource.data against it would reject every legitimate
+    // unpublish/delete. Deleting only ever needs to check who's asking.
     function validPublicMirror(d) {
       return d.keys().hasOnly(['sourceId','displayName','publicText','title','className','rating','reviewDate','status','publishedAt']) &&
         d.keys().hasAll(['sourceId','displayName','publicText','status']) &&
@@ -216,11 +270,13 @@ service cloud.firestore {
     }
     match /publicTestimonials/{itemId} {
       allow read: if true;
-      allow write: if isAdmin() && validPublicMirror(request.resource.data);
+      allow create, update: if isAdmin() && validPublicMirror(request.resource.data);
+      allow delete: if isAdmin();
     }
     match /publicClassReviews/{itemId} {
       allow read: if true;
-      allow write: if isAdmin() && validPublicMirror(request.resource.data);
+      allow create, update: if isAdmin() && validPublicMirror(request.resource.data);
+      allow delete: if isAdmin();
     }
     // Minimal audit trail for administrative actions (booking cancel/
     // decline, prayer/testimony status changes, and similar — see
