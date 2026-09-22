@@ -128,6 +128,171 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    // Night of Prayer — a single admin-configured doc. Public read so the
+    // homepage can show real details once a date exists; empty/missing is
+    // the correct "not scheduled yet" state (the client shows a neutral
+    // message instead of ever inventing a date — see renderNightOfPrayer()
+    // in app.js). Only an admin can set it, same pattern as scheduling.
+    match /nightOfPrayer/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // Prayer requests are always private (never publicly readable, per
+    // ministry policy — not just "admin-only by default" like bookings).
+    // Anonymous submission is allowed (name/email/phone are optional on
+    // the form) — an authorized reader still sees the doc either way,
+    // there's just no name attached when the submitter left it blank.
+    // Folded into isAdmin() for now rather than a separate Prayer Team
+    // role — see PROJECT-CONTEXT.md's Roles and Permissions section for
+    // why that split isn't implemented yet.
+    // Every field the prayer form can actually send (see the submit
+    // handler in app.js) is named here explicitly — hasOnly rejects
+    // anything else, hasAll requires the ones that are never blank.
+    // `id` is checked against the doc's own path id so a visitor can't
+    // write a document whose internal `id` field disagrees with where
+    // it actually lives. Optional string fields (name/email/phone) get
+    // a generous but real max length — plenty for a real submission,
+    // not enough to be used as a junk-data dumping ground.
+    // `docId` is passed in explicitly (from the `{requestId}` wildcard at
+    // the call site below) rather than referenced directly — a function
+    // declared at this scope has no implicit access to a path variable
+    // that only exists inside a nested `match` block; it has to be
+    // handed in as a real parameter, same as `request.resource.data` is.
+    function validPrayerSubmission(d, docId) {
+      return d.keys().hasOnly(['id','firstName','lastName','email','phone','message','visibility','status','notes','createdAt']) &&
+        d.keys().hasAll(['id','message','status','createdAt']) &&
+        d.id is string && d.id == docId &&
+        (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
+        (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
+        (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
+        (!('phone' in d) || (d.phone is string && d.phone.size() <= 40)) &&
+        d.message is string && d.message.size() > 0 && d.message.size() <= 4000 &&
+        (!('visibility' in d) || d.visibility == 'private') && // prayer is always private — see below
+        d.status == 'new' &&
+        (!('notes' in d) || (d.notes is string && d.notes.size() <= 4000)) &&
+        d.createdAt is string && d.createdAt.size() <= 40;
+    }
+    match /prayerRequests/{requestId} {
+      allow create: if validPrayerSubmission(request.resource.data, requestId);
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    // Testimonies and class reviews are private source records — full
+    // contact info, internal notes, the submitter's raw text — and are
+    // NEVER publicly readable, even once "published". A Firestore
+    // document is returned whole; there's no way to hand back only some
+    // fields of an otherwise-readable doc, so "public once published"
+    // on THIS collection would have exposed email/phone/consent
+    // metadata to anyone who queried it, regardless of what the client
+    // UI chose to display. What the public actually reads instead is
+    // the sanitized mirror in `publicTestimonials`/`publicClassReviews`
+    // below, which an admin action creates/updates/deletes alongside a
+    // status change here (see setTestimonyStatus()/setReviewStatus() in
+    // app.js) — never written directly by a visitor.
+    // As with prayer above, every field either form can actually send is
+    // named explicitly (see the two submit handlers in app.js) — nothing
+    // else gets through, and `id` must match the doc's own path.
+    function validTestimonySubmission(d, docId) {
+      return d.keys().hasOnly(['id','firstName','lastName','email','phone','title','message','visibility','status','publicDisplayText','hasVideoPreview','createdAt']) &&
+        d.keys().hasAll(['id','message','visibility','status','createdAt']) &&
+        d.id is string && d.id == docId &&
+        (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
+        (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
+        (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
+        (!('phone' in d) || (d.phone is string && d.phone.size() <= 40)) &&
+        (!('title' in d) || (d.title is string && d.title.size() <= 200)) &&
+        d.message is string && d.message.size() > 0 && d.message.size() <= 6000 &&
+        d.visibility in ['public', 'anonymous', 'private'] &&
+        d.status == 'pending' &&
+        (!('publicDisplayText' in d) || (d.publicDisplayText is string && d.publicDisplayText.size() <= 6000)) &&
+        (!('hasVideoPreview' in d) || d.hasVideoPreview is bool) &&
+        d.createdAt is string && d.createdAt.size() <= 40;
+    }
+    match /testimonials/{itemId} {
+      allow create: if validTestimonySubmission(request.resource.data, itemId);
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    function validClassReviewSubmission(d, docId) {
+      return d.keys().hasOnly(['id','className','firstName','lastName','email','phone','message','visibility','status','publicDisplayText','rating','recommendation','createdAt']) &&
+        d.keys().hasAll(['id','message','visibility','status','createdAt']) &&
+        d.id is string && d.id == docId &&
+        (!('className' in d) || (d.className is string && d.className.size() <= 200)) &&
+        (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
+        (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
+        (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
+        (!('phone' in d) || (d.phone is string && d.phone.size() <= 40)) &&
+        d.message is string && d.message.size() > 0 && d.message.size() <= 6000 &&
+        d.visibility in ['public', 'anonymous', 'private'] &&
+        d.status == 'pending' &&
+        (!('publicDisplayText' in d) || (d.publicDisplayText is string && d.publicDisplayText.size() <= 6000)) &&
+        // Sent by the form as a string ("1"–"5" or "") — see app.js.
+        (!('rating' in d) || (d.rating is string && d.rating.size() <= 4)) &&
+        (!('recommendation' in d) || (d.recommendation is string && d.recommendation.size() <= 20)) &&
+        d.createdAt is string && d.createdAt.size() <= 40;
+    }
+    match /classReviews/{itemId} {
+      allow create: if validClassReviewSubmission(request.resource.data, itemId);
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    // Sanitized public mirrors — the ONLY thing a guest visitor's browser
+    // ever reads for testimonials/reviews. Deterministic id == the source
+    // submission's id (one mirror per source doc, easy to find/replace/
+    // delete when the source is unpublished). Field set is locked down
+    // with hasOnly + type/length checks specifically because this is the
+    // collection a stranger can read — no email, phone, notes, or raw
+    // private text ever belongs here, and these rules are what actually
+    // guarantee that, not just "the admin UI doesn't happen to copy it
+    // over". Admin-only write for now (this app has no Cloud Functions
+    // yet — see PROJECT-CONTEXT.md — so a plain authenticated-admin
+    // client write is the interim mechanism; a trusted server-side
+    // function performing this copy instead, once one exists, would be
+    // strictly more correct than trusting any signed-in admin's browser).
+    // Split into create/update vs delete — a delete has no
+    // request.resource (no replacement document), so validating
+    // request.resource.data against it would reject every legitimate
+    // unpublish/delete. Deleting only ever needs to check who's asking.
+    function validPublicMirror(d) {
+      return d.keys().hasOnly(['sourceId','displayName','publicText','title','className','rating','reviewDate','status','publishedAt']) &&
+        d.keys().hasAll(['sourceId','displayName','publicText','status']) &&
+        d.sourceId is string && d.sourceId.size() > 0 &&
+        d.displayName is string && d.displayName.size() > 0 && d.displayName.size() <= 120 &&
+        d.publicText is string && d.publicText.size() > 0 && d.publicText.size() <= 2000 &&
+        d.status == 'published' &&
+        (!('title' in d) || d.title is string) &&
+        (!('className' in d) || d.className is string) &&
+        (!('rating' in d) || d.rating == null || (d.rating is number && d.rating >= 1 && d.rating <= 5)) &&
+        (!('reviewDate' in d) || d.reviewDate is string);
+    }
+    match /publicTestimonials/{itemId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && validPublicMirror(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /publicClassReviews/{itemId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && validPublicMirror(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    // Minimal audit trail for administrative actions (booking cancel/
+    // decline, prayer/testimony status changes, and similar — see
+    // logAdminAction() in app.js for exactly which actions are covered
+    // today; PROJECT-CONTEXT.md tracks what still needs to be added).
+    // Write-only from the client — nobody can edit or delete an entry
+    // once made, including the admin who made it, which is the whole
+    // point of an audit trail. Only an admin can read it back.
+    match /auditLog/{entryId} {
+      allow create: if isAdmin() &&
+                      request.resource.data.keys().hasAll(['action','actorUid','actorEmail','at']) &&
+                      request.resource.data.actorUid == request.auth.uid;
+      allow read: if isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
     // Public-facing Terms and Conditions / No Refund Policy text shown at
     // checkout. Public read so the booking form can display and require
     // agreement to them; only an admin can edit the wording.
@@ -163,17 +328,28 @@ service cloud.firestore {
     }
 
     // Booking requests hold personal data (name/email), so only the admin
-    // or the booker themself (if signed in) can read them back. Anyone can
-    // create one (guest booking is allowed), but a non-admin's request must
-    // start 'pending' — only an admin can create one already 'confirmed'
-    // (used by the manual "Add An Appointment" panel in Ministry View).
+    // or the booker themself (if signed in) can read them back. Per the
+    // ministry's confirmed policy, an account is required to book — this
+    // used to also allow an anonymous "guest" create (no auth at all) as
+    // long as status stayed 'pending'; that's gone. A non-admin create
+    // now requires being signed in AND the submitted `uid` matching the
+    // caller's own — nobody can create a booking claiming to be someone
+    // else's account, and nobody can create one with uid left blank/null.
+    // Only an admin can create one already 'confirmed' or with any other
+    // uid (used by the manual "Add An Appointment" panel in Ministry
+    // View, which still works exactly as before — this rule only
+    // tightens the NON-admin path).
     // A signed-in booker may update their OWN booking, but only to flip its
     // status to 'cancelled' — no other field, and not to any other status.
     // Admin can update anything (confirm/decline/reschedule).
     match /bookings/{bookingId} {
       allow create: if request.resource.data.keys().hasAll(
-                        ['name','email','sessionType','date','time','status']) &&
-                      (request.resource.data.status == 'pending' || isAdmin());
+                        ['name','email','sessionType','date','time','status','uid']) &&
+                      (
+                        (isSignedIn() && request.resource.data.uid == request.auth.uid &&
+                         request.resource.data.status == 'pending')
+                        || isAdmin()
+                      );
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin() ||
         (isSignedIn() && resource.data.uid == request.auth.uid &&
