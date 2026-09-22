@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Uses the GitHub Pages preview URL for now (this repo isn't mapped to
+  theunveiledassembly.com — see PROJECT-CONTEXT.md). Update the base URL
+  here if/when this repo is promoted to the custom domain.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/index.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/story.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/beliefs.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/gather.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/teachings.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/prayer.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/one-on-one.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/give.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/connect.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/testimonials.html</loc></url>
+  <url><loc>https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/shop/index.html</loc></url>
+</urlset>

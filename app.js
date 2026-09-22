@@ -392,7 +392,11 @@ function socialIconsHtml(extraClass){
   return SOCIAL_LINKS.map(s => {
     const common = s.ready
       ? `href="${s.href}" target="_blank" rel="noopener noreferrer" aria-label="${s.name}"`
-      : `href="#" class="is-placeholder" data-social-placeholder="1" aria-label="${s.name} — coming soon" title="Coming soon" aria-disabled="true"`;
+      // No href at all (not href="#") — a real disabled control shouldn't
+      // jump the page to the top when clicked, or sit in the Tab order,
+      // which is exactly what aria-disabled alone doesn't prevent on its
+      // own for a plain anchor.
+      : `class="is-placeholder" data-social-placeholder="1" aria-label="${s.name} — coming soon" title="Coming soon" aria-disabled="true" role="link"`;
     return `<a class="icon-btn ${extraClass || ''}" ${common}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">${s.icon}</svg></a>`;
   }).join('');
 }
@@ -1692,11 +1696,12 @@ function dialogsHtml(){
               </div>
               <div class="booking-times-column">
                 <div class="admin-microlabel checkout-section-label" id="bookingTimesHeading">Available Times</div>
-                <p class="admin-hint" style="margin-bottom:14px">All times are shown in Eastern Time.</p>
-                <div class="booking-time-grid" id="bookingTimeButtons" role="status" aria-live="polite" aria-atomic="true"></div>
+                <p class="admin-hint" id="bookingTimeZoneNote" style="margin-bottom:14px">All times are shown in Eastern Time.</p>
+                <div class="booking-time-grid" id="bookingTimeButtons" role="radiogroup" aria-live="polite" aria-atomic="true" aria-label="Available times"></div>
                 <select id="bookingTime" name="time" required disabled style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true" tabindex="-1">
                   <option value="">Choose a date first</option>
                 </select>
+                <p class="admin-hint" id="bookingSelectTimeHint" role="status" style="margin:10px 0 0" hidden>Select a time below to enable Continue.</p>
                 <div class="booking-hold-notice" id="bookingHoldNotice" role="status" aria-live="polite"></div>
               </div>
             </div>
@@ -5295,6 +5300,13 @@ document.getElementById('bookingCalendarGrid').addEventListener('click', async e
   if(window.matchMedia('(max-width: 760px)').matches){
     document.getElementById('bookingTimesHeading')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  // Focus follows the content: after picking a date, the natural next
+  // stop is a time — this also means a screen reader user or keyboard
+  // user doesn't have to hunt for the newly-appeared time buttons (and
+  // moving focus onto an off-screen button already scrolls it into view
+  // natively, on any screen size, not just the narrow one handled above).
+  const firstTimeBtn = document.querySelector('#bookingTimeButtons .booking-time-btn');
+  if(firstTimeBtn) firstTimeBtn.focus();
 });
 
 if(bookingTimeZoneSelect){
@@ -5319,6 +5331,22 @@ function selectedBookingTimeZone(){
   if(bookingTimeZoneSelect.value === '__other__') return bookingTimeZoneSelect.dataset.otherTz || undefined;
   return bookingTimeZoneSelect.value;
 }
+// The old copy always said "Eastern Time" even after a visitor picked a
+// different zone for the buttons themselves — directly contradicting
+// what was on screen. This keeps the sentence honest about which zone
+// the times are actually shown in, and only mentions Eastern separately
+// when it's not already the same zone (see rendered ministry-time note
+// on each button in populateTimeSelect below).
+function updateBookingTimeZoneNote(){
+  const note = document.getElementById('bookingTimeZoneNote');
+  if(!note || !bookingTimeZoneSelect) return;
+  const tz = selectedBookingTimeZone();
+  const selectedOpt = bookingTimeZoneSelect.options[bookingTimeZoneSelect.selectedIndex];
+  const zoneName = (selectedOpt ? selectedOpt.textContent : '') || tz || 'your time zone';
+  note.textContent = (tz && tz === BUSINESS_TZ)
+    ? 'Times are shown in your selected time zone: ' + zoneName + '.'
+    : 'Times are shown in your selected time zone: ' + zoneName + '. Ministry hours are Eastern Time (' + businessTzAbbr() + ') — shown next to each time below.';
+}
 if(bookingTimeZoneSelect){
   bookingTimeZoneSelect.addEventListener('change', () => {
     if(bookingTimeZoneSelect.value === '__other__' && !bookingTimeZoneSelect.dataset.otherTz){
@@ -5334,6 +5362,7 @@ if(bookingTimeZoneSelect){
         }
       }
     }
+    updateBookingTimeZoneNote();
     loadTimeSlots();
   });
 }
@@ -5365,27 +5394,71 @@ function renderBookingOptions(){
 renderBookingOptions();
 if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
 
-// Returns one entry per active (non-declined/cancelled) booking on that
-// date: { time, start, end, bufferBefore, bufferAfter }. Buffer minutes
-// come from THAT booking's own session type, so a booked session keeps
-// its configured breathing room regardless of what's being checked
-// against it.
+// A one-off override for a date replaces its normal weekly windows
+// entirely; otherwise the weekday's AVAILABILITY_RULES apply. Pulled out
+// of computeOpenSlots so createHold()/createBooking() can resolve the
+// same window (for its capacity/duration/buffers) when writing a public
+// `slots` doc, without duplicating the override-vs-rule logic.
+function resolveAvailabilityWindows(dateStr, sessionTypeId){
+  const override = AVAILABILITY_OVERRIDES[dateStr];
+  if(override){
+    if(override.closed) return { windows: [], closed: true };
+    return {
+      closed: false,
+      windows: (override.windows || []).filter(w => !w.sessionTypeIds || w.sessionTypeIds.length === 0 || !sessionTypeId || w.sessionTypeIds.includes(sessionTypeId))
+    };
+  }
+  const weekday = new Date(dateStr + 'T12:00:00').getDay();
+  return {
+    closed: false,
+    windows: AVAILABILITY_RULES.filter(r => r.dayOfWeek === weekday &&
+      (!r.sessionTypeIds || r.sessionTypeIds.length === 0 || !sessionTypeId || r.sessionTypeIds.includes(sessionTypeId)))
+  };
+}
+// What a NEW `slots` doc should contain for a given date/time/session —
+// used at hold- and booking-creation time (before any doc exists yet),
+// mirroring the capacity/duration/buffer math computeOpenSlots() used to
+// decide this time button should even be shown.
+function slotMetaForBooking(dateStr, hhmm, sessionTypeId){
+  const { windows } = resolveAvailabilityWindows(dateStr, sessionTypeId);
+  const startMin = hhmmToMinutes(hhmm);
+  const win = windows.find(w => startMin >= hhmmToMinutes(w.startTime) && startMin < hhmmToMinutes(w.endTime));
+  const type = SESSION_TYPES[sessionTypeId] || {};
+  return {
+    capacity: (win && win.capacity) || SCHEDULING_SETTINGS.defaultCapacityPerSlot || 1,
+    durationMinutes: type.durationMinutes || 30,
+    bufferBeforeMin: type.bufferBeforeMin || 0,
+    bufferAfterMin: type.bufferAfterMin || 0
+  };
+}
+
+// Returns one entry per currently-occupied time on that date. In
+// production this reads the PUBLIC `slots` collection — not `bookings`,
+// which firestore.rules correctly restricts to the admin and the
+// booker themself, so a guest visitor's browser can never query it
+// directly. A slot doc already carries no personal data (see
+// createBooking()) and is the aggregate for its exact time (its `count`
+// field), so unlike the old per-booking list this needs no separate
+// grouping step — computeOpenSlots() below sums `count` across entries
+// sharing a time only because demo mode still hands back one raw entry
+// per booking.
 async function bookedIntervalsForDate(dateStr){
-  function toInterval(b){
-    const start = hhmmToMinutes(b.time);
-    const type = SESSION_TYPES[b.sessionType] || {};
-    const dur = type.durationMinutes || 30;
-    return { time: b.time, start, end: start + dur, bufferBefore: type.bufferBeforeMin || 0, bufferAfter: type.bufferAfterMin || 0 };
+  function toInterval(time, durationMinutes, bufferBeforeMin, bufferAfterMin, count){
+    const start = hhmmToMinutes(time);
+    const dur = durationMinutes || 30;
+    return { time, start, end: start + dur, bufferBefore: bufferBeforeMin || 0, bufferAfter: bufferAfterMin || 0, count: count || 1 };
   }
   if(DEMO_MODE){
-    return DEMO_BOOKINGS.filter(b => b.date === dateStr && b.status !== 'declined' && b.status !== 'cancelled').map(toInterval);
+    return DEMO_BOOKINGS.filter(b => b.date === dateStr && b.status !== 'declined' && b.status !== 'cancelled').map(b => {
+      const type = SESSION_TYPES[b.sessionType] || {};
+      return toInterval(b.time, type.durationMinutes, type.bufferBeforeMin, type.bufferAfterMin, 1);
+    });
   }
-  const snap = await getDocs(query(collection(db, 'bookings'), where('date', '==', dateStr)));
+  const snap = await getDocs(query(collection(db, 'slots'), where('date', '==', dateStr)));
   const intervals = [];
   snap.forEach(docSnap => {
-    const b = docSnap.data();
-    if(b.status === 'declined' || b.status === 'cancelled') return;
-    intervals.push(toInterval(b));
+    const s = docSnap.data();
+    intervals.push(toInterval(s.time, s.durationMinutes, s.bufferBeforeMin, s.bufferAfterMin, s.count));
   });
   return intervals;
 }
@@ -5410,55 +5483,68 @@ function dateInAnyBlockoutRange(dateStr){
   return BLOCKOUT_RANGES.some(r => dateStr >= r.startDate && dateStr <= r.endDate);
 }
 
+// dayOfWeek/startTime/endTime come straight out of Firestore (an admin
+// could in principle hand-edit a doc into something malformed) — a bad
+// window is dropped rather than allowed to throw or silently generate
+// nonsense start times, so the worst case is "fewer windows than
+// expected" (still a real, visible state below) instead of a blank
+// panel or an uncaught exception.
+function isValidAvailabilityWindow(w){
+  const hhmmPattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+  return !!w && hhmmPattern.test(w.startTime || '') && hhmmPattern.test(w.endTime || '') &&
+    hhmmToMinutes(w.startTime) < hhmmToMinutes(w.endTime);
+}
+
 async function computeOpenSlots(dateStr, duration, sessionTypeId){
-  if(!dateStr) return { ok: false, reason: 'Choose a date first' };
-  if(SCHEDULING_SETTINGS.bookingPaused) return { ok: false, reason: 'Booking is temporarily paused — please check back soon' };
+  if(!dateStr) return { ok: false, reason: 'Choose a date first', kind: 'no-date' };
+  if(!sessionTypeId || !SESSION_TYPES[sessionTypeId] || !(Number(duration) > 0)){
+    return { ok: false, reason: 'We could not load availability. Please refresh or try again.', kind: 'invalid-config' };
+  }
+  if(SCHEDULING_SETTINGS.bookingPaused) return { ok: false, reason: 'Booking is temporarily paused — please check back soon', kind: 'paused' };
   if(SCHEDULING_SETTINGS.minNoticeHours){
     const earliestDateStr = new Date(Date.now() + SCHEDULING_SETTINGS.minNoticeHours * 3600000).toISOString().slice(0, 10);
-    if(dateStr < earliestDateStr) return { ok: false, reason: 'That date is too soon — please choose a later date' };
+    if(dateStr < earliestDateStr) return { ok: false, reason: 'That date is too soon — please choose a later date', kind: 'no-availability' };
   }
   if(SCHEDULING_SETTINGS.maxAdvanceDays){
     const maxDateStr = new Date(Date.now() + SCHEDULING_SETTINGS.maxAdvanceDays * 86400000).toISOString().slice(0, 10);
-    if(dateStr > maxDateStr) return { ok: false, reason: 'That date is too far out — please choose a closer date' };
+    if(dateStr > maxDateStr) return { ok: false, reason: 'That date is too far out — please choose a closer date', kind: 'no-availability' };
   }
   // Single-date blocks (existing mechanism) and multi-day blockout ranges
   // (vacations/holidays) both rule a date out entirely.
   if(DEMO_MODE){
-    if(DEMO_BLOCKED_DATES.includes(dateStr)) return { ok: false, reason: 'Not available on that date — please choose another' };
+    if(DEMO_BLOCKED_DATES.includes(dateStr)) return { ok: false, reason: 'Not available on that date — please choose another', kind: 'no-availability' };
   } else {
     try {
       const blockSnap = await getDoc(doc(db, 'blockouts', dateStr));
-      if(blockSnap.exists()) return { ok: false, reason: 'Not available on that date — please choose another' };
-    } catch (err) { /* fall through */ }
+      if(blockSnap.exists()) return { ok: false, reason: 'Not available on that date — please choose another', kind: 'no-availability' };
+    } catch (err) {
+      console.error('[booking] could not read blockouts/' + dateStr, err);
+      return { ok: false, reason: 'We could not load availability. Please refresh or try again.', kind: err.code === 'permission-denied' ? 'permission-denied' : 'network' };
+    }
   }
-  if(dateInAnyBlockoutRange(dateStr)) return { ok: false, reason: 'Not available on that date — please choose another' };
+  if(dateInAnyBlockoutRange(dateStr)) return { ok: false, reason: 'Not available on that date — please choose another', kind: 'no-availability' };
 
   // A one-off override for this exact date replaces the normal weekly
   // windows entirely (extra hours, reduced hours, or fully closed).
-  const override = AVAILABILITY_OVERRIDES[dateStr];
-  let windows;
-  if(override){
-    if(override.closed) return { ok: false, reason: 'Not available on that date — please choose another' };
-    windows = (override.windows || []).filter(w => !w.sessionTypeIds || w.sessionTypeIds.length === 0 || !sessionTypeId || w.sessionTypeIds.includes(sessionTypeId));
-  } else {
-    const weekday = new Date(dateStr + 'T12:00:00').getDay();
-    windows = AVAILABILITY_RULES.filter(r => r.dayOfWeek === weekday &&
-      (!r.sessionTypeIds || r.sessionTypeIds.length === 0 || !sessionTypeId || r.sessionTypeIds.includes(sessionTypeId)));
-  }
-  if(windows.length === 0) return { ok: false, reason: 'No sessions available on that day — please try another date' };
+  const resolved = resolveAvailabilityWindows(dateStr, sessionTypeId);
+  if(resolved.closed) return { ok: false, reason: 'Not available on that date — please choose another', kind: 'no-availability' };
+  const windows = resolved.windows.filter(isValidAvailabilityWindow);
+  if(windows.length === 0) return { ok: false, reason: 'No sessions available on that day — please try another date', kind: 'no-availability' };
 
   let booked, holds;
   try {
     [booked, holds] = await Promise.all([bookedIntervalsForDate(dateStr), activeHoldsForDate(dateStr)]);
   } catch (err) {
-    return { ok: false, reason: 'Could not load availability — try again' };
+    console.error('[booking] could not load occupied slots/holds for ' + dateStr, err);
+    return { ok: false, reason: 'We could not load availability. Please refresh or try again.', kind: err.code === 'permission-denied' ? 'permission-denied' : 'network' };
   }
-  if(SCHEDULING_SETTINGS.maxBookingsPerDay && booked.length >= SCHEDULING_SETTINGS.maxBookingsPerDay){
-    return { ok: false, reason: 'No open times on that date — the daily appointment limit has been reached' };
+  const totalBooked = booked.reduce((sum, b) => sum + (b.count || 1), 0);
+  if(SCHEDULING_SETTINGS.maxBookingsPerDay && totalBooked >= SCHEDULING_SETTINGS.maxBookingsPerDay){
+    return { ok: false, reason: 'No open times on that date — the daily appointment limit has been reached', kind: 'no-availability' };
   }
   const heldTimes = new Set(holds.map(h => h.time));
-  const sameSlotCounts = {};
-  booked.forEach(b => { sameSlotCounts[b.time] = (sameSlotCounts[b.time] || 0) + 1; });
+  const countsByTime = {};
+  booked.forEach(b => { countsByTime[b.time] = (countsByTime[b.time] || 0) + (b.count || 1); });
 
   const openStarts = new Set();
   windows.forEach(win => {
@@ -5469,7 +5555,7 @@ async function computeOpenSlots(dateStr, duration, sessionTypeId){
       const end = start + duration;
       const hhmm = minutesToHHMM(start);
       if(heldTimes.has(hhmm)) continue;
-      const atCapacity = (sameSlotCounts[hhmm] || 0) >= capacity;
+      const atCapacity = (countsByTime[hhmm] || 0) >= capacity;
       if(atCapacity) continue;
       const bufferConflict = booked.some(b => {
         if(b.time === hhmm) return false; // same-slot sharing is governed by capacity, not buffer
@@ -5481,7 +5567,7 @@ async function computeOpenSlots(dateStr, duration, sessionTypeId){
       openStarts.add(start);
     }
   });
-  if(openStarts.size === 0) return { ok: false, reason: 'No open times on that date' };
+  if(openStarts.size === 0) return { ok: false, reason: 'No available times for this date. Please choose another date.', kind: 'no-availability' };
   return { ok: true, openStarts: Array.from(openStarts).sort((a, b) => a - b) };
 }
 
@@ -5500,10 +5586,19 @@ async function populateTimeSelect(selectEl, dateStr, duration, sessionTypeId, tz
     return;
   }
   selectEl.appendChild(new Option('Choose a time', ''));
-  const tzAbbr = tz ? tzAbbrFor(tz) : businessTzAbbr();
+  // Bug fixed here: this used to label the ET clock value with the
+  // VISITOR's zone abbreviation (e.g. "2:00 PM PST" when 2:00 PM was
+  // actually the Eastern wall-clock time) — contradictory information.
+  // The ministry-time parenthetical is now always tagged with its own
+  // correct abbreviation, and only shown at all when it actually differs
+  // from what's already on screen.
   result.openStarts.forEach(start => {
     const hhmm = minutesToHHMM(start);
-    selectEl.appendChild(new Option(formatLocalTime(dateStr, hhmm, tz) + ' (' + minutesToLabel(start) + (tzAbbr ? ' ' + tzAbbr : '') + ')', hhmm));
+    const localLabel = formatLocalTime(dateStr, hhmm, tz);
+    const text = (tz && tz !== BUSINESS_TZ)
+      ? localLabel + ' (' + minutesToLabel(start) + ' ' + businessTzAbbr() + ' ministry time)'
+      : localLabel;
+    selectEl.appendChild(new Option(text, hhmm));
   });
   selectEl.disabled = false;
 }
@@ -5518,10 +5613,16 @@ async function loadTimeSlots(){
     await populateTimeSelect(bookingTimeSelect, dateStr, SESSION_TYPES[service] && SESSION_TYPES[service].durationMinutes, service, selectedBookingTimeZone());
     renderBookingTimeButtons();
   } catch (err) {
-    bookingTimeSelect.innerHTML = '<option value="">Could not load times</option>';
+    // Never fail silently: the real cause goes to the console (no
+    // personal data ever touches this path, so it's safe to log in
+    // full), while the visitor only ever sees the one safe, generic
+    // message — this is one of the required non-blank states, not a
+    // fallback that only sometimes shows.
+    console.error('[booking] loadTimeSlots failed', err);
+    bookingTimeSelect.innerHTML = '<option value="">We could not load availability. Please refresh or try again.</option>';
     bookingTimeSelect.disabled = true;
     renderBookingTimeButtons();
-    bookingStatus.textContent = 'Available times could not load. Please choose the date again.';
+    bookingStatus.textContent = 'We could not load availability. Please refresh or try again.';
   }
 }
 
@@ -5564,12 +5665,20 @@ function updateBookingSummaryPanel(){
   if(bookingTimeSelect.value) parts.push(formatLocalTime(bookingDateInput.value, bookingTimeSelect.value, selectedBookingTimeZone()));
   meta.innerHTML = parts.map(p => '<span>' + escapeHtml(p) + '</span>').join('');
 }
+// The time buttons are a real ARIA radio group (role="radiogroup" is on
+// the wrapper in the markup) rather than plain buttons with a CSS
+// .active class standing in for selection state — aria-checked carries
+// the actual selected state to screen readers, and roving tabindex (only
+// the checked/first button is in the Tab order; arrow keys move both
+// focus and selection the way a native radio group would) means a
+// visitor tabs to the group once instead of through every time in it.
 function renderBookingTimeButtons(){
   const wrap = document.getElementById('bookingTimeButtons');
   if(!wrap) return;
   const heading = document.getElementById('bookingTimesHeading');
+  const hint = document.getElementById('bookingSelectTimeHint');
+  const dateStr = bookingDateInput.value;
   if(heading){
-    const dateStr = bookingDateInput.value;
     if(dateStr){
       const formatted = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(dateStr + 'T12:00:00'));
       heading.textContent = 'Available Times for ' + formatted;
@@ -5582,17 +5691,61 @@ function renderBookingTimeButtons(){
     const msg = bookingTimeSelect.options[0] ? bookingTimeSelect.options[0].text : 'Choose a date first';
     wrap.innerHTML = '<p class="admin-hint">' + escapeHtml(msg) + '</p>';
     document.getElementById('bookingStepDateNext').disabled = true;
+    if(hint) hint.hidden = true;
     return;
   }
-  wrap.innerHTML = opts.map(o => '<button type="button" class="booking-time-btn" data-time="' + escapeHtml(o.value) + '">' + escapeHtml(o.text.split(' (')[0]) + '</button>').join('');
+  const tz = selectedBookingTimeZone();
+  const showMinistryTime = !!tz && tz !== BUSINESS_TZ;
+  wrap.innerHTML = opts.map((o, i) => {
+    const hhmm = o.value;
+    const checked = hhmm === bookingTimeSelect.value;
+    const localLabel = formatLocalTime(dateStr, hhmm, tz);
+    const etLine = showMinistryTime
+      ? '<small class="booking-time-btn-et">' + escapeHtml(minutesToLabel(hhmmToMinutes(hhmm)) + ' ' + businessTzAbbr() + ' ministry time') + '</small>'
+      : '';
+    const roving = checked || (!bookingTimeSelect.value && i === 0) ? '0' : '-1';
+    return '<button type="button" class="booking-time-btn" role="radio" aria-checked="' + checked +
+      '" tabindex="' + roving + '" data-time="' + escapeHtml(hhmm) + '">' + escapeHtml(localLabel) + etLine + '</button>';
+  }).join('');
+  document.querySelectorAll('#bookingTimeButtons .booking-time-btn.active').forEach(b => b.classList.remove('active'));
+  const activeBtn = wrap.querySelector('[aria-checked="true"]');
+  if(activeBtn) activeBtn.classList.add('active');
   document.getElementById('bookingStepDateNext').disabled = true;
+  if(hint) hint.hidden = false;
+}
+function selectBookingTimeButton(btn){
+  if(!btn) return;
+  document.querySelectorAll('#bookingTimeButtons .booking-time-btn').forEach(b => {
+    const isBtn = b === btn;
+    b.classList.toggle('active', isBtn);
+    b.setAttribute('aria-checked', String(isBtn));
+    b.tabIndex = isBtn ? 0 : -1;
+  });
+  bookingTimeSelect.value = btn.dataset.time;
+  bookingTimeSelect.dispatchEvent(new Event('change'));
 }
 document.getElementById('bookingTimeButtons').addEventListener('click', event => {
   const btn = event.target.closest('.booking-time-btn');
   if(!btn) return;
-  document.querySelectorAll('#bookingTimeButtons .booking-time-btn').forEach(b => b.classList.toggle('active', b === btn));
-  bookingTimeSelect.value = btn.dataset.time;
-  bookingTimeSelect.dispatchEvent(new Event('change'));
+  selectBookingTimeButton(btn);
+});
+// Left/Up and Right/Down move through the group the way a native radio
+// group does (and pick the newly-focused time immediately, same as a
+// real radio input); Home/End jump to the first/last available time.
+document.getElementById('bookingTimeButtons').addEventListener('keydown', event => {
+  if(!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+  const buttons = Array.from(document.querySelectorAll('#bookingTimeButtons .booking-time-btn'));
+  if(!buttons.length) return;
+  const currentIndex = buttons.indexOf(document.activeElement);
+  if(currentIndex === -1) return;
+  let nextIndex = currentIndex;
+  if(event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % buttons.length;
+  else if(event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+  else if(event.key === 'Home') nextIndex = 0;
+  else if(event.key === 'End') nextIndex = buttons.length - 1;
+  event.preventDefault();
+  selectBookingTimeButton(buttons[nextIndex]);
+  buttons[nextIndex].focus();
 });
 document.getElementById('bookingStepSessionNext').addEventListener('click', () => {
   if(!bookingForm.querySelector('input[name="sessionType"]:checked')){ bookingStatus.textContent = 'Choose a session to continue.'; return; }
@@ -5684,6 +5837,7 @@ function openBooking(service){
     document.getElementById('bookingEmail').value = currentProfile.email || '';
   }
   setDetectedTimeZoneDefault();
+  updateBookingTimeZoneNote();
   bookingCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   renderBookingCalendar();
   updateBookingSummaryPanel();
@@ -5731,24 +5885,61 @@ async function createHold(dateStr, time, sessionTypeId){
     DEMO_HOLDS.push({ id: holdId, date: dateStr, time, sessionTypeId, expiresAt });
     return { expiresAt };
   }
+  const { capacity } = slotMetaForBooking(dateStr, time, sessionTypeId);
   const holdRef = doc(db, 'bookingHolds', holdId);
+  const slotRef = doc(db, 'slots', dateStr + '_' + time);
   await runTransaction(db, async (tx) => {
     const holdSnap = await tx.get(holdRef);
     if(holdSnap.exists() && (holdSnap.data().expiresAt || 0) > Date.now()) throw new Error('slot-taken');
-    const slotSnap = await tx.get(doc(db, 'slots', dateStr + '_' + time));
-    if(slotSnap.exists()) throw new Error('slot-taken');
+    const slotSnap = await tx.get(slotRef);
+    const currentCount = slotSnap.exists() ? (slotSnap.data().count || 0) : 0;
+    if(currentCount >= capacity) throw new Error('slot-taken');
     tx.set(holdRef, { date: dateStr, time, sessionTypeId, expiresAt, createdAt: serverTimestamp() });
   });
   return { expiresAt };
 }
 
+// Deleting a hold early (picking a different time, closing the dialog)
+// is now only actually honored by firestore.rules once the hold has
+// genuinely expired server-side, or by an admin — see the rule comment
+// for why an anonymous hold can't otherwise tell "its own creator
+// releasing it early" apart from "a stranger sniping someone else's
+// still-active hold". A permission-denied here just means the hold will
+// sit until its own countdown ends, which is already handled safely
+// (activeHoldsForDate ignores anything past expiresAt) — never surfaced
+// to the visitor, since there's nothing actionable for them to do.
 async function releaseHold(dateStr, time){
   const holdId = holdIdFor(dateStr, time);
   if(DEMO_MODE){
     DEMO_HOLDS = DEMO_HOLDS.filter(h => h.id !== holdId);
     return;
   }
-  try { await deleteDoc(doc(db, 'bookingHolds', holdId)); } catch (err) { /* ok if already gone */ }
+  try { await deleteDoc(doc(db, 'bookingHolds', holdId)); } catch (err) { /* ok if already gone, or not yet expired — see comment above */ }
+}
+
+// Shared release path for freeing one occupant's worth of a `slots` doc
+// (self-cancel, admin cancel/decline, and the "old time" half of a
+// reschedule) — decrements `count` and only deletes the doc once it
+// would hit 0, so a shared (capacity > 1) slot isn't wiped out from under
+// its other occupants by one cancellation.
+async function releaseSlotOccupancy(slotId){
+  if(!slotId || DEMO_MODE) return;
+  try {
+    await runTransaction(db, async (tx) => {
+      const ref = doc(db, 'slots', slotId);
+      const snap = await tx.get(ref);
+      if(!snap.exists()) return;
+      const count = snap.data().count || 1;
+      if(count <= 1) tx.delete(ref);
+      else tx.update(ref, { count: count - 1, updatedAt: serverTimestamp() });
+    });
+  } catch (err) {
+    // A non-admin can't decrement a shared (capacity > 1) slot per
+    // firestore.rules — see that rule's comment. The booking itself is
+    // still correctly cancelled either way; this only means an admin may
+    // need to free the seat manually for that rare case.
+    console.error('[booking] could not release slot ' + slotId, err);
+  }
 }
 
 function clearHoldCountdown(){
@@ -5797,8 +5988,17 @@ bookingTimeSelect.addEventListener('change', async () => {
     startHoldCountdown(hold.expiresAt);
     const nextBtn = document.getElementById('bookingStepDateNext');
     if(nextBtn) nextBtn.disabled = false;
+    const hint = document.getElementById('bookingSelectTimeHint');
+    if(hint) hint.hidden = true;
   } catch (err) {
-    bookingStatus.textContent = 'That time was just taken by someone else — please choose another.';
+    if(err.message === 'slot-taken'){
+      bookingStatus.textContent = 'That time was just taken by someone else — please choose another.';
+    } else {
+      console.error('[booking] createHold failed', err);
+      bookingStatus.textContent = err.code === 'permission-denied'
+        ? 'We could not hold that time. Please refresh the page and try again.'
+        : 'We could not hold that time — check your connection and try again.';
+    }
     loadTimeSlots();
   }
 });
@@ -5829,14 +6029,24 @@ async function createBooking({ name, email, phone, reason, sessionType, date, ti
     return record;
   }
   const bookingRef = doc(collection(db, 'bookings'));
+  const meta = slotMetaForBooking(date, time, sessionType);
   await runTransaction(db, async (tx) => {
     const slotRef = doc(db, 'slots', slotId);
     const slotSnap = await tx.get(slotRef);
-    if(slotSnap.exists()) throw new Error('slot-taken');
-    tx.set(slotRef, { date, time, sessionType, uid: uid || null, createdAt: serverTimestamp() });
+    const currentCount = slotSnap.exists() ? (slotSnap.data().count || 0) : 0;
+    if(currentCount >= meta.capacity) throw new Error('slot-taken');
+    // This doc is the ONLY thing a guest visitor's browser can read to
+    // compute public availability (see bookedIntervalsForDate) — no
+    // name/email/phone/reason ever goes into it, only what's needed to
+    // block/derive open times for everyone else.
+    tx.set(slotRef, {
+      date, time, sessionType, uid: uid || null,
+      durationMinutes: meta.durationMinutes, bufferBeforeMin: meta.bufferBeforeMin, bufferAfterMin: meta.bufferAfterMin,
+      capacity: meta.capacity, count: currentCount + 1, updatedAt: serverTimestamp()
+    });
     tx.set(bookingRef, { slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone: clientTimeZone || null, confirmationId, smsConsent: !!smsConsent, createdAt: serverTimestamp() });
   });
-  try { await deleteDoc(doc(db, 'bookingHolds', holdIdFor(date, time))); } catch (err) { /* ok if already gone */ }
+  try { await deleteDoc(doc(db, 'bookingHolds', holdIdFor(date, time))); } catch (err) { /* ok if already gone, or not yet expired — see releaseHold comment */ }
   return { id: bookingRef.id, slotId, date, time, sessionType, name, email, phone, reason, uid, status, confirmationId, smsConsent: !!smsConsent };
 }
 
@@ -5906,12 +6116,15 @@ bookingForm.addEventListener('submit', async event => {
     loadTimeSlots();
     if(currentUser){ renderMemberSessionsList(); renderMemberDashboardPanels(); }
   } catch (err) {
+    console.error('[booking] createBooking failed', err.code || err.message || err);
     if(err.message === 'slot-taken'){
       bookingStatus.textContent = 'That time was just taken by someone else — pick another.';
       showBookingWizardStep('date');
       loadTimeSlots();
+    } else if(err.code === 'permission-denied'){
+      bookingStatus.textContent = 'We could not submit your request. Please refresh the page and try again.';
     } else {
-      bookingStatus.textContent = 'Could not submit your request. Please try again.';
+      bookingStatus.textContent = 'Could not submit your request — check your connection and try again.';
     }
   } finally {
     bookingSubmitBtn.disabled = false;
@@ -6355,9 +6568,7 @@ async function cancelOwnBooking(bookingId, slotId){
     return;
   }
   await updateDoc(doc(db, 'bookings', bookingId), { status: 'cancelled' });
-  if(slotId){
-    try { await deleteDoc(doc(db, 'slots', slotId)); } catch (err) { /* admin can clean up if this ever fails */ }
-  }
+  await releaseSlotOccupancy(slotId);
 }
 
 /* =================================================================
@@ -7758,12 +7969,28 @@ async function rescheduleBooking(bookingId, oldSlotId, newDate, newTime, session
     saveBookingsPreviewToStorage();
     return;
   }
+  const meta = slotMetaForBooking(newDate, newTime, sessionType);
   await runTransaction(db, async (tx) => {
+    // All reads before any writes — Firestore transactions require it.
     const newSlotRef = doc(db, 'slots', newSlotId);
     const newSlotSnap = await tx.get(newSlotRef);
-    if(newSlotSnap.exists()) throw new Error('slot-taken');
-    if(oldSlotId) tx.delete(doc(db, 'slots', oldSlotId));
-    tx.set(newSlotRef, { date: newDate, time: newTime, sessionType, uid: uid || null, createdAt: serverTimestamp() });
+    const newCount = newSlotSnap.exists() ? (newSlotSnap.data().count || 0) : 0;
+    if(newCount >= meta.capacity) throw new Error('slot-taken');
+    let oldSlotRef = null, oldSlotSnap = null;
+    if(oldSlotId){
+      oldSlotRef = doc(db, 'slots', oldSlotId);
+      oldSlotSnap = await tx.get(oldSlotRef);
+    }
+    tx.set(newSlotRef, {
+      date: newDate, time: newTime, sessionType, uid: uid || null,
+      durationMinutes: meta.durationMinutes, bufferBeforeMin: meta.bufferBeforeMin, bufferAfterMin: meta.bufferAfterMin,
+      capacity: meta.capacity, count: newCount + 1, updatedAt: serverTimestamp()
+    });
+    if(oldSlotSnap && oldSlotSnap.exists()){
+      const oldCount = oldSlotSnap.data().count || 1;
+      if(oldCount <= 1) tx.delete(oldSlotRef);
+      else tx.update(oldSlotRef, { count: oldCount - 1, updatedAt: serverTimestamp() });
+    }
     tx.update(doc(db, 'bookings', bookingId), { date: newDate, time: newTime, slotId: newSlotId, startAtUTC, rescheduled: true });
   });
 }
@@ -7851,6 +8078,12 @@ document.getElementById('ownerConfirmedList').addEventListener('click', async ev
         saveBookingsPreviewToStorage();
       } else {
         await updateDoc(doc(db, 'bookings', row.dataset.bookingId), { status: 'cancelled' });
+        // This used to skip releasing the slot entirely — a confirmed
+        // appointment cancelled here would permanently block that time
+        // for everyone, forever, since availability now reads `slots`
+        // (see PROJECT-CONTEXT.md Phase 1 log) instead of re-deriving it
+        // from live `bookings` status on every check.
+        await releaseSlotOccupancy(row.dataset.slotId);
       }
       portalOwnerStatus.textContent = 'Appointment cancelled.';
       loadOwnerConfirmed();
@@ -7858,6 +8091,7 @@ document.getElementById('ownerConfirmedList').addEventListener('click', async ev
       renderBookingsOverviewStats();
       renderBookingsToday();
     } catch (err) {
+      console.error('[booking] admin cancel-confirmed failed', err);
       portalOwnerStatus.textContent = 'Could not cancel that appointment.';
       cancelBtn.disabled = false;
     }
@@ -7954,7 +8188,7 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
       loadOwnerConfirmed();
     } else {
       await updateDoc(doc(db, 'bookings', bookingId), { status: 'declined' });
-      if(slotId) await deleteDoc(doc(db, 'slots', slotId));
+      await releaseSlotOccupancy(slotId);
       portalOwnerStatus.textContent = 'Booking declined and the time was freed up.';
       loadOwnerCancelled();
     }
@@ -7962,6 +8196,7 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
     renderBookingsOverviewStats();
     renderBookingsToday();
   } catch (err) {
+    console.error('[booking] confirm/decline failed', err);
     portalOwnerStatus.textContent = 'Could not update that booking.';
     event.target.disabled = false;
   }

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/sitemap.xml
