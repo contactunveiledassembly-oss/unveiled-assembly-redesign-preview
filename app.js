@@ -405,7 +405,7 @@ function navHtml(){
   return `
   <nav class="nav" id="nav">
     <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
-      <span class="brand-badge"><span class="brand-logo-fallback" aria-hidden="true">UV</span><img class="brand-logo" src="${BASE}assets/ua-logo-original.png" alt="Unveiled Assembly logo" /></span>
+      <span class="brand-badge"><span class="brand-logo-fallback" aria-hidden="true">UA</span><img class="brand-logo" src="${BASE}assets/ua-logo-tight.png" alt="Unveiled Assembly logo" /></span>
       <span class="brand-text"><span class="line1">The Unveiled</span><span class="line2">Assembly of Christ Jesus</span></span>
     </a>
 
@@ -549,7 +549,7 @@ function dialogsHtml(){
   <dialog class="portal-dialog" id="memberPortalDialog" aria-label="My Assembly">
     <div class="portal-bar">
       <div class="portal-brand">
-        <img src="${BASE}assets/ua-logo-original.png" alt="" />
+        <img src="${BASE}assets/ua-logo-tight.png" alt="" />
         <span>The Unveiled Assembly<br>of Christ Jesus</span>
       </div>
       <div class="portal-switch" aria-label="My Assembly navigation">
@@ -765,7 +765,7 @@ function dialogsHtml(){
 
       <div class="member-topnav">
         <div class="member-topnav-brand">
-          <img src="${BASE}assets/ua-logo-original.png" alt="" />
+          <img src="${BASE}assets/ua-logo-tight.png" alt="" />
           <span>The Unveiled Assembly</span>
         </div>
         <nav class="member-topnav-links" id="memberTabs" role="tablist" aria-label="Member Portal navigation">
@@ -1389,8 +1389,21 @@ function dialogsHtml(){
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="people">
-          <span class="portal-label">People</span>
-          <p class="admin-panel-intro" style="margin-bottom:14px">One record per person, built from their account plus every class registration, booking, and payment tied to their uid or email — click anyone to open their profile.</p>
+          <div class="admin-panel-head">
+            <div>
+              <span class="portal-label">People</span>
+              <p class="admin-panel-intro" style="margin-bottom:14px">One record per person, built from their account plus every class registration, booking, and payment tied to their uid or email — click anyone to open their profile.</p>
+            </div>
+            <!-- Real count, not hardcoded — set by loadOwnerMembers()/
+                 renderOwnerPeopleList() from the same users data those
+                 functions already load, always excluding role:'admin'
+                 (owner/admin accounts) so this reflects ordinary members
+                 only, matching how this panel already labels them. -->
+            <div class="admin-stat-tile" style="min-width:110px;text-align:center">
+              <span>Members</span>
+              <strong id="ownerMemberCount">—</strong>
+            </div>
+          </div>
           <div class="form-field" style="max-width:360px;margin-bottom:14px">
             <label for="ownerPeopleSearch">Search</label>
             <input id="ownerPeopleSearch" type="text" placeholder="Name, email, or phone…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
@@ -1913,17 +1926,26 @@ function dialogsHtml(){
             <label for="storyVideoLink">Or include a video link</label>
             <input id="storyVideoLink" name="videoLink" type="url" placeholder="YouTube, Vimeo, or shared link" />
           </div>
-          <div class="form-field full form-section-label" style="margin-top:8px">If Published</div>
-          <div class="form-field full" role="radiogroup" aria-label="How should this appear if published">
-            <label class="permission-label"><input type="radio" name="visibility" value="public" checked /> <span>Public with my name</span></label>
-            <label class="permission-label"><input type="radio" name="visibility" value="anonymous" /> <span>Public, anonymously</span></label>
-            <label class="permission-label"><input type="radio" name="visibility" value="private" /> <span>Private — for ministry review only, never published</span></label>
-          </div>
           <div class="form-field full">
-            <label class="permission-label">
-              <input name="permission" type="checkbox" required />
-              <span>I agree to the Testimony Submission Terms and understand that publication requires ministry review.</span>
-            </label>
+            <div class="consent-card" role="radiogroup" aria-label="Visibility and consent">
+              <div class="consent-card-title">Visibility &amp; Consent</div>
+              <label class="consent-option">
+                <input type="radio" name="visibility" value="public" checked />
+                <span><strong>Public</strong><small>May be reviewed and published publicly with your identity.</small></span>
+              </label>
+              <label class="consent-option">
+                <input type="radio" name="visibility" value="anonymous" />
+                <span><strong>Anonymous</strong><small>May be reviewed and published publicly without identifying information.</small></span>
+              </label>
+              <label class="consent-option">
+                <input type="radio" name="visibility" value="private" />
+                <span><strong>Private</strong><small>Visible to authorized ministry staff only and never displayed publicly.</small></span>
+              </label>
+              <label class="consent-option consent-terms">
+                <input name="permission" type="checkbox" required />
+                <span>I agree to the Testimony Submission Terms and understand that publication requires ministry review — nothing publishes automatically.</span>
+              </label>
+            </div>
           </div>
         </div>
         <div class="form-actions">
@@ -2627,7 +2649,20 @@ function dialogsHtml(){
 // anything below tries to query them.
 document.body.insertAdjacentHTML('afterbegin', navHtml());
 document.body.insertAdjacentHTML('beforeend', dialogsHtml() + footerHtml());
-document.querySelectorAll('.brand-logo').forEach(img => img.addEventListener('error', () => { img.hidden = true; }));
+// Belt-and-suspenders fallback for every "logo image next to text
+// branding" spot in the header/portals: if the PNG ever fails to load
+// again for any reason, the image is hidden and the text branding
+// already sitting right next to it (never removed) is what's left
+// visible — never a broken-image icon. Setting `.style.display` here
+// rather than the `hidden` attribute matters: `.brand-logo{display:block}`
+// in styles.css is an AUTHOR rule, and author rules always beat the
+// browser's own built-in `[hidden]{display:none}` UA-stylesheet rule
+// regardless of selector specificity — so `img.hidden = true` alone
+// looked like it should work but silently didn't actually hide anything.
+function hideBrokenLogoImage(img){ img.style.display = 'none'; }
+document.querySelectorAll('.brand-logo, .portal-brand img, .member-topnav-brand img').forEach(img => {
+  img.addEventListener('error', () => hideBrokenLogoImage(img));
+});
 if(DEMO_MODE){
   document.body.classList.add('demo-mode');
   document.body.insertAdjacentHTML('afterbegin',
@@ -4078,7 +4113,21 @@ function bindMinistryFormDialogEvents(){
     if(event.target.closest('[data-open-prayer-form]')){
       document.getElementById('prayerRequestDialog').showModal();
     }
-    if(event.target.closest('[data-open-class-review-form]')){
+    const classReviewOpenBtn = event.target.closest('[data-open-class-review-form]');
+    if(classReviewOpenBtn){
+      // Opened from a specific class's own page (teaching-detail.html) —
+      // pre-select the matching option in the fixed class list so the
+      // review is associated with the right class without the visitor
+      // having to find it themselves. Falls back to the generic "Other"
+      // option if this class isn't one of the ones listed there yet
+      // (the class list itself is still a fixed set, not dynamic — see
+      // PROJECT-CONTEXT.md's "final class structure" note).
+      const classTitle = classReviewOpenBtn.dataset.reviewClassTitle;
+      const classSelect = document.getElementById('reviewClassName');
+      if(classTitle && classSelect){
+        const match = Array.from(classSelect.options).find(o => o.value.toLowerCase() === classTitle.toLowerCase());
+        classSelect.value = match ? match.value : classSelect.options[classSelect.options.length - 1].value;
+      }
       document.getElementById('classReviewDialog').showModal();
     }
   });
@@ -4148,13 +4197,27 @@ function addMinistryDialogs(){
             <div class="form-field"><label for="reviewRating">Rating</label><select id="reviewRating" name="rating"><option value="">Optional</option><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div>
             <div class="form-field"><label for="reviewRecommendation">Would You Recommend?</label><select id="reviewRecommendation" name="recommendation"><option value="">Optional</option><option>Yes</option><option>No</option><option>Maybe</option></select></div>
             <div class="form-field full"><label for="reviewMessage">Review Message</label><textarea id="reviewMessage" name="message" rows="6" placeholder="What changed for you?" required></textarea></div>
-            <div class="form-field full form-section-label" style="margin-top:4px">If Published</div>
-            <div class="form-field full" role="radiogroup" aria-label="How should this appear if published">
-              <label class="permission-label"><input type="radio" name="visibility" value="public" checked /> <span>Public with my name</span></label>
-              <label class="permission-label"><input type="radio" name="visibility" value="anonymous" /> <span>Public, anonymously</span></label>
-              <label class="permission-label"><input type="radio" name="visibility" value="private" /> <span>Private — for ministry review only, never published</span></label>
+            <div class="form-field full">
+              <div class="consent-card" role="radiogroup" aria-label="Visibility and consent">
+                <div class="consent-card-title">Visibility &amp; Consent</div>
+                <label class="consent-option">
+                  <input type="radio" name="visibility" value="public" checked />
+                  <span><strong>Public</strong><small>May be reviewed and published publicly with your identity.</small></span>
+                </label>
+                <label class="consent-option">
+                  <input type="radio" name="visibility" value="anonymous" />
+                  <span><strong>Anonymous</strong><small>May be reviewed and published publicly without identifying information.</small></span>
+                </label>
+                <label class="consent-option">
+                  <input type="radio" name="visibility" value="private" />
+                  <span><strong>Private</strong><small>Visible to authorized ministry staff only and never displayed publicly.</small></span>
+                </label>
+                <label class="consent-option consent-terms">
+                  <input name="terms" type="checkbox" required />
+                  <span>I agree to the Review Submission Terms — nothing publishes automatically.</span>
+                </label>
+              </div>
             </div>
-            <div class="form-field full"><label class="permission-label"><input name="terms" type="checkbox" required /><span>I agree to the Review Submission Terms.</span></label></div>
           </div>
           <div class="form-actions"><button class="btn fill" type="submit">Submit Review</button><div class="form-status" id="classReviewFormStatus" role="status" aria-live="polite"></div></div>
         </form>
@@ -4172,12 +4235,12 @@ function addMinistryDialogs(){
 
     <dialog class="booking-dialog" id="testimonyDetailDialog" aria-labelledby="testimonyDetailTitle" style="max-width:640px">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Testimony</div><h3 id="testimonyDetailTitle">Review Submission</h3></div><button class="dialog-close" id="closeTestimonyDetailDialog" type="button" aria-label="Close testimony detail">×</button></div>
-      <div class="dialog-body"><div class="story-form-grid" id="testimonyDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-testimony-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-testimony-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-testimony-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-testimony-status="pending">Set Pending</button></div><div class="form-status" id="testimonyStatusMessage"></div></div>
+      <div class="dialog-body"><div class="story-form-grid" id="testimonyDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-testimony-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-testimony-status="published" data-force-anonymous="1">Publish Anonymously</button><button class="admin-btn-ghost" type="button" data-testimony-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-testimony-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-testimony-status="pending">Set Pending</button></div><div class="form-status" id="testimonyStatusMessage"></div></div>
     </dialog>
 
     <dialog class="booking-dialog" id="reviewDetailDialog" aria-labelledby="reviewDetailTitle" style="max-width:640px">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Class Review</div><h3 id="reviewDetailTitle">Review Submission</h3></div><button class="dialog-close" id="closeReviewDetailDialog" type="button" aria-label="Close review detail">×</button></div>
-      <div class="dialog-body"><div class="story-form-grid" id="reviewDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-review-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-review-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-review-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-review-status="pending">Set Pending</button></div><div class="form-status" id="reviewStatusMessage"></div></div>
+      <div class="dialog-body"><div class="story-form-grid" id="reviewDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-review-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-review-status="published" data-force-anonymous="1">Publish Anonymously</button><button class="admin-btn-ghost" type="button" data-review-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-review-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-review-status="pending">Set Pending</button></div><div class="form-status" id="reviewStatusMessage"></div></div>
     </dialog>
   `);
 
@@ -4269,10 +4332,14 @@ function addMinistryDialogs(){
     if(testimonyStatusBtn){
       const id = document.getElementById('testimonyDetailDialog').dataset.testimonyId;
       const item = TESTIMONIALS.find(t => t.id === id);
+      const visSelect = document.getElementById('testimonyVisibilitySelect');
+      // "Publish Anonymously" is a one-click shortcut for "set visibility
+      // to anonymous, then publish" — updates the select too, so what's
+      // shown matches what's about to be saved.
+      if(testimonyStatusBtn.dataset.forceAnonymous && visSelect) visSelect.value = 'anonymous';
       if(item){
         item.publicDisplayText = document.getElementById('testimonyPublicDisplayText')?.value || item.publicDisplayText || item.message || '';
         item.reviewDate = document.getElementById('testimonyDateInput')?.value || item.reviewDate;
-        const visSelect = document.getElementById('testimonyVisibilitySelect');
         if(visSelect) item.visibility = visSelect.value;
       }
       const result = await setTestimonyStatus(id, testimonyStatusBtn.dataset.testimonyStatus);
@@ -4282,10 +4349,11 @@ function addMinistryDialogs(){
     if(reviewStatusBtn){
       const id = document.getElementById('reviewDetailDialog').dataset.reviewId;
       const item = CLASS_REVIEWS.find(r => r.id === id);
+      const visSelect = document.getElementById('reviewVisibilitySelect');
+      if(reviewStatusBtn.dataset.forceAnonymous && visSelect) visSelect.value = 'anonymous';
       if(item){
         item.publicDisplayText = document.getElementById('reviewPublicDisplayText')?.value || item.publicDisplayText || item.message || '';
         item.reviewDate = document.getElementById('reviewDateInput')?.value || item.reviewDate;
-        const visSelect = document.getElementById('reviewVisibilitySelect');
         if(visSelect) item.visibility = visSelect.value;
       }
       const result = await setReviewStatus(id, reviewStatusBtn.dataset.reviewStatus);
@@ -9279,6 +9347,16 @@ function ownerPersonRowHtml(m){
     '<span class="portal-access">' + (m.role === 'admin' ? 'Admin' : total + ' record' + (total === 1 ? '' : 's')) + '</span>' +
     '</div>';
 }
+// Real registered-member count for the People panel's "Members" stat
+// tile — never hardcoded, always derived from the exact same data these
+// two render functions already load, and always excluding role:'admin'
+// (the owner/ministry account) so it counts ordinary members only,
+// matching the "Admin"/"Member" distinction this panel already draws
+// per row. Called from both the production and DEMO_MODE paths below.
+function setOwnerMemberCount(count){
+  const el = document.getElementById('ownerMemberCount');
+  if(el) el.textContent = String(count);
+}
 async function loadOwnerMembers(){
   const container = document.getElementById('ownerMembersList');
   container.innerHTML = '<p style="color:#656565">Loading member accounts…</p>';
@@ -9290,6 +9368,7 @@ async function loadOwnerMembers(){
     const snap = await getDocs(collection(db, 'users'));
     if(snap.empty){
       container.innerHTML = '<p style="color:#656565">No member accounts yet.</p>';
+      setOwnerMemberCount(0);
       return;
     }
     const items = [];
@@ -9299,6 +9378,7 @@ async function loadOwnerMembers(){
       '<div class="portal-row"><div><strong>' + escapeHtml(u.name || u.email) + '</strong><small>' + escapeHtml(u.email) +
       '</small></div><span class="portal-access">' + (u.role === 'admin' ? 'Admin' : 'Member') + '</span></div>'
     ).join('');
+    setOwnerMemberCount(items.filter(u => u.role !== 'admin').length);
   } catch (err) {
     container.innerHTML = '<p style="color:#656565">Could not load member accounts.</p>';
   }
@@ -9307,9 +9387,13 @@ function renderOwnerPeopleList(){
   const wrap = document.getElementById('ownerMembersList');
   if(!wrap) return;
   const q = (document.getElementById('ownerPeopleSearch')?.value || '').trim().toLowerCase();
-  let items = resolveAllMemberProfiles();
+  const all = resolveAllMemberProfiles();
+  let items = all;
   if(q) items = items.filter(m => (m.name + ' ' + m.email + ' ' + (m.phone || '')).toLowerCase().includes(q));
   wrap.innerHTML = items.length === 0 ? '<p style="color:#656565">No member accounts yet.</p>' : items.map(ownerPersonRowHtml).join('');
+  // The count reflects everyone, not just what the search box currently
+  // filters down to — a search shouldn't make the total look smaller.
+  setOwnerMemberCount(all.filter(m => m.role !== 'admin').length);
 }
 document.getElementById('ownerPeopleSearch')?.addEventListener('input', renderOwnerPeopleList);
 document.getElementById('ownerMembersList')?.addEventListener('click', event => {
@@ -11503,6 +11587,7 @@ function renderTeachingDetailPage(){
     '<div><span>Instructor</span><strong>' + escapeHtml(t.instructor || 'The Unveiled Assembly') + '</strong></div>' +
     '<button class="btn on-light fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
       (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
+    '<button class="text-link" type="button" data-open-class-review-form data-review-class-title="' + escapeHtml(t.title || '') + '" style="border-color:var(--line-light);color:var(--ink-muted)">Leave A Class Review →</button>' +
     '</div>' +
     '<div class="teaching-detail-copy">' +
     '<h2 class="teaching-subtitle-heading">About This Teaching</h2>' +

@@ -327,4 +327,56 @@ Decided roles: Owner, Booking Manager, Class Manager, Prayer Team, Testimony Rev
 
 ---
 
+## 20. Session Log — 2026-09-24: cleanup/update pass (NOT YET COMMITTED — owner review pending)
+
+**Everything in this section is sitting uncommitted on local branch `phase3-cleanup-pass`** in the clone at `/Users/yaunahlove/Projects/unveiled-assembly-redesign-preview` — per explicit instruction, nothing was committed or pushed. `main`/GitHub/the live preview are all untouched and still reflect the state as of Section 19. If this session is lost before the owner reviews and commits, `git diff main` on that branch is the complete list of what changed.
+
+### 20.1 Beliefs page
+Replaced the "Prayer" belief card with "Deliverance," using the owner's exact doctrinal statement and scripture list (John 8:31–36, Romans 12:2, Colossians 1:13–14, John 17:17, Romans 1:16, 2 Corinthians 3:17). No other belief card touched.
+
+### 20.2 Header logo — real bug, found and fixed
+**Root cause:** every page's favicon `<link>` and all three of `app.js`'s logo `<img>` tags (main nav, member-portal dialog header, member top-nav) pointed at `assets/ua-logo-original.png` — a file that has **never existed in this repository's git history at all** (confirmed via `git log --all`), not something that was deleted. The real, actually-committed logo asset is `assets/ua-logo-tight.png`/`.svg` (a genuine "UA" monogram, added via the "Seed logo asset" commit). All 16 references across every page + `app.js` now point at the real file.
+- **Also found and fixed while investigating:** the existing "hide the image if it fails to load" fallback (`img.hidden = true`) silently never actually worked, because `.brand-logo{display:block}` in `styles.css` is an author-stylesheet rule, and author rules always beat the browser's own built-in `[hidden]{display:none}` styling regardless of selector specificity — so even when the error handler fired, nothing actually hid. Now sets `img.style.display='none'` instead, which does win. Also extended the same fallback to the two portal logo `<img>` tags that never had any error handling at all, and fixed the fallback text itself (was "UV", now "UA", matching the actual monogram).
+
+### 20.3 One-on-One page photography placement
+Added a large "atmospheric portrait" placeholder right after the hero and a 3-across detail grid (Bible/notebook, two-people-conversation, hands/chair detail) after "How It Works" — new `.photo-placeholder`/`.photo-placeholder-grid` CSS component (dark textured box + a caption describing the intended real shot, not a stock photo). The existing session-card grid and booking flow were not touched at all — this was purely additive. **Deferred per instruction:** the deeper page restructure is still to be discussed separately.
+
+### 20.4 Connect page — Instagram preview + Gathering gateway
+Added two new sections between the hero and the existing discover-list (which is unchanged): a "The Gathering" feature card (reuses the existing `.feature-card` component, links to `gather.html`) and an Instagram preview area (handle + real follow link + a 3-tile placeholder grid explicitly labeled "Feed Pending", reusing `.photo-placeholder-grid`). **No live Instagram data was faked** — see 20.11 below for exactly what a real integration needs. **Deferred per instruction:** the deeper Connect redesign is still to be discussed separately.
+
+### 20.5 Site-wide color contrast audit
+Read the entire stylesheet (2000+ lines, every button/hover/active/disabled/card/nav/both portals/form/booking-dialog/modal) plus every inline `style="color:...background:..."` combination in `app.js` and all HTML pages. **Finding: the color system was already remarkably well-maintained** — dedicated dark-context tokens (`--stone`/`--stone-dim`) vs. light-context tokens (`--ink-muted`/`--ink-dim`) are applied consistently everywhere, including deep, deliberate overrides for shared components reused in different contexts (`.portal-panel.wine`, `[data-portal-view="member"]`, `.classroom-dialog`, etc.) — evidence of real prior contrast work, not luck. The only two actual violations found were the header logo (20.2) and the two portal background photos (20.7) — both fixed. Added an explicit "DARK BACKGROUND = LIGHT TEXT, LIGHT BACKGROUND = DARK TEXT" rule as a comment directly at the `:root` token declarations so it's a documented contract for whoever adds the next component, not just an unwritten convention.
+
+### 20.6 Give page — donation interface prepared, no fake payment processing
+Built a real amount-selection UI (preset $25/$50/$100/$250 + custom amount, one-time/recurring toggle) that **actually works today** by constructing a `https://cash.app/$UnveiledAssemblyOCJ/<amount>` deep link — a real, documented Cash App URL pattern (not invented), not a simulation of anything. Donor information fields and the "Recurring" option are visibly present but disabled/labeled "Coming Soon" — genuinely not connected, and nothing pretends otherwise. **Confirmed:** the existing Cash App option was not removed. See 20.11 for exactly what's needed to connect real card/Apple Pay giving.
+
+### 20.7 Member Portal + Ministry/Owner Portal background — real bug, found and fixed
+**Root cause:** `.member-hero` (the member dashboard's hero band) and `.portal-view[data-portal-view="owner"]>.portal-head` (the Ministry/Owner header) both hotlinked full-color Unsplash photos with **no desaturation** — unlike every other `.member-*-art` spot in the file (all of which already had `filter:grayscale(1)`), these two were the one inconsistent, "colorful," off-brand background the owner was describing. Both replaced with the same subtle radial-gradient-on-black texture the main site `.hero` already uses — no photo dependency at all, matching "black, charcoal, subtle texture" exactly. The smaller, already-grayscale accent images elsewhere in the member portal (feature/session/quote/record thumbnails) were left as-is — they were already correctly desaturated and consistent, so touching them wasn't necessary or in scope.
+
+### 20.8 Ministry Owner Portal — real member count
+Added a "Members" stat tile to the People panel header (`#ownerMemberCount`), driven by `setOwnerMemberCount()` — called from both `loadOwnerMembers()` (production, reading the real `users` Firestore collection) and `renderOwnerPeopleList()` (DEMO_MODE). **Never hardcoded**, always `role !== 'admin'` filtered out of whichever real dataset is currently loaded, and reflects the *total* count even while the search box is filtering the visible list (a search narrowing what's shown doesn't make the total look smaller).
+
+### 20.9 One-on-One date + time on the same screen
+**Re-verified, not rebuilt** — this was already fully implemented in Phase 1 (Section 8/10): the Calendly-style calendar and the adjacent time-slot column live in the same wizard step, calendar clicks call the time-slot loader directly, and nothing in this pass touched that code. Confirmed no photography/placeholder additions (20.3) or other edits this session altered `#bookingDialog`'s markup or `app.js`'s booking wizard logic.
+
+### 20.10 Testimony privacy/consent + Class Reviews
+- **Visibility choice (public/anonymous/private) and the never-auto-publish approval workflow were already real**, built in Phase 2 (Section 19.8) — re-verified, not rebuilt.
+- **What this pass actually added:** a redesigned, centered "Visibility & Consent" card (new `.consent-card`/`.consent-option` component) on both the testimony and class-review forms, replacing a plain checkbox at the bottom of the form — each option now shows the owner's exact wording (Public/Anonymous/Private descriptions) instead of a one-line label, and the terms checkbox restates "nothing publishes automatically" directly in its own copy.
+- **Class Reviews specifically:** added a real "Leave A Class Review" entry point on the individual class page (`teaching-detail.html` — this only existed on `teachings.html`/`testimonials.html` before), which pre-selects the matching class in the review form when one exists. Added a one-click "Publish Anonymously" action to the owner's review/testimony management dialogs (previously required manually switching the visibility dropdown to Anonymous, then clicking Publish — same end result, now one click, matching the owner's example list exactly). The class list itself is still the same fixed set of options as before (Discernment, The Prophetic, etc.) — per instruction, the deeper "final class structure" work is still to be discussed separately, not built now.
+
+### 20.11 What still needs the owner's decision or external setup
+- **Photography:** every `.photo-placeholder` on One-on-One and Connect needs real photos shot and dropped in — each placeholder's caption is the shot direction for whoever does that.
+- **Instagram:** the Connect page's feed grid is structural placeholder only. A real embed needs either Instagram's own Basic Display/Graph API (requires a Meta developer app + access token — a secret, needs a backend to hold it, same constraint as Stripe in Section 19.5) or a third-party embed service (e.g., SnapWidget, Elfsight) that doesn't need a backend but is a paid/external dependency the owner would need to choose and sign up for.
+- **Give page card/Apple Pay + recurring + donor receipts:** blocked on the same Stripe backend decision already documented in Section 19.5 — nothing new needed beyond what's already written there.
+- **Logo:** `ua-logo-tight.png`/`.svg` is what's actually live now (confirmed a real, deliberate "UA" monogram, not a placeholder) — if the owner has a different/newer logo file in mind, that's a separate "replace the logo" decision, not part of this bug fix.
+- **Member count / roles:** the "Members" stat currently means "every `users` doc where `role !== 'admin'`" — if/when the full multi-role system in Section 19.11 (Booking Manager, Prayer Team, etc.) gets built, this count's definition of "member" should be revisited so a Booking Manager or Website Editor account doesn't skew it.
+
+### 20.12 Not implemented this pass (explicitly deferred per instruction — documented, not built)
+- Buying/enrolling in an entire Learning Path or course collection at once.
+- Final class structure (the fixed Discernment/Prophetic/etc. list stays as-is for now).
+- Deeper redesign of the One-on-One page (only photo placement was addressed).
+- Deeper redesign of the Connect page (only the Gathering card + Instagram preview were added).
+
+---
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

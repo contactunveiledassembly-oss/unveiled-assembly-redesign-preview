@@ -6,6 +6,24 @@
    it selects/queries elements — only appearance changes here.
    ============================================================ */
 
+/* ---------- Contrast rule (audited sitewide 2026-09-24) ----------
+   DARK BACKGROUND = LIGHT TEXT. LIGHT BACKGROUND = DARK TEXT. Always.
+   That's the whole rule — the tokens below just make it hard to get
+   wrong by accident:
+     - On a dark surface (--black/--black2/--charcoal/--panel, or any
+       .portal-panel.wine / [data-portal-view="member"] / owner "dark
+       theme" context): body text is --ivory, secondary is --stone,
+       tertiary is --stone-dim.
+     - On a light surface (--ivory/--white/--owner-surface, or any
+       .on-light/.on-light-section context): body text is --black,
+       secondary is --ink-muted, tertiary is --ink-dim.
+   A new component should reach for the matching pair (dark bg → ivory/
+   stone/stone-dim; light bg → black/ink-muted/ink-dim) rather than
+   picking colors by eye — that pairing is what a full pass over this
+   file (buttons, hover/active/disabled states, cards, nav, both
+   portals, forms, the booking dialog, every modal) confirmed already
+   holds everywhere except the header logo and two portal hero photos,
+   both fixed the same day this rule was written down. */
 :root{
   --black:#0a0a0a;
   --black2:#000000;
@@ -381,6 +399,73 @@ section{padding:130px 5vw; position:relative; overflow:hidden}
   .event-feature-card{padding:40px 6vw}
 }
 
+/* ---------- Editorial photography placeholder ----------
+   A clearly-marked staging area for future ministry photography, NOT a
+   real photo and NOT decorative-only like .feature-card-visual/
+   .event-feature-visual above (no stock image was dropped in to fill
+   the space — see one-on-one.html for the first use). Same dark
+   textured-gradient treatment as the rest of the site so an empty page
+   doesn't feel unfinished while real photography is pending, plus a
+   small caption describing the INTENDED shot so whoever shoots it later
+   knows exactly what each spot is for. Drop-in ready: once a real photo
+   exists, replace the placeholder's contents with an <img> and this
+   wrapper's border/aspect-ratio still frames it correctly.
+   ------------------------------------------------------------ */
+.photo-placeholder{
+  position:relative; overflow:hidden; border:1px solid var(--line-dark);
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,.06), transparent 55%),
+    linear-gradient(155deg, #1c1a17, #0a0a0a 70%);
+  display:flex; flex-direction:column; justify-content:flex-end;
+}
+.photo-placeholder-tag{
+  position:absolute; top:16px; right:18px; font-family:var(--mono); font-size:9px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--stone-dim); opacity:.75;
+}
+.photo-placeholder-icon{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-52%);
+  width:34px; height:34px; opacity:.22;
+}
+.photo-placeholder-caption{
+  position:relative; padding:16px 20px; font-family:var(--mono); font-size:10px; line-height:1.6;
+  letter-spacing:.05em; color:var(--stone-dim); background:rgba(0,0,0,.3);
+  border-top:1px solid var(--line-dark);
+}
+.photo-placeholder-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line-dark); border:1px solid var(--line-dark)}
+.photo-placeholder-grid .photo-placeholder{border:0; aspect-ratio:1}
+@media(max-width:760px){ .photo-placeholder-grid{grid-template-columns:1fr} }
+
+/* ---------- Give page — donation interface (interim: routes to Cash
+   App, the one real giving method connected today) ----------
+   Reuses .oneonone-pill for the frequency toggle so this introduces no
+   new interactive-control styling. Amount buttons are a small variant
+   of the same pill. See give.html for what's genuinely live today vs.
+   prepared-but-not-connected. */
+.give-frequency-toggle{display:flex;gap:10px;margin-bottom:28px}
+.give-amount-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px}
+.give-amount-btn{
+  font-family:var(--sans);font-size:15px;font-weight:600;padding:16px 8px;border-radius:10px;
+  border:1px solid var(--line-dark);background:transparent;color:var(--ivory);cursor:pointer;transition:.15s;
+}
+.give-amount-btn:hover{border-color:var(--ivory)}
+.give-amount-btn.active{background:var(--ivory);border-color:var(--ivory);color:var(--black)}
+.give-amount-custom{
+  grid-column:1/-1;display:flex;align-items:center;gap:2px;border:1px solid var(--line-dark);border-radius:10px;
+  padding:0 14px;margin-top:2px;
+}
+.give-amount-custom span{color:var(--stone);font-size:15px}
+.give-amount-custom input{
+  flex:1;min-width:0;background:none;border:0;color:var(--ivory);font:inherit;font-size:15px;
+  padding:14px 0 14px 6px;
+}
+.give-amount-custom input:focus{outline:0}
+.give-amount-custom:focus-within{border-color:var(--ivory)}
+.give-donor-fields{margin:28px 0;padding:20px;border:1px dashed var(--line-dark);border-radius:12px}
+.give-donor-fields .form-field{margin-bottom:14px}
+.give-donor-fields .form-field:last-child{margin-bottom:0}
+.give-donor-fields input:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:560px){ .give-amount-grid{grid-template-columns:repeat(2,1fr)} }
+
 /* Midpage collage grid */
 .collage{background:var(--black)}
 .collage-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line-dark); border:1px solid var(--line-dark)}
@@ -549,6 +634,35 @@ dialog.detail-drawer .booking-body{padding:20px 22px 28px}
    to wrap one letter per line off the right edge of the dialog. */
 .permission-label input{width:auto;margin-top:3px;flex-shrink:0;accent-color:var(--ivory)}
 .permission-label span{display:block;min-width:0;max-width:100%;flex:1 1 auto;word-break:normal;overflow-wrap:break-word;white-space:normal}
+
+/* ---------- Consent card (testimony / class review visibility choice) ----------
+   A dedicated, centered, visually distinct area for the one decision
+   that actually matters legally/pastorally on these forms — public /
+   anonymous / private, plus the terms checkbox — rather than blending
+   into the rest of the form as one more plain checkbox at the bottom. */
+.consent-card{
+  max-width:480px;margin:6px auto 0;padding:20px 22px;border:1px solid var(--line-dark);border-radius:12px;
+  background:rgba(255,255,255,.02);
+}
+.consent-card-title{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--stone-dim);margin-bottom:14px;text-align:center}
+.consent-option{
+  display:flex;align-items:flex-start;gap:12px;width:100%;max-width:100%;text-transform:none;letter-spacing:.02em;
+  padding:12px 10px;border-radius:8px;cursor:pointer;transition:.15s;
+}
+.consent-option:hover{background:rgba(255,255,255,.04)}
+.consent-option:has(input:checked){background:rgba(255,255,255,.06)}
+.consent-option input{width:auto;margin-top:3px;flex-shrink:0;accent-color:var(--ivory)}
+.consent-option span{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto}
+.consent-option strong{font-size:13px;font-weight:600;color:var(--ivory)}
+.consent-option small{font-size:11.5px;line-height:1.5;color:var(--stone);font-weight:400}
+.consent-option.consent-terms{
+  margin-top:8px;padding-top:16px;border-top:1px solid var(--line-dark);border-radius:0;
+  font-size:12px;line-height:1.6;color:var(--stone);
+}
+.consent-option.consent-terms:hover{background:none}
+.consent-option.consent-terms span{color:inherit}
+@media(max-width:480px){ .consent-card{padding:16px} }
+
 .form-actions{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:24px;flex-wrap:wrap}
 .form-actions .btn{background:var(--ivory);color:var(--black);border-color:var(--ivory);cursor:pointer}
 .form-status{color:var(--silver);font-size:13px;line-height:1.5;max-width:420px}
@@ -991,10 +1105,15 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .member-topnav-badge{font-size:11px;letter-spacing:0;text-transform:none;padding:9px 18px;color:var(--silver)}
 .member-topnav-avatar{width:38px;height:38px;background:linear-gradient(145deg,#777,#151515);color:white;border:1px solid #444}
 
+/* Previously a hotlinked full-color Unsplash photo here — the one
+   portal background that was never desaturated, unlike every other
+   .member-* art spot in this file, and visually inconsistent with the
+   rest of the site besides. Replaced with the same subtle radial-
+   texture-on-black treatment the main site .hero already uses, so the
+   member dashboard reads as unmistakably part of the same site. */
 .member-hero{
   min-height:280px;align-items:center;margin:0;padding:38px 3.35vw 34px;border:0;
-  background:linear-gradient(90deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.78) 29%,rgba(0,0,0,.22) 68%,rgba(0,0,0,.82) 100%),
-  url('https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=2200&q=88') center 42%/cover no-repeat;
+  background:radial-gradient(ellipse at 75% 35%, rgba(255,255,255,.05), transparent 55%), var(--black);
 }
 .member-hero-copy .eyebrow{font-size:11px;letter-spacing:.42em;margin-bottom:12px}
 .member-hero-title{font-family:var(--sans);font-size:clamp(44px,5.1vw,76px);font-weight:200;line-height:.95;letter-spacing:.01em;margin:0 0 12px}
@@ -1113,9 +1232,12 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
   --owner-shadow:0 16px 50px rgba(0,0,0,.34);
   min-height:100dvh;padding:0;background:#050505;color:var(--owner-text)
 }
+/* Same fix as .member-hero above — was a second hotlinked, non-
+   desaturated color photo (the Ministry/Owner header), replaced with
+   the identical subtle black texture so both portal entry points match. */
 .portal-view[data-portal-view="owner"]>.portal-head{
   min-height:255px;margin:0;padding:58px 42px 40px;align-items:flex-end;
-  background:linear-gradient(90deg,rgba(0,0,0,.96),rgba(0,0,0,.62) 48%,rgba(0,0,0,.78)),url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=2200&q=88') center 45%/cover no-repeat;
+  background:radial-gradient(ellipse at 75% 30%, rgba(255,255,255,.05), transparent 55%), var(--black);
   border-bottom:1px solid var(--owner-border)
 }
 .portal-view[data-portal-view="owner"]>.portal-head .kicker{color:#d0cfcb;letter-spacing:.34em}
