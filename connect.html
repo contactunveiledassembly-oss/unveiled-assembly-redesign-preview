@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Connect with The Unveiled Assembly of Christ Jesus — contact, ministry inquiries, and ways to join the community." />
   <title>Connect | The Unveiled Assembly</title>
-  <link rel="icon" type="image/png" href="assets/ua-logo-original.png" />
+  <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,49 @@
     <p class="hero-sub reveal">Questions, ministry inquiries, prayer requests, testimonies, or simply wanting to join the community — this is the place to start.</p>
   </header>
 
-  <section id="prayer-request" style="padding-top:80px">
+  <!-- Gateway into the community: The Gathering + Instagram. Reuses the
+       existing .feature-card pattern (same one the homepage uses for
+       "Upcoming Class") for visual consistency — no new layout system
+       introduced. This is a first, additive pass per the owner's
+       instruction not to fully redesign Connect yet. -->
+  <section style="padding-top:70px">
+    <div class="section-inner">
+      <div class="feature-card reveal">
+        <div class="feature-card-visual" aria-hidden="true"></div>
+        <div class="feature-card-body">
+          <div class="eyebrow">The Gathering</div>
+          <h3>Come Closer.</h3>
+          <p>Intimate gatherings, prayer, teaching, and worship — honest spiritual formation with the people of The Assembly. This is where community actually happens.</p>
+          <a class="btn fill" href="gather.html">Explore Gathering →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Instagram preview — UI/placeholder only. No live Instagram data is
+       faked here (see PROJECT-CONTEXT.md for exactly what a real
+       integration still needs). The handle/link below is the one real,
+       already-confirmed piece; the tile grid is a clearly-labeled stand-in
+       for a future live feed, not invented content. -->
+  <section style="padding-top:70px;padding-bottom:20px">
+    <div class="section-inner">
+      <div class="reveal" style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:24px">
+        <div>
+          <div class="eyebrow" style="margin-bottom:10px">Follow Along</div>
+          <h3 class="serif-heading" style="font-size:clamp(24px,3vw,36px)">@unveiledassembly</h3>
+        </div>
+        <a class="btn" href="https://www.instagram.com/unveiledassembly?igsi=Y2RhZXdmcTRneHJn&amp;utm_source=qr" target="_blank" rel="noopener noreferrer">Follow on Instagram →</a>
+      </div>
+      <div class="photo-placeholder-grid reveal" aria-label="Instagram feed — not yet connected">
+        <figure class="photo-placeholder" aria-hidden="true"><span class="photo-placeholder-tag">Feed Pending</span></figure>
+        <figure class="photo-placeholder" aria-hidden="true"><span class="photo-placeholder-tag">Feed Pending</span></figure>
+        <figure class="photo-placeholder" aria-hidden="true"><span class="photo-placeholder-tag">Feed Pending</span></figure>
+      </div>
+      <p class="admin-hint" style="margin-top:14px">Live Instagram posts aren't connected yet — this is placeholder structure only. See PROJECT-CONTEXT.md for what's needed to make it real.</p>
+    </div>
+  </section>
+
+  <section id="prayer-request" style="padding-top:60px">
     <div class="discover-list reveal">
       <button class="discover-row" type="button" id="connectOpenPrayer" style="width:100%;text-align:left;border:0;background:none;cursor:pointer">
         <span class="discover-num">01</span>
