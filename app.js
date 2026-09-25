@@ -631,6 +631,18 @@ function dialogsHtml(){
               <p class="auth-switch-line">Don't have an account? <button type="button" class="link-btn" data-switch-to="register">Create Account</button></p>
             </form>
 
+            <!-- Preview-site only (hidden in production by JS — see
+                 tryDemoMemberBtn wiring): a one-click way to explore
+                 the Member Portal as an already-populated sample
+                 member (bookings, classes, notifications), without
+                 typing anything. In DEMO_MODE, any email/password
+                 already logs in as this same "Maya Johnson" sample
+                 identity — this button just makes that discoverable
+                 instead of requiring someone to already know that. -->
+            <div class="rule" style="margin:20px 0"></div>
+            <p class="admin-hint" style="text-align:center;margin-bottom:10px">Just previewing the website?</p>
+            <button type="button" class="portal-secondary" id="tryDemoMemberBtn" style="width:100%" hidden>Try A Demo Member Account →</button>
+
             <div data-auth-method-panel="phone" hidden>
               <div class="portal-field phone-field">
                 <label for="signinPhoneNumber">Phone number</label>
@@ -5190,6 +5202,30 @@ emailSignInForm.addEventListener('submit', async event => {
     portalSignInBtn.disabled = false;
   }
 });
+
+// Demo-member quick sign-in — only meaningful (and only shown) on the
+// preview site: in production this would try to sign in with real
+// credentials that don't exist, since signInWithEmailAndPassword() only
+// fakes success in DEMO_MODE. Reuses that exact same function real Sign
+// In uses (not a separate shortcut path), so it goes through the same
+// onAuthStateChanged handling as any other sign-in — no duplicated
+// "what happens after sign-in" logic to keep in sync.
+const tryDemoMemberBtn = document.getElementById('tryDemoMemberBtn');
+if(tryDemoMemberBtn){
+  tryDemoMemberBtn.hidden = !DEMO_MODE;
+  tryDemoMemberBtn.addEventListener('click', async () => {
+    portalLoginStatus.textContent = 'Signing in…';
+    tryDemoMemberBtn.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, 'demo@example.com', 'preview-demo');
+      portalLoginStatus.textContent = '';
+    } catch (err) {
+      portalLoginStatus.textContent = friendlyAuthError(err);
+    } finally {
+      tryDemoMemberBtn.disabled = false;
+    }
+  });
+}
 
 /* ---------------------------------------------------------------
    Forgot password — always shows the same neutral confirmation,
