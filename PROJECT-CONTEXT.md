@@ -599,6 +599,13 @@ Sections 21–26 (the whole One-on-One redesign, Member/Owner Portal fixes, and 
 ### 27.2 Verification and status
 Bracket-balance checked clean on every edit. All of this — the v1 Sign In button, its removal, and the header-button retarget — has been committed, pushed, and merged into `main` (PR #5 for v1; a follow-up commit/PR for the correction). No browser was available to click-test the actual preview flow; the code path (`enterOwnerMemberPreview`) is pre-existing and already relied upon elsewhere (Classes → "Preview As Member" uses the same function) — only which member key the header button passes to it changed.
 
+### 27.3 "Is the example showing all the mockups?" — traced through, one real gap found and fixed
+The owner asked directly whether Maya Johnson's example actually shows everything. Traced every piece rather than assuming:
+- **Dashboard, notifications, My Classes (all 4 registrations), My Sessions, and the one-on-one confirmation "ticket"** (`openConfirmationRecap`) — all confirmed complete; every field that ticket view reads (title, date/time, status, confirmation ID) is present on her seeded booking record.
+- **Classroom content** (lesson summaries, study guides, resources, scripture focus) — already seeded for all 4 of her classes (`DEFAULT_CLASSROOM_CONTENT`), not just one.
+- **Real gap found:** only **one** of her four classes (`demo-discernment`) had Zoom meeting info and a pinned announcement seeded (`DEMO_TEACHING_ZOOM`, `CLASS_ANNOUNCEMENTS`). The other three (`demo-prophetic`, `demo-warfare`, `demo-foundations`) silently hid their entire Zoom section — `renderClassroomZoomInfo()` hides it outright when no Zoom URL exists, rather than showing anything broken, so this wasn't a visible bug, just a materially less complete example on 3 of her 4 classrooms.
+- **Fixed:** added Zoom meeting info and one pinned announcement for the other three classes too, matching the same style/tone as Discernment's — all four of Maya's classrooms now show a fully complete example (content, Zoom link, announcement), not just one of them.
+
 ---
 
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

@@ -319,7 +319,16 @@ const DEMO_TEACHINGS = {
     status: 'published' },
 };
 let DEMO_TEACHING_ZOOM = {
-  'demo-discernment': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '000 000 0000', passcode: 'demo' }
+  'demo-discernment': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '000 000 0000', passcode: 'demo' },
+  // Added so every class the sample member ("Maya Johnson") is
+  // registered for shows a complete Classroom example — without this,
+  // three of her four classrooms silently hid their whole Zoom section
+  // (renderClassroomZoomInfo hides it entirely when no zoomUrl exists,
+  // rather than showing anything broken) since only Discernment had
+  // Zoom info seeded before.
+  'demo-prophetic': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '111 111 1111', passcode: 'demo' },
+  'demo-warfare': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '222 222 2222', passcode: 'demo' },
+  'demo-foundations': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '333 333 3333', passcode: 'demo' }
 };
 function demoPastTimestamp(daysAgo, hour, minute){
   const d = new Date();
@@ -4665,7 +4674,16 @@ function saveClassQuestions(){
 const CLASS_ANNOUNCEMENTS_KEY = 'ua_preview_class_announcements_v1';
 let CLASS_ANNOUNCEMENTS = [
   { id: 'ann-1', teachingId: 'demo-discernment', title: 'Zoom room opens 15 minutes early', body: 'Feel free to join the Zoom room starting at 7:15 PM ET to settle in before we begin at 7:30.',
-    pinned: true, status: 'published', publishAt: '2026-09-11T12:00:00.000Z', createdAt: '2026-09-11T12:00:00.000Z' }
+    pinned: true, status: 'published', publishAt: '2026-09-11T12:00:00.000Z', createdAt: '2026-09-11T12:00:00.000Z' },
+  // Same reasoning as the DEMO_TEACHING_ZOOM additions above — one
+  // pinned announcement per class so every classroom in the sample
+  // member's example looks equally complete, not just Discernment's.
+  { id: 'ann-p1', teachingId: 'demo-prophetic', title: 'Bring a notebook', body: 'This class involves reflection exercises — bring something to write with, physical or digital.',
+    pinned: true, status: 'published', publishAt: '2026-09-16T12:00:00.000Z', createdAt: '2026-09-16T12:00:00.000Z' },
+  { id: 'ann-w1', teachingId: 'demo-warfare', title: 'Read Ephesians 6 beforehand', body: 'We will move quickly through the text — reading it once ahead of time will help you follow along.',
+    pinned: true, status: 'published', publishAt: '2026-09-17T11:00:00.000Z', createdAt: '2026-09-17T11:00:00.000Z' },
+  { id: 'ann-f1', teachingId: 'demo-foundations', title: 'This class has concluded', body: 'Thank you for taking Foundations of Faith — your workbook and class summary remain available below anytime.',
+    pinned: true, status: 'published', publishAt: '2026-08-30T10:00:00.000Z', createdAt: '2026-08-30T10:00:00.000Z' }
 ];
 (function loadClassAnnouncements(){
   try { const raw = localStorage.getItem(CLASS_ANNOUNCEMENTS_KEY); if(raw) CLASS_ANNOUNCEMENTS = JSON.parse(raw); } catch (err) { /* keep defaults */ }
