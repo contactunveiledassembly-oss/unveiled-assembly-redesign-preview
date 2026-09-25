@@ -588,4 +588,16 @@ Serving at **http://localhost:8080/give.html** — same local server as the One-
 
 ---
 
+## 27. Session Log — 2026-09-25: Committed, pushed, and merged to main; demo member quick sign-in
+
+Sections 21–26 (the whole One-on-One redesign, Member/Owner Portal fixes, and Give redesign) were committed as a single commit, pushed on `phase5-give-page-redesign`, opened as PR #4, and **merged into `main`** at the owner's explicit request ("you can merge all that in"). The live preview site (`https://contactunveiledassembly-oss.github.io/unveiled-assembly-redesign-preview/`, confirmed via the GitHub Pages API to be exactly what serves from `main`) now reflects everything through Section 26.
+
+### 27.1 Demo member quick sign-in
+The owner asked to make the existing "Maya Johnson" demo member (`uid: 'demo-member'`, already seeded with a confirmed one-on-one booking, 4 class registrations, and several notifications — see the `DEMO_BOOKINGS`/`DEMO_TEACHING_REGISTRATIONS` entries) usable as a one-click demo account on the preview site's Member Portal. It already technically worked — `DEMO_MODE`'s `signInWithEmailAndPassword()` fakes success for any email/password that isn't the ministry's real admin address, always landing on this same Maya Johnson identity — but nothing on the page surfaced that, so a visitor would have had no reason to know it existed. Added a **"Try A Demo Member Account →"** button directly on the Sign In screen, calling the exact same `signInWithEmailAndPassword(auth, 'demo@example.com', 'preview-demo')` real Sign In uses (not a separate shortcut path), so it goes through the same `onAuthStateChanged` handling as any real sign-in — nothing about "what happens after sign-in" was duplicated. The button is hidden by a `DEMO_MODE` check and will never appear on the real production site, since it would otherwise try to sign in with credentials that don't exist there.
+
+### 27.2 Verification and status
+Bracket-balance checked clean. This was committed on a fresh branch (`demo-member-quick-signin`, branched from the just-merged `main`, not stacked on the already-merged `phase5-give-page-redesign`) and **also pushed, opened as PR #5, and merged into `main`** — continuing the same explicit merge authorization from the same conversation, for the same "get it onto the preview site" request. No browser was available to click-test the actual sign-in flow; the code path is identical to the existing, already-relied-upon demo sign-in mechanism, just newly exposed via a visible button.
+
+---
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*
