@@ -3,95 +3,145 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="One-on-one sessions with The Unveiled Assembly — discernment, prayer, clarity, and spiritual direction." />
+  <meta name="description" content="One-on-one sessions with The Unveiled Assembly — prayer, direction, discernment, and biblical guidance." />
   <title>One-on-One Sessions | The Unveiled Assembly</title>
   <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=phase2-correction2-20260921" />
+  <link rel="stylesheet" href="styles.css?v=phase4-optionc-20260925" />
 </head>
 <body data-page="one-on-one">
   <div class="grain"></div>
 
-  <header class="teaching-hero teaching-hero-empty" id="oneOnOneHero">
-    <div class="teaching-hero-content reveal">
-      <div class="eyebrow">One-on-One Sessions</div>
-      <h1 class="teaching-display">Guidance For A<br>Deeper Walk.</h1>
-      <p class="teaching-hero-desc">Personal conversations for discernment, prayer, clarity, and spiritual direction.</p>
+  <!-- Hero — assets/one-on-one/hero.png (approved photography) -->
+  <header class="oo-hero" id="oneOnOneHero" aria-label="One-on-One Sessions">
+    <div class="oo-hero-media" aria-hidden="true"></div>
+    <div class="oo-hero-overlay" aria-hidden="true"></div>
+    <div class="oo-hero-content reveal">
+      <div class="eyebrow">Personal Ministry</div>
+      <h1 class="teaching-display oo-hero-title">One<br>On One</h1>
+      <p class="oo-hero-sub">Prayer. Direction. Discernment.<br>Biblical Guidance.</p>
+      <button type="button" class="btn fill book-session">Book A Session →</button>
+      <p class="oo-hero-desc">A safe space to seek, listen,<br>and walk in clarity.</p>
     </div>
+    <div class="oo-hero-words" aria-hidden="true">Come<br>Seek<br>Listen<br>Discern<br>Find Direction</div>
   </header>
 
-  <!-- Editorial photography placeholder — intentionally not a stock
-       photo. Intended shot: an atmospheric, candid portrait during
-       conversation (concept D) — quiet, natural light, black and white
-       or heavily desaturated to match the site. Swap the figure's
-       contents for a real <img> once photography exists; nothing else
-       on this page needs to change. -->
-  <section class="section-inner reveal" style="padding-top:0">
-    <figure class="photo-placeholder" aria-hidden="true" style="min-height:380px;margin:0">
-      <span class="photo-placeholder-tag">Photography — Pending</span>
-      <figcaption class="photo-placeholder-caption">Atmospheric portrait during conversation — quiet, natural light, black &amp; white or heavily desaturated.</figcaption>
-    </figure>
-  </section>
-
-  <section class="teaching-cards-section">
-    <div class="section-inner">
-      <div class="oneonone-cards-grid reveal" id="oneOnOneCardsList" style="max-width:560px;margin:0 auto"></div>
-      <p id="oneOnOneEmptyState" hidden style="text-align:center;color:var(--stone);margin-top:24px">No sessions are available right now — please check back soon.</p>
-    </div>
-  </section>
-
-  <section class="on-light-section" style="padding-bottom:100px">
-    <div class="section-inner reveal" style="text-align:center;margin-bottom:56px">
-      <div class="eyebrow on-light" style="margin-bottom:16px">How It Works</div>
-      <h2 class="serif-heading" style="font-size:clamp(26px,3.2vw,40px)">Simple, From Start To Finish.</h2>
-    </div>
-    <div class="oneonone-steps reveal">
-      <div class="oneonone-step">
-        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">1</div>
-        <div class="oneonone-step-label" style="color:var(--black)">Select Session</div>
+  <!-- Ministry Principles strip -->
+  <section style="padding:48px 5vw">
+    <div class="oo-principles reveal">
+      <div class="oo-principle">
+        <div class="oo-principle-num">01</div>
+        <div class="oo-principle-label">Prayer</div>
+        <p class="oo-principle-desc">Seek God. Bring it all before Him.</p>
       </div>
-      <div class="oneonone-step">
-        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">2</div>
-        <div class="oneonone-step-label" style="color:var(--black)">Choose Date</div>
+      <div class="oo-principle">
+        <div class="oo-principle-num">02</div>
+        <div class="oo-principle-label">Direction</div>
+        <p class="oo-principle-desc">Gain clarity. Discern next steps.</p>
       </div>
-      <div class="oneonone-step">
-        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">3</div>
-        <div class="oneonone-step-label" style="color:var(--black)">Choose Time</div>
+      <div class="oo-principle">
+        <div class="oo-principle-num">03</div>
+        <div class="oo-principle-label">Discernment</div>
+        <p class="oo-principle-desc">Receive biblical insight and wisdom.</p>
       </div>
-      <div class="oneonone-step">
-        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">4</div>
-        <div class="oneonone-step-label" style="color:var(--black)">Details &amp; Payment</div>
-      </div>
-      <div class="oneonone-step">
-        <div class="oneonone-step-num" style="border-color:var(--line-light);color:var(--ink-muted)">5</div>
-        <div class="oneonone-step-label" style="color:var(--black)">Confirmation</div>
+      <div class="oo-principle">
+        <div class="oo-principle-num">04</div>
+        <div class="oo-principle-label">Next Steps</div>
+        <p class="oo-principle-desc">Leave with practical guidance.</p>
       </div>
     </div>
   </section>
 
-  <!-- Editorial photography placeholders — three intimate detail shots,
-       not staged/corporate imagery. Each caption is the direction for
-       the eventual real photo; none of these are stock images. -->
-  <section style="background:var(--black)">
-    <div class="photo-placeholder-grid">
-      <figure class="photo-placeholder" aria-hidden="true">
-        <span class="photo-placeholder-tag">Pending</span>
-        <figcaption class="photo-placeholder-caption">Open Bible &amp; notebook, close editorial detail — intimate conversation setting.</figcaption>
-      </figure>
-      <figure class="photo-placeholder" aria-hidden="true">
-        <span class="photo-placeholder-tag">Pending</span>
-        <figcaption class="photo-placeholder-caption">Two people seated across from one another, shot naturally from the side or behind — candid, not staged.</figcaption>
-      </figure>
-      <figure class="photo-placeholder" aria-hidden="true">
-        <span class="photo-placeholder-tag">Pending</span>
-        <figcaption class="photo-placeholder-caption">Close detail — hands, Bible, journal, or chair in the conversation environment.</figcaption>
-      </figure>
+  <!-- Booking experience — 50/50 editorial split. Left: real photo with
+       its own headline. Right: the REAL booking widget — session type,
+       date, and available times all live here, all reachable without
+       navigating to another page. #oneOnOneSessionSlot and
+       #oneOnOneDateTimeSlot start empty; renderOneOnOnePage() in app.js
+       moves the site's real #bookingOptions and calendar/time-grid
+       elements into them (see the comment there for why this is safe —
+       it moves the existing elements rather than rebuilding them, so
+       every availability/capacity/buffer/hold/double-booking rule
+       keeps working exactly as before). -->
+  <section class="oo-booking-section" id="booking">
+    <div class="oo-booking-split">
+      <div class="oo-booking-image" role="img" aria-label="Open Bible, journal, and plant near a window — the setting a session happens in">
+        <div class="oo-booking-image-overlay" aria-hidden="true"></div>
+        <div class="oo-booking-image-content">
+          <div class="admin-microlabel" style="color:var(--stone-dim)">Book Your Session</div>
+          <h2 class="teaching-display">Choose<br>Your Time</h2>
+          <p>Select a session type and book a time that works for you.</p>
+        </div>
+      </div>
+      <div class="oo-booking-panel oo-dark-booking-ui">
+        <div class="oo-step-label">1. Select A Session Type</div>
+        <div id="oneOnOneSessionSlot"></div>
+        <div id="oneOnOneDateTimeSlot"></div>
+        <p class="oo-booking-hint" id="oneOnOneBookingHint" role="status" aria-live="polite"></p>
+        <button type="button" class="btn fill" id="oneOnOneContinueBtn" style="margin-top:20px;width:100%">Continue To Confirm →</button>
+        <p class="oo-booking-note">Nothing is confirmed until you complete your booking on the next step.</p>
+      </div>
     </div>
   </section>
 
-  <script type="module" src="app.js?v=phase2-correction2-20260921"></script>
+  <!-- Ministry support statement — restrained, not a disclaimer. Wording
+       adapted from the ministry owner's own stated direction; flagged
+       for final approval, see the completion notes. -->
+  <section style="background:var(--black);border-top:1px solid var(--line-dark)">
+    <div class="oo-support-band reveal">
+      <p>Your contribution supports the work of The Unveiled Assembly — helping fund ministry, outreach, and resources like food drives, gatherings, and community initiatives. A One-on-One is time for honest conversation, prayer, and biblical guidance — not the purchase of prophecy or a guaranteed prophetic word.</p>
+    </div>
+  </section>
+
+  <!-- What to Expect — cream / dark editorial split. assets/one-on-one/expect.png -->
+  <section class="on-light-section" style="padding:0">
+    <div class="oo-expect-split">
+      <div class="oo-expect-content reveal">
+        <div class="eyebrow on-light">What To Expect</div>
+        <h2 class="serif-heading">A Safe &amp;<br>Focused Space.</h2>
+        <div class="oo-expect-list">
+          <div class="oo-expect-item">
+            <span class="oo-expect-check">✓</span>
+            <p>A private, confidential conversation.</p>
+          </div>
+          <div class="oo-expect-item">
+            <span class="oo-expect-check">✓</span>
+            <p>A Christ-centered, Bible-based approach.</p>
+          </div>
+          <div class="oo-expect-item">
+            <span class="oo-expect-check">✓</span>
+            <p>Prayer, guidance, and practical insight.</p>
+          </div>
+          <div class="oo-expect-item">
+            <span class="oo-expect-check">✓</span>
+            <p>A listening ear and honest direction.</p>
+          </div>
+          <div class="oo-expect-item">
+            <span class="oo-expect-check">✓</span>
+            <p>Leave with clarity and next steps.</p>
+          </div>
+        </div>
+      </div>
+      <div class="oo-expect-media" aria-hidden="true">
+        <div class="oo-expect-media-overlay"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Closing — assets/one-on-one/closing.png -->
+  <section class="oo-closing" aria-label="Closing">
+    <div class="oo-closing-media" aria-hidden="true"></div>
+    <div class="oo-closing-overlay" aria-hidden="true"></div>
+    <div class="oo-closing-content reveal">
+      <div class="eyebrow">Come As You Are</div>
+      <h2 class="teaching-display">Real Conversations.<br>Real Direction.</h2>
+      <p>Whether you're seeking clarity, prayer, or biblical guidance, this is a space for you.</p>
+      <button type="button" class="btn fill book-session">Book A Session →</button>
+    </div>
+  </section>
+
+  <script type="module" src="app.js?v=phase4-optionc-20260925"></script>
 </body>
 </html>

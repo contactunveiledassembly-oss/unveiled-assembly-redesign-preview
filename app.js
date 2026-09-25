@@ -231,6 +231,29 @@ let DEMO_BOOKINGS = [
   { id: 'demo-3', slotId: DEMO_TUE2 + '_16:00', date: DEMO_TUE2, time: '16:00', sessionType: '30-minute', name: 'Sam Rivera', email: 'sam@example.com', uid: null, status: 'confirmed' },
   { id: 'demo-member-session', slotId: DEMO_TUE1 + '_16:00', date: DEMO_TUE1, time: '16:00', sessionType: '30-minute', name: 'Maya Johnson', email: 'demo@example.com', uid: 'demo-member', status: 'confirmed', clientTimeZone: 'America/New_York', confirmationId: 'TUA-4J8M2Q' },
 ];
+// A signed-in member's OWN real bookings in production — populated by
+// loadMemberOwnBookings() (called on sign-in and right after a new
+// booking is created), completely separate from DEMO_BOOKINGS. Before
+// this existed, myBookings() only ever read DEMO_BOOKINGS regardless
+// of mode, which is a real bug: a production member's "My Sessions"
+// list, and anything built on it (reschedule/cancel), never actually
+// loaded their real Firestore bookings at all — it just silently
+// showed "No upcoming sessions" for every real visitor. Found and
+// fixed while building the reschedule-window policy below, which
+// needs real booking data (createdAt, in particular) to work at all.
+let MEMBER_OWN_BOOKINGS = [];
+async function loadMemberOwnBookings(){
+  if(DEMO_MODE || !currentUser) return;
+  try {
+    const snap = await getDocs(query(collection(db, 'bookings'), where('uid', '==', currentUser.uid)));
+    MEMBER_OWN_BOOKINGS = [];
+    snap.forEach(docSnap => MEMBER_OWN_BOOKINGS.push({ id: docSnap.id, ...docSnap.data() }));
+    renderMemberSessionsList();
+    if(typeof renderMemberDashboardPanels === 'function') renderMemberDashboardPanels();
+  } catch (err) {
+    console.error('[member] loadMemberOwnBookings failed', err);
+  }
+}
 const DEMO_MEMBERS = [
   { id: 'demo-m1', name: 'Jordan Lee', email: 'jordan@example.com', role: 'member' },
   { id: 'demo-m2', name: 'Amara Okafor', email: 'amara@example.com', role: 'member' },
@@ -369,6 +392,7 @@ const NAV_LINKS = [
   { page: 'one-on-one', href: 'one-on-one.html', label: 'One-on-One' },
   { page: 'prayer', href: 'prayer.html', label: 'Prayer' },
   { page: 'connect', href: 'connect.html', label: 'Connect' },
+  { page: 'give', href: 'give.html', label: 'Give' },
   { page: 'shop', href: 'shop/', label: 'Shop' },
 ];
 
@@ -883,6 +907,25 @@ function dialogsHtml(){
           <p style="color:var(--ink-muted);line-height:1.6">Profile editing isn't available in Member View preview — this reaches real account settings (email/phone/password), which stay tied to your own Owner account no matter who you're previewing. Exit Member View to manage your own profile.</p>
         </div>
         <div class="portal-dashboard-grid" id="memberAccountRealForm">
+          <article class="portal-panel">
+            <span class="portal-label">My Profile</span>
+            <p style="color:var(--stone);font-size:13.5px;max-width:56ch;margin:4px 0 0;line-height:1.55">Add a photo and a few personal details — this is what the ministry team sees on your account.</p>
+            <div class="admin-profile-photo-row" style="margin-top:18px">
+              <div class="admin-profile-photo" id="memberProfilePhotoPreview">?</div>
+              <div class="admin-profile-photo-actions">
+                <label class="admin-image-upload-btn" style="cursor:pointer">Upload Photo<input type="file" accept="image/*" id="memberProfilePhotoFile" hidden /></label>
+                <button type="button" class="admin-image-remove-btn" id="memberProfilePhotoRemove">Remove Photo</button>
+              </div>
+            </div>
+            <div class="booking-grid" style="margin-top:20px">
+              <div class="portal-field"><label for="memberProfileFirstName">First Name</label><input id="memberProfileFirstName" type="text" /></div>
+              <div class="portal-field"><label for="memberProfileLastName">Last Name</label><input id="memberProfileLastName" type="text" /></div>
+              <div class="portal-field"><label for="memberProfileNickname">Nickname <span class="admin-hint">(optional)</span></label><input id="memberProfileNickname" type="text" placeholder="What should we call you?" /></div>
+              <div class="portal-field"><label for="memberProfileBirthday">Birthday <span class="admin-hint">(optional)</span></label><input id="memberProfileBirthday" type="date" /></div>
+            </div>
+            <button class="portal-primary" type="button" id="memberProfileSaveBtn" style="margin-top:16px">Save Profile</button>
+            <div class="portal-status" id="memberProfileStatus" role="status" aria-live="polite" style="margin-top:8px"></div>
+          </article>
           ${accountSettingsHtml('member')}
         </div>
       </div>
@@ -1667,7 +1710,7 @@ function dialogsHtml(){
     </div>
   </dialog>
 
-  <dialog class="booking-dialog checkout-dialog" id="bookingDialog" aria-labelledby="bookingTitle">
+  <dialog class="booking-dialog checkout-dialog oo-dark-booking-ui" id="bookingDialog" aria-labelledby="bookingTitle">
     <button class="booking-close checkout-close" id="closeBooking" type="button" aria-label="Close scheduling">×</button>
     <div class="checkout-grid">
       <div class="checkout-summary" id="bookingSummaryArt">
@@ -2517,6 +2560,10 @@ function dialogsHtml(){
         <button type="button" class="admin-tab" data-person-tab="notes">Notes</button>
       </div>
       <div data-person-panel="overview">
+        <div class="admin-profile-photo-row" style="margin-bottom:18px">
+          <div class="admin-profile-photo" id="personProfilePhoto">?</div>
+          <div id="personProfileDetails" style="font-size:13px;color:var(--owner-text-muted);line-height:1.7"></div>
+        </div>
         <div class="admin-stat-row" id="personProfileStats"></div>
       </div>
       <div data-person-panel="classes" hidden><div id="personProfileClasses"></div></div>
@@ -2861,6 +2908,7 @@ const PREVIEW_STORAGE_KEYS = {
   zoom: 'ua_preview_teaching_zoom_v1',
   media: 'ua_preview_media_v1',
   profilePhoto: 'ua_preview_profile_photo_v1',
+  memberProfilePhoto: 'ua_preview_member_profile_photo_v1',
   sessionTypes: 'ua_preview_session_types_v1',
   schedulingSettings: 'ua_preview_scheduling_settings_v1',
   availabilityRules: 'ua_preview_availability_rules_v1',
@@ -5712,7 +5760,7 @@ function calendarDatePotentiallyOpen(dateStr){
     if(dateStr > max) return false;
   }
   if((DEMO_MODE && DEMO_BLOCKED_DATES.includes(dateStr)) || dateInAnyBlockoutRange(dateStr)) return false;
-  const selected = bookingForm.querySelector('input[name="sessionType"]:checked');
+  const selected = document.querySelector('input[name="sessionType"]:checked');
   const service = selected ? selected.value : null;
   const override = AVAILABILITY_OVERRIDES[dateStr];
   if(override) return !override.closed && (override.windows || []).some(w => !w.sessionTypeIds || !w.sessionTypeIds.length || !service || w.sessionTypeIds.includes(service));
@@ -6076,7 +6124,7 @@ async function loadTimeSlots(){
   try {
     await releaseCurrentHold();
     const dateStr = bookingDateInput.value;
-    const checkedInput = bookingForm.querySelector('input[name="sessionType"]:checked');
+    const checkedInput = document.querySelector('input[name="sessionType"]:checked');
     if(!checkedInput) return;
     const service = checkedInput.value;
     await populateTimeSelect(bookingTimeSelect, dateStr, SESSION_TYPES[service] && SESSION_TYPES[service].durationMinutes, service, selectedBookingTimeZone());
@@ -6115,7 +6163,7 @@ function showBookingWizardStep(name){
   });
 }
 function selectedSessionType(){
-  const checked = bookingForm.querySelector('input[name="sessionType"]:checked');
+  const checked = document.querySelector('input[name="sessionType"]:checked');
   return checked ? SESSION_TYPES[checked.value] : null;
 }
 function updateBookingSummaryPanel(){
@@ -6229,7 +6277,7 @@ document.getElementById('bookingTimeButtons').addEventListener('keydown', event 
 // once they're back.
 let pendingBookingService = null;
 function requireAccountForBooking(){
-  pendingBookingService = bookingForm.querySelector('input[name="sessionType"]:checked')?.value || null;
+  pendingBookingService = document.querySelector('input[name="sessionType"]:checked')?.value || null;
   bookingDialog.close();
   showAuthPanel('signin');
   showPortalView('prospect');
@@ -6250,7 +6298,7 @@ function resumePendingBooking(){
   loadTimeSlots();
 }
 document.getElementById('bookingStepSessionNext').addEventListener('click', () => {
-  if(!bookingForm.querySelector('input[name="sessionType"]:checked')){ bookingStatus.textContent = 'Choose a session to continue.'; return; }
+  if(!document.querySelector('input[name="sessionType"]:checked')){ bookingStatus.textContent = 'Choose a session to continue.'; return; }
   if(!currentUser){ requireAccountForBooking(); return; }
   bookingStatus.textContent = '';
   updateBookingSummaryPanel();
@@ -6307,32 +6355,29 @@ document.getElementById('bookingAddCalendarBtn').addEventListener('click', () =>
 });
 document.getElementById('bookingViewSessionsBtn').addEventListener('click', () => {
   bookingDialog.close();
-  if(currentUser){
-    openPortal();
-    showMemberTab('sessions');
-  } else {
-    // One-on-ones never require an account up front — this is the
-    // "invite to create/claim an account after confirmation" path
-    // from the requirement, not a hard gate like class registration.
-    showAuthPanel('register');
-    showPortalView('prospect');
-    memberPortalDialog.showModal();
-    const emailField = document.getElementById('regEmail');
-    if(emailField && !emailField.value) emailField.value = document.getElementById('bookingConfirmEmail').textContent || '';
-    const nameParts = (document.getElementById('bookingConfirmName').textContent || '').trim().split(/\s+/);
-    const firstField = document.getElementById('regFirstName');
-    const lastField = document.getElementById('regLastName');
-    if(firstField && !firstField.value) firstField.value = nameParts[0] || '';
-    if(lastField && !lastField.value) lastField.value = nameParts.slice(1).join(' ') || '';
-  }
+  // Reaching this confirmation step at all already required signing in
+  // or registering — requireAccountForBooking() gates every path into
+  // Details/Payment before this point (the session-step Continue button
+  // on every other page, and the inline "Continue To Confirm" button on
+  // the One-on-One page). So currentUser is always set here; there's no
+  // signed-out case left to handle.
+  openPortal();
+  showMemberTab('sessions');
 });
 
 function openBooking(service){
+  // The One-on-One page keeps session/date/time inline on the page
+  // itself (see renderOneOnOnePage()) rather than behind this dialog —
+  // every "Book A Session" trigger on that page (nav, hero, closing,
+  // a specific session card) is redirected there instead of opening a
+  // dialog whose Session/Date steps have nothing left in them on that
+  // page. Every other page's booking dialog is completely unaffected.
+  if(document.body.dataset.page === 'one-on-one') return openOneOnOneInline(service);
   bookingForm.reset();
   bookingStatus.textContent = '';
   document.getElementById('bookingStepDateNext').disabled = true;
   if(service){
-    const serviceChoice = bookingForm.querySelector('input[name="sessionType"][value="' + service + '"]');
+    const serviceChoice = document.querySelector('input[name="sessionType"][value="' + service + '"]');
     if(serviceChoice) serviceChoice.checked = true;
   }
   if(currentUser && currentProfile){
@@ -6344,8 +6389,19 @@ function openBooking(service){
   bookingCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   renderBookingCalendar();
   updateBookingSummaryPanel();
-  showBookingWizardStep('session');
   bookingDialog.showModal();
+  // A signed-in visitor who tapped a specific session card already told
+  // us which session they want — re-showing the "confirm your session"
+  // step would just be a redundant extra click, so jump straight to
+  // date/time. Nobody without an account gets this shortcut: the
+  // Continue button on the session step is still what calls
+  // requireAccountForBooking(), same auth gate as before, untouched.
+  if(service && currentUser){
+    showBookingWizardStep('date');
+    loadTimeSlots();
+    return;
+  }
+  showBookingWizardStep('session');
 }
 window.openBooking = openBooking; // pages can trigger booking directly, e.g. Prayer CTAs
 
@@ -6483,7 +6539,7 @@ bookingTimeSelect.addEventListener('change', async () => {
   const dateStr = bookingDateInput.value;
   const time = bookingTimeSelect.value;
   if(!dateStr || !time) return;
-  const checkedInput = bookingForm.querySelector('input[name="sessionType"]:checked');
+  const checkedInput = document.querySelector('input[name="sessionType"]:checked');
   const sessionTypeId = checkedInput ? checkedInput.value : null;
   try {
     const hold = await createHold(dateStr, time, sessionTypeId);
@@ -6576,7 +6632,7 @@ bookingForm.addEventListener('submit', async event => {
     bookingStatus.textContent = 'Please wait a moment before submitting another request.';
     return;
   }
-  const service = bookingForm.querySelector('input[name="sessionType"]:checked').value;
+  const service = document.querySelector('input[name="sessionType"]:checked').value;
   const dateStr = bookingDateInput.value;
   const time = bookingTimeSelect.value;
   const name = document.getElementById('bookingName').value.trim();
@@ -6627,7 +6683,17 @@ bookingForm.addEventListener('submit', async event => {
     showBookingWizardStep('confirm');
     bookingForm.reset();
     loadTimeSlots();
-    if(currentUser){ renderMemberSessionsList(); renderMemberDashboardPanels(); }
+    if(currentUser){
+      // Optimistic append in production: createBooking()'s returned
+      // record has no server-resolved createdAt yet, so the reschedule
+      // window (see memberSessionRowHtml) needs a local timestamp — this
+      // is genuinely "now," so it's accurate, not a guess. A later
+      // loadMemberOwnBookings() call (next sign-in, or any future
+      // refresh) replaces it with the real server-confirmed record.
+      if(!DEMO_MODE) MEMBER_OWN_BOOKINGS.push({ ...record, createdAt: new Date() });
+      renderMemberSessionsList();
+      renderMemberDashboardPanels();
+    }
   } catch (err) {
     console.error('[booking] createBooking failed', err.code || err.message || err);
     if(err.message === 'slot-taken'){
@@ -7148,6 +7214,11 @@ async function cancelOwnBooking(bookingId, slotId){
   }
   await updateDoc(doc(db, 'bookings', bookingId), { status: 'cancelled' });
   await releaseSlotOccupancy(slotId);
+  // Keep the in-memory copy in sync with what was just written — without
+  // this, renderMemberSessionsList() (called right after) would still
+  // show the pre-cancel status until the next full loadMemberOwnBookings().
+  const cached = MEMBER_OWN_BOOKINGS.find(x => x.id === bookingId);
+  if(cached) cached.status = 'cancelled';
 }
 
 /* =================================================================
@@ -7168,6 +7239,7 @@ function showMemberTab(name){
   if(name === 'account'){
     document.getElementById('memberAccountPreviewLocked').hidden = !ownerPreviewActive;
     document.getElementById('memberAccountRealForm').hidden = ownerPreviewActive;
+    if(!ownerPreviewActive) renderMemberProfileCard();
   }
 }
 document.getElementById('memberTabs').addEventListener('click', event => {
@@ -7190,9 +7262,15 @@ function myTeachingRegistrations(){
 }
 function myBookings(){
   if(!currentUser) return [];
-  const uid = effectiveMemberUid(), email = effectiveMemberEmail();
-  return DEMO_BOOKINGS.filter(b => b.uid === uid ||
-    (!b.uid && email && b.email && b.email.toLowerCase() === email.toLowerCase()));
+  // Owner Member View preview always simulates against DEMO_BOOKINGS
+  // (it has no real production counterpart to preview against here),
+  // same as every other DEMO_MODE consumer of this data.
+  if(DEMO_MODE || ownerPreviewActive){
+    const uid = effectiveMemberUid(), email = effectiveMemberEmail();
+    return DEMO_BOOKINGS.filter(b => b.uid === uid ||
+      (!b.uid && email && b.email && b.email.toLowerCase() === email.toLowerCase()));
+  }
+  return MEMBER_OWN_BOOKINGS;
 }
 function isUpcomingTeaching(t){
   if(!t) return true;
@@ -7502,10 +7580,44 @@ document.getElementById('memberClassesSubTabs').addEventListener('click', event 
   document.querySelectorAll('#memberClassesSubTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
   renderMemberClassesList();
 });
+// Self-service reschedule (instant cancel + reopen the booking wizard,
+// no owner involvement) is only offered for a short grace period right
+// after booking — not any time before the session itself. Past that
+// window, rescheduling requires the ministry to actually have
+// availability, so it's a request the owner reviews, not a guarantee.
+const RESCHEDULE_SELF_SERVICE_WINDOW_MS = 2 * 60 * 60 * 1000;
+function bookingCreatedAtMillis(b){
+  const ts = b.createdAt || b.bookedAt;
+  if(!ts) return null;
+  if(typeof ts === 'string') return new Date(ts).getTime();
+  if(ts instanceof Date) return ts.getTime();
+  if(typeof ts.toMillis === 'function') return ts.toMillis();
+  return null;
+}
 function memberSessionRowHtml(b, today){
   const statusClass = b.status === 'confirmed' ? 'confirmed' : b.status === 'cancelled' ? 'cancelled' : b.status === 'declined' ? 'cancelled' : 'pending';
   const statusLabel = b.status === 'confirmed' ? 'Confirmed' : b.status === 'cancelled' ? 'Cancelled' : b.status === 'declined' ? 'Declined' : 'Pending';
   const canManage = !ownerPreviewActive && (b.status === 'pending' || b.status === 'confirmed') && b.date >= today;
+  const createdAtMs = bookingCreatedAtMillis(b);
+  // No createdAt at all (only possible on old/seed data) is treated as
+  // outside the window — safer default than accidentally granting a
+  // one-click reschedule with no real basis for the 2-hour check.
+  const withinRescheduleWindow = createdAtMs !== null && (Date.now() - createdAtMs) <= RESCHEDULE_SELF_SERVICE_WINDOW_MS;
+  let rescheduleActionHtml = '';
+  let rescheduleNoteHtml = '';
+  if(canManage){
+    if(withinRescheduleWindow){
+      rescheduleActionHtml = '<button class="portal-secondary member-reschedule-booking" type="button" style="min-height:32px;padding:0 12px;font-size:9px">Reschedule</button>';
+    } else {
+      const subject = 'Reschedule Request — ' + (b.confirmationId || b.id);
+      const body = 'Hi, I would like to request a reschedule for my ' + sessionTypeName(b.sessionType) +
+        ' currently booked for ' + formatLocalDateTime(b.date, b.time, b.clientTimeZone) +
+        ' (Confirmation ' + (b.confirmationId || b.id) + '). Please let me know if a new time is available.';
+      const mailtoHref = 'mailto:' + ADMIN_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+      rescheduleActionHtml = '<a class="portal-secondary" href="' + mailtoHref + '" style="min-height:32px;padding:0 12px;font-size:9px;display:inline-flex;align-items:center;text-decoration:none">Request Reschedule</a>';
+      rescheduleNoteHtml = '<p class="member-record-meta" style="opacity:.75;margin-top:6px">Self-service rescheduling has closed for this session. Requesting a reschedule sends us an email — it isn\'t guaranteed and depends on availability.</p>';
+    }
+  }
   return '<article class="portal-panel member-record-card" data-booking-id="' + escapeHtml(b.id) + '" data-slot-id="' + escapeHtml(b.slotId || '') + '" data-session-type="' + escapeHtml(b.sessionType) + '">' +
     '<div class="member-record-art member-record-session-art"></div><div class="member-record-content">' +
     '<div class="member-record-head">' +
@@ -7514,10 +7626,11 @@ function memberSessionRowHtml(b, today){
     '</div>' +
     '<p class="member-record-meta">' + escapeHtml(formatLocalDateTime(b.date, b.time, b.clientTimeZone)) + '</p>' +
     '<p class="member-record-conf">Confirmation <strong>' + escapeHtml(b.confirmationId || '—') + '</strong></p>' +
+    rescheduleNoteHtml +
     '<div class="portal-inline-actions" style="margin-top:10px">' +
     '<button class="portal-secondary" type="button" data-member-add-calendar-booking="' + escapeHtml(b.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">Add To Calendar</button>' +
     '<button class="portal-secondary" type="button" data-member-view-confirmation-session="' + escapeHtml(b.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">View Confirmation</button>' +
-    (canManage ? '<button class="portal-secondary member-reschedule-booking" type="button" style="min-height:32px;padding:0 12px;font-size:9px">Reschedule</button>' +
+    (canManage ? rescheduleActionHtml +
       '<button class="portal-secondary member-cancel-booking" type="button" style="min-height:32px;padding:0 12px;font-size:9px">Cancel</button>' : '') +
     '</div></div></article>';
 }
@@ -7536,12 +7649,16 @@ function renderMemberSessionsList(){
     ? '<p style="color:var(--stone)">No ' + mode + ' sessions.</p>'
     : rows.map(b => memberSessionRowHtml(b, today)).join('');
 }
-// Reschedule = cancel the current time, then reopen the booking wizard
-// to pick a new one — same real mechanism the old dashboard-only
-// booking list used (cancelOwnBooking + openBooking), just wired to
-// this row template now that it's the one place a member manages
-// their sessions from. Disabled entirely during Owner Member View
-// preview (ownerPreviewActive gates canManage above).
+// .member-reschedule-booking only renders inside the 2-hour self-
+// service window (see memberSessionRowHtml) — reschedule there means
+// cancel the current time, then reopen the booking wizard to pick a
+// new one, same real mechanism the old dashboard-only booking list
+// used (cancelOwnBooking + openBooking). Past that window the button
+// is a plain mailto: link instead (rendered directly in
+// memberSessionRowHtml, not a button at all), so it never reaches this
+// handler — no auto-cancel happens just from asking to reschedule.
+// Disabled entirely during Owner Member View preview (ownerPreviewActive
+// gates canManage above).
 document.getElementById('memberSessionsList').addEventListener('click', async event => {
   const cancelBtn = event.target.closest('.member-cancel-booking');
   const reschedBtn = event.target.closest('.member-reschedule-booking');
@@ -7990,12 +8107,25 @@ function ownerGlobalSearchResults(q){
   q = q.trim().toLowerCase();
   if(!q) return [];
   const results = [];
-  resolveAllMemberProfiles().filter(m => (m.name + ' ' + m.email + ' ' + (m.phone || '')).toLowerCase().includes(q)).slice(0, 6)
+  // Correction from the earlier pass: on closer check, Class/Prayer
+  // Request/Testimonial/Class Review search below were already reading
+  // TEACHINGS/PRAYER_REQUESTS/TESTIMONIALS/CLASS_REVIEWS — the real,
+  // unprefixed module-level vars that loadTeachingPageConfig()/
+  // loadMinistryInboxData() already populate with production data on
+  // every page load / dashboard entry. Only Member (fixed previously)
+  // and these next two — which really were hardcoded to the DEMO_*
+  // arrays specifically — were actually broken in production. Both now
+  // search OWNER_ALL_REGISTRATIONS_CACHE/OWNER_ALL_BOOKINGS_CACHE
+  // (populated once at dashboard load by loadOwnerSearchCaches(), same
+  // reasoning as PRODUCTION_MEMBERS_CACHE above it: a live Firestore
+  // fetch on every keystroke isn't reasonable, so this searches a
+  // snapshot from when the dashboard loaded, not truly live data).
+  (DEMO_MODE ? resolveAllMemberProfiles() : PRODUCTION_MEMBERS_CACHE).filter(m => (m.name + ' ' + m.email + ' ' + (m.phone || '')).toLowerCase().includes(q)).slice(0, 6)
     .forEach(m => results.push({ type: 'Member', title: m.name || m.email, action: () => { showOwnerSection('people'); openPersonProfile(m.key); } }));
-  DEMO_TEACHING_REGISTRATIONS.filter(r => (r.confirmationId || '').toLowerCase().includes(q)).slice(0, 6)
+  (DEMO_MODE ? DEMO_TEACHING_REGISTRATIONS : OWNER_ALL_REGISTRATIONS_CACHE).filter(r => (r.confirmationId || '').toLowerCase().includes(q)).slice(0, 6)
     .forEach(r => results.push({ type: 'Class Registration', title: r.confirmationId + ' — ' + ((r.firstName + ' ' + r.lastName).trim() || r.email),
       action: () => { showOwnerSection('registrations'); showClassRegTab('registrations'); openClassRegDetail(r.id); } }));
-  DEMO_BOOKINGS.filter(b => (b.confirmationId || '').toLowerCase().includes(q)).slice(0, 6)
+  (DEMO_MODE ? DEMO_BOOKINGS : OWNER_ALL_BOOKINGS_CACHE).filter(b => (b.confirmationId || '').toLowerCase().includes(q)).slice(0, 6)
     .forEach(b => results.push({ type: 'One-on-One Booking', title: b.confirmationId + ' — ' + (b.name || b.email),
       action: () => { showOwnerSection('bookings'); showBookingsTab('lookup'); openBookingDetail(b.id); } }));
   Object.values(TEACHINGS).filter(t => (t.title || '').toLowerCase().includes(q)).slice(0, 6)
@@ -8159,6 +8289,104 @@ document.getElementById('ownerProfileSaveBtn').addEventListener('click', async (
     status.textContent = 'Saved.';
   } catch (err) {
     console.error('save owner profile failed', err);
+    status.textContent = 'Could not save changes — try again.';
+  }
+});
+
+/* ---------------------------------------------------------------
+   Member Profile — photo, name, nickname, and birthday. Same pattern
+   as the Owner's own profile card just above: photo is a resized data
+   URL stored directly on `users/{uid}` (no Firebase Storage needed —
+   see the comment at resizeImageToDataUrl), DEMO_MODE keeps the photo
+   in its own localStorage key so it survives this session's reloads
+   without touching real Firestore. Nickname/birthday are plain new
+   fields on the same doc — birthday is captured now specifically so a
+   future "free one-on-one for your birthday" outreach has real data to
+   work from; that automation itself is NOT built here, only the field.
+   A member's photo is also what the Owner sees when they open that
+   member's profile from People — see personProfileDialog.
+   --------------------------------------------------------------- */
+function getMemberProfilePhoto(){
+  if(DEMO_MODE){
+    try { return localStorage.getItem(PREVIEW_STORAGE_KEYS.memberProfilePhoto) || ''; } catch (err) { return ''; }
+  }
+  return (currentProfile && currentProfile.photoURL) || '';
+}
+async function setMemberProfilePhoto(dataUrl){
+  if(DEMO_MODE){
+    try {
+      if(dataUrl) localStorage.setItem(PREVIEW_STORAGE_KEYS.memberProfilePhoto, dataUrl);
+      else localStorage.removeItem(PREVIEW_STORAGE_KEYS.memberProfilePhoto);
+    } catch (err) {
+      throw new Error("This browser's preview storage is full — try a smaller image.");
+    }
+  } else if(currentUser) {
+    await updateDoc(doc(db, 'users', currentUser.uid), { photoURL: dataUrl || null });
+  }
+  if(currentProfile) currentProfile.photoURL = dataUrl || '';
+}
+function renderMemberProfilePhotoPreview(){
+  const el = document.getElementById('memberProfilePhotoPreview');
+  if(!el) return;
+  const photo = getMemberProfilePhoto();
+  const name = (currentProfile && (currentProfile.nickname || currentProfile.name || currentProfile.email)) || '';
+  if(photo){ el.style.backgroundImage = "url('" + photo.replace(/'/g, "%27") + "')"; el.textContent = ''; }
+  else { el.style.backgroundImage = ''; el.textContent = name.trim().charAt(0).toUpperCase() || '?'; }
+}
+const memberProfilePhotoFile = document.getElementById('memberProfilePhotoFile');
+if(memberProfilePhotoFile){
+  memberProfilePhotoFile.addEventListener('change', async () => {
+    const file = memberProfilePhotoFile.files[0];
+    memberProfilePhotoFile.value = '';
+    if(!file) return;
+    if(!file.type || !file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 400, 0.82);
+      await setMemberProfilePhoto(dataUrl);
+      renderMemberProfilePhotoPreview();
+    } catch (err) {
+      console.error('member profile photo upload failed', err);
+      alert(err && err.message ? err.message : 'Could not use that image — try a different file.');
+    }
+  });
+}
+document.getElementById('memberProfilePhotoRemove')?.addEventListener('click', async () => {
+  await setMemberProfilePhoto('');
+  renderMemberProfilePhotoPreview();
+});
+function renderMemberProfileCard(){
+  if(!currentProfile) return;
+  const parts = (currentProfile.name || '').split(' ');
+  document.getElementById('memberProfileFirstName').value = currentProfile.firstName || parts[0] || '';
+  document.getElementById('memberProfileLastName').value = currentProfile.lastName || parts.slice(1).join(' ') || '';
+  document.getElementById('memberProfileNickname').value = currentProfile.nickname || '';
+  document.getElementById('memberProfileBirthday').value = currentProfile.birthday || '';
+  renderMemberProfilePhotoPreview();
+}
+document.getElementById('memberProfileSaveBtn')?.addEventListener('click', async () => {
+  const status = document.getElementById('memberProfileStatus');
+  const firstName = document.getElementById('memberProfileFirstName').value.trim();
+  const lastName = document.getElementById('memberProfileLastName').value.trim();
+  const nickname = document.getElementById('memberProfileNickname').value.trim();
+  const birthday = document.getElementById('memberProfileBirthday').value;
+  if(!firstName || !lastName){ status.textContent = 'Enter your first and last name.'; return; }
+  const fullName = firstName + ' ' + lastName;
+  status.textContent = 'Saving…';
+  try {
+    if(DEMO_MODE){
+      if(currentUser) currentUser.displayName = fullName;
+    } else {
+      await updateProfile(currentUser, { displayName: fullName });
+      await updateDoc(doc(db, 'users', currentUser.uid), { firstName, lastName, name: fullName, nickname: nickname || null, birthday: birthday || null });
+    }
+    if(currentProfile){
+      currentProfile.name = fullName; currentProfile.firstName = firstName; currentProfile.lastName = lastName;
+      currentProfile.nickname = nickname; currentProfile.birthday = birthday;
+    }
+    document.getElementById('memberWelcomeName').textContent = fullName ? ', ' + fullName.split(' ')[0] : '';
+    status.textContent = 'Saved.';
+  } catch (err) {
+    console.error('save member profile failed', err);
     status.textContent = 'Could not save changes — try again.';
   }
 });
@@ -8520,6 +8748,7 @@ async function loadOwnerData(){
   if(!DEMO_MODE){ try { await loadMediaLibrary(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadMinistryInboxData(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadNightOfPrayerConfig(); } catch (err) { /* keep whatever is already loaded */ } }
+  if(!DEMO_MODE){ try { await loadOwnerSearchCaches(); } catch (err) { /* keep whatever is already loaded */ } }
   renderOwnerProfilePhotoPreview();
   renderOwnerAccountProfile();
   renderSchedSettingsForm();
@@ -9171,6 +9400,32 @@ async function ownerAllBookingsEverything(){
     return items;
   } catch (err) { return []; }
 }
+// Mirrors ownerAllBookingsEverything() for the other collection global
+// search needs — no existing equivalent for teachingRegistrations.
+async function ownerAllRegistrationsEverything(){
+  if(DEMO_MODE) return DEMO_TEACHING_REGISTRATIONS;
+  try {
+    const snap = await getDocs(collection(db, 'teachingRegistrations'));
+    const items = [];
+    snap.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
+    return items;
+  } catch (err) { return []; }
+}
+// Global search (ownerGlobalSearchResults) runs synchronously on every
+// keystroke, so it can't await a fresh Firestore fetch each time —
+// these two caches are populated once, when the owner's dashboard
+// loads (see loadOwnerData()), and searched client-side from there,
+// same approach as PRODUCTION_MEMBERS_CACHE. Same caveat as that one:
+// only reflects bookings/registrations that existed as of that load,
+// not ones created later in the same session.
+let OWNER_ALL_BOOKINGS_CACHE = [];
+let OWNER_ALL_REGISTRATIONS_CACHE = [];
+async function loadOwnerSearchCaches(){
+  if(DEMO_MODE) return;
+  const [bookings, regs] = await Promise.all([ownerAllBookingsEverything(), ownerAllRegistrationsEverything()]);
+  OWNER_ALL_BOOKINGS_CACHE = bookings;
+  OWNER_ALL_REGISTRATIONS_CACHE = regs;
+}
 async function renderBookingsClients(){
   const wrap = document.getElementById('bookingsClientsList');
   if(!wrap) return;
@@ -9357,6 +9612,15 @@ function setOwnerMemberCount(count){
   const el = document.getElementById('ownerMemberCount');
   if(el) el.textContent = String(count);
 }
+// Real production user docs, keyed the same way openPersonProfile()
+// expects (uid as `key`) — populated by loadOwnerMembers() below.
+// Before this existed, the production member row had no data-person-
+// key at all, so clicking a real member here did nothing: the row
+// looked identical to the DEMO_MODE version but the click handler
+// (which reads data-person-key) silently found nothing to open. Found
+// while wiring up the new profile photo/nickname/birthday fields,
+// which need this same click-through to actually reach a real member.
+let PRODUCTION_MEMBERS_CACHE = [];
 async function loadOwnerMembers(){
   const container = document.getElementById('ownerMembersList');
   container.innerHTML = '<p style="color:#656565">Loading member accounts…</p>';
@@ -9369,13 +9633,15 @@ async function loadOwnerMembers(){
     if(snap.empty){
       container.innerHTML = '<p style="color:#656565">No member accounts yet.</p>';
       setOwnerMemberCount(0);
+      PRODUCTION_MEMBERS_CACHE = [];
       return;
     }
     const items = [];
-    snap.forEach(docSnap => items.push(docSnap.data()));
+    snap.forEach(docSnap => items.push({ key: docSnap.id, uid: docSnap.id, ...docSnap.data() }));
     items.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    PRODUCTION_MEMBERS_CACHE = items;
     container.innerHTML = items.map(u =>
-      '<div class="portal-row"><div><strong>' + escapeHtml(u.name || u.email) + '</strong><small>' + escapeHtml(u.email) +
+      '<div class="portal-row" data-person-key="' + escapeHtml(u.key) + '" style="cursor:pointer"><div><strong>' + escapeHtml(u.name || u.email) + '</strong><small>' + escapeHtml(u.email) +
       '</small></div><span class="portal-access">' + (u.role === 'admin' ? 'Admin' : 'Member') + '</span></div>'
     ).join('');
     setOwnerMemberCount(items.filter(u => u.role !== 'admin').length);
@@ -9415,9 +9681,49 @@ let PERSON_NOTES = {};
 function savePersonNotes(){
   try { localStorage.setItem(PERSON_NOTES_KEY, JSON.stringify(PERSON_NOTES)); } catch (err) { /* ignore */ }
 }
-function personActivityTimeline(key, profile){
+// Normalizes a Firestore Timestamp/Date/ISO-string into the plain ISO
+// string every existing consumer here (classRegRowHtml,
+// bookingsLookupRowHtml, personActivityTimeline's own `new Date(e.at)`)
+// already expects, since those were all written against DEMO_MODE's
+// plain-string sample data. Doing this once at the fetch boundary below
+// means none of them needed to change to accept real production data.
+function toIsoStringSafe(ts){
+  if(!ts) return null;
+  if(typeof ts === 'string') return ts;
+  if(ts instanceof Date) return ts.toISOString();
+  if(typeof ts.toDate === 'function') return ts.toDate().toISOString();
+  return null;
+}
+// The production half of Section 25.2's "known gap" — fetches one
+// specific member's real class registrations and bookings by uid, for
+// the Classes/Sessions/Payments/Activity tabs in their People profile
+// drawer. isAdmin() already permits this per firestore.rules (verified
+// before writing this, not assumed) — no rule change needed.
+async function fetchPersonRecordsForKey(key){
+  try {
+    const [regsSnap, bookingsSnap] = await Promise.all([
+      getDocs(query(collection(db, 'teachingRegistrations'), where('uid', '==', key))),
+      getDocs(query(collection(db, 'bookings'), where('uid', '==', key)))
+    ]);
+    const regs = [];
+    regsSnap.forEach(d => {
+      const data = d.data();
+      regs.push({ id: d.id, ...data, registeredAt: toIsoStringSafe(data.registeredAt || data.createdAt) });
+    });
+    const bookings = [];
+    bookingsSnap.forEach(d => {
+      const data = d.data();
+      bookings.push({ id: d.id, ...data, bookedAt: toIsoStringSafe(data.bookedAt || data.createdAt) });
+    });
+    return { regs, bookings };
+  } catch (err) {
+    console.error('[people] fetchPersonRecordsForKey failed', err);
+    return { regs: [], bookings: [] };
+  }
+}
+function personActivityTimeline(key, profile, preloadedRecords){
   const events = [];
-  const { regs, bookings } = memberRecordsForKey(key);
+  const { regs, bookings } = preloadedRecords || memberRecordsForKey(key);
   regs.forEach(r => {
     events.push({ at: r.registeredAt, label: 'Registered for ' + (r.teachingTitle || 'a class'), meta: r.confirmationId });
     if(Number(r.amountPaid) > 0) events.push({ at: r.registeredAt, label: 'Paid $' + Number(r.amountPaid).toFixed(2) + ' for ' + (r.teachingTitle || 'a class'), meta: r.confirmationId });
@@ -9435,14 +9741,11 @@ function personActivityTimeline(key, profile){
   }
   return events.filter(e => e.at).sort((a, b) => new Date(b.at) - new Date(a.at));
 }
-let personProfileKey = null;
-function openPersonProfile(key){
-  const profile = resolveAllMemberProfiles().find(m => m.key === key);
-  if(!profile) return;
-  personProfileKey = key;
-  document.getElementById('personProfileTitle').textContent = profile.name || profile.email;
-  document.getElementById('personProfileMeta').textContent = profile.email + (profile.phone ? ' · ' + profile.phone : '') + (profile.role === 'admin' ? ' · Admin' : ' · Member');
-  const { regs, bookings } = memberRecordsForKey(key);
+// Fills the Classes/Sessions/Payments/Activity tabs from whatever
+// records were resolved (demo array lookup or a real production
+// fetch — see openPersonProfile). Split out so both paths render
+// identically instead of duplicating this block.
+function renderPersonRecordsTabs(key, profile, regs, bookings){
   const revenue = [...regs, ...bookings].reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
   document.getElementById('personProfileStats').innerHTML =
     '<div class="admin-stat-tile"><span>Classes</span><strong>' + regs.length + '</strong></div>' +
@@ -9453,14 +9756,60 @@ function openPersonProfile(key){
   const paid = [...regs, ...bookings].filter(r => Number(r.amountPaid) > 0);
   document.getElementById('personProfilePayments').innerHTML = paid.length === 0 ? '<p style="color:var(--owner-text-faint)">No payments yet.</p>' :
     paid.map(r => '<div class="portal-row"><div><strong>$' + Number(r.amountPaid).toFixed(2) + '</strong><small>' + escapeHtml(r.teachingTitle || sessionTypeName(r.sessionType)) + ' · ' + escapeHtml(r.confirmationId || '') + '</small></div></div>').join('');
-  const timeline = personActivityTimeline(key, profile);
+  const timeline = personActivityTimeline(key, profile, { regs, bookings });
   document.getElementById('personProfileActivity').innerHTML = timeline.length === 0 ? '<p style="color:var(--owner-text-faint)">No activity yet.</p>' :
     timeline.map(e => '<div class="portal-row"><div><strong>' + escapeHtml(e.label) + '</strong><small>' + escapeHtml(shortDate(e.at)) + (e.meta ? ' · ' + escapeHtml(e.meta) : '') + '</small></div></div>').join('');
+}
+let personProfileKey = null;
+async function openPersonProfile(key){
+  // DEMO_MODE simulates against the sample data set; production reads
+  // the real user docs loadOwnerMembers() just fetched (see the cache's
+  // own comment for why this branch had to exist at all).
+  const profile = DEMO_MODE ? resolveAllMemberProfiles().find(m => m.key === key) : PRODUCTION_MEMBERS_CACHE.find(m => m.key === key);
+  if(!profile) return;
+  personProfileKey = key;
+  document.getElementById('personProfileTitle').textContent = profile.name || profile.email;
+  document.getElementById('personProfileMeta').textContent = profile.email + (profile.phone ? ' · ' + profile.phone : '') + (profile.role === 'admin' ? ' · Admin' : ' · Member');
+  const photoEl = document.getElementById('personProfilePhoto');
+  const detailsEl = document.getElementById('personProfileDetails');
+  if(photoEl){
+    if(profile.photoURL){ photoEl.style.backgroundImage = "url('" + profile.photoURL.replace(/'/g, '%27') + "')"; photoEl.textContent = ''; }
+    else { photoEl.style.backgroundImage = ''; photoEl.textContent = (profile.nickname || profile.name || profile.email || '?').trim().charAt(0).toUpperCase(); }
+  }
+  if(detailsEl){
+    const lines = [];
+    if(profile.nickname) lines.push('Goes by <strong>' + escapeHtml(profile.nickname) + '</strong>');
+    if(profile.birthday) lines.push('Birthday <strong>' + escapeHtml(formatTeachingDate ? formatTeachingDate(profile.birthday) : profile.birthday) + '</strong>');
+    detailsEl.innerHTML = lines.length ? lines.map(l => '<div>' + l + '</div>').join('') : '<div style="font-style:italic">No nickname or birthday on file.</div>';
+  }
   document.getElementById('personProfileNotes').value = PERSON_NOTES[key] || '';
   document.getElementById('personProfileNotesStatus').textContent = '';
   document.querySelectorAll('#personProfileTabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.personTab === 'overview'));
   document.querySelectorAll('[data-person-panel]').forEach(p => { p.hidden = p.dataset.personPanel !== 'overview'; });
+  if(DEMO_MODE){
+    const { regs, bookings } = memberRecordsForKey(key);
+    renderPersonRecordsTabs(key, profile, regs, bookings);
+    document.getElementById('personProfileDialog').showModal();
+    return;
+  }
+  // Real per-member query — this is what was missing before (see
+  // Section 25.2): Classes/Sessions/Payments/Activity now show this
+  // specific person's actual history instead of always reading empty.
+  // The dialog opens right away with a loading state rather than
+  // waiting on the fetch, and personProfileKey is re-checked after it
+  // resolves so a slower response can't land on a different (by-then-
+  // reopened) profile if the owner clicks to someone else while it's
+  // still in flight.
+  const loadingHtml = '<p style="color:var(--owner-text-faint)">Loading…</p>';
+  document.getElementById('personProfileClasses').innerHTML = loadingHtml;
+  document.getElementById('personProfileSessions').innerHTML = loadingHtml;
+  document.getElementById('personProfilePayments').innerHTML = loadingHtml;
+  document.getElementById('personProfileActivity').innerHTML = loadingHtml;
+  document.getElementById('personProfileStats').innerHTML = '';
   document.getElementById('personProfileDialog').showModal();
+  const { regs, bookings } = await fetchPersonRecordsForKey(key);
+  if(personProfileKey !== key) return;
+  renderPersonRecordsTabs(key, profile, regs, bookings);
 }
 document.getElementById('personProfileTabs').addEventListener('click', event => {
   const btn = event.target.closest('[data-person-tab]');
@@ -11651,13 +12000,111 @@ function renderOneOnOneCards(){
   wrap.innerHTML = types.map(oneOnOneCardHtml).join('');
   if(empty) empty.hidden = types.length > 0;
 }
+/* ---------------------------------------------------------------
+   One-on-One page — inline booking (Phase 4 "Option C" pass,
+   2026-09-25). The approved reference shows session type, date, and
+   available times all live on the page itself, not behind a click
+   into the dialog. Rather than duplicating the dialog's calendar/
+   time-slot rendering (a second, parallel implementation that could
+   drift from the real one), this physically RELOCATES the dialog's
+   already-real, already-wired elements — #bookingOptions (session
+   cards) and .booking-date-time-layout (calendar + time grid) — out
+   of #bookingDialog and into this page's own containers. Moving a
+   DOM node (appendChild on a node already in the document) preserves
+   its identity, so every existing event listener, every
+   getElementById() lookup elsewhere in this file, and every
+   availability/capacity/buffer/hold/double-booking rule keeps
+   working completely unmodified — only where the node LIVES changed.
+   Only #bookingDialog's own Details/Payment and Confirmation steps
+   still open inside the dialog, once session+date+time are chosen.
+   --------------------------------------------------------------- */
 function renderOneOnOnePage(){
-  renderOneOnOneCards();
+  const sessionSlot = document.getElementById('oneOnOneSessionSlot');
+  const dateTimeSlot = document.getElementById('oneOnOneDateTimeSlot');
+  const dialogDateStep = document.querySelector('#bookingDialog [data-booking-step="date"]');
+  if(sessionSlot && bookingOptionsEl) sessionSlot.appendChild(bookingOptionsEl);
+  if(dateTimeSlot && dialogDateStep){
+    const tzField = document.getElementById('bookingTimeZone')?.closest('.booking-field');
+    const dtLayout = dialogDateStep.querySelector('.booking-date-time-layout');
+    if(tzField) dateTimeSlot.appendChild(tzField);
+    if(dtLayout) dateTimeSlot.appendChild(dtLayout);
+  }
+  const tzSelect = document.getElementById('bookingTimeZone');
+  if(tzSelect && !tzSelect.hasAttribute('aria-label')) tzSelect.setAttribute('aria-label', 'Time zone');
+  setDetectedTimeZoneDefault();
+  updateBookingTimeZoneNote();
+  bookingCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  renderBookingCalendar();
+  renderBookingTimeButtons();
+
   // Deep link from Owner → Session Types → "Copy Link" (?service=30-minute)
-  // opens straight to that session's booking dialog, pre-selected.
+  // pre-selects that session inline instead of opening a dialog.
   const params = new URLSearchParams(window.location.search);
   const preselect = params.get('service');
-  if(preselect && SESSION_TYPES[preselect] && window.openBooking) window.openBooking(preselect);
+  if(preselect && SESSION_TYPES[preselect]){
+    const radio = document.querySelector('input[name="sessionType"][value="' + preselect + '"]');
+    if(radio){ radio.checked = true; loadTimeSlots(); }
+  }
+
+  const continueBtn = document.getElementById('oneOnOneContinueBtn');
+  const hint = document.getElementById('oneOnOneBookingHint');
+  if(continueBtn){
+    continueBtn.addEventListener('click', () => {
+      if(!document.querySelector('input[name="sessionType"]:checked')){
+        if(hint) hint.textContent = 'Choose a session to continue.';
+        return;
+      }
+      if(!bookingTimeSelect.value){
+        if(hint) hint.textContent = 'Choose an available time to continue.';
+        return;
+      }
+      if(!currentUser){ requireAccountForBooking(); return; }
+      if(hint) hint.textContent = '';
+      openOneOnOneInline();
+    });
+  }
+
+  // Every sitewide "Book A Session" trigger (nav button, this page's
+  // own hero/closing CTAs) normally opens #bookingDialog straight to
+  // its Session step via the global .book-session listener below —
+  // intercepted here, in the capture phase so it runs first, and
+  // redirected into the inline flow instead.
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('.book-session');
+    if(!trigger) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openOneOnOneInline(trigger.dataset.service || null);
+  }, true);
+}
+// Shared entry point for every one-on-one-page booking trigger: pre-
+// selects a session if given, always scrolls the inline widget into
+// view, and — only once a session AND a time are both already chosen
+// AND the visitor is signed in — opens #bookingDialog directly at its
+// Details/Payment step (the same step the dialog's own Date-step
+// "Continue" button already jumps to, see bookingStepDateNext above).
+// Never resets the form: unlike openBooking() on every other page,
+// nothing here needs to clear a prior selection, since a signed-out
+// visitor's already-picked date/time survives the sign-in round trip
+// untouched (it never left the page).
+function openOneOnOneInline(service){
+  if(service){
+    const radio = document.querySelector('input[name="sessionType"][value="' + service + '"]');
+    if(radio){ radio.checked = true; loadTimeSlots(); }
+  }
+  const bookingSection = document.getElementById('booking');
+  if(bookingSection) bookingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if(currentUser && bookingTimeSelect.value){
+    if(currentProfile){
+      document.getElementById('bookingName').value = currentProfile.name || '';
+      document.getElementById('bookingEmail').value = currentProfile.email || '';
+    }
+    bookingStatus.textContent = '';
+    updateBookingSummaryPanel();
+    bookingDialog.showModal();
+    showBookingWizardStep('details');
+    renderBookingOrderSummary();
+  }
 }
 
 /* ---------------------------------------------------------------
@@ -11677,6 +12124,7 @@ onAuthStateChanged(auth, async (user) => {
       } catch (err) {
         currentProfile = { name: user.displayName || '', email: user.email, role: 'member' };
       }
+      loadMemberOwnBookings();
     }
     document.getElementById('memberWelcomeName').textContent = currentProfile.name ? ', ' + currentProfile.name.split(' ')[0] : '';
     document.getElementById('memberAccountLabel').textContent = currentProfile.role === 'admin' ? 'Admin Account' : 'Student Account';

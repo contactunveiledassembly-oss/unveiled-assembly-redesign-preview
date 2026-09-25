@@ -10,33 +10,71 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=phase2-correction2-20260921" />
+  <link rel="stylesheet" href="styles.css?v=phase5-give-20260925" />
 </head>
 <body data-page="give">
   <div class="grain"></div>
 
-  <header class="hero" style="min-height:60vh">
-    <div class="eyebrow reveal">Generosity</div>
-    <h1 class="display reveal" style="font-size:clamp(52px,9vw,140px)">Partner With<br>The Work.</h1>
-    <p class="hero-sub reveal" style="max-width:560px">Your generosity helps create spaces for teaching, prayer, discipleship, community, and the continued work of The Assembly.</p>
+  <!-- Hero — assets/give/hero.png (approved photography) -->
+  <header class="gv-hero" aria-label="Give">
+    <div class="gv-hero-media" aria-hidden="true"></div>
+    <div class="gv-hero-overlay" aria-hidden="true"></div>
+    <div class="gv-hero-content reveal">
+      <div class="eyebrow">Generosity</div>
+      <h1 class="teaching-display gv-hero-title">Give</h1>
+      <p class="gv-hero-sub">Generosity That Moves<br>Beyond The Walls.</p>
+      <p class="gv-hero-desc">Your generosity helps The Unveiled Assembly serve people, create ministry resources, support outreach, host gatherings, and meet practical needs in the community.</p>
+      <a href="#give-today" class="btn fill">Give Today →</a>
+    </div>
+    <div class="gv-hero-words" aria-hidden="true">People<br>Community<br>Outreach<br>Resources<br>A Greater Work</div>
   </header>
 
-  <!-- Giving interface — the amount/frequency selector below is real and
-       drives the one payment method actually connected today (Cash
-       App). Donor information and card/Apple Pay checkout are prepared
-       here visually but intentionally disabled — no payment is
-       processed on this page yet, and nothing here pretends otherwise.
-       See PROJECT-CONTEXT.md for exactly what's needed to connect real
-       card/Apple Pay giving. -->
-  <section style="padding-top:20px;padding-bottom:110px">
-    <div class="section-inner reveal" style="max-width:560px;margin:0 auto">
-      <div class="eyebrow" style="margin-bottom:16px">Give Online</div>
-      <h2 class="serif-heading" style="font-size:clamp(28px,3.4vw,42px);margin-bottom:28px">Choose Your Gift.</h2>
-
-      <div class="give-frequency-toggle" role="radiogroup" aria-label="Giving frequency">
-        <button type="button" class="oneonone-pill active" data-freq="once" aria-pressed="true">One-Time</button>
-        <button type="button" class="oneonone-pill" data-freq="recurring" disabled aria-disabled="true" title="Recurring giving isn't connected yet">Recurring<span class="coming-soon" style="margin-left:8px">Coming Soon</span></button>
+  <!-- Your Generosity At Work -->
+  <section class="on-light-section" style="padding:90px 6vw">
+    <div class="section-inner reveal" style="text-align:center;margin-bottom:56px">
+      <h2 class="serif-heading" style="font-size:clamp(28px,3.2vw,44px)">Your Generosity<br>At Work.</h2>
+      <p style="color:var(--ink-muted);max-width:520px;margin:18px auto 0;font-size:14px;line-height:1.7">Every seed sown helps us continue the work God has called us to — serving people, meeting practical needs, and creating spaces for encounter, growth, and community.</p>
+    </div>
+    <div class="gv-principles reveal">
+      <div class="gv-principle">
+        <div class="gv-principle-media" style="background-image:url('assets/give/outreach.png')"></div>
+        <div class="gv-principle-num">01</div>
+        <div class="gv-principle-label">Outreach</div>
+        <p class="gv-principle-desc">Serving our communities and meeting real practical needs.</p>
       </div>
+      <div class="gv-principle">
+        <div class="gv-principle-media" style="background-image:url('assets/give/food-drives.png')"></div>
+        <div class="gv-principle-num">02</div>
+        <div class="gv-principle-label">Food Drives</div>
+        <p class="gv-principle-desc">Providing food and essentials to families and individuals.</p>
+      </div>
+      <div class="gv-principle">
+        <div class="gv-principle-media" style="background-image:url('assets/give/gatherings.png')"></div>
+        <div class="gv-principle-num">03</div>
+        <div class="gv-principle-label">Gatherings</div>
+        <p class="gv-principle-desc">Hosting gatherings, events, and spaces for people to encounter God and connect with community.</p>
+      </div>
+      <div class="gv-principle">
+        <div class="gv-principle-media" style="background-image:url('assets/give/ministry-resources.png')"></div>
+        <div class="gv-principle-num">04</div>
+        <div class="gv-principle-label">Ministry Resources</div>
+        <p class="gv-principle-desc">Creating resources, teachings, and tools that help serve people.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Give Today — real, working amount/frequency/Cash App logic below
+       is unchanged from before this pass; only its layout/appearance
+       changed. assets/give/donate-section.png -->
+  <section id="give-today" class="gv-donate-split">
+    <div class="gv-donate-image">
+      <div class="gv-donate-image-overlay" aria-hidden="true"></div>
+      <div class="gv-donate-words" aria-hidden="true">Faith<br>People<br>Presence<br>Purpose</div>
+    </div>
+    <div class="gv-donate-panel oo-dark-booking-ui">
+      <div class="eyebrow">Make A Difference</div>
+      <h2 class="teaching-display">Give Today</h2>
+      <p>Choose an amount or enter a custom amount.</p>
 
       <div class="give-amount-grid" role="radiogroup" aria-label="Gift amount">
         <button type="button" class="give-amount-btn active" data-amount="25" aria-pressed="true">$25</button>
@@ -45,31 +83,119 @@
         <button type="button" class="give-amount-btn" data-amount="250" aria-pressed="false">$250</button>
         <label class="give-amount-custom">
           <span>$</span>
-          <input type="number" id="giveCustomAmount" min="1" step="1" inputmode="numeric" placeholder="Custom amount" aria-label="Custom gift amount" />
+          <input type="number" id="giveCustomAmount" min="1" step="1" inputmode="numeric" placeholder="Other" aria-label="Custom gift amount" />
         </label>
       </div>
 
-      <div class="give-donor-fields" aria-hidden="true">
-        <div class="admin-microlabel" style="color:var(--stone-dim);margin-bottom:14px">Donor Information <span class="coming-soon" style="margin-left:6px">Requires secure card payment — coming soon</span></div>
-        <div class="form-field"><label style="color:var(--stone)">Name</label><input disabled placeholder="Available once card/Apple Pay giving is connected" /></div>
-        <div class="form-field"><label style="color:var(--stone)">Email (for receipt)</label><input disabled placeholder="Available once card/Apple Pay giving is connected" /></div>
+      <div class="give-frequency-toggle" role="radiogroup" aria-label="Giving frequency" style="margin-top:22px">
+        <button type="button" class="oneonone-pill active" data-freq="once" aria-pressed="true">One Time</button>
+        <button type="button" class="oneonone-pill" data-freq="recurring" disabled aria-disabled="true" title="Monthly giving isn't connected yet">Monthly<span class="coming-soon" style="margin-left:8px">Coming Soon</span></button>
       </div>
 
-      <a class="btn fill" id="giveSubmitBtn" href="https://cash.app/$UnveiledAssemblyOCJ/25" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:center">Give $25 via Cash App →</a>
-      <p class="admin-hint" style="margin-top:16px;text-align:center">Secure card and Apple Pay giving directly on this site isn't connected yet — your gift completes securely through Cash App for now.</p>
+      <div class="gv-payment-note" style="margin-top:22px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        Choose how you'd like to give
+      </div>
+
+      <!-- Each method is its own button; clicking one shows that
+           method's own panel below. Cash App is real and working — its
+           panel is just the actual "go give" action. Card and Apple Pay
+           are honestly not connected yet, so their panels show what's
+           coming rather than pretending to process anything. -->
+      <div class="gv-payment-methods" role="tablist" aria-label="Choose how to give">
+        <button type="button" class="gv-payment-method active" data-method="cashapp" role="tab" aria-selected="true" aria-controls="giveMethodPanel-cashapp">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 6.5v11M14.8 9c0-1.4-1.4-1.9-2.8-1.9S9.2 7.6 9.2 9s1.4 1.9 2.8 1.9 2.8.5 2.8 1.9-1.4 1.9-2.8 1.9-2.8-.5-2.8-1.9"/></svg>
+          Cash App
+        </button>
+        <button type="button" class="gv-payment-method" data-method="card" role="tab" aria-selected="false" aria-controls="giveMethodPanel-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          Card <span class="coming-soon">Soon</span>
+        </button>
+        <button type="button" class="gv-payment-method" data-method="applepay" role="tab" aria-selected="false" aria-controls="giveMethodPanel-applepay">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6.9c-.8 1-2.1 1.7-3.3 1.6-.2-1.2.4-2.5 1.1-3.3.8-1 2.2-1.7 3.3-1.8.1 1.3-.4 2.6-1.1 3.5zm1.1 1.8c-1.8-.1-3.4 1-4.2 1-.9 0-2.2-1-3.7-.9-1.9 0-3.6 1.1-4.6 2.7-2 3.4-.5 8.5 1.4 11.3.9 1.4 2 2.9 3.5 2.8 1.4-.1 1.9-.9 3.6-.9s2.1.9 3.6.8c1.5 0 2.5-1.3 3.4-2.8.9-1.4 1.3-2.8 1.3-2.9-.1 0-2.7-1-2.7-4 0-2.5 2.1-3.7 2.2-3.8-1.2-1.7-3-1.9-3.6-2z"/></svg>
+          Apple Pay <span class="coming-soon">Soon</span>
+        </button>
+      </div>
+
+      <div class="gv-payment-panel" id="giveMethodPanel-cashapp" data-method-panel="cashapp" role="tabpanel">
+        <a class="btn fill" id="giveSubmitBtn" href="https://cash.app/$UnveiledAssemblyOCJ/25" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:center;margin-top:18px">Give $25 via Cash App →</a>
+        <p class="admin-hint" style="margin-top:12px;color:var(--stone-dim)">Opens Cash App in a new tab to complete your gift securely.</p>
+      </div>
+
+      <div class="gv-payment-panel" id="giveMethodPanel-card" data-method-panel="card" role="tabpanel" hidden>
+        <div class="give-donor-fields" aria-hidden="true" style="margin-top:18px">
+          <div class="admin-microlabel" style="color:var(--stone-dim);margin-bottom:14px">Donor Information <span class="coming-soon" style="margin-left:6px">Requires secure card payment — coming soon</span></div>
+          <div class="form-field"><label style="color:var(--stone)">Name</label><input disabled placeholder="Available once card giving is connected" /></div>
+          <div class="form-field"><label style="color:var(--stone)">Email (for receipt)</label><input disabled placeholder="Available once card giving is connected" /></div>
+        </div>
+        <!-- Same card-entry preview structure used everywhere else on
+             the site a real card payment will eventually happen (the
+             booking dialog's Details & Payment step) — same classes
+             (.payment-demo/.checkout-payment-demo/.demo-badge), same
+             dummy readonly values, same "not yet connected" honesty.
+             Genuinely disabled (fieldset disabled + readonly inputs),
+             not a working form — no card data is collected here. -->
+        <fieldset class="payment-demo checkout-payment-demo" disabled aria-hidden="true" style="margin-top:16px">
+          <legend class="demo-badge">Payment Preview Only — Not Yet Connected</legend>
+          <div class="booking-grid">
+            <div class="booking-field full">
+              <label>Card number</label>
+              <input type="text" value="4242 4242 4242 4242" readonly />
+            </div>
+            <div class="booking-field">
+              <label>Expiry</label>
+              <input type="text" value="12 / 29" readonly />
+            </div>
+            <div class="booking-field">
+              <label>CVC</label>
+              <input type="text" value="123" readonly />
+            </div>
+            <div class="booking-field full">
+              <label>Name on card</label>
+              <input type="text" value="Full name as shown on card" readonly />
+            </div>
+          </div>
+          <p class="payment-demo-note">This shows how giving by card will look once a real payment processor is connected. No card details are collected and no charge occurs today.</p>
+        </fieldset>
+        <p class="admin-hint" style="margin-top:12px;color:var(--stone-dim)">Card giving isn't connected yet — use Cash App for now.</p>
+      </div>
+
+      <div class="gv-payment-panel" id="giveMethodPanel-applepay" data-method-panel="applepay" role="tabpanel" hidden>
+        <p class="admin-hint" style="margin-top:18px;color:var(--stone-dim)">Apple Pay isn't connected yet — use Cash App for now.</p>
+      </div>
     </div>
   </section>
 
-  <script type="module" src="app.js?v=phase2-correction2-20260921"></script>
+  <!-- More Than a Donation -->
+  <section class="on-light-section" style="padding:0">
+    <div class="gv-statement reveal">
+      <h2 class="serif-heading">More Than<br>a Donation.</h2>
+      <p>Your generosity helps The Unveiled Assembly serve people, create ministry resources, support outreach, host gatherings, and meet practical needs in the community. Together, we can reach more people and make a greater impact for the Kingdom.</p>
+    </div>
+  </section>
+
+  <!-- Closing — assets/give/thank-you.png -->
+  <section class="gv-closing" aria-label="Closing">
+    <div class="gv-closing-media" aria-hidden="true"></div>
+    <div class="gv-closing-overlay" aria-hidden="true"></div>
+    <div class="gv-closing-words" aria-hidden="true"><span>Serve</span><span>Give</span><span>Love</span><span>People</span><span>Community</span></div>
+    <div class="gv-closing-content reveal">
+      <div class="eyebrow">Together, We Go Further</div>
+      <h2 class="teaching-display">Thank You<br>For Helping Us Serve.</h2>
+      <p>Your generosity makes this work possible. We're grateful to be on this journey together, and we believe every seed sown will continue to bring light, hope, and real change.</p>
+    </div>
+  </section>
+
+  <script type="module" src="app.js?v=phase5-give-20260925"></script>
   <script type="module">
     // Interim giving interface: no payment processing happens on this
     // page — the amount/frequency selection just builds the Cash App
     // deep link (https://cash.app/$cashtag/AMOUNT is a real, documented
     // Cash App URL pattern, not something invented here) so the one
     // connected giving method is at least easy to use with a chosen
-    // amount pre-filled. Recurring and card/Apple Pay stay visibly
+    // amount pre-filled. Monthly and card/Apple Pay stay visibly
     // disabled until a real processor is connected — see
-    // PROJECT-CONTEXT.md.
+    // PROJECT-CONTEXT.md. Unchanged from before this visual pass.
     (function(){
       const amountButtons = document.querySelectorAll('.give-amount-btn');
       const customInput = document.getElementById('giveCustomAmount');
@@ -96,6 +222,26 @@
         amountButtons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
         selectedAmount = customInput.value;
         updateSubmitLink();
+      });
+    })();
+
+    // Payment method switcher: each method is its own button. Cash App
+    // is the one real, working action, so its "panel" is just the
+    // actual give link — clicking the Cash App method button selects it
+    // AND (since it's already selected by default) the link right below
+    // it is what actually sends someone to Cash App. Card/Apple Pay
+    // just swap in their own honest "not connected yet" panel — neither
+    // one submits or processes anything.
+    (function(){
+      const methodButtons = document.querySelectorAll('.gv-payment-method');
+      const panels = document.querySelectorAll('.gv-payment-panel');
+      methodButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          methodButtons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+          btn.classList.add('active');
+          btn.setAttribute('aria-selected', 'true');
+          panels.forEach(p => { p.hidden = p.dataset.methodPanel !== btn.dataset.method; });
+        });
       });
     })();
   </script>
