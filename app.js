@@ -3046,6 +3046,32 @@ function backfillPreviewConfirmationFields(){
   });
   if(changed){ saveTeachingRegistrationsToStorage(); saveBookingsPreviewToStorage(); }
 }
+// Preview seed-data version: loadPreviewFromStorage() above
+// unconditionally trusts whatever this browser already saved,
+// overriding the fresh hardcoded DEMO_* defaults with it — normally
+// correct (it's how a visitor's own test bookings survive a reload),
+// but it means a browser that saved a snapshot before Maya Johnson's
+// example data existed would keep silently hiding it forever, no
+// matter how many times that seed data gets updated in code. This is
+// exactly what happened: "Member View" showed a blank "Demo Account"
+// because the owner's own browser had an older, Maya-less snapshot of
+// DEMO_BOOKINGS/DEMO_TEACHING_REGISTRATIONS saved from an earlier
+// visit. Bumping PREVIEW_DATA_VERSION below forces every returning
+// browser to discard its old saved preview data and start fresh from
+// the current seed data instead — the same cache-busting idea already
+// used for app.js/styles.css (see every page's `?v=` query string),
+// applied to localStorage. Bump this again any time the DEMO_*
+// content changes in a way visitors should actually see.
+const PREVIEW_DATA_VERSION = '2026-09-25-maya-v2';
+const PREVIEW_DATA_VERSION_KEY = 'ua_preview_data_version_v1';
+if(DEMO_MODE){
+  try {
+    if(localStorage.getItem(PREVIEW_DATA_VERSION_KEY) !== PREVIEW_DATA_VERSION){
+      Object.values(PREVIEW_STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+      localStorage.setItem(PREVIEW_DATA_VERSION_KEY, PREVIEW_DATA_VERSION);
+    }
+  } catch (err) { /* storage unavailable — loadPreviewFromStorage()'s own try/catch below already handles this gracefully */ }
+}
 if(DEMO_MODE){ loadPreviewFromStorage(); backfillPreviewConfirmationFields(); }
 
 async function loadTeachingPageConfig(){
