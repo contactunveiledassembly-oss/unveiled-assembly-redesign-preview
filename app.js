@@ -254,10 +254,42 @@ async function loadMemberOwnBookings(){
     console.error('[member] loadMemberOwnBookings failed', err);
   }
 }
+// Location fields added for the Member Location feature — the extra
+// demo-m4..demo-m23 entries below exist ONLY so Location Analytics
+// (Owner Portal -> People) has enough realistic spread to actually
+// demonstrate a state map, a top-cities table, and regional/filter
+// breakdowns in preview mode; they're bare name/email/location/
+// createdAt records, not full member accounts (no bookings/
+// registrations tied to them, unlike Jordan/Amara/Sam/Maya above them,
+// which already have real demo activity elsewhere and keep their
+// existing ids/names/emails unchanged here). One entry (demo-m23)
+// deliberately has no location at all, to demo the "members without
+// location data" case real pre-this-feature accounts will have.
 const DEMO_MEMBERS = [
-  { id: 'demo-m1', name: 'Jordan Lee', email: 'jordan@example.com', role: 'member' },
-  { id: 'demo-m2', name: 'Amara Okafor', email: 'amara@example.com', role: 'member' },
-  { id: 'demo-m3', name: 'Sam Rivera', email: 'sam@example.com', role: 'member' },
+  { id: 'demo-m1', name: 'Jordan Lee', email: 'jordan@example.com', role: 'member', state: 'Georgia', city: 'Macon', createdAt: demoPastTimestamp(210, 9, 0) },
+  { id: 'demo-m2', name: 'Amara Okafor', email: 'amara@example.com', role: 'member', state: 'North Carolina', city: 'Charlotte', createdAt: demoPastTimestamp(140, 14, 30) },
+  { id: 'demo-m3', name: 'Sam Rivera', email: 'sam@example.com', role: 'member', state: 'Texas', city: 'Houston', createdAt: demoPastTimestamp(60, 11, 0) },
+  { id: 'demo-member', name: 'Maya Johnson', email: 'demo@example.com', role: 'member', state: 'Georgia', city: 'Macon', createdAt: demoPastTimestamp(95, 16, 0) },
+  { id: 'demo-m4', name: 'Renee Carter', email: 'renee.c@example.com', role: 'member', state: 'Georgia', city: 'Macon', createdAt: demoPastTimestamp(18, 10, 0) },
+  { id: 'demo-m5', name: 'Terrence Boyd', email: 'terrence.b@example.com', role: 'member', state: 'Georgia', city: 'Macon', createdAt: demoPastTimestamp(5, 8, 45) },
+  { id: 'demo-m6', name: 'Danielle Foster', email: 'danielle.f@example.com', role: 'member', state: 'Georgia', city: 'Atlanta', createdAt: demoPastTimestamp(400, 12, 0) },
+  { id: 'demo-m7', name: 'Marcus Whitfield', email: 'marcus.w@example.com', role: 'member', state: 'Georgia', city: 'Atlanta', createdAt: demoPastTimestamp(75, 19, 15) },
+  { id: 'demo-m8', name: 'Alicia Byrd', email: 'alicia.b@example.com', role: 'member', state: 'Georgia', city: 'Atlanta', createdAt: demoPastTimestamp(2, 9, 30) },
+  { id: 'demo-m9', name: 'Kevin Dunbar', email: 'kevin.d@example.com', role: 'member', state: 'Georgia', city: 'Savannah', createdAt: demoPastTimestamp(230, 13, 0) },
+  { id: 'demo-m10', name: 'Patrice Holloway', email: 'patrice.h@example.com', role: 'member', state: 'Georgia', city: 'Augusta', createdAt: demoPastTimestamp(310, 17, 0) },
+  { id: 'demo-m11', name: 'Devon Lattimore', email: 'devon.l@example.com', role: 'member', state: 'North Carolina', city: 'Charlotte', createdAt: demoPastTimestamp(20, 9, 0) },
+  { id: 'demo-m12', name: 'Yolanda Pierce', email: 'yolanda.p@example.com', role: 'member', state: 'North Carolina', city: 'Raleigh', createdAt: demoPastTimestamp(150, 14, 0) },
+  { id: 'demo-m13', name: 'Isaiah Monroe', email: 'isaiah.m@example.com', role: 'member', state: 'Florida', city: 'Jacksonville', createdAt: demoPastTimestamp(80, 10, 30) },
+  { id: 'demo-m14', name: 'Brianna Cole', email: 'brianna.c@example.com', role: 'member', state: 'Florida', city: 'Orlando', createdAt: demoPastTimestamp(12, 15, 0) },
+  { id: 'demo-m15', name: 'Trevon Ashby', email: 'trevon.a@example.com', role: 'member', state: 'Texas', city: 'Dallas', createdAt: demoPastTimestamp(500, 11, 0) },
+  { id: 'demo-m16', name: 'Simone Adeyemi', email: 'simone.a@example.com', role: 'member', state: 'South Carolina', city: 'Columbia', createdAt: demoPastTimestamp(45, 16, 30) },
+  { id: 'demo-m17', name: 'Gregory Hutchins', email: 'gregory.h@example.com', role: 'member', state: 'South Carolina', city: 'Charleston', createdAt: demoPastTimestamp(260, 9, 0) },
+  { id: 'demo-m18', name: 'Faith Okonkwo', email: 'faith.o@example.com', role: 'member', state: 'Tennessee', city: 'Nashville', createdAt: demoPastTimestamp(90, 13, 30) },
+  { id: 'demo-m19', name: 'Bryce Coleman', email: 'bryce.c@example.com', role: 'member', state: 'Ohio', city: 'Columbus', createdAt: demoPastTimestamp(180, 10, 0) },
+  { id: 'demo-m20', name: 'Nadia Simmons', email: 'nadia.s@example.com', role: 'member', state: 'New York', city: 'New York', createdAt: demoPastTimestamp(340, 20, 0) },
+  { id: 'demo-m21', name: 'Elijah Vance', email: 'elijah.v@example.com', role: 'member', state: 'California', city: 'Los Angeles', createdAt: demoPastTimestamp(25, 18, 0) },
+  { id: 'demo-m22', name: 'Camille Burrell', email: 'camille.b@example.com', role: 'member', state: 'Georgia', city: 'macon', createdAt: demoPastTimestamp(3, 8, 0) },
+  { id: 'demo-m23', name: 'Anthony Reyes', email: 'anthony.r@example.com', role: 'member', state: '', city: '', createdAt: demoPastTimestamp(600, 12, 0) },
 ];
 let DEMO_BLOCKED_DATES = [demoNextWeekdayStr(4, 2)];
 // Temporary slot holds (Phase 6) — in demo mode these just live in this
@@ -513,6 +545,101 @@ const COUNTRY_CODES = [
 ];
 const COUNTRY_OPTIONS = COUNTRY_CODES.map(c => `<option value="${c.code}" title="${c.full}">${c.label}</option>`).join('');
 
+/* ---------------------------------------------------------------
+   Member Location — full U.S. state list (all 50 + DC), a fixed
+   dropdown so every member's `state` field is one of exactly these
+   full names (never "GA"/"ga"/"Georgia " typed three different ways),
+   which is what keeps Location Analytics below accurate without any
+   fuzzy-matching. STATE_REGIONS is the Southeast/Northeast/Midwest/
+   Southwest/West grouping used by the Regional Analytics section —
+   a standard, commonly-used U.S. regional breakdown (not an owner
+   decision to make; there's no single official version, so this one
+   was chosen as the most conventional split).
+   --------------------------------------------------------------- */
+const US_STATES = [
+  'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+  'District of Columbia','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
+  'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota',
+  'Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico',
+  'New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island',
+  'South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington',
+  'West Virginia','Wisconsin','Wyoming'
+];
+const US_STATE_OPTIONS = '<option value="">Select your state…</option>' +
+  US_STATES.map(s => '<option value="' + s + '">' + s + '</option>').join('');
+const STATE_REGIONS = {
+  'Connecticut':'Northeast','Maine':'Northeast','Massachusetts':'Northeast','New Hampshire':'Northeast',
+  'Rhode Island':'Northeast','Vermont':'Northeast','New Jersey':'Northeast','New York':'Northeast','Pennsylvania':'Northeast',
+  'Illinois':'Midwest','Indiana':'Midwest','Michigan':'Midwest','Ohio':'Midwest','Wisconsin':'Midwest',
+  'Iowa':'Midwest','Kansas':'Midwest','Minnesota':'Midwest','Missouri':'Midwest','Nebraska':'Midwest',
+  'North Dakota':'Midwest','South Dakota':'Midwest',
+  'Delaware':'Southeast','District of Columbia':'Southeast','Florida':'Southeast','Georgia':'Southeast',
+  'Maryland':'Southeast','North Carolina':'Southeast','South Carolina':'Southeast','Virginia':'Southeast',
+  'West Virginia':'Southeast','Alabama':'Southeast','Kentucky':'Southeast','Mississippi':'Southeast','Tennessee':'Southeast',
+  'Arkansas':'Southeast','Louisiana':'Southeast',
+  'Arizona':'Southwest','New Mexico':'Southwest','Oklahoma':'Southwest','Texas':'Southwest',
+  'Colorado':'West','Idaho':'West','Montana':'West','Nevada':'West','Utah':'West','Wyoming':'West',
+  'Alaska':'West','California':'West','Hawaii':'West','Oregon':'West','Washington':'West'
+};
+const LOCATION_REGIONS_ORDER = ['Southeast','Northeast','Midwest','Southwest','West'];
+function regionForState(state){ return STATE_REGIONS[state] || null; }
+// Grouping key only (lowercase/trimmed/whitespace-collapsed) — never
+// shown anywhere. What a member actually typed (member.city) is always
+// what's displayed; this only prevents "Macon"/"macon"/"MACON " from
+// being counted as three different cities in the analytics below.
+function normalizeCityKey(city, state){
+  const c = (city || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if(!c) return '';
+  return c + '|' + (state || '');
+}
+// One consistent display label per normalized city — the FIRST spelling
+// seen for that key wins, so the analytics table always shows a real
+// member's actual typed spelling, never a synthesized/title-cased one.
+function cityDisplayLabel(city, state){
+  const trimmed = (city || '').trim().replace(/\s+/g, ' ');
+  return trimmed + (state ? ', ' + stateAbbreviation(state) : '');
+}
+const STATE_ABBR = {
+  'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA','Colorado':'CO',
+  'Connecticut':'CT','Delaware':'DE','District of Columbia':'DC','Florida':'FL','Georgia':'GA',
+  'Hawaii':'HI','Idaho':'ID','Illinois':'IL','Indiana':'IN','Iowa':'IA','Kansas':'KS','Kentucky':'KY',
+  'Louisiana':'LA','Maine':'ME','Maryland':'MD','Massachusetts':'MA','Michigan':'MI','Minnesota':'MN',
+  'Mississippi':'MS','Missouri':'MO','Montana':'MT','Nebraska':'NE','Nevada':'NV','New Hampshire':'NH',
+  'New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND',
+  'Ohio':'OH','Oklahoma':'OK','Oregon':'OR','Pennsylvania':'PA','Rhode Island':'RI','South Carolina':'SC',
+  'South Dakota':'SD','Tennessee':'TN','Texas':'TX','Utah':'UT','Vermont':'VT','Virginia':'VA',
+  'Washington':'WA','West Virginia':'WV','Wisconsin':'WI','Wyoming':'WY'
+};
+function stateAbbreviation(state){ return STATE_ABBR[state] || state || ''; }
+// A stylized "tile grid" layout (row/column position per state) for the
+// Members By State visual — deliberately NOT a geographically precise
+// map (no real US state boundary/path data is available to hand-author
+// accurately in this environment, and getting that wrong would be
+// worse than being honest about using an approximation). This is a
+// common, legitimate alternative for exactly this kind of "which
+// states have more" comparison — each state gets one equally-sized
+// tile in roughly its real relative position, so Georgia still reads
+// near Florida/Alabama/South Carolina and Maine still reads in the
+// far northeast, etc. Every tile always renders (even at zero
+// members) so the shape stays recognizable as the U.S.; intensity
+// (color) is the only thing that changes with member count. The exact
+// data (state names, real counts) is never inferred from this grid —
+// it always comes from the same computed numbers as the table next to
+// it, which is the actual source of truth per the "don't depend only
+// on the map" requirement.
+const STATE_GRID_POSITIONS = {
+  'Alaska':[1,1], 'Maine':[1,11],
+  'Washington':[2,1], 'Montana':[2,3], 'North Dakota':[2,5], 'Minnesota':[2,6], 'Wisconsin':[2,7], 'Michigan':[2,8], 'Vermont':[2,10], 'New Hampshire':[2,11],
+  'Oregon':[3,1], 'Idaho':[3,2], 'Wyoming':[3,3], 'South Dakota':[3,5], 'Iowa':[3,6], 'Illinois':[3,7], 'Indiana':[3,8], 'New York':[3,10], 'Massachusetts':[3,11],
+  'California':[4,1], 'Nevada':[4,2], 'Utah':[4,3], 'Colorado':[4,4], 'Nebraska':[4,5], 'Missouri':[4,6], 'Kentucky':[4,7], 'Ohio':[4,8], 'Pennsylvania':[4,9], 'New Jersey':[4,10], 'Connecticut':[4,11],
+  'Arizona':[5,2], 'New Mexico':[5,4], 'Kansas':[5,5], 'Arkansas':[5,6], 'Tennessee':[5,7], 'West Virginia':[5,8], 'Virginia':[5,9], 'Maryland':[5,10], 'Rhode Island':[5,11],
+  'Hawaii':[6,1], 'Oklahoma':[6,4], 'Louisiana':[6,6], 'Mississippi':[6,7], 'Alabama':[6,8], 'Georgia':[6,9], 'South Carolina':[6,10], 'Delaware':[6,11],
+  'Texas':[7,4], 'North Carolina':[7,9], 'District of Columbia':[7,10],
+  'Florida':[8,10]
+};
+function stateGridSpanRows(){ return 8; }
+function stateGridSpanCols(){ return 11; }
+
 // Account Settings block — identical markup used inside both the member
 // and admin dashboards (they coexist in the DOM, just one hidden at a
 // time), so every id is prefixed to stay unique. wireAccountSettings(p)
@@ -696,6 +823,14 @@ function dialogsHtml(){
                 <div class="phone-input-row">
                   <select id="regPhoneCountry" aria-label="Country code">${COUNTRY_OPTIONS}</select>
                   <input id="regPhoneNumber" type="tel" placeholder="Phone number" autocomplete="tel-national" required />
+                </div>
+              </div>
+              <div class="member-location-block">
+                <div class="admin-microlabel">Where Are You Located?</div>
+                <p class="admin-hint">This helps us understand where our community is growing and plan future gatherings and outreach.</p>
+                <div class="portal-field-row">
+                  <div class="portal-field"><label for="regState">State *</label><select id="regState" required>${US_STATE_OPTIONS}</select></div>
+                  <div class="portal-field"><label for="regCity">City <span class="admin-hint">(optional)</span></label><input id="regCity" type="text" autocomplete="address-level2" placeholder="e.g. Macon" /></div>
                 </div>
               </div>
               <div class="portal-field">
@@ -931,6 +1066,14 @@ function dialogsHtml(){
               <div class="portal-field"><label for="memberProfileLastName">Last Name</label><input id="memberProfileLastName" type="text" /></div>
               <div class="portal-field"><label for="memberProfileNickname">Nickname <span class="admin-hint">(optional)</span></label><input id="memberProfileNickname" type="text" placeholder="What should we call you?" /></div>
               <div class="portal-field"><label for="memberProfileBirthday">Birthday <span class="admin-hint">(optional)</span></label><input id="memberProfileBirthday" type="date" /></div>
+            </div>
+            <div class="member-location-block" style="margin-top:6px">
+              <div class="admin-microlabel" style="color:var(--stone-dim)">Location</div>
+              <p style="color:var(--stone);font-size:11.5px;line-height:1.5;margin:6px 0 12px">This information helps us understand where our community is growing and plan future gatherings and outreach.</p>
+              <div class="booking-grid">
+                <div class="portal-field"><label for="memberProfileState">State *</label><select id="memberProfileState">${US_STATE_OPTIONS}</select></div>
+                <div class="portal-field"><label for="memberProfileCity">City <span class="admin-hint">(optional)</span></label><input id="memberProfileCity" type="text" placeholder="e.g. Macon" /></div>
+              </div>
             </div>
             <button class="portal-primary" type="button" id="memberProfileSaveBtn" style="margin-top:16px">Save Profile</button>
             <div class="portal-status" id="memberProfileStatus" role="status" aria-live="polite" style="margin-top:8px"></div>
@@ -1456,11 +1599,56 @@ function dialogsHtml(){
               <strong id="ownerMemberCount">—</strong>
             </div>
           </div>
-          <div class="form-field" style="max-width:360px;margin-bottom:14px">
-            <label for="ownerPeopleSearch">Search</label>
-            <input id="ownerPeopleSearch" type="text" placeholder="Name, email, or phone…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+          <div class="admin-tabs" id="peopleTabs" role="tablist" style="margin-bottom:18px">
+            <button type="button" class="admin-tab active" data-people-tab="list">People List</button>
+            <button type="button" class="admin-tab" data-people-tab="analytics">Location Analytics</button>
           </div>
-          <div id="ownerMembersList"><p style="color:#656565">Loading member accounts…</p></div>
+
+          <div data-people-tab-panel="list">
+            <div class="form-field" style="max-width:360px;margin-bottom:14px">
+              <label for="ownerPeopleSearch">Search</label>
+              <input id="ownerPeopleSearch" type="text" placeholder="Name, email, or phone…" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" />
+            </div>
+            <div id="ownerMembersList"><p style="color:#656565">Loading member accounts…</p></div>
+          </div>
+
+          <div data-people-tab-panel="analytics" hidden>
+            <p class="admin-panel-intro" style="margin-bottom:16px">Built from each member's own State/City (set at sign-up or in their Profile) — internal only, never shown to other members. See PROJECT-CONTEXT.md for exactly what this can and can't do yet.</p>
+            <div class="admin-tabs" id="locFilterTabs" style="margin-bottom:20px">
+              <button type="button" class="admin-tab active" data-loc-filter="all">All Time</button>
+              <button type="button" class="admin-tab" data-loc-filter="year">This Year</button>
+              <button type="button" class="admin-tab" data-loc-filter="month">This Month</button>
+            </div>
+
+            <div class="admin-stat-row" id="locOverviewStats"></div>
+
+            <div class="loc-section">
+              <div class="admin-subsection-label">Members By State</div>
+              <div class="loc-map-table-split">
+                <div class="loc-state-grid" id="locStateGrid" role="img" aria-label="Member concentration by state, stylized grid layout"></div>
+                <div>
+                  <div class="admin-microlabel" style="margin-bottom:10px">Top States</div>
+                  <div id="locStateTable"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="loc-section">
+              <div class="admin-subsection-label">Top Cities</div>
+              <div id="locCityTable"></div>
+            </div>
+
+            <div class="loc-section">
+              <div class="admin-subsection-label">Regional Analytics</div>
+              <div id="locRegionBars"></div>
+            </div>
+
+            <div class="loc-section">
+              <div class="admin-subsection-label">Event Insights</div>
+              <p class="admin-hint" style="margin-bottom:14px">Concentrations of members that may be useful when considering future gatherings, conferences, outreach, or ministry initiatives — for the owner to decide, not a recommendation.</p>
+              <div id="locEventInsights"></div>
+            </div>
+          </div>
         </article>
         <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="paths">
           <div class="admin-panel-head">
@@ -5369,10 +5557,13 @@ registerForm.addEventListener('submit', async event => {
   const password = document.getElementById('regPassword').value;
   const confirmPassword = document.getElementById('regConfirmPassword').value;
   const ageConfirmed = document.getElementById('regAgeConfirm').checked;
+  const state = document.getElementById('regState').value;
+  const city = document.getElementById('regCity').value.trim();
 
   if(!firstName || !lastName){ registerStatus.textContent = 'Enter your first and last name.'; return; }
   if(!isValidEmail(email)){ registerStatus.textContent = 'Enter a valid email address.'; return; }
   if(!phone){ registerStatus.textContent = 'Enter a valid phone number, including country code.'; return; }
+  if(!state){ registerStatus.textContent = 'Select the state you\'re located in.'; return; }
   if(!isValidPassword(password)){ registerStatus.textContent = 'Password must be at least 8 characters and include a letter and a number.'; return; }
   if(password !== confirmPassword){ registerStatus.textContent = 'Passwords do not match.'; return; }
   // Self-attested, not age-verified against an ID — this is the minimum
@@ -5390,7 +5581,8 @@ registerForm.addEventListener('submit', async event => {
       await setDoc(doc(db, 'users', cred.user.uid), {
         firstName, lastName, name: fullName, email, phone, role,
         emailVerified: false, phoneVerified: false,
-        ageConfirmed16Plus: true, createdAt: serverTimestamp()
+        ageConfirmed16Plus: true, createdAt: serverTimestamp(),
+        state: state || null, city: city || null
       });
     }
     pendingVerifyPhone = phone;
@@ -8414,6 +8606,8 @@ function renderMemberProfileCard(){
   document.getElementById('memberProfileLastName').value = currentProfile.lastName || parts.slice(1).join(' ') || '';
   document.getElementById('memberProfileNickname').value = currentProfile.nickname || '';
   document.getElementById('memberProfileBirthday').value = currentProfile.birthday || '';
+  document.getElementById('memberProfileState').value = currentProfile.state || '';
+  document.getElementById('memberProfileCity').value = currentProfile.city || '';
   renderMemberProfilePhotoPreview();
 }
 document.getElementById('memberProfileSaveBtn')?.addEventListener('click', async () => {
@@ -8422,6 +8616,8 @@ document.getElementById('memberProfileSaveBtn')?.addEventListener('click', async
   const lastName = document.getElementById('memberProfileLastName').value.trim();
   const nickname = document.getElementById('memberProfileNickname').value.trim();
   const birthday = document.getElementById('memberProfileBirthday').value;
+  const state = document.getElementById('memberProfileState').value;
+  const city = document.getElementById('memberProfileCity').value.trim();
   if(!firstName || !lastName){ status.textContent = 'Enter your first and last name.'; return; }
   const fullName = firstName + ' ' + lastName;
   status.textContent = 'Saving…';
@@ -8430,11 +8626,12 @@ document.getElementById('memberProfileSaveBtn')?.addEventListener('click', async
       if(currentUser) currentUser.displayName = fullName;
     } else {
       await updateProfile(currentUser, { displayName: fullName });
-      await updateDoc(doc(db, 'users', currentUser.uid), { firstName, lastName, name: fullName, nickname: nickname || null, birthday: birthday || null });
+      await updateDoc(doc(db, 'users', currentUser.uid), { firstName, lastName, name: fullName, nickname: nickname || null, birthday: birthday || null, state: state || null, city: city || null });
     }
     if(currentProfile){
       currentProfile.name = fullName; currentProfile.firstName = firstName; currentProfile.lastName = lastName;
       currentProfile.nickname = nickname; currentProfile.birthday = birthday;
+      currentProfile.state = state; currentProfile.city = city;
     }
     document.getElementById('memberWelcomeName').textContent = fullName ? ', ' + fullName.split(' ')[0] : '';
     status.textContent = 'Saved.';
@@ -9628,15 +9825,23 @@ function resolveAllMemberProfiles(){
   const byKey = new Map();
   const upsert = (key, patch) => {
     if(!key) return;
-    const existing = byKey.get(key) || { key, uid: null, name: '', email: '', phone: '', role: 'member' };
+    const existing = byKey.get(key) || { key, uid: null, name: '', email: '', phone: '', role: 'member', state: '', city: '', createdAt: null };
     if(patch.uid) existing.uid = patch.uid;
     if(patch.name && !existing.name) existing.name = patch.name;
     if(patch.email && !existing.email) existing.email = patch.email;
     if(patch.phone && !existing.phone) existing.phone = patch.phone;
     if(patch.role === 'admin') existing.role = 'admin';
+    // Location/created date only ever come from DEMO_MEMBERS (the one
+    // source that actually models a full member profile) — teaching
+    // registrations/bookings/waitlist entries don't carry these, so
+    // there's nothing to prefer-if-blank here the way name/email/phone
+    // do above.
+    if(patch.state !== undefined) existing.state = patch.state;
+    if(patch.city !== undefined) existing.city = patch.city;
+    if(patch.createdAt !== undefined) existing.createdAt = patch.createdAt;
     byKey.set(key, existing);
   };
-  DEMO_MEMBERS.forEach(m => upsert(m.id, { uid: m.id, name: m.name, email: m.email, role: m.role }));
+  DEMO_MEMBERS.forEach(m => upsert(m.id, { uid: m.id, name: m.name, email: m.email, role: m.role, state: m.state || '', city: m.city || '', createdAt: m.createdAt || null }));
   DEMO_TEACHING_REGISTRATIONS.forEach(r => upsert(r.uid || normalizeEmail(r.email), { uid: r.uid, name: (r.firstName + ' ' + r.lastName).trim(), email: r.email, phone: r.phone }));
   DEMO_BOOKINGS.forEach(b => upsert(b.uid || normalizeEmail(b.email), { uid: b.uid, name: b.name, email: b.email, phone: b.phone }));
   CLASS_WAITLIST.forEach(w => upsert(w.uid || normalizeEmail(w.email), { uid: w.uid, name: w.name, email: w.email, phone: w.phone }));
@@ -9718,6 +9923,171 @@ document.getElementById('ownerPeopleSearch')?.addEventListener('input', renderOw
 document.getElementById('ownerMembersList')?.addEventListener('click', event => {
   const row = event.target.closest('[data-person-key]');
   if(row) openPersonProfile(row.dataset.personKey);
+});
+document.getElementById('peopleTabs')?.addEventListener('click', event => {
+  const btn = event.target.closest('[data-people-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#peopleTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('[data-people-tab-panel]').forEach(p => { p.hidden = p.dataset.peopleTabPanel !== btn.dataset.peopleTab; });
+  if(btn.dataset.peopleTab === 'analytics') renderLocationAnalytics();
+});
+
+/* ---------------------------------------------------------------
+   Location Analytics — Owner Portal -> People -> Location Analytics.
+   Reads the SAME member profile data every other People view already
+   loads (PRODUCTION_MEMBERS_CACHE in production, resolveAllMemberProfiles()
+   in DEMO_MODE) — no separate/duplicate query, and nothing here is
+   hardcoded; every number is computed live from whatever's actually on
+   each member's profile right now. Internal-only: this whole tab lives
+   inside the same admin-only Owner Portal every other People data
+   already does, and per-member state/city is never rendered anywhere
+   a non-admin (or another member) can reach — firestore.rules'
+   `users/{userId}` read rule already restricts a doc to its own owner
+   or an admin, so this doesn't add a new exposure, it only adds a new
+   admin-side view of data that was already admin-only-readable.
+   --------------------------------------------------------------- */
+let locActiveFilter = 'all';
+function locAllMembers(){
+  const raw = DEMO_MODE ? resolveAllMemberProfiles() : PRODUCTION_MEMBERS_CACHE;
+  return raw.filter(m => m.role !== 'admin');
+}
+// Handles a Firestore Timestamp, a JS Date, or a plain ISO string —
+// same normalization pattern used elsewhere this session (see
+// bookingCreatedAtMillis) for the same underlying reason: createdAt
+// arrives shaped differently depending on where it was written from.
+function locCreatedAtMillis(m){
+  const ts = m.createdAt;
+  if(!ts) return null;
+  if(typeof ts === 'string'){ const t = new Date(ts).getTime(); return isNaN(t) ? null : t; }
+  if(ts instanceof Date) return ts.getTime();
+  if(typeof ts.toMillis === 'function') return ts.toMillis();
+  return null;
+}
+// A member with no createdAt at all (only possible for an account made
+// before this field existed) is excluded from "This Year"/"This Month"
+// — not counted in the wrong bucket, just left out of any specific
+// time slice — since there's no real basis to place them in one. They
+// still count fully under "All Time". This is the honest option the
+// instruction asked for over a filter that quietly guesses.
+function locFilterMembers(members, filter){
+  if(filter === 'all') return members;
+  const now = new Date();
+  return members.filter(m => {
+    const ms = locCreatedAtMillis(m);
+    if(ms === null) return false;
+    const d = new Date(ms);
+    if(filter === 'year') return d.getFullYear() === now.getFullYear();
+    if(filter === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    return true;
+  });
+}
+function computeLocationAnalytics(members){
+  const withLocation = members.filter(m => m.state);
+  const stateCounts = new Map();
+  const cityCounts = new Map(); // normalized key -> { label, count }
+  const regionCounts = new Map();
+  withLocation.forEach(m => {
+    stateCounts.set(m.state, (stateCounts.get(m.state) || 0) + 1);
+    const region = regionForState(m.state);
+    if(region) regionCounts.set(region, (regionCounts.get(region) || 0) + 1);
+    if(m.city){
+      const key = normalizeCityKey(m.city, m.state);
+      const existing = cityCounts.get(key);
+      if(existing) existing.count++;
+      else cityCounts.set(key, { label: cityDisplayLabel(m.city, m.state), count: 1 });
+    }
+  });
+  const byState = Array.from(stateCounts.entries()).map(([state, count]) => ({ state, count })).sort((a, b) => b.count - a.count);
+  const byCity = Array.from(cityCounts.values()).sort((a, b) => b.count - a.count);
+  const totalWithLocation = withLocation.length;
+  const byRegion = LOCATION_REGIONS_ORDER.map(region => {
+    const count = regionCounts.get(region) || 0;
+    return { region, count, pct: totalWithLocation ? Math.round((count / totalWithLocation) * 100) : 0 };
+  });
+  return { totalMembers: members.length, statesRepresented: stateCounts.size, citiesRepresented: cityCounts.size, membersWithLocation: totalWithLocation, byState, byCity, byRegion };
+}
+// Sequential ramp, one hue (the site's existing --gold token), low to
+// high — never a rainbow, per the "restrained gold accents" direction
+// and standard sequential-data practice.
+function locStateIntensityColor(count, maxCount){
+  if(!count) return '#15130f';
+  const ratio = maxCount > 0 ? count / maxCount : 0;
+  const stops = ['#2a2620', '#4a3f26', '#6e5a29', '#99812c', '#c9a227'];
+  const idx = Math.min(stops.length - 1, Math.round(ratio * (stops.length - 1)));
+  return stops[idx];
+}
+function renderLocStateGrid(byState){
+  const grid = document.getElementById('locStateGrid');
+  if(!grid) return;
+  const countByState = {};
+  byState.forEach(s => { countByState[s.state] = s.count; });
+  const maxCount = byState.length ? byState[0].count : 0;
+  grid.style.setProperty('--loc-grid-rows', stateGridSpanRows());
+  grid.style.setProperty('--loc-grid-cols', stateGridSpanCols());
+  grid.innerHTML = Object.keys(STATE_GRID_POSITIONS).map(state => {
+    const [row, col] = STATE_GRID_POSITIONS[state];
+    const count = countByState[state] || 0;
+    return '<div class="loc-state-tile" style="grid-row:' + row + ';grid-column:' + col + ';background:' + locStateIntensityColor(count, maxCount) + '" title="' + escapeHtml(state) + ': ' + count + ' member' + (count === 1 ? '' : 's') + '"><span>' + escapeHtml(stateAbbreviation(state)) + '</span></div>';
+  }).join('');
+}
+function locBarRowHtml(label, count, max){
+  return '<div class="loc-bar-row"><span class="loc-bar-label">' + escapeHtml(label) + '</span>' +
+    '<span class="loc-bar-track"><span class="loc-bar-fill" style="width:' + Math.max(4, Math.round((count / max) * 100)) + '%"></span></span>' +
+    '<strong class="loc-bar-count">' + count + '</strong></div>';
+}
+function renderLocStateTable(byState){
+  const wrap = document.getElementById('locStateTable');
+  if(!wrap) return;
+  wrap.innerHTML = byState.length === 0 ? '<p class="admin-hint">No location data yet.</p>' : byState.slice(0, 10).map(s => locBarRowHtml(s.state, s.count, byState[0].count)).join('');
+}
+function renderLocCityTable(byCity){
+  const wrap = document.getElementById('locCityTable');
+  if(!wrap) return;
+  wrap.innerHTML = byCity.length === 0 ? '<p class="admin-hint">No city data yet.</p>' : byCity.slice(0, 10).map(c => locBarRowHtml(c.label, c.count, byCity[0].count)).join('');
+}
+function renderLocRegionBars(byRegion){
+  const wrap = document.getElementById('locRegionBars');
+  if(!wrap) return;
+  const max = Math.max(1, ...byRegion.map(r => r.count));
+  wrap.innerHTML = byRegion.map(r =>
+    '<div class="loc-bar-row"><span class="loc-bar-label">' + escapeHtml(r.region) + '</span>' +
+    '<span class="loc-bar-track"><span class="loc-bar-fill" style="width:' + Math.max(4, Math.round((r.count / max) * 100)) + '%"></span></span>' +
+    '<strong class="loc-bar-count">' + r.count + ' <span class="loc-bar-pct">(' + r.pct + '%)</span></strong></div>'
+  ).join('');
+}
+// Presents concentrations only — deliberately no "you should hold an
+// event in X" logic or scoring, per instruction: this is data for the
+// owner to interpret, not a conclusion the data doesn't support.
+function renderLocEventInsights(byCity){
+  const wrap = document.getElementById('locEventInsights');
+  if(!wrap) return;
+  if(byCity.length === 0){ wrap.innerHTML = '<p class="admin-hint">Not enough location data yet to show concentrations.</p>'; return; }
+  const ordinals = ['Largest Community Concentration', 'Second-Largest Concentration', 'Third-Largest Concentration'];
+  wrap.innerHTML = '<div class="loc-insight-row">' + byCity.slice(0, 3).map((c, i) =>
+    '<div class="loc-insight-card"><span class="admin-microlabel">' + escapeHtml(c.label) + '</span><strong>' + c.count + ' member' + (c.count === 1 ? '' : 's') + '</strong><span class="loc-insight-note">' + ordinals[i] + '</span></div>'
+  ).join('') + '</div>';
+}
+function renderLocationAnalytics(){
+  const members = locFilterMembers(locAllMembers(), locActiveFilter);
+  const data = computeLocationAnalytics(members);
+  const stats = document.getElementById('locOverviewStats');
+  if(stats) stats.innerHTML =
+    '<div class="admin-stat-tile"><span>Total Members</span><strong>' + data.totalMembers + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>States Represented</span><strong>' + data.statesRepresented + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Cities Represented</span><strong>' + data.citiesRepresented + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>With Location Data</span><strong>' + data.membersWithLocation + ' / ' + data.totalMembers + '</strong></div>';
+  renderLocStateGrid(data.byState);
+  renderLocStateTable(data.byState);
+  renderLocCityTable(data.byCity);
+  renderLocRegionBars(data.byRegion);
+  renderLocEventInsights(data.byCity);
+}
+document.getElementById('locFilterTabs')?.addEventListener('click', event => {
+  const btn = event.target.closest('[data-loc-filter]');
+  if(!btn) return;
+  document.querySelectorAll('#locFilterTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  locActiveFilter = btn.dataset.locFilter;
+  renderLocationAnalytics();
 });
 
 /* ---------------------------------------------------------------
