@@ -141,7 +141,7 @@ body.demo-mode .nav{top:26px}
 
 .nav-mobile-panel{display:contents}
 
-.links{display:flex;align-items:center;justify-content:center;gap:16px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;flex-wrap:nowrap}
+.links{display:flex;align-items:center;justify-content:center;gap:16px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;flex-wrap:nowrap;min-width:0}
 .links a{color:var(--ivory);opacity:.8;transition:.2s;padding-bottom:3px;border-bottom:1px solid transparent;white-space:nowrap}
 .links a:hover,.links a.current{opacity:1;border-color:currentColor}
 
@@ -200,7 +200,7 @@ body.demo-mode .nav{top:26px}
 .nav-book-btn:focus-visible{outline:2px solid var(--ivory);outline-offset:2px}
 .menu-btn{display:none;background:none;border:0;color:var(--ivory);font-size:24px;cursor:pointer;flex:0 0 auto;grid-column:3;justify-self:end}
 
-@media(max-width:1040px){
+@media(max-width:1300px){
   .nav-mobile-panel{display:none}
   .menu-btn{display:block}
   .nav.open .nav-mobile-panel{
@@ -843,7 +843,8 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .portal-login p{color:var(--ink-muted);line-height:1.6}
 .portal-field{display:grid;gap:7px;margin-top:14px}
 .portal-field label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-muted)}
-.portal-field input{width:100%;min-height:46px;border:1px solid var(--line-light);background:var(--white);padding:11px 12px;font:inherit;color:var(--black)}
+.portal-field input,.portal-field select{width:100%;min-height:46px;border:1px solid var(--line-light);background:var(--white);padding:11px 12px;font:inherit;color:var(--black)}
+.portal-field select{cursor:pointer}
 .portal-actions{display:grid;gap:9px;margin-top:18px}
 .portal-primary,.portal-secondary{min-height:44px;padding:0 16px;cursor:pointer;letter-spacing:.08em;font-size:11px;text-transform:uppercase}
 .portal-primary{border:1px solid var(--black);background:var(--black);color:var(--ivory)}
@@ -1468,7 +1469,6 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .member-location-block{margin-bottom:18px}
 .member-location-block .admin-microlabel{margin-bottom:6px}
 .member-location-block .admin-hint{margin-bottom:12px}
-@media(max-width:480px){.member-location-block .portal-field-row{grid-template-columns:1fr}}
 
 .password-field{position:relative;display:flex;align-items:center}
 .password-field input{padding-right:44px}
