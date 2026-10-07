@@ -3,91 +3,428 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="What The Unveiled Assembly of Christ Jesus believes — Jesus Christ, salvation, the Triune God, Scripture, spiritual gifts, the Church, repentance, baptism, and deliverance." />
+  <meta name="description" content="What The Unveiled Assembly of Christ Jesus believes — Jesus Christ, salvation, the Triune God, Scripture, spiritual gifts, the Church, repentance, baptism, deliverance, and our approach to Scripture." />
   <title>Beliefs | The Unveiled Assembly</title>
   <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Real, unmodified site system — real nav (Sign In / Book A
+       Session / Cart all genuinely wired up) and real footer, exactly
+       like every other real page. -->
   <link rel="stylesheet" href="styles.css?v=sitewide-20260925" />
+  <!-- This page's own approved CSS, EVERY class renamed with a ub-
+       prefix (and the two bare-tag rules that would have leaked onto
+       the real footer/dialogs removed) so nothing here can be
+       overridden by, or override, the real site's stylesheet. See
+       that file's header comment for the full account. -->
+  <link rel="stylesheet" href="assets/beliefs-v2/beliefs-real-nav.css?v=2" />
 </head>
-<body data-page="beliefs">
-  <div class="grain"></div>
+<body id="top" data-page="beliefs">
+  <div class="ub-grain" aria-hidden="true"></div>
+  <div class="ub-scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
-  <header class="inner-hero">
-    <div class="ghost-word" style="top:10px;right:-2vw">Believe</div>
-    <div class="eyebrow reveal">01 / Foundation</div>
-    <h1 class="display reveal">What We<br>Believe</h1>
-    <p class="hero-sub reveal">Jesus at the center. Grace as the promise. Identity as the fruit.</p>
-  </header>
 
-  <section style="padding-top:56px">
-    <div class="section-inner">
-      <p class="belief-intro reveal">At The Assembly, our beliefs are centered on Jesus Christ, His finished work, and the identity we have received through Him.</p>
-      <div class="belief-grid reveal" aria-label="Ministry beliefs">
-        <div class="belief-card">
-          <h4>Jesus Christ</h4>
-          <p>We believe in the Lord Jesus Christ, the Son of God, born of a virgin, who lived without sin and gave His life on the cross for humanity. We believe He rose again and is seated at the right hand of the Father. He is the King of Kings and Lord of Lords, and His name is above every name.</p>
-          <span class="scripture"><strong>Scripture:</strong> Matthew 1:23 • Hebrews 4:15 • Philippians 2:8–11 • Hebrews 12:2</span>
+
+  <div id="ua-beliefs-v2">
+    <header class="ub-hero ub-family-hero">
+      <div class="ub-family-hero-media" aria-hidden="true">
+      </div>
+      <div class="ub-family-hero-content ub-reveal">
+        <div class="ub-eyebrow">Beliefs</div>
+        <h1 class="ub-teaching-display ub-family-hero-title">What We<br>Believe</h1>
+        <p class="ub-family-hero-sub">Jesus at the center. Grace as the promise. Identity as the fruit.</p>
+        <div class="ub-family-hero-rule" aria-hidden="true"></div>
+        <div class="ub-family-hero-note">The foundation of our faith</div>
+      </div>
+      <div class="ub-family-hero-words" aria-hidden="true">An unveiling of truth</div>
+    </header>
+
+    <section class="ub-belief-principles-section" aria-label="Our foundation">
+      <div class="ub-belief-principles ub-reveal">
+        <div class="ub-belief-principle"><div class="ub-belief-principle-num">01</div><div class="ub-belief-principle-label">Jesus</div><p class="ub-belief-principle-desc">Jesus at the center.</p></div>
+        <div class="ub-belief-principle"><div class="ub-belief-principle-num">02</div><div class="ub-belief-principle-label">Grace</div><p class="ub-belief-principle-desc">Grace as the promise.</p></div>
+        <div class="ub-belief-principle"><div class="ub-belief-principle-num">03</div><div class="ub-belief-principle-label">Identity</div><p class="ub-belief-principle-desc">Identity as the fruit.</p></div>
+      </div>
+    </section>
+
+    <section class="ub-beliefs-section" id="beliefs" aria-labelledby="beliefs-intro">
+      <div class="ub-belief-chapter" id="beliefChapter" aria-hidden="true">
+        <span class="ub-belief-chapter-count"><span id="beliefChapterCurrent">01</span> / 10</span>
+        <span class="ub-belief-chapter-title" id="beliefChapterTitle">Jesus Christ</span>
+      </div>
+      <div class="ub-beliefs-intro-row ub-reveal">
+        <div class="ub-eyebrow ub-beliefs-heading-eyebrow">Our Doctrine</div>
+        <h2 class="ub-teaching-display ub-beliefs-heading">Our Foundation.</h2>
+        <p class="ub-belief-intro" id="beliefs-intro">At The Assembly, our beliefs are centered on <strong>Jesus Christ</strong>, His finished work, and the identity we have received through Him.</p>
+      </div>
+
+      <div class="ub-belief-grid">
+        <article class="ub-belief-card ub-reveal" id="jesus-christ" tabindex="0">
+          <div class="ub-belief-card-head"><h2>Jesus Christ</h2><span class="ub-belief-number">01</span></div>
+          <div class="ub-belief-body">
+            <p>We believe in the Lord Jesus Christ, the Son of God, born of a virgin, who lived without sin and gave His life on the cross for humanity. We believe He rose again and is seated at the right hand of the Father. He is the King of Kings and Lord of Lords, and His name is above every name.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> Matthew 1:23 • Hebrews 4:15 • Philippians 2:8–11 • Hebrews 12:2</span>
+          </div>
+        </article>
+
+        <article class="ub-belief-card ub-reveal" id="salvation" tabindex="0">
+          <div class="ub-belief-card-head"><h2>Salvation</h2><span class="ub-belief-number">02</span></div>
+          <div class="ub-belief-body">
+            <p>We believe salvation is an eternal promise established and kept by Jesus Christ. Salvation is not earned or maintained through human behavior, but received through Christ and His finished work. We believe salvation establishes a new identity in Him, secured by His promise rather than our own ability to preserve ourselves.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> John 10:27–29 • Ephesians 2:8–9 • Hebrews 10:14 • Romans 8:38–39</span>
+          </div>
+        </article>
+
+        <article class="ub-belief-card ub-reveal" id="triune-god" tabindex="0">
+          <div class="ub-belief-card-head"><h2>The Triune God</h2><span class="ub-belief-number">03</span></div>
+          <div class="ub-belief-body">
+            <p>We believe in one eternal God revealed in three distinct persons: Father, Son, and Holy Spirit. We receive and honor the fullness of who God has revealed Himself to be.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> Matthew 28:19 • 2 Corinthians 13:14 • Matthew 3:16–17</span>
+          </div>
+        </article>
+
+        <article class="ub-belief-card ub-reveal" id="scriptures" tabindex="0">
+          <div class="ub-belief-card-head"><h2>The Scriptures</h2><span class="ub-belief-number">04</span></div>
+          <div class="ub-belief-body">
+            <p>We believe the Bible is the true Word of God, given for His people and profitable for teaching, correction, instruction, and spiritual maturity. Scripture provides a trustworthy testimony of God's character and serves as a dependable reference for the life we live unto Him.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> 2 Timothy 3:16–17 • 2 Peter 1:20–21 • Psalm 119:105</span>
+          </div>
+        </article>
+
+        <article class="ub-belief-card ub-reveal" id="spiritual-gifts" tabindex="0">
+          <div class="ub-belief-card-head"><h2>Spiritual Gifts</h2><span class="ub-belief-number">05</span></div>
+          <div class="ub-belief-body">
+            <p>We believe the gifts of the Holy Spirit remain active today, including prophecy, teaching, healing, deliverance, tongues, and other spiritual gifts. We believe these gifts are expressions of God's love, mercy, power, and glory through His people, demonstrating that Jesus Christ is still alive and active among us.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> 1 Corinthians 12:4–11 • Acts 2:17–18 • Romans 12:6–8 • 1 Corinthians 14:1</span>
+          </div>
+        </article>
+
+        <article class="ub-belief-card ub-reveal" id="church" tabindex="0">
+          <div class="ub-belief-card-head"><h2>The Church</h2><span class="ub-belief-number">06</span></div>
+          <div class="ub-belief-body">
+            <p>We believe the Church is the Body of Christ, the gathering and community of those who are in Him. The Church is not ultimately a building, location, or event, but a people who share an identity and life in Christ.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> 1 Corinthians 12:27 • Ephesians 2:19–22 • Ephesians 4:4–6</span>
+          </div>
+        </article>
+
+        <aside class="ub-revelation-interlude ub-reveal" aria-label="Scripture reflection">
+          <div class="ub-revelation-inner">
+            <div class="ub-revelation-kicker">A revelation of becoming</div>
+            <blockquote class="ub-revelation-quote">With unveiled faces,<br>we behold His glory.</blockquote>
+            <div class="ub-revelation-ref">2 Corinthians 3:18</div>
+          </div>
+        </aside>
+
+        <article class="ub-belief-card ub-reveal" id="repentance" tabindex="0">
+          <div class="ub-belief-card-head"><h2>Repentance</h2><span class="ub-belief-number">07</span></div>
+          <div class="ub-belief-body">
+            <p>We believe repentance begins with a change of mind, a turning from false conclusions and returning to the truth revealed in Christ. As our minds are renewed toward God and our identity in Him, our lives progressively mature and our behavior increasingly reflects the Christ we have come to know.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> Romans 12:2 • Acts 2:38 • 2 Corinthians 3:18 • Colossians 3:9–10</span>
+          </div>
+        </article>
+
+        <article class="ub-belief-card ub-reveal" id="baptism" tabindex="0">
+          <div class="ub-belief-card-head"><h2>Baptism</h2><span class="ub-belief-number">08</span></div>
+          <div class="ub-belief-body">
+            <p>We believe baptism is an outward expression of faith in Christ. Baptism does not save a person, but it is a meaningful act of obedience, identification, and public witness. It symbolizes the believer's union with Christ in His death, burial, and resurrection.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> Romans 6:3–4 • Colossians 2:12 • Acts 2:38 • 1 Peter 3:21</span>
+          </div>
+        </article>
+
+        <article class="ub-belief-card ub-reveal" id="deliverance" tabindex="0">
+          <div class="ub-belief-card-head"><h2>Deliverance</h2><span class="ub-belief-number">09</span></div>
+          <div class="ub-belief-body">
+            <p>We believe true deliverance is found in Jesus Christ and the truth of His Word. Freedom begins through believing the Gospel, the renewing of the mind, and a transformed posture of the heart toward Christ. Practices such as renouncing, denouncing, or casting out demons may have a place in ministry, but the practice itself is not what saves or guarantees freedom. Our confidence is not in a formula or ritual, but in Christ, His finished work, and the truth that makes us free.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> John 8:31–36 • Romans 12:2 • Colossians 1:13–14 • John 17:17 • Romans 1:16 • 2 Corinthians 3:17</span>
+          </div>
+        </article>
+
+        <article class="ub-belief-card ub-reveal" id="approach" tabindex="0">
+          <div class="ub-belief-card-head"><h2>Our Approach to Scripture</h2><span class="ub-belief-number">10</span></div>
+          <div class="ub-belief-body">
+            <p>We believe Scripture should be studied within its proper context. This includes examining the original languages in which the biblical texts were written, particularly Hebrew, Aramaic, and Greek, when necessary to better understand the meaning of words, phrases, and passages within their historical and literary context. Our desire is not simply to read words from Scripture, but to understand as accurately as possible what was being communicated and how it reveals the character and purposes of God.</p>
+            <span class="ub-scripture"><strong>Scripture:</strong> 2 Timothy 2:15 • Nehemiah 8:8 • Acts 17:11</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="ub-cta">
+      <div class="ub-cta-inner ub-reveal">
+        <div class="ub-eyebrow">Continue the journey</div>
+        <h2>Ready to go deeper?</h2>
+        <p>Our teaching library exists to help you know Christ with both encounter and understanding.</p>
+        <a class="btn" href="teachings.html">Explore Teachings</a>
+      </div>
+    </section>
+  </div>
+
+
+
+  <dialog class="ub-scripture-reader" id="scriptureReader" aria-labelledby="readerPassage">
+    <div class="ub-reader-shell">
+      <div class="ub-reader-topbar">
+        <div class="ub-reader-brand">
+          <span class="ub-reader-brand-main">The Unveiled Assembly</span>
+          <span class="ub-reader-brand-sub">Beliefs / Scripture Reading</span>
         </div>
-        <div class="belief-card">
-          <h4>Salvation</h4>
-          <p>We believe salvation is an eternal promise established and kept by Jesus Christ. Salvation is not earned or maintained through human behavior, but received through Christ and His finished work. We believe salvation establishes a new identity in Him, secured by His promise rather than our own ability to preserve ourselves.</p>
-          <span class="scripture"><strong>Scripture:</strong> John 10:27–29 • Ephesians 2:8–9 • Hebrews 10:14 • Romans 8:38–39</span>
-        </div>
-        <div class="belief-card">
-          <h4>The Triune God</h4>
-          <p>We believe in one eternal God revealed in three distinct persons: Father, Son, and Holy Spirit. We receive and honor the fullness of who God has revealed Himself to be.</p>
-          <span class="scripture"><strong>Scripture:</strong> Matthew 28:19 • 2 Corinthians 13:14 • Matthew 3:16–17</span>
-        </div>
-        <div class="belief-card">
-          <h4>The Scriptures</h4>
-          <p>We believe the Bible is the true Word of God, given for His people and profitable for teaching, correction, instruction, and spiritual maturity. Scripture provides a trustworthy testimony of God's character and serves as a dependable reference for the life we live unto Him.</p>
-          <span class="scripture"><strong>Scripture:</strong> 2 Timothy 3:16–17 • 2 Peter 1:20–21 • Psalm 119:105</span>
-        </div>
-        <div class="belief-card">
-          <h4>Spiritual Gifts</h4>
-          <p>We believe the gifts of the Holy Spirit remain active today, including prophecy, teaching, healing, deliverance, tongues, and other spiritual gifts. We believe these gifts are expressions of God's love, mercy, power, and glory through His people, demonstrating that Jesus Christ is still alive and active among us.</p>
-          <span class="scripture"><strong>Scripture:</strong> 1 Corinthians 12:4–11 • Acts 2:17–18 • Romans 12:6–8 • 1 Corinthians 14:1</span>
-        </div>
-        <div class="belief-card">
-          <h4>The Church</h4>
-          <p>We believe the Church is the Body of Christ, the gathering and community of those who are in Him. The Church is not ultimately a building, location, or event, but a people who share an identity and life in Christ.</p>
-          <span class="scripture"><strong>Scripture:</strong> 1 Corinthians 12:27 • Ephesians 2:19–22 • Ephesians 4:4–6</span>
-        </div>
-        <div class="belief-card">
-          <h4>Repentance</h4>
-          <p>We believe repentance begins with a change of mind, a turning from false conclusions and returning to the truth revealed in Christ. As our minds are renewed toward God and our identity in Him, our lives progressively mature and our behavior increasingly reflects the Christ we have come to know.</p>
-          <span class="scripture"><strong>Scripture:</strong> Romans 12:2 • Acts 2:38 • 2 Corinthians 3:18 • Colossians 3:9–10</span>
-        </div>
-        <div class="belief-card">
-          <h4>Baptism</h4>
-          <p>We believe baptism is an outward expression of faith in Christ. Baptism does not save a person, but it is a meaningful act of obedience, identification, and public witness. It symbolizes the believer's union with Christ in His death, burial, and resurrection.</p>
-          <span class="scripture"><strong>Scripture:</strong> Romans 6:3–4 • Colossians 2:12 • Acts 2:38 • 1 Peter 3:21</span>
-        </div>
-        <div class="belief-card">
-          <h4>Deliverance</h4>
-          <p>We believe true deliverance is found in Jesus Christ and the truth of His Word. Freedom begins through believing the Gospel, the renewing of the mind, and a transformed posture of the heart toward Christ. Practices such as renouncing, denouncing, or casting out demons may have a place in ministry, but the practice itself is not what saves or guarantees freedom. Our confidence is not in a formula or ritual, but in Christ, His finished work, and the truth that makes us free.</p>
-          <span class="scripture"><strong>Scripture:</strong> John 8:31–36 • Romans 12:2 • Colossians 1:13–14 • John 17:17 • Romans 1:16 • 2 Corinthians 3:17</span>
-        </div>
-        <div class="belief-card approach">
-          <h4>Our Approach to Scripture</h4>
-          <p>We believe Scripture should be studied within its proper context. This includes examining the original languages in which the biblical texts were written, particularly Hebrew, Aramaic, and Greek, when necessary to better understand the meaning of words, phrases, and passages within their historical and literary context. Our desire is not simply to read words from Scripture, but to understand as accurately as possible what was being communicated and how it reveals the character and purposes of God.</p>
-          <span class="scripture"><strong>Scripture:</strong> 2 Timothy 2:15 • Nehemiah 8:8 • Acts 17:11</span>
-        </div>
+        <button class="ub-reader-close" id="readerClose" type="button">Close ×</button>
+      </div>
+      <div class="ub-reader-layout">
+        <aside class="ub-reader-sidebar">
+          <div class="ub-reader-side-inner">
+            <div class="ub-reader-number" id="readerNumber">01</div>
+            <div class="ub-reader-belief-label">Belief</div>
+            <h2 class="ub-reader-belief" id="readerBelief">Jesus Christ</h2>
+            <div class="ub-reader-reference-label">Continue reading</div>
+            <nav class="ub-reader-references" id="readerReferences" aria-label="Passages for this belief"></nav>
+          </div>
+        </aside>
+        <section class="ub-reader-main">
+          <div class="ub-reader-passage-kicker">Scripture reading</div>
+          <h3 class="ub-reader-passage" id="readerPassage">Matthew 1:23</h3>
+          <div class="ub-reader-version" aria-label="Bible translation">
+            <span>Translation</span>
+            <strong>King James Version</strong>
+          </div>
+          <div class="ub-reader-text loading" id="readerText" role="tabpanel" aria-live="polite">Preparing the passage…</div>
+          <div class="ub-reader-license-note" id="readerLicense">King James Version — Public Domain in the United States.</div>
+        </section>
       </div>
     </div>
-  </section>
+  </dialog>
 
-  <section class="on-light-section" style="text-align:center">
-    <div class="reveal">
-      <h2 class="serif-heading" style="font-size:clamp(32px,4vw,52px);margin-bottom:22px">Ready to go deeper?</h2>
-      <p style="max-width:520px;margin:0 auto 30px">Our teaching library exists to help you know Christ with both encounter and understanding.</p>
-      <a class="btn on-light fill" href="teachings.html">Explore Teachings →</a>
-    </div>
-  </section>
 
+
+  <!-- Real nav + footer + every real dialog (Sign In, Book A Session,
+       etc.) get auto-injected here by app.js, exactly like every other
+       real page — this was missing entirely before, which is why
+       nothing from the real site ever actually appeared. -->
   <script type="module" src="app.js?v=sitewide-20260925"></script>
+  <!-- Local, embedded KJV passage data — public domain King James
+       Version text for all 36 Scripture references used on this page.
+       Loaded as a plain script (not fetch/JSON) so it's part of the
+       page's own initial load and the reader below needs zero network
+       requests afterward, including fully offline. -->
+  <script src="assets/beliefs-v2/kjv-passages.js"></script>
+  <script type="module">
+    /* ---------------------------------------------------------------
+       Adapted from the approved beliefs-v2-prototype.html's own
+       inline script. Removed: nav-toggle / nav-scrolled / the
+       placeholder "Book a session" dialog system — the real nav
+       injected by app.js already handles its own menu, scroll state,
+       and real Sign In / Book A Session / Cart behavior. Every other
+       class this script touches now targets the ub- prefixed names
+       (see the style block / class renames), so none of it can
+       collide with the real site's own same-named classes.
+       --------------------------------------------------------------- */
+    const progress = document.getElementById('scrollProgress');
+    const beliefGrid = document.querySelector('#ua-beliefs-v2 .ub-belief-grid');
+    const revelationInterlude = document.querySelector('#ua-beliefs-v2 .ub-revelation-interlude');
+    const beliefOrder = [
+      'jesus-christ',
+      'triune-god',
+      'scriptures',
+      'salvation',
+      'repentance',
+      'baptism',
+      'church',
+      'spiritual-gifts',
+      'deliverance',
+      'approach'
+    ];
+
+    beliefOrder.forEach((id, index) => {
+      const card = document.getElementById(id);
+      const number = card?.querySelector('.ub-belief-number');
+      if (!card) return;
+      if (number) number.textContent = String(index + 1).padStart(2, '0');
+      beliefGrid.appendChild(card);
+      if (index === 5 && revelationInterlude) beliefGrid.appendChild(revelationInterlude);
+    });
+
+    const cards = [...document.querySelectorAll('#ua-beliefs-v2 .ub-belief-card')];
+    const beliefChapter = document.getElementById('beliefChapter');
+    const beliefChapterCurrent = document.getElementById('beliefChapterCurrent');
+    const beliefChapterTitle = document.getElementById('beliefChapterTitle');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const updateScrollProgress = () => {
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      progress.style.width = `${scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0}%`;
+    };
+    updateScrollProgress();
+    window.addEventListener('scroll', updateScrollProgress, { passive: true });
+
+    if (!reduceMotion) {
+      const revealObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: .12 });
+      document.querySelectorAll('#ua-beliefs-v2 .ub-reveal').forEach(element => revealObserver.observe(element));
+      setTimeout(() => document.querySelectorAll('#ua-beliefs-v2 .ub-hero .ub-reveal').forEach(element => element.classList.add('visible')), 90);
+    } else {
+      document.querySelectorAll('#ua-beliefs-v2 .ub-reveal').forEach(element => element.classList.add('visible'));
+    }
+
+    const sectionObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        beliefChapterCurrent.textContent = entry.target.querySelector('.ub-belief-number')?.textContent || '01';
+        beliefChapterTitle.textContent = entry.target.querySelector('h2')?.textContent || 'Jesus Christ';
+      });
+    }, { rootMargin: '-38% 0px -52% 0px', threshold: 0 });
+    cards.forEach(card => sectionObserver.observe(card));
+
+    const beliefsObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => beliefChapter.classList.toggle('visible', entry.isIntersecting));
+    }, { rootMargin: '-12% 0px -12% 0px', threshold: 0 });
+    beliefsObserver.observe(document.getElementById('beliefs'));
+
+    cards.forEach(card => {
+      card.addEventListener('pointermove', event => {
+        const box = card.getBoundingClientRect();
+        card.style.setProperty('--mouse-x', `${event.clientX - box.left}px`);
+        card.style.setProperty('--mouse-y', `${event.clientY - box.top}px`);
+      });
+      card.addEventListener('click', () => {
+        cards.forEach(item => item.classList.toggle('active', item === card));
+      });
+    });
+
+    // ---- KJV Scripture reader (local data only, no network request) ----
+    const scriptureReader = document.getElementById('scriptureReader');
+    const readerBelief = document.getElementById('readerBelief');
+    const readerNumber = document.getElementById('readerNumber');
+    const readerPassage = document.getElementById('readerPassage');
+    const readerReferences = document.getElementById('readerReferences');
+    const readerText = document.getElementById('readerText');
+    const readerLicense = document.getElementById('readerLicense');
+    let activeReference = '';
+    const kjvNotice = 'King James Version — Public Domain in the United States.';
+
+    // One shared normalization function, used both to build the local
+    // KJV_PASSAGES lookup keys (see assets/beliefs-v2/kjv-passages.js)
+    // and here when opening a passage — en dash/hyphen, extra spaces,
+    // and case are all treated as equivalent. The displayed reference
+    // keeps its typographic en dash; only the lookup key is normalized.
+    function normalizeScriptureRef(ref) {
+      return ref
+        .replace(/–|—/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    }
+
+    const renderKjvPassage = data => {
+      const paragraph = document.createElement('p');
+      const verses = Array.isArray(data.verses) ? data.verses : [];
+      if (verses.length) {
+        verses.forEach(verse => {
+          const number = document.createElement('span');
+          number.className = 'ub-verse-number';
+          number.textContent = verse.verse;
+          paragraph.append(number, document.createTextNode(`${verse.text.trim()} `));
+        });
+      } else {
+        paragraph.textContent = data.text?.trim() || 'Passage text unavailable.';
+      }
+      readerText.classList.remove('loading');
+      readerText.replaceChildren(paragraph);
+      readerLicense.textContent = kjvNotice;
+    };
+
+    // Reads from the local, embedded KJV_PASSAGES data only — no
+    // network request of any kind. Every one of the 36 references
+    // used on this page is embedded in assets/beliefs-v2/kjv-passages.js
+    // (see the completeness audit below, which confirms this at load
+    // time), so the "could not load" branch is a defensive fallback
+    // for a reference outside that set, not the normal path.
+    const loadReaderPassage = reference => {
+      activeReference = reference;
+      readerPassage.textContent = reference;
+      [...readerReferences.children].forEach(button => button.classList.toggle('active', button.dataset.reference === reference));
+
+      const data = KJV_PASSAGES[normalizeScriptureRef(reference)];
+      if (data) {
+        renderKjvPassage(data);
+      } else {
+        readerText.classList.remove('loading');
+        readerText.innerHTML = '<p>This passage is not yet embedded in the local Scripture data.</p>';
+        readerLicense.textContent = kjvNotice;
+      }
+    };
+
+    const openScriptureDialog = scripture => {
+      const rawReferences = scripture.textContent.replace(/^Scripture:\s*/i, '').trim();
+      const references = rawReferences.split('•').map(reference => reference.trim()).filter(Boolean);
+      const card = scripture.closest('.ub-belief-card');
+      const beliefName = card?.querySelector('h2')?.textContent || 'Scripture';
+      const beliefNumber = card?.querySelector('.ub-belief-number')?.textContent || '01';
+
+      readerBelief.textContent = beliefName;
+      readerNumber.textContent = beliefNumber;
+      readerReferences.replaceChildren();
+      references.forEach(reference => {
+        const button = document.createElement('button');
+        button.className = 'ub-reader-reference';
+        button.type = 'button';
+        button.dataset.reference = reference;
+        button.textContent = reference;
+        button.addEventListener('click', () => loadReaderPassage(reference));
+        readerReferences.appendChild(button);
+      });
+
+      scriptureReader.showModal();
+      loadReaderPassage(references[0]);
+    };
+    document.getElementById('readerClose').addEventListener('click', () => scriptureReader.close());
+    scriptureReader.addEventListener('click', event => { if (event.target === scriptureReader) scriptureReader.close(); });
+
+    document.querySelectorAll('#ua-beliefs-v2 .ub-scripture').forEach(scripture => {
+      scripture.setAttribute('role', 'button');
+      scripture.setAttribute('tabindex', '0');
+      scripture.setAttribute('aria-label', `Explore ${scripture.textContent.trim()}`);
+      scripture.addEventListener('click', event => {
+        event.stopPropagation();
+        openScriptureDialog(scripture);
+      });
+      scripture.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        event.stopPropagation();
+        openScriptureDialog(scripture);
+      });
+    });
+
+    // ---- Development-time completeness audit ----
+    // Reads every .ub-scripture reference actually on the page, splits
+    // each group on "•", normalizes each one the same way the reader
+    // does, and compares that set against the local KJV_PASSAGES keys.
+    (function auditKjvCoverage() {
+      const pageRefs = new Set();
+      document.querySelectorAll('#ua-beliefs-v2 .ub-scripture').forEach(scripture => {
+        const raw = scripture.textContent.replace(/^Scripture:\s*/i, '').trim();
+        raw.split('•').map(r => r.trim()).filter(Boolean).forEach(r => pageRefs.add(normalizeScriptureRef(r)));
+      });
+      const available = new Set(Object.keys(KJV_PASSAGES || {}));
+      const missing = [...pageRefs].filter(r => !available.has(r));
+      const presentCount = pageRefs.size - missing.length;
+      const summary = `${presentCount} of ${pageRefs.size} KJV passages available locally`;
+      if (missing.length) {
+        console.warn('[KJV audit]', summary, '— missing:', missing);
+      } else {
+        console.log('[KJV audit]', summary, '— every Scripture reference on this page resolves to embedded KJV text. No external Scripture API is used.');
+      }
+      window.__kjvAudit = { total: pageRefs.size, present: presentCount, missing };
+    })();
+  </script>
+
 </body>
 </html>
