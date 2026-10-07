@@ -400,6 +400,20 @@
     :focus-visible { outline: 2px solid var(--ivory); outline-offset: 4px; }
     .cta :focus-visible { outline-color: var(--black); }
 
+    /* The full-size nav (9 links + icon + Book A Session) needs real
+       room to sit centered without crowding — shrink it gradually in
+       this medium zone instead of staying full-size right up against
+       the 1300px hamburger cutover below, which left no margin and
+       could crowd/uncenter the links on common laptop widths. */
+    @media (max-width: 1500px) {
+      .nav { padding: 0 2.4vw; column-gap: 12px; }
+      .brand { gap: 8px; }
+      .brand-text .line2 { display: none; }
+      .nav-links { gap: 10px; font-size: 9px; letter-spacing: .1em; }
+      .nav-actions { gap: 8px; }
+      .nav-book-btn { padding: 0 11px; font-size: 9px; }
+    }
+
     @media (max-width: 1300px) {
       .nav-panel { display: none; }
       .menu-btn { display: block; }
