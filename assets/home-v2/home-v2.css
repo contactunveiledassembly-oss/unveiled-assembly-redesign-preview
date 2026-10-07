@@ -1,0 +1,90 @@
+/* ============================================================
+   Homepage redesign — approved-design INTEGRATION pass. Companion
+   to assets/beliefs-v2/beliefs-v2.css — same methodology: real
+   nav/footer/dialogs (app.js) replace the prototype's own hardcoded,
+   disconnected versions; every colliding class is either deleted in
+   favor of the real shared one (verified first) or scoped under
+   #homeRoot so nothing here can leak into any other page. See that
+   file's header comment for the full rationale; this one only notes
+   what's specific to the homepage.
+
+   Dropped as dead (never referenced by the supplied body markup —
+   an earlier, superseded "site index" / "side note" layout):
+   .site-index, .index-link, .index-number, .index-title,
+   .index-arrow, .ghost-mark, .side-note, .side-note-symbol.
+   ============================================================ */
+
+body[data-page="home"]{ background:var(--black); }
+
+.progress{ position:fixed; z-index:1200; top:0; left:0; width:0; height:2px; background:var(--ivory); }
+
+.home-v2-proto-banner{
+  position:fixed; top:0; left:0; right:0; z-index:300; height:26px;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  background:var(--gold); color:#0a0a0a; font-family:var(--sans); font-size:10px;
+  font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:0 16px;
+}
+body[data-page="home"] .nav{ top:26px; }
+
+/* ---------- Opening hero (pitch-black, centered) ---------- */
+#homeRoot .landing{
+  position:relative; min-height:100svh; padding:106px clamp(22px,4.8vw,76px) 38px;
+  display:grid; grid-template-rows:1fr auto; overflow:hidden; isolation:isolate; background:#000;
+}
+#homeRoot .landing::before{
+  content:""; position:absolute; z-index:-2; inset:-24%;
+  background:radial-gradient(ellipse 46% 54% at 50% 48%, rgba(245,243,238,.055), transparent 74%);
+  animation:homeV2Veil 14s ease-in-out infinite alternate;
+}
+#homeRoot .landing::after{
+  content:""; position:absolute; z-index:-1; inset:0;
+  box-shadow:inset 0 -130px 140px rgba(0,0,0,.42), inset 0 100px 100px rgba(0,0,0,.25); pointer-events:none;
+}
+@keyframes homeV2Veil{ from{ transform:translate3d(-2%,-1%,0) rotate(-2deg) } to{ transform:translate3d(3%,1%,0) rotate(2deg) } }
+
+#homeRoot .landing-inner{ width:min(1120px,100%); margin:auto; display:grid; place-items:center; }
+#homeRoot .intro{ max-width:1040px; text-align:center; }
+#homeRoot .eyebrow{ color:var(--stone); font:400 10px/1.4 var(--mono); letter-spacing:.24em; text-transform:uppercase; }
+#homeRoot .intro-rule{ width:58px; height:1px; margin:22px auto 26px; background:rgba(245,243,238,.42); }
+#homeRoot .intro h1{ margin:0; font-family:var(--display); font-size:clamp(58px,9.1vw,138px); font-weight:300; line-height:.83; letter-spacing:-.052em; text-transform:uppercase; }
+#homeRoot .intro h1 span{ display:block; margin-top:.12em; color:var(--stone); }
+#homeRoot .intro-copy{ max-width:520px; margin:30px auto 0; color:var(--stone); font-size:clamp(13px,1.2vw,16px); line-height:1.7; }
+#homeRoot .hero-actions{ margin-top:31px; display:flex; justify-content:center; gap:12px; }
+#homeRoot .hero-action{
+  min-height:46px; padding:0 21px; display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--ivory); color:var(--black); background:var(--ivory);
+  font-family:var(--sans); font-size:9px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  transition:transform .2s, color .2s, background .2s;
+}
+#homeRoot .hero-action.secondary{ color:var(--ivory); background:transparent; border-color:rgba(245,243,238,.42); }
+#homeRoot .hero-action:hover{ transform:translateY(-2px); color:var(--ivory); background:transparent; }
+#homeRoot .hero-action.secondary:hover{ color:var(--black); background:var(--ivory); border-color:var(--ivory); }
+
+#homeRoot .landing-foot{ display:flex; justify-content:space-between; align-items:center; padding-top:25px; color:var(--stone-dim); font:400 9px/1 var(--mono); letter-spacing:.15em; text-transform:uppercase; }
+#homeRoot .scroll-cue{ display:flex; align-items:center; gap:11px; }
+#homeRoot .scroll-cue i{ position:relative; width:44px; height:1px; overflow:hidden; background:var(--line-dark); display:block; }
+#homeRoot .scroll-cue i::after{ content:""; position:absolute; inset:0; background:var(--ivory); transform:translateX(-100%); animation:homeV2Cue 2.4s ease-in-out infinite; }
+@keyframes homeV2Cue{ 55%,100%{ transform:translateX(100%) } }
+
+#homeRoot .reveal{ opacity:0; transform:translateY(20px); transition:opacity .8s ease, transform .8s cubic-bezier(.2,.75,.2,1); }
+#homeRoot .reveal.visible{ opacity:1; transform:none; }
+#homeRoot :focus-visible{ outline:2px solid var(--ivory); outline-offset:4px; }
+
+@media(max-width:900px){
+  #homeRoot .landing{ min-height:100svh; padding-top:112px; }
+}
+@media(max-width:680px){
+  #homeRoot .landing{ min-height:100svh; padding:106px 22px 24px; }
+  #homeRoot .landing-inner{ width:100%; }
+  #homeRoot .intro-rule{ margin:16px auto; }
+  #homeRoot .intro h1{ font-size:clamp(48px,15.5vw,78px); line-height:.87; }
+  #homeRoot .intro-copy{ max-width:330px; margin-top:24px; font-size:13px; }
+  #homeRoot .hero-actions{ margin-top:25px; flex-direction:column; align-items:stretch; }
+  #homeRoot .landing-foot{ padding-top:18px; }
+  #homeRoot .landing-foot > span:first-child{ display:none; }
+}
+@media(prefers-reduced-motion:reduce){
+  #homeRoot .landing::before{ animation:none; }
+  #homeRoot .scroll-cue i::after{ animation:none; transform:none; }
+  #homeRoot .reveal{ opacity:1; transform:none; }
+}

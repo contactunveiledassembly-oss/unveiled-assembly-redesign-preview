@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PRIVATE PROTOTYPE — approved homepage redesign, integrated with the real site's navigation/footer/account flows for review. Not linked from the live site." />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>The Unveiled Assembly — Approved Homepage Redesign (Integration Preview)</title>
+  <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
+  <meta name="theme-color" content="#090909" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Real, unmodified site system — same rationale as the Beliefs
+       integration: real nav (Sign In / Book A Session / Cart all
+       genuinely wired up) and real footer, not a disconnected copy. -->
+  <link rel="stylesheet" href="styles.css?v=sitewide-20260925" />
+  <link rel="stylesheet" href="assets/home-v2/home-v2.css" />
+</head>
+<body data-page="home">
+  <div class="grain" aria-hidden="true"></div>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+  <div class="home-v2-proto-banner">Private prototype — approved design, integration review only. Not published.</div>
+
+  <div id="homeRoot">
+    <section class="landing" aria-labelledby="landing-title">
+      <div class="landing-inner">
+        <div class="intro reveal">
+          <div class="eyebrow">Prayer · Teaching · Presence</div>
+          <div class="intro-rule"></div>
+          <h1 id="landing-title">Christ Revealed.<span>A People Unveiled.</span></h1>
+          <p class="intro-copy">Gathering hearts in prayer, teaching, and the presence of Jesus.</p>
+          <div class="hero-actions">
+            <a class="hero-action" href="gather.html">Enter The Assembly</a>
+            <a class="hero-action secondary" href="teachings.html">Explore Teachings</a>
+          </div>
+        </div>
+      </div>
+      <div class="landing-foot">
+        <span>The Unveiled Assembly of Christ Jesus</span>
+        <a class="scroll-cue" href="#site-footer">The Assembly <i aria-hidden="true"></i></a>
+      </div>
+    </section>
+  </div>
+
+  <!-- Real nav + footer + every real dialog get auto-injected here by
+       app.js, exactly as on every other real page — nothing added by
+       hand. The real footer (id="site-footer") already matches this
+       design's own "compact, left-positioned three-line wordmark,
+       divider / info / divider" footer spec near exactly — same
+       identity copy, same link set — so it's reused as-is rather than
+       duplicating a second footer implementation. -->
+  <script type="module" src="app.js?v=sitewide-20260925"></script>
+  <script type="module">
+    /* ---------------------------------------------------------------
+       Adapted from the supplied/approved prototype's own inline
+       script. Removed: nav-toggle / nav-scrolled / the placeholder
+       "Book a session" dialog — the real nav injected by app.js
+       already handles its own menu, scroll state, and the real
+       Book A Session flow. Everything else (scroll progress bar,
+       reveal-on-scroll) is the same logic as supplied, unchanged.
+       --------------------------------------------------------------- */
+    const progress = document.getElementById('progress');
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function updateProgress(){
+      const total = document.documentElement.scrollHeight - innerHeight;
+      progress.style.width = `${total > 0 ? scrollY / total * 100 : 0}%`;
+    }
+    updateProgress();
+    addEventListener('scroll', updateProgress, { passive: true });
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: .14 });
+    document.querySelectorAll('#homeRoot .reveal').forEach(element => reducedMotion ? element.classList.add('visible') : observer.observe(element));
+  </script>
+</body>
+</html>
