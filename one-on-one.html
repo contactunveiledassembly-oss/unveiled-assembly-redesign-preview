@@ -21,34 +21,34 @@
     <div class="oo-hero-media" aria-hidden="true"></div>
     <div class="oo-hero-overlay" aria-hidden="true"></div>
     <div class="oo-hero-content reveal">
-      <div class="eyebrow">Personal Ministry</div>
-      <h1 class="teaching-display oo-hero-title">One<br>On One</h1>
-      <p class="oo-hero-sub">Prayer. Direction. Discernment.<br>Biblical Guidance.</p>
-      <button type="button" class="btn fill book-session">Book A Session →</button>
-      <p class="oo-hero-desc">A safe space to seek, listen,<br>and walk in clarity.</p>
+      <div class="eyebrow" id="ooHeroEyebrow">Personal Ministry</div>
+      <h1 class="teaching-display oo-hero-title" id="ooHeroTitle">One<br>On One</h1>
+      <p class="oo-hero-sub" id="ooHeroSubtitle">Prayer. Direction. Discernment.<br>Biblical Guidance.</p>
+      <button type="button" class="btn fill book-session" id="ooHeroButton">Book A Session →</button>
+      <p class="oo-hero-desc" id="ooHeroDescription">A safe space to seek, listen,<br>and walk in clarity.</p>
     </div>
-    <div class="oo-hero-words" aria-hidden="true">Come<br>Seek<br>Listen<br>Discern<br>Find Direction</div>
+    <div class="oo-hero-words" id="ooHeroWords" aria-hidden="true">Come<br>Seek<br>Listen<br>Discern<br>Find Direction</div>
   </header>
 
   <!-- Ministry Principles strip -->
   <section style="padding:48px 5vw">
     <div class="oo-principles reveal">
-      <div class="oo-principle">
+      <div class="oo-principle" data-oo-principle="0">
         <div class="oo-principle-num">01</div>
         <div class="oo-principle-label">Prayer</div>
         <p class="oo-principle-desc">Seek God. Bring it all before Him.</p>
       </div>
-      <div class="oo-principle">
+      <div class="oo-principle" data-oo-principle="1">
         <div class="oo-principle-num">02</div>
         <div class="oo-principle-label">Direction</div>
         <p class="oo-principle-desc">Gain clarity. Discern next steps.</p>
       </div>
-      <div class="oo-principle">
+      <div class="oo-principle" data-oo-principle="2">
         <div class="oo-principle-num">03</div>
         <div class="oo-principle-label">Discernment</div>
         <p class="oo-principle-desc">Receive biblical insight and wisdom.</p>
       </div>
-      <div class="oo-principle">
+      <div class="oo-principle" data-oo-principle="3">
         <div class="oo-principle-num">04</div>
         <div class="oo-principle-label">Next Steps</div>
         <p class="oo-principle-desc">Leave with practical guidance.</p>
@@ -71,9 +71,9 @@
       <div class="oo-booking-image reveal oo-soft-reveal oo-soft-reveal-left" role="img" aria-label="Open Bible, journal, and plant near a window — the setting a session happens in">
         <div class="oo-booking-image-overlay" aria-hidden="true"></div>
         <div class="oo-booking-image-content">
-          <div class="admin-microlabel" style="color:var(--stone-dim)">Book Your Session</div>
-          <h2 class="teaching-display">Choose<br>Your Time</h2>
-          <p>Select a session type and book a time that works for you.</p>
+          <div class="admin-microlabel" id="ooBookingEyebrow" style="color:var(--stone-dim)">Book Your Session</div>
+          <h2 class="teaching-display" id="ooBookingTitle">Choose<br>Your Time</h2>
+          <p id="ooBookingDescription">Select a session type and book a time that works for you.</p>
         </div>
       </div>
       <div class="oo-booking-panel oo-dark-booking-ui reveal oo-soft-reveal oo-soft-reveal-right">
@@ -92,7 +92,7 @@
        for final approval, see the completion notes. -->
   <section style="background:var(--black);border-top:1px solid var(--line-dark)">
     <div class="oo-support-band reveal">
-      <p>Your contribution supports the work of The Unveiled Assembly — helping fund ministry, outreach, and resources like food drives, gatherings, and community initiatives. A One-on-One is time for honest conversation, prayer, and biblical guidance — not the purchase of prophecy or a guaranteed prophetic word.</p>
+      <p id="ooSupportText">Your contribution supports the work of The Unveiled Assembly — helping fund ministry, outreach, and resources like food drives, gatherings, and community initiatives. A One-on-One is time for honest conversation, prayer, and biblical guidance — not the purchase of prophecy or a guaranteed prophetic word.</p>
     </div>
   </section>
 
@@ -100,26 +100,26 @@
   <section class="on-light-section" style="padding:0">
     <div class="oo-expect-split">
       <div class="oo-expect-content reveal oo-soft-reveal oo-soft-reveal-left">
-        <div class="eyebrow on-light">What To Expect</div>
-        <h2 class="serif-heading">A Safe &amp;<br>Focused Space.</h2>
+        <div class="eyebrow on-light" id="ooExpectEyebrow">What To Expect</div>
+        <h2 class="serif-heading" id="ooExpectTitle">A Safe &amp;<br>Focused Space.</h2>
         <div class="oo-expect-list">
-          <div class="oo-expect-item">
+          <div class="oo-expect-item" data-oo-expect="0">
             <span class="oo-expect-check">✓</span>
             <p>A private, confidential conversation.</p>
           </div>
-          <div class="oo-expect-item">
+          <div class="oo-expect-item" data-oo-expect="1">
             <span class="oo-expect-check">✓</span>
             <p>A Christ-centered, Bible-based approach.</p>
           </div>
-          <div class="oo-expect-item">
+          <div class="oo-expect-item" data-oo-expect="2">
             <span class="oo-expect-check">✓</span>
             <p>Prayer, guidance, and practical insight.</p>
           </div>
-          <div class="oo-expect-item">
+          <div class="oo-expect-item" data-oo-expect="3">
             <span class="oo-expect-check">✓</span>
             <p>A listening ear and honest direction.</p>
           </div>
-          <div class="oo-expect-item">
+          <div class="oo-expect-item" data-oo-expect="4">
             <span class="oo-expect-check">✓</span>
             <p>Leave with clarity and next steps.</p>
           </div>
@@ -136,10 +136,10 @@
     <div class="oo-closing-media" aria-hidden="true"></div>
     <div class="oo-closing-overlay" aria-hidden="true"></div>
     <div class="oo-closing-content reveal oo-soft-reveal oo-soft-reveal-up">
-      <div class="eyebrow">Come As You Are</div>
-      <h2 class="teaching-display">Real Conversations.<br>Real Direction.</h2>
-      <p>Whether you're seeking clarity, prayer, or biblical guidance, this is a space for you.</p>
-      <button type="button" class="btn fill book-session">Book A Session →</button>
+      <div class="eyebrow" id="ooClosingEyebrow">Come As You Are</div>
+      <h2 class="teaching-display" id="ooClosingTitle">Real Conversations.<br>Real Direction.</h2>
+      <p id="ooClosingDescription">Whether you're seeking clarity, prayer, or biblical guidance, this is a space for you.</p>
+      <button type="button" class="btn fill book-session" id="ooClosingButton">Book A Session →</button>
     </div>
   </section>
 

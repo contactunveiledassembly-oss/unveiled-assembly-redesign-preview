@@ -477,6 +477,114 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Owner-edited public page copy and image references. Each page is
+    // stored as one document (starting with `one-on-one`). Visitors need
+    // read access to render it; only an authenticated admin may change it.
+    match /pageContent/{pageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Discount documents use SHA-256(normalized code) as their document
+    // id. A checkout may fetch one exact code (`get`) but cannot list all
+    // codes; only the owner can list, create, or delete them.
+    //
+    // A limited-use code must be CLAIMED before the booking/registration
+    // it discounts is ever created — never the other way around — so
+    // the cap is enforced before a discounted purchase exists, not just
+    // before it's counted afterward. usedCount moves for a non-admin in
+    // exactly two situations, both requiring a matching discountRedemptions
+    // ticket (see below):
+    //   - CLAIM (+1): reserves one use up front. Requires a brand-new
+    //     ticket, still in state 'claimed', owned by the caller, naming
+    //     this code — so a bare updateDoc() with no ticket behind it is
+    //     rejected outright. Because Firestore serializes writes to a
+    //     single document, two claims racing for the last remaining use
+    //     can never both win: whichever commits first sets usedCount,
+    //     and the other's retry sees that fresh value and is rejected —
+    //     usedCount can never legitimately pass maxUses.
+    //   - RELEASE (-1): gives a use back if the booking/registration the
+    //     claim was reserving then fails to be created for an unrelated
+    //     reason (e.g. the time slot was taken). Requires the named
+    //     ticket to still be owned by the caller and still 'claimed' —
+    //     once a ticket is confirmed (see discountRedemptions below) it
+    //     can never be released again, so a real, completed purchase can
+    //     never be "given back" to double-dip a second discount.
+    // Either way, redeemedSourceIds must change by exactly the one named
+    // ticket id and nothing else (the two hasAll() checks below pin the
+    // new list down to old±that one id precisely, not merely "shrank/grew
+    // by one") — so this can't be abused to sneak an unrelated id in or
+    // out alongside the legitimate change.
+    match /discountCodes/{codeHash} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() ||
+        (isSignedIn() &&
+         resource.data.redeemedSourceIds is list && request.resource.data.redeemedSourceIds is list &&
+         (
+           // Claim: reserve one use for a brand-new ticket.
+           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedCount', 'redeemedSourceIds', 'lastRedeemedSourceId']) &&
+            request.resource.data.usedCount == resource.data.usedCount + 1 &&
+            (resource.data.maxUses == null || resource.data.usedCount < resource.data.maxUses) &&
+            request.resource.data.redeemedSourceIds.size() == resource.data.redeemedSourceIds.size() + 1 &&
+            !(request.resource.data.lastRedeemedSourceId in resource.data.redeemedSourceIds) &&
+            request.resource.data.redeemedSourceIds.hasAll(resource.data.redeemedSourceIds) &&
+            resource.data.redeemedSourceIds.concat([request.resource.data.lastRedeemedSourceId]).hasAll(request.resource.data.redeemedSourceIds) &&
+            get(/databases/$(database)/documents/discountRedemptions/$(request.resource.data.lastRedeemedSourceId)).data.uid == request.auth.uid &&
+            get(/databases/$(database)/documents/discountRedemptions/$(request.resource.data.lastRedeemedSourceId)).data.codeId == codeHash &&
+            get(/databases/$(database)/documents/discountRedemptions/$(request.resource.data.lastRedeemedSourceId)).data.status == 'claimed')
+           ||
+           // Release: give one use back for a ticket that never got confirmed.
+           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedCount', 'redeemedSourceIds', 'lastReleasedSourceId']) &&
+            request.resource.data.usedCount == resource.data.usedCount - 1 &&
+            resource.data.usedCount > 0 &&
+            request.resource.data.redeemedSourceIds.size() == resource.data.redeemedSourceIds.size() - 1 &&
+            (request.resource.data.lastReleasedSourceId in resource.data.redeemedSourceIds) &&
+            !(request.resource.data.lastReleasedSourceId in request.resource.data.redeemedSourceIds) &&
+            resource.data.redeemedSourceIds.hasAll(request.resource.data.redeemedSourceIds) &&
+            request.resource.data.redeemedSourceIds.concat([request.resource.data.lastReleasedSourceId]).hasAll(resource.data.redeemedSourceIds) &&
+            get(/databases/$(database)/documents/discountRedemptions/$(request.resource.data.lastReleasedSourceId)).data.uid == request.auth.uid &&
+            get(/databases/$(database)/documents/discountRedemptions/$(request.resource.data.lastReleasedSourceId)).data.status == 'claimed')
+         ));
+    }
+
+    // A discount redemption's lifecycle: 'claimed' (reserved up front,
+    // before any booking/registration exists) -> either 'confirmed'
+    // (the booking/registration it paid for was actually created) or
+    // deleted (that booking/registration failed, so the claim — and the
+    // use it reserved, via the discountCodes rule above — is given
+    // back). There is deliberately no way for a non-admin to move a
+    // ticket backward out of 'confirmed': once confirmed it can never be
+    // updated or deleted again, so a completed purchase's use can never
+    // be released and re-claimed for a second discount.
+    //
+    // Note on "proof of purchase": there is no payment backend in this
+    // project yet, so 'confirmed' only means "a booking/registration
+    // document naming this code was created, owned by this uid" — the
+    // same standard this codebase already uses everywhere else to mean
+    // a completed booking. A trusted server (payment webhook or Cloud
+    // Function) would be needed to verify a real charge before
+    // confirming; until one exists, this is the strongest check
+    // available within pure Firestore rules.
+    match /discountRedemptions/{claimId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.status == 'claimed' &&
+        request.resource.data.sourceCollection == null &&
+        request.resource.data.sourceId == null &&
+        get(/databases/$(database)/documents/discountCodes/$(request.resource.data.codeId)).data.code is string;
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'claimed' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'sourceCollection', 'sourceId', 'confirmedAt']) &&
+        request.resource.data.status == 'confirmed' &&
+        request.resource.data.sourceCollection in ['bookings', 'teachingRegistrations'] &&
+        get(/databases/$(database)/documents/$(request.resource.data.sourceCollection)/$(request.resource.data.sourceId)).data.uid == request.auth.uid &&
+        get(/databases/$(database)/documents/$(request.resource.data.sourceCollection)/$(request.resource.data.sourceId)).data.discountCode ==
+          get(/databases/$(database)/documents/discountCodes/$(resource.data.codeId)).data.code;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'claimed';
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
     // Owner Media Library — images uploaded from Owner → Media, reused
     // across Teaching/Scripture images. Same pattern as teachingPageSettings:
     // public read (the images themselves are already public once used on a

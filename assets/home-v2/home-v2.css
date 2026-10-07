@@ -45,7 +45,7 @@ body[data-page="home"]{ background:var(--black); }
 #homeRoot .eyebrow{ color:var(--stone); font:400 10px/1.4 var(--mono); letter-spacing:.24em; text-transform:uppercase; }
 #homeRoot .intro-rule{ width:58px; height:1px; margin:22px auto 26px; background:rgba(245,243,238,.42); }
 #homeRoot .intro h1{ margin:0; font-family:var(--display); font-size:clamp(58px,9.1vw,138px); font-weight:300; line-height:.83; letter-spacing:-.052em; text-transform:uppercase; }
-#homeRoot .intro h1 span{ display:block; margin-top:.12em; color:var(--stone); }
+#homeRoot .intro h1 .sub{ display:block; margin-top:.12em; color:var(--stone); }
 #homeRoot .intro-copy{ max-width:520px; margin:30px auto 0; color:var(--stone); font-size:clamp(13px,1.2vw,16px); line-height:1.7; }
 #homeRoot .hero-actions{ margin-top:31px; display:flex; justify-content:center; gap:12px; }
 #homeRoot .hero-action{
