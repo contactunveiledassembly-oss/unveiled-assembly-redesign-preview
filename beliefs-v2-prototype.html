@@ -107,7 +107,6 @@
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand-badge { position: relative; width: 44px; height: 44px; display: grid; place-items: center; background: transparent; overflow: hidden; }
     .brand-logo { position: relative; z-index: 1; width: 38px; height: 44px; object-fit: contain; }
-    .brand-logo-fallback { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; font-weight: 700; letter-spacing: -.08em; }
     .brand-text { line-height: 1.3; white-space: nowrap; }
     .brand-text .line1 { display: block; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
     .brand-text .line2 { display: block; margin-top: 2px; color: var(--stone); font-size: 8.5px; letter-spacing: .18em; text-transform: uppercase; }
@@ -574,7 +573,6 @@
   <nav class="nav" id="nav" aria-label="Main navigation">
     <a class="brand" href="#top" aria-label="The Unveiled Assembly beliefs preview home">
       <span class="brand-badge">
-        <span class="brand-logo-fallback" aria-hidden="true">UA</span>
         <img class="brand-logo" src="assets/ua-logo-transparent.png" alt="The Unveiled Assembly logo">
       </span>
       <span class="brand-text"><span class="line1">The Unveiled</span><span class="line2">Assembly of Christ Jesus</span></span>
