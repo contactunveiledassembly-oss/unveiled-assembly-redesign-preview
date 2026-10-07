@@ -145,6 +145,20 @@ body.demo-mode .nav{top:26px}
 .links a{color:var(--ivory);opacity:.8;transition:.2s;padding-bottom:3px;border-bottom:1px solid transparent;white-space:nowrap}
 .links a:hover,.links a.current{opacity:1;border-color:currentColor}
 
+/* Shrink the nav row at medium/laptop widths instead of jumping
+   straight to the hamburger menu — keeps the full set of links
+   genuinely visible across normal desktop/laptop widths, only
+   collapsing to the mobile menu at the narrower breakpoint below. */
+@media(max-width:1200px){
+  .nav{padding:0 2.4vw;column-gap:12px}
+  .brand{gap:8px}
+  .brand-text .line1{font-size:10px}
+  .brand-text .line2{display:none}
+  .links{gap:10px;font-size:9px;letter-spacing:.1em}
+  .nav-right-controls{gap:8px}
+  .nav-book-btn{padding:0 11px;font-size:9px}
+}
+
 /* Right column: social + shop + account + cart, all in the bar itself.
    Every control below sets color AND border explicitly — do not rely on
    inheritance here, since <button> does not inherit color from the page
@@ -200,7 +214,7 @@ body.demo-mode .nav{top:26px}
 .nav-book-btn:focus-visible{outline:2px solid var(--ivory);outline-offset:2px}
 .menu-btn{display:none;background:none;border:0;color:var(--ivory);font-size:24px;cursor:pointer;flex:0 0 auto;grid-column:3;justify-self:end}
 
-@media(max-width:1300px){
+@media(max-width:780px){
   .nav-mobile-panel{display:none}
   .menu-btn{display:block}
   .nav.open .nav-mobile-panel{
@@ -1255,8 +1269,13 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
   [data-member-panel="resources"] #memberResourcesList{grid-template-columns:1fr}
 }
 
-/* Exact owner-supplied UA identity mark. */
-.brand-badge{position:relative;border:0;border-radius:0;background:#050505}
+/* Exact owner-supplied UA identity mark. The transparent PNG now used
+   here (assets/ua-logo-transparent.png) must be visible on its own —
+   this rule previously painted an opaque #050505 fill behind it with
+   border-radius:0, which is exactly what reintroduced the "logo
+   trapped in a dark square" look the transparent asset was meant to
+   remove. */
+.brand-badge{position:relative;border:0;border-radius:0;background:transparent}
 .brand-logo-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:700 16px var(--sans);letter-spacing:-.16em;z-index:0}
 .brand-logo{position:relative;z-index:1;width:38px;height:44px;max-width:none;object-fit:contain;transform:none}
 .portal-brand,.member-topnav-brand{overflow:visible}
