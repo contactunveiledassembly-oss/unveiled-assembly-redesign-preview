@@ -18,13 +18,11 @@ body[data-page="home"]{ background:var(--black); }
 
 .progress{ position:fixed; z-index:1200; top:0; left:0; width:0; height:2px; background:var(--ivory); }
 
-.home-v2-proto-banner{
-  position:fixed; top:0; left:0; right:0; z-index:300; height:26px;
-  display:flex; align-items:center; justify-content:center; text-align:center;
-  background:var(--gold); color:#0a0a0a; font-family:var(--sans); font-size:10px;
-  font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:0 16px;
-}
-body[data-page="home"] .nav{ top:26px; }
+/* The real shared app.js/styles.css already provide a preview banner
+   and nav offset on localhost (DEMO_MODE adds body.demo-mode, which
+   injects .preview-banner and sets .nav{top:26px}) — no page-specific
+   duplicate of either needed here (same fix applied to the Beliefs
+   integration; see that file's CSS for the fuller account). */
 
 /* ---------- Opening hero (pitch-black, centered) ---------- */
 #homeRoot .landing{
