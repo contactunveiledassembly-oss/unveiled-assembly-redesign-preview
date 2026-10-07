@@ -28,6 +28,7 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+import { initSiteManagement } from "./site-management.js?v=1";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -1206,9 +1207,10 @@ function dialogsHtml(){
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="website">
-          <span class="portal-label">Website Pages <span class="demo-badge">Not Yet Connected</span></span>
-          <p class="admin-panel-intro">Click a page to see what will be editable here. Nothing below is live yet — the words and images on these pages still need a developer change until this is wired up. Ask for this to be connected whenever you're ready to start editing pages yourself.</p>
+          <span class="portal-label">Website Pages</span>
+          <p class="admin-panel-intro">Edit approved pages without changing their design. We are connecting the site page by page; One-on-One is ready now.</p>
           <div id="ownerWebsitePagesList" class="admin-website-pages"></div>
+          <div id="ownerWebsiteEditor"></div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
           <span class="portal-label">Payments</span>
@@ -1224,6 +1226,21 @@ function dialogsHtml(){
           <div class="admin-payments-empty">
             <strong>Payments Not Connected</strong>
             <p>There's no real payment processor connected to the website yet, so there's no transaction history to show. Once one is connected, every teaching payment, one-on-one booking payment, shop order, donation, and refund will show up here automatically — with totals for this month, this year, and by category.</p>
+          </div>
+          <div class="discount-manager">
+            <span class="portal-label">Discount Codes</span>
+            <p class="admin-panel-intro">Create codes for One-on-One sessions, Teachings, or both. Codes adjust checkout totals now; the real charge will use the adjusted total once a payment processor is connected.</p>
+            <form id="ownerDiscountCodeForm" class="discount-manager-form">
+              <label>Code<input id="ownerDiscountCode" type="text" placeholder="GRACE20" maxlength="30" required /></label>
+              <label>Kind<select id="ownerDiscountType"><option value="percent">Percentage</option><option value="fixed">Fixed Amount</option></select></label>
+              <label>Amount<input id="ownerDiscountAmount" type="number" min="0.01" step="0.01" required /></label>
+              <label>Applies To<select id="ownerDiscountScope"><option value="both">Both</option><option value="oneonone">One-on-Ones</option><option value="teaching">Teachings</option></select></label>
+              <label>Expiration<input id="ownerDiscountExpiry" type="date" /></label>
+              <label>Usage Limit<input id="ownerDiscountMaxUses" type="number" min="1" step="1" placeholder="Unlimited" /></label>
+              <button class="admin-btn-solid" type="submit">Save Code</button>
+            </form>
+            <div class="form-status" id="ownerDiscountCodeStatus" role="status" aria-live="polite"></div>
+            <div id="ownerDiscountCodesList"></div>
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="media">
@@ -2039,6 +2056,15 @@ function dialogsHtml(){
               <p class="payment-demo-note">This shows how checkout will look once a real payment processor is connected. No card details are collected and no charge occurs today.</p>
             </fieldset>
 
+            <div class="checkout-discount-entry">
+              <label for="bookingDiscountCode">Have a discount code?</label>
+              <div class="checkout-discount-controls">
+                <input id="bookingDiscountCode" type="text" autocomplete="off" placeholder="Enter code" />
+                <button type="button" class="admin-btn-ghost" id="bookingDiscountApply">Apply</button>
+              </div>
+              <p class="checkout-discount-status" id="bookingDiscountStatus" role="status" aria-live="polite"></p>
+            </div>
+
             <div class="checkout-order-summary" id="bookingOrderSummary"></div>
 
             <div class="booking-policy-checks">
@@ -2064,6 +2090,13 @@ function dialogsHtml(){
               </button>
             </div>
             <div class="booking-status" id="bookingStatus" role="status" aria-live="polite"></div>
+            <div class="checkout-discount-entry" id="bookingPriceChangeConfirm" hidden>
+              <p class="checkout-discount-status" id="bookingPriceChangeMessage"></p>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+                <button type="button" class="btn on-light fill checkout-submit" id="bookingPriceChangeContinueBtn">Continue</button>
+                <button type="button" class="admin-btn-ghost" id="bookingPriceChangeBackBtn">Go Back</button>
+              </div>
+            </div>
             <div class="booking-note checkout-note">Your time is reserved now and confirmed once payment is connected. This does not yet collect real payment.</div>
           </div>
 
@@ -2280,6 +2313,15 @@ function dialogsHtml(){
           </fieldset>
           <p class="payment-demo-note checkout-payment-note">Card, Apple Pay, and Google Pay are shown as a preview of what will be available once a real payment processor is connected. No card details are collected and no charge occurs today.</p>
 
+          <div class="checkout-discount-entry">
+            <label for="teachingRegisterDiscountCode">Have a discount code?</label>
+            <div class="checkout-discount-controls">
+              <input id="teachingRegisterDiscountCode" type="text" autocomplete="off" placeholder="Enter code" />
+              <button type="button" class="admin-btn-ghost" id="teachingRegisterDiscountApply">Apply</button>
+            </div>
+            <p class="checkout-discount-status" id="teachingRegisterDiscountStatus" role="status" aria-live="polite"></p>
+          </div>
+
           <div class="checkout-order-summary" id="teachingRegisterOrderSummary"></div>
 
           <div class="booking-policy-checks">
@@ -2295,6 +2337,13 @@ function dialogsHtml(){
               <span id="teachingRegisterSubmitLabel">Continue To Payment</span>
             </button>
             <div class="booking-status" id="teachingRegisterStatus" role="status" aria-live="polite"></div>
+          </div>
+          <div class="checkout-discount-entry" id="teachingRegisterPriceChangeConfirm" hidden>
+            <p class="checkout-discount-status" id="teachingRegisterPriceChangeMessage"></p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+              <button type="button" class="btn on-light fill checkout-submit" id="teachingRegisterPriceChangeContinueBtn">Continue</button>
+              <button type="button" class="admin-btn-ghost" id="teachingRegisterPriceChangeBackBtn">Go Back</button>
+            </div>
           </div>
           <div class="booking-note checkout-note">Your seat is requested now and confirmed once payment is connected. Private class access details are never posted publicly — only sent to confirmed registrants.</div>
           <div class="checkout-next-steps">
@@ -2942,6 +2991,7 @@ setPersistence(auth, browserLocalPersistence).catch(() => {});
 
 let currentUser = null;
 let currentProfile = null;
+let siteManagement = null;
 // Ministry's scheduling timezone. The Scheduling Settings panel (below)
 // can change this in-memory for preview purposes; loadSchedulingConfig()
 // would also assign it once that panel is reconnected to Firestore.
@@ -6573,10 +6623,14 @@ function renderBookingOrderSummary(){
   if(!wrap) return;
   const t = selectedSessionType();
   if(!t) return;
+  const price = Number(t.price) || 0;
+  const pricing = siteManagement ? siteManagement.pricing('oneonone', price) : { total: price };
+  const discountRow = siteManagement ? siteManagement.discountSummaryHtml('oneonone', price) : '';
   wrap.innerHTML =
-    '<div class="checkout-order-row"><span>' + escapeHtml(t.name) + '</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</span></div>' +
+    '<div class="checkout-order-row"><span>' + escapeHtml(t.name) + '</span><span>' + (price ? '$' + price.toFixed(2) : 'Free') + '</span></div>' +
     '<div class="checkout-order-row"><span>' + escapeHtml(formatLocalDateTime(bookingDateInput.value, bookingTimeSelect.value, selectedBookingTimeZone())) + '</span><span></span></div>' +
-    '<div class="checkout-order-total"><span>Total</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</span></div>';
+    discountRow +
+    '<div class="checkout-order-total"><span>Total</span><span>' + (pricing.total ? '$' + pricing.total.toFixed(2) : 'Free') + '</span></div>';
 }
 function openPolicyView(key){
   const p = BOOKING_POLICIES[key] || MINISTRY_POLICIES[key];
@@ -6589,7 +6643,10 @@ function openPolicyView(key){
 document.getElementById('bookingViewTerms').addEventListener('click', () => openPolicyView('terms'));
 document.getElementById('bookingViewNoRefund').addEventListener('click', () => openPolicyView('noRefund'));
 document.getElementById('closePolicyView').addEventListener('click', () => document.getElementById('policyViewDialog').close());
-document.getElementById('bookingConfirmCloseBtn').addEventListener('click', () => bookingDialog.close());
+document.getElementById('bookingConfirmCloseBtn').addEventListener('click', () => {
+  bookingDialog.close();
+  if(siteManagement) siteManagement.resetCheckout('oneonone');
+});
 document.getElementById('bookingCopyIdBtn').addEventListener('click', event => {
   copyConfirmationId(document.getElementById('bookingConfirmId').textContent, event.currentTarget);
 });
@@ -6619,6 +6676,7 @@ function openBooking(service){
   // page. Every other page's booking dialog is completely unaffected.
   if(document.body.dataset.page === 'one-on-one') return openOneOnOneInline(service);
   bookingForm.reset();
+  if(siteManagement) siteManagement.resetCheckout('oneonone');
   bookingStatus.textContent = '';
   document.getElementById('bookingStepDateNext').disabled = true;
   if(service){
@@ -6807,7 +6865,7 @@ bookingTimeSelect.addEventListener('change', async () => {
   }
 });
 
-async function createBooking({ name, email, phone, reason, sessionType, date, time, status, uid, clientTimeZone, smsConsent }){
+async function createBooking({ name, email, phone, reason, sessionType, date, time, status, uid, clientTimeZone, smsConsent, discount }){
   const slotId = date + '_' + time;
   const startAtUTC = etWallTimeToDate(date, hhmmToMinutes(time));
   const confirmationId = generateConfirmationId('1ON1');
@@ -6817,7 +6875,7 @@ async function createBooking({ name, email, phone, reason, sessionType, date, ti
     }
     const bookedAt = new Date().toISOString();
     const notificationLog = buildInitialNotificationLog(smsConsent);
-    const record = { id: 'demo-' + (++DEMO_BOOKING_SEQ), slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone, confirmationId, smsConsent: !!smsConsent, notificationLog, bookedAt, amountPaid: 0, transactionId: null, notes: '' };
+    const record = { id: 'demo-' + (++DEMO_BOOKING_SEQ), slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone, confirmationId, smsConsent: !!smsConsent, notificationLog, bookedAt, amountPaid: 0, transactionId: null, notes: '', ...(discount || {}) };
     if(status === 'confirmed') markBookingPaid(record);
     DEMO_BOOKINGS.push(record);
     DEMO_HOLDS = DEMO_HOLDS.filter(h => h.id !== holdIdFor(date, time));
@@ -6848,7 +6906,7 @@ async function createBooking({ name, email, phone, reason, sessionType, date, ti
       durationMinutes: meta.durationMinutes, bufferBeforeMin: meta.bufferBeforeMin, bufferAfterMin: meta.bufferAfterMin,
       capacity: meta.capacity, count: currentCount + 1, updatedAt: serverTimestamp()
     });
-    tx.set(bookingRef, { slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone: clientTimeZone || null, confirmationId, smsConsent: !!smsConsent, createdAt: serverTimestamp() });
+    tx.set(bookingRef, { slotId, date, time, sessionType, name, email, phone: phone || null, reason: reason || null, uid: uid || null, status, startAtUTC, clientTimeZone: clientTimeZone || null, confirmationId, smsConsent: !!smsConsent, ...(discount || {}), createdAt: serverTimestamp() });
   });
   try { await deleteDoc(doc(db, 'bookingHolds', holdIdFor(date, time))); } catch (err) { /* ok if already gone, or not yet expired — see releaseHold comment */ }
   return { id: bookingRef.id, slotId, date, time, sessionType, name, email, phone, reason, uid, status, confirmationId, smsConsent: !!smsConsent };
@@ -6864,6 +6922,37 @@ function throttledRecently(storageKey){
 function markThrottled(storageKey){
   try { localStorage.setItem(storageKey, String(Date.now())); } catch (err) { /* ignore */ }
 }
+
+// Shown only when a discount claim loses a race after the customer
+// already saw a discounted total — never silently books/registers them
+// at the new, higher price. Resolves true ("Continue") or false ("Go
+// Back"); the caller must not create anything until it resolves true.
+// `prefix` is 'booking' or 'teachingRegister', matching the matching
+// *PriceChangeConfirm/*PriceChangeMessage/*PriceChangeContinueBtn/
+// *PriceChangeBackBtn elements in each dialog.
+function waitForPriceChangeConfirm(prefix, oldTotal, newTotal){
+  return new Promise(resolve => {
+    const block = document.getElementById(prefix + 'PriceChangeConfirm');
+    const message = document.getElementById(prefix + 'PriceChangeMessage');
+    const continueBtn = document.getElementById(prefix + 'PriceChangeContinueBtn');
+    const backBtn = document.getElementById(prefix + 'PriceChangeBackBtn');
+    if(!block || !message || !continueBtn || !backBtn){ resolve(true); return; }
+    message.textContent = 'This discount code just reached its usage limit. Your total has changed from ' +
+      previewPriceLabel(oldTotal) + ' to ' + previewPriceLabel(newTotal) + '.';
+    continueBtn.textContent = 'Continue at ' + previewPriceLabel(newTotal);
+    block.hidden = false;
+    function onContinue(){ cleanup(); resolve(true); }
+    function onBack(){ cleanup(); resolve(false); }
+    function cleanup(){
+      block.hidden = true;
+      continueBtn.removeEventListener('click', onContinue);
+      backBtn.removeEventListener('click', onBack);
+    }
+    continueBtn.addEventListener('click', onContinue);
+    backBtn.addEventListener('click', onBack);
+  });
+}
+function previewPriceLabel(amount){ return amount > 0 ? '$' + Number(amount).toFixed(2) : 'Free'; }
 
 bookingForm.addEventListener('submit', async event => {
   event.preventDefault();
@@ -6910,17 +6999,50 @@ bookingForm.addEventListener('submit', async event => {
   bookingStatus.textContent = 'Requesting your session…';
   const clientTimeZone = selectedBookingTimeZone();
   const smsConsent = document.getElementById('bookingAgreeSms').checked;
+  const bookingPrice = Number(SESSION_TYPES[service] && SESSION_TYPES[service].price) || 0;
+  // A limited-use code must be claimed BEFORE the booking is created at
+  // its discounted price, not after — claim-then-book (rather than the
+  // reverse) is what makes maxUses race-safe: whichever of two
+  // simultaneous customers wins the atomic claim is the only one whose
+  // booking is ever created at the discounted price. The other finds
+  // out immediately — and because the price just changed from what
+  // they saw a moment ago, they are asked to explicitly accept the new
+  // total before anything is booked, never booked at the higher price
+  // automatically. This matters even more once a real payment processor
+  // is connected: a customer must never be charged more than the total
+  // they last agreed to.
+  let discountClaim = siteManagement ? await siteManagement.claimDiscount('oneonone', currentUser.uid) : null;
+  let discountLimitReached = false;
+  if(discountClaim && !discountClaim.ok){
+    const oldTotal = siteManagement.pricing('oneonone', bookingPrice).total;
+    siteManagement.resetCheckout('oneonone');
+    renderBookingOrderSummary();
+    discountClaim = null;
+    discountLimitReached = true;
+    bookingStatus.textContent = '';
+    bookingSubmitBtn.disabled = false;
+    const proceed = await waitForPriceChangeConfirm('booking', oldTotal, bookingPrice);
+    if(!proceed){
+      bookingStatus.textContent = 'Booking not submitted — the discount code reached its usage limit.';
+      return;
+    }
+    bookingSubmitBtn.disabled = true;
+    bookingStatus.textContent = 'Requesting your session…';
+  }
+  const discount = siteManagement ? siteManagement.discountRecord('oneonone', bookingPrice) : { subtotal: bookingPrice, discountCode: null, discountAmount: 0, totalAfterDiscount: bookingPrice };
   try {
     const record = await createBooking({
       name, email, phone, reason, sessionType: service, date: dateStr, time,
-      status: 'pending', uid: currentUser.uid, clientTimeZone, smsConsent
+      status: 'pending', uid: currentUser.uid, clientTimeZone, smsConsent, discount
     });
     markThrottled('lastBookingSubmit');
+    if(siteManagement && discountClaim) siteManagement.confirmDiscountClaim(discountClaim.claimId, { collection: 'bookings', id: record.id, uid: currentUser.uid });
     document.getElementById('bookingConfirmTitle').textContent = sessionTypeName(service);
     document.getElementById('bookingConfirmName').textContent = name;
     document.getElementById('bookingConfirmWhen').textContent = formatLocalDateTime(dateStr, time, clientTimeZone);
     document.getElementById('bookingConfirmEmail').textContent = email;
-    document.getElementById('bookingConfirmPayment').textContent = previewPaymentStatusLabel(SESSION_TYPES[service] && SESSION_TYPES[service].price);
+    document.getElementById('bookingConfirmPayment').textContent = previewPaymentStatusLabel(discount.totalAfterDiscount) +
+      (discountLimitReached ? ' (discount code reached its usage limit — full price applied)' : '');
     document.getElementById('bookingConfirmId').textContent = record.confirmationId;
     document.getElementById('bookingConfirmSmsNote').textContent = smsConsent ? ' and phone' : '';
     bookingForm.dataset.lastBookingId = record.id;
@@ -6940,6 +7062,9 @@ bookingForm.addEventListener('submit', async event => {
       renderMemberDashboardPanels();
     }
   } catch (err) {
+    // The booking never happened, so a claimed discount use must be
+    // given back rather than left counted against maxUses for nothing.
+    if(siteManagement && discountClaim) siteManagement.releaseDiscountClaim(discountClaim.claimId);
     console.error('[booking] createBooking failed', err.code || err.message || err);
     if(err.message === 'slot-taken'){
       bookingStatus.textContent = 'That time was just taken by someone else — pick another.';
@@ -8967,13 +9092,11 @@ document.getElementById('ownerQuickActions').addEventListener('click', event => 
   else if(action === 'website'){ showOwnerSection('website'); }
 });
 
-const OWNER_WEBSITE_PAGES = ['Home Page', 'Teaching Page', 'Prayer Page', 'Our Story', 'Beliefs', 'Gather', 'Connect', 'Give', 'Shop', 'Navigation', 'Footer'];
 function renderOwnerWebsitePages(){
+  if(siteManagement){ siteManagement.renderOwnerWebsitePages(); return; }
   const wrap = document.getElementById('ownerWebsitePagesList');
   if(!wrap) return;
-  wrap.innerHTML = OWNER_WEBSITE_PAGES.map(name =>
-    '<div class="admin-website-page-row"><span>' + escapeHtml(name) + '</span><span class="demo-badge">Not Yet Connected</span></div>'
-  ).join('');
+  wrap.innerHTML = '<p class="admin-hint">Loading page controls…</p>';
 }
 
 // No real payment processor is connected anywhere in this project yet
@@ -9010,6 +9133,7 @@ async function loadOwnerData(){
   renderOwnerNotifications();
   renderTeachingManager();
   renderOwnerWebsitePages();
+  if(siteManagement) siteManagement.renderOwnerDiscountCodes();
   renderOwnerMediaGallery();
   renderBookingsPanels();
   renderClassRegistrationsPanel();
@@ -10318,13 +10442,13 @@ document.getElementById('ownerLearningPathsList').addEventListener('click', even
    real right now (pending payment), and only the payment step is a
    visual demonstration until a real processor is connected.
    --------------------------------------------------------------- */
-async function createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid, smsConsent }){
+async function createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid, smsConsent, discount }){
   const t = TEACHINGS[teachingId] || {};
   const confirmationId = generateConfirmationId(classConfirmationPrefix(t));
   const data = {
     teachingId, teachingTitle: t.title || '', teachingDate: t.date || '',
     firstName, lastName, email, phone, status: 'pending_payment', uid: uid || null,
-    attendanceStatus: 'not-marked', amountPaid: 0, notes: '', confirmationId, smsConsent: !!smsConsent
+    attendanceStatus: 'not-marked', amountPaid: 0, notes: '', confirmationId, smsConsent: !!smsConsent, ...(discount || {})
   };
   if(DEMO_MODE){
     const registeredAt = new Date().toISOString();
@@ -10406,11 +10530,26 @@ function resumePendingTeachingRegistration(){
   memberPortalDialog.close();
   openTeachingRegister(id);
 }
+function renderTeachingRegistrationOrderSummary(){
+  const wrap = document.getElementById('teachingRegisterOrderSummary');
+  if(!wrap) return;
+  const teachingId = teachingRegisterForm.dataset.teachingId;
+  const t = TEACHINGS[teachingId];
+  if(!t) return;
+  const price = Number(t.price) || 0;
+  const pricing = siteManagement ? siteManagement.pricing('teaching', price) : { total: price };
+  const discountRow = siteManagement ? siteManagement.discountSummaryHtml('teaching', price) : '';
+  wrap.innerHTML =
+    '<div class="checkout-order-row"><span>' + escapeHtml(t.title || 'Teaching') + '</span><span>' + (price ? '$' + price.toFixed(2) : 'Free') + '</span></div>' +
+    discountRow +
+    '<div class="checkout-order-total"><span>Total</span><span>' + (pricing.total ? '$' + pricing.total.toFixed(2) : '$0.00') + '</span></div>';
+}
 function openTeachingRegister(teachingId){
   const t = TEACHINGS[teachingId];
   if(!t) return;
   if(!currentUser){ requireAccountForTeachingRegister(teachingId); return; }
   teachingRegisterForm.reset();
+  if(siteManagement) siteManagement.resetCheckout('teaching');
   teachingRegisterForm.hidden = false;
   document.getElementById('teachingRegisterConfirmStep').hidden = true;
   teachingRegisterStatus.textContent = '';
@@ -10426,9 +10565,7 @@ function openTeachingRegister(teachingId){
   const art = teachingCardArt(t);
   artEl.className = 'checkout-summary' + (art ? '' : ' ' + teachingArtClass(t.category));
   artEl.style.backgroundImage = art ? "url('" + art + "')" : '';
-  document.getElementById('teachingRegisterOrderSummary').innerHTML =
-    '<div class="checkout-order-row"><span>' + escapeHtml(t.title || 'Teaching') + '</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</span></div>' +
-    '<div class="checkout-order-total"><span>Total</span><span>' + (t.price ? '$' + Number(t.price).toFixed(2) : '$0.00') + '</span></div>';
+  renderTeachingRegistrationOrderSummary();
   document.getElementById('teachingRegisterSubmitLabel').textContent = t.price ? 'Continue To Payment' : 'Reserve My Seat';
   if(currentUser && currentProfile){
     const parts = (currentProfile.name || '').split(' ');
@@ -10515,12 +10652,38 @@ teachingRegisterForm.addEventListener('submit', async event => {
   const email = document.getElementById('teachingRegisterEmail').value.trim();
   const phone = toE164(document.getElementById('teachingRegisterPhoneCountry'), document.getElementById('teachingRegisterPhoneNumber'));
   const smsConsent = document.getElementById('teachingRegisterAgreeSms').checked;
+  const teachingPrice = Number(t.price) || 0;
   if(!phone){ teachingRegisterStatus.textContent = 'Enter a valid phone number, including country code.'; return; }
   teachingRegisterSubmitBtn.disabled = true;
   teachingRegisterStatus.textContent = 'Reserving your seat…';
+  // Claim a limited-use code BEFORE creating the registration at its
+  // discounted price — see the matching comment in the booking submit
+  // handler above for why claim-then-register (not the reverse) is
+  // what makes maxUses race-safe, and why a price increase after the
+  // fact must be explicitly accepted, never applied automatically.
+  let discountClaim = siteManagement ? await siteManagement.claimDiscount('teaching', currentUser.uid) : null;
+  let discountLimitReached = false;
+  if(discountClaim && !discountClaim.ok){
+    const oldTotal = siteManagement.pricing('teaching', teachingPrice).total;
+    siteManagement.resetCheckout('teaching');
+    renderTeachingRegistrationOrderSummary();
+    discountClaim = null;
+    discountLimitReached = true;
+    teachingRegisterStatus.textContent = '';
+    teachingRegisterSubmitBtn.disabled = false;
+    const proceed = await waitForPriceChangeConfirm('teachingRegister', oldTotal, teachingPrice);
+    if(!proceed){
+      teachingRegisterStatus.textContent = 'Registration not submitted — the discount code reached its usage limit.';
+      return;
+    }
+    teachingRegisterSubmitBtn.disabled = true;
+    teachingRegisterStatus.textContent = 'Reserving your seat…';
+  }
+  const discount = siteManagement ? siteManagement.discountRecord('teaching', teachingPrice) : { subtotal: teachingPrice, discountCode: null, discountAmount: 0, totalAfterDiscount: teachingPrice };
   try {
-    const record = await createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid: currentUser.uid, smsConsent });
+    const record = await createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid: currentUser.uid, smsConsent, discount });
     markThrottled('lastTeachingRegisterSubmit');
+    if(siteManagement && discountClaim) siteManagement.confirmDiscountClaim(discountClaim.claimId, { collection: 'teachingRegistrations', id: record.id, uid: currentUser.uid });
     // If this registration fulfills an active waitlist offer, close
     // that loop out — the seat is now taken, so the offer is done.
     const claimedOffer = CLASS_WAITLIST.find(w => w.teachingId === teachingId && liveWaitlistStatus(w) === 'offer-sent' &&
@@ -10533,13 +10696,17 @@ teachingRegisterForm.addEventListener('submit', async event => {
     document.getElementById('teachingRegisterConfirmName').textContent = (firstName + ' ' + lastName).trim();
     document.getElementById('teachingRegisterConfirmWhen').textContent = formatTeachingDate(t.date || '') + ' · ' + formatTeachingTime(t.startTime, t.timeZone);
     document.getElementById('teachingRegisterConfirmFormat').textContent = formatLabel;
-    document.getElementById('teachingRegisterConfirmPayment').textContent = previewPaymentStatusLabel(t.price);
+    document.getElementById('teachingRegisterConfirmPayment').textContent = previewPaymentStatusLabel(discount.totalAfterDiscount) +
+      (discountLimitReached ? ' (discount code reached its usage limit — full price applied)' : '');
     document.getElementById('teachingRegisterConfirmId').textContent = record.confirmationId;
     document.getElementById('teachingRegisterConfirmSmsNote').textContent = smsConsent ? ' and phone' : '';
     teachingRegisterForm.hidden = true;
     document.getElementById('teachingRegisterConfirmStep').hidden = false;
     teachingRegisterForm.reset();
   } catch (err) {
+    // The registration never happened, so a claimed discount use must
+    // be given back rather than left counted against maxUses for nothing.
+    if(siteManagement && discountClaim) siteManagement.releaseDiscountClaim(discountClaim.claimId);
     teachingRegisterStatus.textContent = 'Could not submit your registration. Please try again.';
   } finally {
     teachingRegisterSubmitBtn.disabled = false;
@@ -12588,3 +12755,24 @@ const observer = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 setTimeout(() => document.querySelector('.reveal')?.classList.add('visible'), 100);
+
+/* Owner-managed page content and shared checkout discount codes. Kept
+   in a focused module so page-by-page editors can be added without
+   turning the already-large booking/portal file into one more monolith. */
+siteManagement = initSiteManagement({
+  DEMO_MODE,
+  db,
+  firestore: { doc, setDoc, getDoc, collection, getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction },
+  escapeHtml,
+  getBookingSubtotal: () => {
+    const selected = selectedSessionType();
+    return selected ? Number(selected.price) || 0 : 0;
+  },
+  getTeachingSubtotal: () => {
+    const teaching = TEACHINGS[teachingRegisterForm.dataset.teachingId];
+    return teaching ? Number(teaching.price) || 0 : 0;
+  },
+  rerenderBookingSummary: renderBookingOrderSummary,
+  rerenderTeachingSummary: renderTeachingRegistrationOrderSummary
+});
+renderOwnerWebsitePages();
