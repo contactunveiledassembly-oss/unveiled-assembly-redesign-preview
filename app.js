@@ -470,7 +470,7 @@ function navHtml(){
   return `
   <nav class="nav" id="nav">
     <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
-      <span class="brand-badge"><span class="brand-logo-fallback" aria-hidden="true">UA</span><img class="brand-logo" src="${BASE}assets/ua-logo-transparent.png" alt="Unveiled Assembly logo" /></span>
+      <span class="brand-badge"><img class="brand-logo" src="${BASE}assets/ua-logo-transparent.png" alt="Unveiled Assembly logo" /></span>
       <span class="brand-text"><span class="line1">The Unveiled</span><span class="line2">Assembly of Christ Jesus</span></span>
     </a>
 
