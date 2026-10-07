@@ -10,13 +10,10 @@
    name left between the two files. See PROJECT-CONTEXT.md for the
    full collision audit this was built against.
    ================================================================ */
-.beliefs-real-nav-proto-banner{
-  position:fixed; top:0; left:0; right:0; z-index:300; height:26px;
-  display:flex; align-items:center; justify-content:center; text-align:center;
-  background:#c9a227; color:#0a0a0a; font-family:'Inter',sans-serif; font-size:10px;
-  font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:0 16px;
-}
-body[data-page="beliefs"] .nav{ top:26px; }
+/* The real shared app.js/styles.css already provide a preview banner
+   and nav offset on localhost (DEMO_MODE adds body.demo-mode, which
+   injects .preview-banner and sets .nav{top:26px}) — no page-specific
+   duplicate of either needed here. */
 
 /* Only the two custom properties the real site's own :root doesn't
    already provide (confirmed by direct comparison — every other
