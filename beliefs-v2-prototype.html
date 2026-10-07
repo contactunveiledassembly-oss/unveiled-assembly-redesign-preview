@@ -815,6 +815,12 @@
     </div>
   </dialog>
 
+  <!-- Local, embedded KJV passage data — public domain King James
+       Version text for all 36 Scripture references used on this page.
+       Loaded as a plain script (not fetch/JSON) so it's part of the
+       page's own initial load and the reader below needs zero network
+       requests afterward, including fully offline. -->
+  <script src="assets/beliefs-v2/kjv-passages.js"></script>
   <script>
     const nav = document.getElementById('nav');
     const menuButton = document.getElementById('menuButton');
@@ -940,9 +946,21 @@
     const readerReferences = document.getElementById('readerReferences');
     const readerText = document.getElementById('readerText');
     const readerLicense = document.getElementById('readerLicense');
-    const passageCache = new Map();
     let activeReference = '';
     const kjvNotice = 'King James Version — Public Domain in the United States.';
+
+    // One shared normalization function, used both to build the local
+    // KJV_PASSAGES lookup keys (see assets/beliefs-v2/kjv-passages.js)
+    // and here when opening a passage — en dash/hyphen, extra spaces,
+    // and case are all treated as equivalent. The displayed reference
+    // keeps its typographic en dash; only the lookup key is normalized.
+    function normalizeScriptureRef(ref) {
+      return ref
+        .replace(/–|—/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    }
 
     const renderKjvPassage = data => {
       const paragraph = document.createElement('p');
@@ -962,25 +980,23 @@
       readerLicense.textContent = kjvNotice;
     };
 
-    const loadReaderPassage = async reference => {
+    // Reads from the local, embedded KJV_PASSAGES data only — no
+    // network request of any kind. Every one of the 36 references
+    // used on this page is embedded in assets/beliefs-v2/kjv-passages.js
+    // (see the completeness audit below, which confirms this at load
+    // time), so the "could not load" branch is a defensive fallback
+    // for a reference outside that set, not the normal path.
+    const loadReaderPassage = reference => {
       activeReference = reference;
       readerPassage.textContent = reference;
       [...readerReferences.children].forEach(button => button.classList.toggle('active', button.dataset.reference === reference));
 
-      readerText.classList.add('loading');
-      readerText.textContent = 'Preparing the passage…';
-      try {
-        let data = passageCache.get(reference);
-        if (!data) {
-          const response = await fetch(`https://bible-api.com/${encodeURIComponent(reference)}?translation=kjv`);
-          if (!response.ok) throw new Error('Passage request failed');
-          data = await response.json();
-          passageCache.set(reference, data);
-        }
-        if (activeReference === reference) renderKjvPassage(data);
-      } catch (error) {
+      const data = KJV_PASSAGES[normalizeScriptureRef(reference)];
+      if (data) {
+        renderKjvPassage(data);
+      } else {
         readerText.classList.remove('loading');
-        readerText.innerHTML = '<p>The KJV passage could not load in this preview. The reader design and navigation are ready for the final Scripture connection.</p>';
+        readerText.innerHTML = '<p>This passage is not yet embedded in the local Scripture data.</p>';
         readerLicense.textContent = kjvNotice;
       }
     };
@@ -1028,6 +1044,30 @@
     });
     document.getElementById('dialogClose').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+
+    // ---- Development-time completeness audit ----
+    // Reads every .scripture reference actually on the page, splits
+    // each group on "•", normalizes each one the same way the reader
+    // does, and compares that set against the local KJV_PASSAGES keys.
+    // Logs the exact missing references (if any) and only reports
+    // "36 of 36" when every reference used on the page is covered.
+    (function auditKjvCoverage() {
+      const pageRefs = new Set();
+      document.querySelectorAll('.scripture').forEach(scripture => {
+        const raw = scripture.textContent.replace(/^Scripture:\s*/i, '').trim();
+        raw.split('•').map(r => r.trim()).filter(Boolean).forEach(r => pageRefs.add(normalizeScriptureRef(r)));
+      });
+      const available = new Set(Object.keys(KJV_PASSAGES || {}));
+      const missing = [...pageRefs].filter(r => !available.has(r));
+      const presentCount = pageRefs.size - missing.length;
+      const summary = `${presentCount} of ${pageRefs.size} KJV passages available locally`;
+      if (missing.length) {
+        console.warn('[KJV audit]', summary, '— missing:', missing);
+      } else {
+        console.log('[KJV audit]', summary, '— every Scripture reference on this page resolves to embedded KJV text. No external Scripture API is used.');
+      }
+      window.__kjvAudit = { total: pageRefs.size, present: presentCount, missing };
+    })();
   </script>
 </body>
 </html>
