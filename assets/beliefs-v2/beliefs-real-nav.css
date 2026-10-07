@@ -18,39 +18,22 @@
 }
 body[data-page="beliefs"] .nav{ top:26px; }
 
+/* Only the two custom properties the real site's own :root doesn't
+   already provide (confirmed by direct comparison — every other
+   variable this page used was byte-identical to styles.css's own, so
+   those duplicates were removed entirely rather than left shadowing
+   the real ones). */
 :root {
-      --black: #0a0a0a;
-      --black-2: #000000;
-      --panel: #111111;
       --panel-hover: #151515;
-      --ivory: #f5f3ee;
-      --white: #ffffff;
-      --stone: #a7a7a7;
-      --stone-dim: #8f8f8f;
-      --ink-muted: #525252;
-      --ink-dim: #6b6b6b;
-      --line-dark: rgba(245, 243, 238, .14);
-      --line-light: rgba(10, 10, 10, .14);
-      --display: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
-      --sans: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
-      --mono: 'Courier Prime', 'Courier New', monospace;
       --page-x: clamp(22px, 5vw, 76px);
     }
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; background: var(--black); }
-body {
-      margin: 0;
-      overflow-x: hidden;
-      background: var(--black);
-      color: var(--ivory);
-      font-family: var(--sans);
-      -webkit-font-smoothing: antialiased;
-    }
-a { color: inherit; text-decoration: none; }
-button { color: inherit; font: inherit; }
-p, h1, h2, h3, h4 { margin-top: 0; }
-img { display: block; max-width: 100%; }
-::selection { background: var(--ivory); color: var(--black); }
+/* Base element resets (*, html, body, a, button, headings/p, img,
+   ::selection) were removed here entirely — confirmed property-for-
+   property identical to styles.css's own versions, so they were pure
+   duplicates rather than needed overrides. #ua-beliefs-v2 inherits
+   everything it needs from the real stylesheet already loaded before
+   this file. */
+#ua-beliefs-v2 ::selection, .ub-scripture-reader ::selection { background: var(--ivory); color: var(--black); }
 .ub-grain {
       position: fixed;
       inset: 0;
@@ -112,11 +95,6 @@ to { opacity: .09; transform: translateY(-50%) scale(1.015); }
 }
 .ub-eyebrow { color: var(--stone); font-size: 11px; letter-spacing: .28em; text-transform: uppercase; }
 .ub-hero .ub-eyebrow { flex: 0 0 auto; }
-.scroll-cue { display: flex; align-items: center; gap: 12px; margin-top: 28px; color: var(--stone-dim); font: 400 9px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; }
-.scroll-cue span { width: 44px; height: 1px; background: var(--line-dark); position: relative; overflow: hidden; }
-.scroll-cue span::after { content: ''; position: absolute; inset: 0; background: var(--ivory); transform: translateX(-100%); animation: cue 2.4s ease-in-out infinite; }
-@keyframes cue {55%, 100% { transform: translateX(100%); }
-}
 .ub-beliefs-section { position: relative; padding: 72px var(--page-x) 104px; }
 .ub-beliefs-intro-row { display: grid; grid-template-columns: minmax(240px, .72fr) minmax(0, 1.28fr); gap: clamp(32px, 7vw, 100px); align-items: start; margin-bottom: 52px; }
 .ub-belief-intro { max-width: 760px; margin: 0; color: var(--stone); font-size: clamp(17px, 1.8vw, 23px); line-height: 1.65; }
@@ -184,7 +162,7 @@ to { opacity: .09; transform: translateY(-50%) scale(1.015); }
 .ub-reader-close { border: 0; background: none; color: var(--stone); cursor: pointer; font: 400 10px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; transition: color .2s ease; }
 .ub-reader-close:hover { color: var(--ivory); }
 .ub-reader-layout { min-height: 0; display: grid; grid-template-columns: minmax(240px, 30%) minmax(0, 1fr); }
-.ub-reader-sidebar { position: relative; min-height: 0; padding: clamp(28px, 4vw, 52px); overflow-y: auto; border-right: 1px solid var(--line-dark); background: linear-gradient(180deg, rgba(10,10,10,.48), rgba(10,10,10,.94)), url('assets/beliefs-hero-v3.png') 73% center / cover; }
+.ub-reader-sidebar { position: relative; min-height: 0; padding: clamp(28px, 4vw, 52px); overflow-y: auto; border-right: 1px solid var(--line-dark); background: linear-gradient(180deg, rgba(10,10,10,.48), rgba(10,10,10,.94)), url('beliefs-hero-v3.png') 73% center / cover; }
 .ub-reader-sidebar::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(135deg, transparent 20%, rgba(245,243,238,.045), transparent 70%); }
 .ub-reader-side-inner { position: relative; z-index: 1; }
 .ub-reader-number { margin-bottom: 22px; color: rgba(245,243,238,.36); font: 300 clamp(58px, 7vw, 94px)/.8 var(--display); letter-spacing: -.055em; }
@@ -228,21 +206,15 @@ to { opacity: .09; transform: translateY(-50%) scale(1.015); }
 .ub-reader-passage { font-size: clamp(31px, 10vw, 46px); }
 .ub-reader-text { min-height: 250px; font-size: 23px; }
 }
-:focus-visible { outline: 2px solid var(--ivory); outline-offset: 4px; }
+#ua-beliefs-v2 :focus-visible, .ub-scripture-reader :focus-visible { outline: 2px solid var(--ivory); outline-offset: 4px; }
 .ub-cta :focus-visible { outline-color: var(--black); }
-/* The full-size nav (9 links + icon + Book A Session) needs real
-       room to sit centered without crowding — shrink it gradually in
-       this medium zone instead of staying full-size right up against
-       the 1300px hamburger cutover below, which left no margin and
-       could crowd/uncenter the links on common laptop widths. */@media (max-width: 820px) {.ub-hero { min-height: 720px; grid-template-columns: 1fr; grid-template-rows: auto auto auto; align-content: end; row-gap: 34px; }
-.scroll-cue { margin-top: 4px; }
+@media (max-width: 820px) {.ub-hero { min-height: 720px; grid-template-columns: 1fr; grid-template-rows: auto auto auto; align-content: end; row-gap: 34px; }
 .ub-beliefs-intro-row { grid-template-columns: 1fr; gap: 18px; margin-bottom: 40px; }
 .ub-belief-grid { grid-template-columns: 1fr; }
 .ub-belief-card { min-height: 0; }
 .ub-belief-card.wide { grid-column: auto; display: flex; gap: 0; }
 }
 @media (max-width: 580px) {.ub-hero { min-height: 700px; padding-top: 112px; padding-bottom: 36px; row-gap: 27px; }
-.scroll-cue { grid-column: auto; margin-top: 2px; }
 .ub-beliefs-section { padding-top: 56px; padding-bottom: 72px; }
 .ub-belief-card { padding: 28px 24px; }
 .ub-belief-card p { font-size: 14px; }
@@ -262,7 +234,7 @@ to { opacity: .09; transform: translateY(-50%) scale(1.015); }
       position: absolute;
       inset: 0;
       overflow: hidden;
-      background-image: url('assets/beliefs-hero-v3.png');
+      background-image: url('beliefs-hero-v3.png');
       background-color: var(--black);
       background-size: cover;
       background-position: center 58%;
@@ -334,7 +306,8 @@ to { opacity: .09; transform: translateY(-50%) scale(1.015); }
 .ub-revelation-interlude { min-height: 250px; margin: 8px 0; padding: 38px 22px; }
 .ub-revelation-quote { font-size: clamp(34px, 11vw, 58px); }
 }
-@media (prefers-reduced-motion: reduce) {html { scroll-behavior: auto; }
-*, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+@media (prefers-reduced-motion: reduce) {
+#ua-beliefs-v2 *, #ua-beliefs-v2 *::before, #ua-beliefs-v2 *::after,
+.ub-scripture-reader *, .ub-scripture-reader *::before, .ub-scripture-reader *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 .ub-reveal { opacity: 1; transform: none; }
 }
