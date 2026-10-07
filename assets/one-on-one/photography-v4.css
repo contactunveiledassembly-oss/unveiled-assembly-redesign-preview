@@ -1,0 +1,79 @@
+/* One-on-One photography preview — page-scoped image replacements only. */
+body[data-page="one-on-one"] .oo-hero-media {
+  background-image: url('hero-v4.png');
+  background-position: center 48%;
+}
+
+body[data-page="one-on-one"] .oo-booking-image {
+  background-image: url('booking-v2.png');
+  background-position: center 54%;
+}
+
+body[data-page="one-on-one"] .oo-expect-media {
+  background-image: url('expect-v3.png');
+  background-position: center 48%;
+}
+
+body[data-page="one-on-one"] .oo-closing-media {
+  background-image: url('closing-v3.png');
+  background-position: center 48%;
+}
+
+/* Keep the quiet hero keywords legible over the sunlit curtain. */
+body[data-page="one-on-one"] .oo-hero-words {
+  color: rgba(250, 247, 240, .96);
+  padding: 26px 22px;
+  background: radial-gradient(ellipse at center, rgba(8, 8, 8, .72) 0%, rgba(8, 8, 8, .46) 48%, rgba(8, 8, 8, 0) 76%);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .92);
+}
+
+body[data-page="one-on-one"] .oo-hero-words::after {
+  background: rgba(250, 247, 240, .72);
+}
+
+/* Let the navigation flow into the hero instead of ending in a hard line. */
+body[data-page="one-on-one"] .nav,
+body[data-page="one-on-one"] .nav.scrolled {
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+/* Soft page-specific scroll reveals. The site's observer adds .visible. */
+body[data-page="one-on-one"] .oo-soft-reveal {
+  opacity: 0;
+  transition:
+    opacity 850ms cubic-bezier(.22, 1, .36, 1),
+    transform 950ms cubic-bezier(.22, 1, .36, 1);
+  will-change: opacity, transform;
+}
+
+body[data-page="one-on-one"] .oo-soft-reveal-left {
+  transform: translate3d(-14px, 12px, 0);
+}
+
+body[data-page="one-on-one"] .oo-soft-reveal-right {
+  transform: translate3d(14px, 12px, 0);
+}
+
+body[data-page="one-on-one"] .oo-soft-reveal-up {
+  transform: translate3d(0, 16px, 0);
+}
+
+body[data-page="one-on-one"] .oo-soft-reveal.visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+body[data-page="one-on-one"] .oo-booking-panel.oo-soft-reveal,
+body[data-page="one-on-one"] .oo-expect-media.oo-soft-reveal {
+  transition-delay: 90ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="one-on-one"] .oo-soft-reveal,
+  body[data-page="one-on-one"] .oo-soft-reveal.visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
