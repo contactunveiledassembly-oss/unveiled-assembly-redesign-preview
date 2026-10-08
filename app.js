@@ -28,7 +28,7 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-import { initSiteManagement } from "./site-management.js?v=1";
+import { initSiteManagement } from "./site-management.js?v=2";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may

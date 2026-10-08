@@ -661,4 +661,18 @@ Running at **http://localhost:8080/** — sign in as the demo admin (`contactunv
 
 ---
 
+## 29. Session Log — 2026-10-08: Give page editorial redesign and Owner Portal editor
+
+The owner approved moving the reviewed Give-page prototype to the live GitHub Pages site. The implementation preserves the shared navigation, typography, dark visual system, Firebase authentication, and existing Owner Portal architecture.
+
+- Rebuilt `give.html` around the approved dark editorial design, including a conceptual Give hero, an optional featured upcoming-event module, the “Feeding Our Community” story, and the giving interface.
+- Added four high-resolution conceptual images under `assets/give/`. Every conceptual image is visibly labeled as concept imagery and not represented as an actual ministry photograph.
+- The featured event can be shown or hidden. Its title, label, date, time, description, button label, image, and optional location are editable in Owner Portal → Website Pages → Give. Location has its own visibility toggle.
+- Date, time, and location default to honest “to be announced” language; no event details were invented for the live release.
+- The giving interface defaults to a $50 one-time Cash App gift and supports presets plus a custom amount. Cash App is the only active payment path. “Card Payment” and monthly giving remain clearly disabled previews until a secure processor is connected; no card data is collected and no donation record is fabricated.
+- Added editable Give-page hero, food-drive story panels, giving-form copy, closing copy, and image paths to the Firebase-backed `pageContent/give` editor.
+- Added smoother page-entry, reveal, hover, and navigation-adjacent transitions, with reduced-motion support and responsive desktop/mobile layouts.
+- Audited the former Give imagery: the source images were only about 138–377 px wide and were being enlarged substantially. The replacements are 1672×941 to prevent the same visible softness at large display sizes.
+- Cache-busting was advanced for the Give page and `site-management.js` so the new editor and design load immediately after deployment.
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

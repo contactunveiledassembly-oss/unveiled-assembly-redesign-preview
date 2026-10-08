@@ -2679,3 +2679,58 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
   .loc-bar-row{grid-template-columns:90px 1fr auto;gap:8px}
   .loc-state-tile{font-size:7.5px}
 }
+
+/* ---------- Give page — approved editorial revision (Oct 2026) ---------- */
+body[data-page="give"]{background:#0a0a0a;color:var(--ivory)}
+.give-page-fade{position:fixed;inset:0;z-index:899;background:#000;opacity:1;pointer-events:none;transition:opacity 1.05s cubic-bezier(.22,1,.36,1)}
+body.give-ready .give-page-fade{opacity:0}
+body[data-page="give"] .reveal{transform:translateY(14px);transition:opacity 1.05s cubic-bezier(.22,1,.36,1),transform 1.05s cubic-bezier(.22,1,.36,1)}
+body[data-page="give"] .gv-hero{min-height:92vh;border-bottom:1px solid var(--line-dark)}
+body[data-page="give"] .gv-hero-media{background-image:url('assets/give/hero-editorial-v2.png');background-position:50% 52%;transform:scale(1.015);transition:transform 1.8s cubic-bezier(.22,1,.36,1)}
+body.give-ready .gv-hero-media{transform:scale(1)}
+body[data-page="give"] .gv-hero-overlay{background:linear-gradient(90deg,rgba(10,10,10,.82),rgba(10,10,10,.12) 72%),linear-gradient(0deg,#0a0a0a,transparent 48%)}
+body[data-page="give"] .gv-hero-content{padding:0 6vw 70px;max-width:760px}
+body[data-page="give"] .gv-hero-title{font-size:clamp(72px,12vw,168px);line-height:.82;margin:20px 0 28px}
+body[data-page="give"] .gv-hero-sub{max-width:18ch}
+body[data-page="give"] .gv-hero-words{color:#fff;background:rgba(0,0,0,.32);border-right:1px solid rgba(255,255,255,.72);padding:14px 16px 14px 18px;text-shadow:0 1px 12px rgba(0,0,0,.95);backdrop-filter:blur(3px);font-weight:500}
+.give-concept-label{position:absolute;z-index:4;right:18px;bottom:18px;background:rgba(0,0,0,.78);border:1px solid rgba(255,255,255,.28);padding:8px 11px;font:10px var(--mono);letter-spacing:.04em;color:#ddd}
+
+.give-feature{position:relative;display:grid;grid-template-columns:1fr 1fr;min-height:680px;background:#000;color:#f5f5f3;border-bottom:1px solid rgba(255,255,255,.18);overflow:hidden}
+.give-feature[hidden],.give-event-location[hidden]{display:none!important}
+.give-feature-content{display:flex;flex-direction:column;justify-content:center;padding:76px 6vw 82px;background:#000}
+.give-feature-number{font:10px var(--mono);letter-spacing:.12em;color:#7e7e7e;margin-bottom:42px}
+.give-upcoming{display:flex;align-items:center;gap:13px;margin:0 0 34px;color:#f5f5f3;font:500 14px/1 var(--sans);letter-spacing:.24em;text-transform:uppercase}
+.give-upcoming i{display:block;width:38px;height:1px;background:currentColor}
+.give-feature-content>.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em}
+.give-feature-content h2{font:400 clamp(46px,5vw,72px)/.91 var(--sans);letter-spacing:-.052em;margin:16px 0 28px;max-width:9ch}
+.give-event-schedule{display:grid;grid-template-columns:minmax(255px,1.4fr) minmax(175px,1fr);width:100%;max-width:560px;border-top:1px solid rgba(255,255,255,.18);border-bottom:1px solid rgba(255,255,255,.18);font-family:var(--mono)}
+.give-event-schedule>div{padding:15px 18px 16px 0}.give-event-schedule>div+div{padding-left:18px;border-left:1px solid rgba(255,255,255,.18)}
+.give-event-schedule span,.give-event-location span{display:block;color:#a9a9a9;text-transform:uppercase;letter-spacing:.12em;font-size:11px;margin-bottom:8px}
+.give-event-schedule strong,.give-event-location strong{display:block;color:#f5f5f3;font:400 15px/1.45 var(--mono);letter-spacing:.01em}
+.give-event-schedule strong{white-space:nowrap}
+.give-event-location{width:100%;max-width:560px;margin:0 0 26px;padding:15px 0 16px;border-bottom:1px solid rgba(255,255,255,.18);font-family:var(--mono)}
+.give-event-location[hidden]+#giveEventDetails{margin-top:26px}
+.give-feature-content>p{color:#aaa;font-size:15px;line-height:1.75;max-width:42ch;margin:0 0 30px}
+.give-feature-media{position:relative;min-height:680px;overflow:hidden;border-left:1px solid rgba(255,255,255,.18);background:url('assets/give/event-handoff-v2.png') 54% 50%/cover no-repeat;filter:grayscale(1) contrast(1.12) brightness(.82);transition:transform 1.1s cubic-bezier(.22,1,.36,1)}
+.give-feature:hover .give-feature-media{transform:scale(1.018)}
+.give-feature-media:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.44),transparent 24%),linear-gradient(0deg,rgba(0,0,0,.58),transparent 58%)}
+.give-feature-media span{position:absolute;z-index:2;left:28px;bottom:26px;color:#d0d0d0;border-left:1px solid #fff;padding-left:12px;text-transform:uppercase;letter-spacing:.12em;font:10px var(--mono)}
+
+.give-community{background:#0c0c0c;color:var(--ivory);padding:110px 6vw}
+.give-community-intro{display:grid;grid-template-columns:.8fr 1.4fr;gap:40px;align-items:end;margin-bottom:60px}
+.give-community-intro .eyebrow{align-self:start;padding-top:14px}.give-community-intro h2{font:400 clamp(40px,6vw,78px)/.92 var(--sans);letter-spacing:-.05em;margin:0}.give-community-intro p{grid-column:2;font-size:16px;line-height:1.75;color:var(--stone);max-width:700px;margin:0}
+.give-story-grid{display:grid;grid-template-columns:1.5fr 1fr;border:1px solid var(--line-dark)}
+.give-story-media{margin:0;display:flex;flex-direction:column}.give-story-image{flex:1;min-height:620px;background:url('assets/give/community-meals-v2.png') center/cover no-repeat}
+.give-story-media figcaption{display:flex;justify-content:space-between;gap:20px;padding:12px 16px;background:#090909;border-top:1px solid var(--line-dark);color:var(--stone);font:10px var(--mono);text-transform:uppercase;letter-spacing:.08em}
+.give-story-notes{display:flex;flex-direction:column}.give-story-notes article{flex:1;padding:36px;border-left:1px solid var(--line-dark);border-bottom:1px solid var(--line-dark);display:flex;flex-direction:column;justify-content:center}.give-story-notes article:last-child{border-bottom:0}.give-story-notes article>span{font:12px var(--mono);color:var(--stone)}
+.give-story-notes h3{font:400 clamp(21px,1.55vw,25px)/1.12 var(--sans);letter-spacing:-.035em;margin:24px 0 12px}.give-story-notes p{font-size:14px;line-height:1.7;color:var(--stone);margin:0}
+
+body[data-page="give"] .gv-donate-split{min-height:760px;background:#090909}
+body[data-page="give"] .gv-donate-image{background-image:url('assets/give/giving-panel-v2.png');background-position:54% 50%}
+body[data-page="give"] .gv-donate-panel{padding:78px 6vw}.gv-donate-image .give-concept-label{left:18px;right:auto}
+.give-closing{background:#000;color:#f5f5f3;text-align:center;padding:120px 6vw;border-top:1px solid var(--line-dark)}
+.give-closing h2{font:400 clamp(52px,8vw,110px)/.86 var(--sans);letter-spacing:-.06em;text-transform:uppercase;margin:28px 0}.give-closing p{max-width:650px;margin:0 auto;color:var(--stone);line-height:1.8}
+
+@media(max-width:1080px){.give-feature{grid-template-columns:1fr}.give-feature-content{padding:68px 7vw 70px}.give-feature-media{min-height:480px;border-left:0;border-top:1px solid var(--line-dark)}.give-community-intro{grid-template-columns:1fr}.give-community-intro p{grid-column:1}.give-story-grid{grid-template-columns:1fr}.give-story-notes article{border-left:0}.give-story-image{min-height:480px}}
+@media(max-width:760px){body[data-page="give"] .gv-hero-content{padding:0 20px 55px}.give-feature-content{padding:52px 20px 58px}.give-feature-content h2{font-size:48px}.give-event-schedule{grid-template-columns:1fr;max-width:none}.give-event-schedule>div{padding:14px 0}.give-event-schedule>div+div{padding-left:0;border-left:0;border-top:1px solid var(--line-dark)}.give-event-schedule strong{white-space:normal}.give-event-location{max-width:none;padding:14px 0}.give-feature-media{min-height:390px}.give-community{padding:80px 20px}.give-community-intro{margin-bottom:40px}.give-story-image{min-height:410px}.give-story-media figcaption{flex-direction:column;gap:5px}.give-story-notes article{padding:28px}.give-closing{padding:90px 20px}.give-concept-label{max-width:calc(100% - 36px)}}
+@media(prefers-reduced-motion:reduce){.give-page-fade{display:none}body[data-page="give"] .reveal,body[data-page="give"] .gv-hero-media{opacity:1;transform:none;transition:none}}

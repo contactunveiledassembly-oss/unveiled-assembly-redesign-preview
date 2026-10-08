@@ -109,6 +109,35 @@ const BELIEFS_DEFAULTS = {
   }
 };
 
+const GIVE_DEFAULTS = {
+  hero: {
+    eyebrow: 'Generosity In Action', title: 'Give', kicker: 'Generosity That Moves Beyond The Walls.',
+    copy: 'Your generosity helps The Unveiled Assembly serve people, strengthen outreach, create ministry resources, and meet practical needs throughout our community.',
+    words: 'People\nCommunity\nOutreach\nResources\nA Greater Work'
+  },
+  event: {
+    enabled: true, label: 'Community Giving Event', title: 'Autumn Food Drive', date: '', startTime: '', endTime: '',
+    locationEnabled: true, location: 'Location to be announced',
+    details: 'Help us prepare shelf-stable groceries and meal bags for neighbors experiencing homelessness.',
+    button: 'Support The Drive'
+  },
+  community: {
+    eyebrow: 'A Ministry Of Presence', title: 'Feeding Our Community',
+    intro: 'Food drives are one of the central ways The Unveiled Assembly serves people experiencing homelessness. We gather food, prepare meals, and meet neighbors with dignity, care, and practical support.',
+    stories: [
+      { title: 'Prepare With Care', copy: 'Gifts help make room for food, water, serving supplies, and the practical details behind every outreach day.' },
+      { title: 'Serve With Dignity', copy: 'The heart is not simply distribution. It is seeing people, honoring them, and showing up with compassion.' },
+      { title: 'Keep Showing Up', copy: 'Consistent giving helps the ministry plan future food drives and respond when community needs arise.' }
+    ]
+  },
+  form: { eyebrow: 'Make A Difference', title: 'Give Today', copy: 'Choose an amount and a secure giving method.' },
+  closing: { eyebrow: 'Together, We Go Further', title: 'More Than\nA Donation.', copy: 'Every gift can become a meal, a resource, a gathering, or a moment of care. Thank you for helping us serve with consistency and love.' },
+  images: {
+    hero: 'assets/give/hero-editorial-v2.png', event: 'assets/give/event-handoff-v2.png',
+    community: 'assets/give/community-meals-v2.png', giving: 'assets/give/giving-panel-v2.png'
+  }
+};
+
 const DEMO_DISCOUNT_DEFAULTS = [
   { id: 'demo-grace20', code: 'GRACE20', type: 'percent', amount: 20, scope: 'both', active: true, expiresAt: '', maxUses: null, usedCount: 0, redeemedSourceIds: [], lastRedeemedSourceId: null }
 ];
@@ -121,11 +150,12 @@ function htmlLines(value, escapeHtml){ return String(value || '').split('\n').ma
 export function initSiteManagement(context){
   const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary } = context;
   const { doc, setDoc, getDoc, collection, getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction } = firestore;
-  const PAGE_STORAGE_KEYS = { 'one-on-one': 'uaOneOnOnePageContent', home: 'uaHomePageContent', beliefs: 'uaBeliefsPageContent' };
+  const PAGE_STORAGE_KEYS = { 'one-on-one': 'uaOneOnOnePageContent', home: 'uaHomePageContent', beliefs: 'uaBeliefsPageContent', give: 'uaGivePageContent' };
   const DISCOUNT_STORAGE_KEY = 'uaDiscountCodes';
   let pageContent = clone(ONE_ON_ONE_DEFAULTS);
   let homeContent = clone(HOME_DEFAULTS);
   let beliefsContent = clone(BELIEFS_DEFAULTS);
+  let giveContent = clone(GIVE_DEFAULTS);
   let discountCodes = [];
   let discountsLoaded = false;
   const appliedDiscounts = { oneonone: null, teaching: null };
@@ -158,6 +188,22 @@ export function initSiteManagement(context){
     const merged = { ...clone(BELIEFS_DEFAULTS), ...saved, hero: { ...BELIEFS_DEFAULTS.hero, ...(saved.hero || {}) }, order: BELIEFS_DEFAULTS.order };
     merged.beliefs = {};
     BELIEFS_DEFAULTS.order.forEach(id => { merged.beliefs[id] = { ...BELIEFS_DEFAULTS.beliefs[id], ...((saved.beliefs || {})[id] || {}) }; });
+    return merged;
+  }
+  function mergeGiveContent(saved){
+    if(!saved || typeof saved !== 'object') return clone(GIVE_DEFAULTS);
+    const merged = {
+      ...clone(GIVE_DEFAULTS), ...saved,
+      hero: { ...GIVE_DEFAULTS.hero, ...(saved.hero || {}) },
+      event: { ...GIVE_DEFAULTS.event, ...(saved.event || {}) },
+      community: { ...GIVE_DEFAULTS.community, ...(saved.community || {}) },
+      form: { ...GIVE_DEFAULTS.form, ...(saved.form || {}) },
+      closing: { ...GIVE_DEFAULTS.closing, ...(saved.closing || {}) },
+      images: { ...GIVE_DEFAULTS.images, ...(saved.images || {}) }
+    };
+    merged.community.stories = Array.isArray(saved.community?.stories)
+      ? saved.community.stories.slice(0, 3).map((item, i) => ({ ...GIVE_DEFAULTS.community.stories[i], ...item }))
+      : clone(GIVE_DEFAULTS.community.stories);
     return merged;
   }
 
@@ -248,6 +294,36 @@ export function initSiteManagement(context){
     });
   }
 
+  function giveDate(value){
+    if(!value) return 'Date to be announced';
+    const parts = String(value).split('-').map(Number);
+    if(parts.length !== 3 || parts.some(Number.isNaN)) return value;
+    return new Intl.DateTimeFormat('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }).format(new Date(parts[0], parts[1] - 1, parts[2]));
+  }
+  function giveClock(value){
+    if(!value) return '';
+    const parts = String(value).split(':').map(Number);
+    if(parts.length < 2 || parts.some(Number.isNaN)) return value;
+    return new Intl.DateTimeFormat('en-US', { hour:'numeric', minute:'2-digit' }).format(new Date(2000, 0, 1, parts[0], parts[1]));
+  }
+  function applyGivePage(){
+    if(document.body.dataset.page !== 'give') return;
+    setText('giveHeroEyebrow', giveContent.hero.eyebrow); setText('giveHeroTitle', giveContent.hero.title);
+    setText('giveHeroKicker', giveContent.hero.kicker); setText('giveHeroCopy', giveContent.hero.copy); setLines('giveHeroWords', giveContent.hero.words);
+    const event = giveContent.event;
+    const eventRoot = document.getElementById('giveFeaturedEvent'); if(eventRoot) eventRoot.hidden = event.enabled === false;
+    setText('giveEventLabel', event.label); setText('giveEventTitle', event.title); setText('giveEventDate', giveDate(event.date));
+    const start = giveClock(event.startTime), end = giveClock(event.endTime); setText('giveEventTime', start ? (end ? start + ' – ' + end : start) : 'Time to be announced');
+    const locationWrap = document.getElementById('giveEventLocationWrap'); if(locationWrap) locationWrap.hidden = event.locationEnabled === false;
+    setText('giveEventLocation', event.location || 'Location to be announced'); setText('giveEventDetails', event.details); setText('giveEventButton', event.button);
+    setText('giveCommunityEyebrow', giveContent.community.eyebrow); setText('giveCommunityTitle', giveContent.community.title); setText('giveCommunityIntro', giveContent.community.intro);
+    giveContent.community.stories.forEach((item, i) => { const word = ['One','Two','Three'][i]; setText('giveStory' + word + 'Title', item.title); setText('giveStory' + word + 'Copy', item.copy); });
+    setText('giveFormEyebrow', giveContent.form.eyebrow); setText('giveFormTitle', giveContent.form.title); setText('giveFormCopy', giveContent.form.copy);
+    setText('giveClosingEyebrow', giveContent.closing.eyebrow); setLines('giveClosingTitle', giveContent.closing.title); setText('giveClosingCopy', giveContent.closing.copy);
+    setBackground('.gv-hero-media', giveContent.images.hero); setBackground('.give-feature-media', giveContent.images.event);
+    setBackground('.give-story-image', giveContent.images.community); setBackground('.gv-donate-image', giveContent.images.giving);
+  }
+
   async function loadPageContentDoc(pageId, defaults, merge){
     try {
       if(DEMO_MODE){
@@ -276,6 +352,11 @@ export function initSiteManagement(context){
     beliefsContent = await loadPageContentDoc('beliefs', BELIEFS_DEFAULTS, mergeBeliefsContent);
     applyBeliefsPage();
     populateBeliefsEditor();
+  }
+  async function loadGivePage(){
+    giveContent = await loadPageContentDoc('give', GIVE_DEFAULTS, mergeGiveContent);
+    applyGivePage();
+    populateGiveEditor();
   }
 
   function field(label, id, rows){
@@ -343,6 +424,27 @@ export function initSiteManagement(context){
       '<div class="site-editor-actions"><button class="admin-btn-solid" type="submit">Save Beliefs Page</button><button class="admin-btn-ghost" type="button" id="ownerBeliefsResetBtn">Restore Approved Version</button><span class="form-status" id="ownerBeliefsStatus" role="status" aria-live="polite"></span></div>' +
       '</form>';
   }
+  function giveEditorHtml(){
+    return '<form id="ownerGiveEditor" class="site-editor">' +
+      '<div class="site-editor-head"><div><span class="portal-label">Edit Give Page</span><p class="admin-panel-intro">Update the Give page, feature or remove an upcoming event, and edit the food-drive stories. Payment connections and financial records stay protected.</p></div><button type="button" class="admin-btn-ghost" id="ownerGivePreviewBtn">Open Page Preview ↗</button></div>' +
+      '<div class="admin-subsection-label">Opening Section</div><div class="site-editor-grid">' +
+      field('Small heading', 'giveEditHeroEyebrow') + field('Main heading', 'giveEditHeroTitle') + field('Statement', 'giveEditHeroKicker', 2) + field('Quiet words — one per line', 'giveEditHeroWords', 5) + '</div><div class="site-editor-grid site-editor-single">' + field('Introduction', 'giveEditHeroCopy', 3) + '</div>' +
+      '<div class="admin-subsection-label">Featured Event</div>' +
+      '<label class="admin-checkbox-field"><input id="giveEditEventEnabled" type="checkbox" /> Feature this event on the Give page</label>' +
+      '<div class="site-editor-grid">' + field('Small label', 'giveEditEventLabel') + field('Event name', 'giveEditEventTitle') +
+      '<div class="site-editor-field"><label for="giveEditEventDate">Date</label><input id="giveEditEventDate" type="date" /></div>' +
+      '<div class="site-editor-field"><label for="giveEditEventStart">Start time</label><input id="giveEditEventStart" type="time" /></div>' +
+      '<div class="site-editor-field"><label for="giveEditEventEnd">End time</label><input id="giveEditEventEnd" type="time" /></div>' + field('Button wording', 'giveEditEventButton') + '</div>' +
+      '<label class="admin-checkbox-field"><input id="giveEditLocationEnabled" type="checkbox" /> Show event location</label>' +
+      '<div class="site-editor-grid site-editor-single">' + field('Event location', 'giveEditEventLocation') + field('Event description', 'giveEditEventDetails', 3) + '</div>' +
+      '<div class="admin-subsection-label">Feeding Our Community</div><div class="site-editor-grid">' + field('Small heading', 'giveEditCommunityEyebrow') + field('Main heading', 'giveEditCommunityTitle') + '</div><div class="site-editor-grid site-editor-single">' + field('Introduction', 'giveEditCommunityIntro', 3) + '</div>' +
+      GIVE_DEFAULTS.community.stories.map((_, i) => '<div class="admin-subsection-label">Story ' + (i + 1) + '</div><div class="site-editor-grid">' + field('Heading', 'giveEditStoryTitle' + i) + field('Description', 'giveEditStoryCopy' + i, 3) + '</div>').join('') +
+      '<div class="admin-subsection-label">Giving Form</div><div class="site-editor-grid">' + field('Small heading', 'giveEditFormEyebrow') + field('Main heading', 'giveEditFormTitle') + '</div><div class="site-editor-grid site-editor-single">' + field('Instruction line', 'giveEditFormCopy', 2) + '</div>' +
+      '<div class="admin-subsection-label">Closing Statement</div><div class="site-editor-grid">' + field('Small heading', 'giveEditClosingEyebrow') + field('Main heading — use a new line to control the break', 'giveEditClosingTitle', 2) + '</div><div class="site-editor-grid site-editor-single">' + field('Closing message', 'giveEditClosingCopy', 3) + '</div>' +
+      '<div class="admin-subsection-label">Photography</div><p class="admin-hint">Use an approved site asset path or image URL. Concept photographs remain labeled on the public page.</p><div class="site-editor-grid">' +
+      field('Opening photograph', 'giveEditImageHero') + field('Featured-event photograph', 'giveEditImageEvent') + field('Food-drive photograph', 'giveEditImageCommunity') + field('Giving-form photograph', 'giveEditImageGiving') + '</div>' +
+      '<div class="site-editor-actions"><button class="admin-btn-solid" type="submit">Save Give Page</button><button class="admin-btn-ghost" type="button" id="ownerGiveResetBtn">Restore Approved Version</button><span class="form-status" id="ownerGiveStatus" role="status" aria-live="polite"></span></div></form>';
+  }
 
   function setValue(id, value){ const node = document.getElementById(id); if(node) node.value = value || ''; }
   function readValue(id){ return (document.getElementById(id)?.value || '').trim(); }
@@ -372,6 +474,18 @@ export function initSiteManagement(context){
       setValue('beliefEditTitle_' + id, item.title); setValue('beliefEditBody_' + id, item.body); setValue('beliefEditScripture_' + id, item.scripture);
     });
   }
+  function populateGiveEditor(){
+    if(!document.getElementById('ownerGiveEditor')) return;
+    setValue('giveEditHeroEyebrow', giveContent.hero.eyebrow); setValue('giveEditHeroTitle', giveContent.hero.title); setValue('giveEditHeroKicker', giveContent.hero.kicker); setValue('giveEditHeroCopy', giveContent.hero.copy); setValue('giveEditHeroWords', giveContent.hero.words);
+    document.getElementById('giveEditEventEnabled').checked = giveContent.event.enabled !== false;
+    setValue('giveEditEventLabel', giveContent.event.label); setValue('giveEditEventTitle', giveContent.event.title); setValue('giveEditEventDate', giveContent.event.date); setValue('giveEditEventStart', giveContent.event.startTime); setValue('giveEditEventEnd', giveContent.event.endTime); setValue('giveEditEventLocation', giveContent.event.location); setValue('giveEditEventDetails', giveContent.event.details); setValue('giveEditEventButton', giveContent.event.button);
+    document.getElementById('giveEditLocationEnabled').checked = giveContent.event.locationEnabled !== false;
+    setValue('giveEditCommunityEyebrow', giveContent.community.eyebrow); setValue('giveEditCommunityTitle', giveContent.community.title); setValue('giveEditCommunityIntro', giveContent.community.intro);
+    giveContent.community.stories.forEach((item, i) => { setValue('giveEditStoryTitle' + i, item.title); setValue('giveEditStoryCopy' + i, item.copy); });
+    setValue('giveEditFormEyebrow', giveContent.form.eyebrow); setValue('giveEditFormTitle', giveContent.form.title); setValue('giveEditFormCopy', giveContent.form.copy);
+    setValue('giveEditClosingEyebrow', giveContent.closing.eyebrow); setValue('giveEditClosingTitle', giveContent.closing.title); setValue('giveEditClosingCopy', giveContent.closing.copy);
+    setValue('giveEditImageHero', giveContent.images.hero); setValue('giveEditImageEvent', giveContent.images.event); setValue('giveEditImageCommunity', giveContent.images.community); setValue('giveEditImageGiving', giveContent.images.giving);
+  }
   function collectOneOnOneEditor(){
     return {
       hero: { eyebrow: readValue('ooEditHeroEyebrow'), title: readValue('ooEditHeroTitle'), subtitle: readValue('ooEditHeroSubtitle'), button: readValue('ooEditHeroButton'), description: readValue('ooEditHeroDescription'), words: readValue('ooEditHeroWords') },
@@ -398,6 +512,16 @@ export function initSiteManagement(context){
       hero: { eyebrow: readValue('beliefsEditHeroEyebrow'), title: readValue('beliefsEditHeroTitle'), sub: readValue('beliefsEditHeroSub') },
       intro: readValue('beliefsEditIntro'),
       beliefs
+    };
+  }
+  function collectGiveEditor(){
+    return {
+      hero: { eyebrow:readValue('giveEditHeroEyebrow'), title:readValue('giveEditHeroTitle'), kicker:readValue('giveEditHeroKicker'), copy:readValue('giveEditHeroCopy'), words:readValue('giveEditHeroWords') },
+      event: { enabled:document.getElementById('giveEditEventEnabled')?.checked !== false, label:readValue('giveEditEventLabel'), title:readValue('giveEditEventTitle'), date:readValue('giveEditEventDate'), startTime:readValue('giveEditEventStart'), endTime:readValue('giveEditEventEnd'), locationEnabled:document.getElementById('giveEditLocationEnabled')?.checked !== false, location:readValue('giveEditEventLocation'), details:readValue('giveEditEventDetails'), button:readValue('giveEditEventButton') },
+      community: { eyebrow:readValue('giveEditCommunityEyebrow'), title:readValue('giveEditCommunityTitle'), intro:readValue('giveEditCommunityIntro'), stories:GIVE_DEFAULTS.community.stories.map((_, i) => ({ title:readValue('giveEditStoryTitle' + i), copy:readValue('giveEditStoryCopy' + i) })) },
+      form: { eyebrow:readValue('giveEditFormEyebrow'), title:readValue('giveEditFormTitle'), copy:readValue('giveEditFormCopy') },
+      closing: { eyebrow:readValue('giveEditClosingEyebrow'), title:readValue('giveEditClosingTitle'), copy:readValue('giveEditClosingCopy') },
+      images: { hero:readValue('giveEditImageHero') || GIVE_DEFAULTS.images.hero, event:readValue('giveEditImageEvent') || GIVE_DEFAULTS.images.event, community:readValue('giveEditImageCommunity') || GIVE_DEFAULTS.images.community, giving:readValue('giveEditImageGiving') || GIVE_DEFAULTS.images.giving }
     };
   }
   function refreshImagePreview(key){
@@ -435,8 +559,9 @@ export function initSiteManagement(context){
     { name: 'Home Page', key: 'home', html: homeEditorHtml, populate: populateHomeEditor, previewUrl: 'index.html' },
     { name: 'One-on-One Page', key: 'one-on-one', html: oneOnOneEditorHtml, populate: populateOneOnOneEditor, previewUrl: 'one-on-one.html' },
     { name: 'Beliefs', key: 'beliefs', html: beliefsEditorHtml, populate: populateBeliefsEditor, previewUrl: 'beliefs.html' },
+    { name: 'Give', key: 'give', html: giveEditorHtml, populate: populateGiveEditor, previewUrl: 'give.html' },
     { name: 'Teaching Page', key: null }, { name: 'Prayer Page', key: null }, { name: 'Our Story', key: null },
-    { name: 'Gather', key: null }, { name: 'Connect', key: null }, { name: 'Give', key: null },
+    { name: 'Gather', key: null }, { name: 'Connect', key: null },
     { name: 'Shop', key: null }, { name: 'Navigation', key: null }, { name: 'Footer', key: null }
   ];
   function renderOwnerWebsitePages(){
@@ -447,7 +572,7 @@ export function initSiteManagement(context){
       const connected = !!page.key;
       return '<button type="button" class="admin-website-page-row' + (connected ? ' is-connected' : '') + '" data-site-page="' + escapeHtml(page.name) + '"' + (connected ? '' : ' disabled') + '><span>' + escapeHtml(page.name) + '</span><span class="' + (connected ? 'admin-status-pill published' : 'demo-badge') + '">' + (connected ? 'Editable' : 'Coming Later') + '</span></button>';
     }).join('');
-    editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>We are connecting the website page by page. Home, One-on-One, and Beliefs are ready now; the others stay protected until you approve their editors.</p></div>';
+    editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>Home, One-on-One, Beliefs, and Give are ready to edit. Other pages stay protected until their editors are approved.</p></div>';
   }
   function openWebsitePageEditor(pageName){
     const page = WEBSITE_PAGES.find(p => p.name === pageName && p.key);
@@ -722,6 +847,7 @@ export function initSiteManagement(context){
     if(event.target.closest('#ownerOneOnOnePreviewBtn')){ window.open('one-on-one.html', '_blank', 'noopener'); return; }
     if(event.target.closest('#ownerHomePreviewBtn')){ window.open('index.html', '_blank', 'noopener'); return; }
     if(event.target.closest('#ownerBeliefsPreviewBtn')){ window.open('beliefs.html', '_blank', 'noopener'); return; }
+    if(event.target.closest('#ownerGivePreviewBtn')){ window.open('give.html', '_blank', 'noopener'); return; }
     if(event.target.closest('#ownerOneOnOneResetBtn')){
       pageContent = clone(ONE_ON_ONE_DEFAULTS); populateOneOnOneEditor(); applyOneOnOnePage();
       const status = document.getElementById('ownerOneOnOneStatus'); if(status) status.textContent = 'Approved version restored in the editor. Select Save to publish it.';
@@ -734,10 +860,14 @@ export function initSiteManagement(context){
       beliefsContent = clone(BELIEFS_DEFAULTS); populateBeliefsEditor(); applyBeliefsPage();
       const status = document.getElementById('ownerBeliefsStatus'); if(status) status.textContent = 'Approved version restored in the editor. Select Save to publish it.';
     }
+    if(event.target.closest('#ownerGiveResetBtn')){
+      giveContent = clone(GIVE_DEFAULTS); populateGiveEditor(); applyGivePage();
+      const status = document.getElementById('ownerGiveStatus'); if(status) status.textContent = 'Approved version restored in the editor. Select Save to publish it.';
+    }
   });
   document.getElementById('ownerWebsiteEditor')?.addEventListener('submit', async event => {
     const formId = event.target.id;
-    if(!['ownerOneOnOneEditor', 'ownerHomeEditor', 'ownerBeliefsEditor'].includes(formId)) return;
+    if(!['ownerOneOnOneEditor', 'ownerHomeEditor', 'ownerBeliefsEditor', 'ownerGiveEditor'].includes(formId)) return;
     event.preventDefault();
     if(formId === 'ownerOneOnOneEditor'){
       const status = document.getElementById('ownerOneOnOneStatus'); status.textContent = 'Saving…';
@@ -754,6 +884,11 @@ export function initSiteManagement(context){
       beliefsContent = mergeBeliefsContent(collectBeliefsEditor());
       try { await savePageContentDoc('beliefs', beliefsContent); applyBeliefsPage(); status.textContent = DEMO_MODE ? 'Saved in this preview browser.' : 'Saved. The Beliefs page is updated.'; }
       catch (err) { console.error('save Beliefs page failed', err); status.textContent = 'Could not save. Check your connection and try again.'; }
+    } else if(formId === 'ownerGiveEditor'){
+      const status = document.getElementById('ownerGiveStatus'); status.textContent = 'Saving…';
+      giveContent = mergeGiveContent(collectGiveEditor());
+      try { await savePageContentDoc('give', giveContent); applyGivePage(); status.textContent = DEMO_MODE ? 'Saved in this preview browser.' : 'Saved. The Give page is updated.'; }
+      catch (err) { console.error('save Give page failed', err); status.textContent = 'Could not save. Check your connection and try again.'; }
     }
   });
 
@@ -813,6 +948,7 @@ export function initSiteManagement(context){
   loadOneOnOnePage();
   loadHomePage();
   loadBeliefsPage();
+  loadGivePage();
   if(DEMO_MODE) loadDemoDiscounts();
 
   return { renderOwnerWebsitePages, renderOwnerDiscountCodes, pricing, discountSummaryHtml, discountRecord, resetCheckout, claimDiscount, confirmDiscountClaim, releaseDiscountClaim };
