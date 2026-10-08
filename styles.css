@@ -2682,6 +2682,9 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 
 /* ---------- Give page — approved editorial revision (Oct 2026) ---------- */
 body[data-page="give"]{background:#0a0a0a;color:var(--ivory)}
+body[data-page="give"] .nav{border-bottom-color:transparent;box-shadow:none}
+body[data-page="give"] .nav:not(.scrolled){background:transparent}
+body[data-page="give"] .nav.scrolled{border-bottom-color:transparent}
 .give-page-fade{position:fixed;inset:0;z-index:899;background:#000;opacity:1;pointer-events:none;transition:opacity 1.05s cubic-bezier(.22,1,.36,1)}
 body.give-ready .give-page-fade{opacity:0}
 body[data-page="give"] .reveal{transform:translateY(14px);transition:opacity 1.05s cubic-bezier(.22,1,.36,1),transform 1.05s cubic-bezier(.22,1,.36,1)}
