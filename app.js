@@ -12409,7 +12409,7 @@ function teachingCardHtml(t){
   const art = teachingCardArt(t);
   const fallbackClass = art ? '' : ' ' + teachingArtClass(t.category);
   const style = art ? ' style="background-image:linear-gradient(190deg,rgba(10,10,10,.1),rgba(10,10,10,.72)),url(\'' + escapeHtml(art) + '\')"' : '';
-  return '<a class="teaching-card' + fallbackClass + '" href="' + BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id) + '"' + style + '>' +
+  return '<a class="teaching-card teaching-card-reveal' + fallbackClass + '" href="' + BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id) + '"' + style + '>' +
     '<div class="teaching-card-art-text">' +
     '<span class="teaching-card-eyebrow">' + escapeHtml(t.category || 'Teaching') + '</span>' +
     '<h3>' + escapeHtml(t.title || '') + '</h3>' +
@@ -12449,6 +12449,39 @@ function renderTeachingHero(){
     '</div></div>';
 }
 
+let teachingCardObserver = null;
+function wireTeachingCardTransitions(wrap){
+  if(!wrap) return;
+  const cards = [...wrap.querySelectorAll('.teaching-card-reveal')];
+  if(teachingCardObserver) teachingCardObserver.disconnect();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reducedMotion){ cards.forEach(card => card.classList.add('is-visible')); return; }
+  teachingCardObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      teachingCardObserver.unobserve(entry.target);
+    });
+  }, { threshold: .16, rootMargin: '0px 0px -7% 0px' });
+  cards.forEach((card, index) => {
+    card.style.setProperty('--teaching-delay', Math.min(index, 5) * 90 + 'ms');
+    teachingCardObserver.observe(card);
+    if(window.matchMedia('(hover: hover) and (pointer: fine)').matches){
+      card.addEventListener('pointermove', event => {
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - .5;
+        const y = (event.clientY - rect.top) / rect.height - .5;
+        card.style.setProperty('--teaching-tilt-x', (-y * 3).toFixed(2) + 'deg');
+        card.style.setProperty('--teaching-tilt-y', (x * 3).toFixed(2) + 'deg');
+      });
+      card.addEventListener('pointerleave', () => {
+        card.style.setProperty('--teaching-tilt-x', '0deg');
+        card.style.setProperty('--teaching-tilt-y', '0deg');
+      });
+    }
+  });
+}
+
 function renderTeachingCards(){
   const wrap = document.getElementById('teachingCardsList');
   const section = document.getElementById('teachingCardsSection');
@@ -12460,6 +12493,7 @@ function renderTeachingCards(){
   const items = upcomingTeachingsList().filter(t => t.id !== featuredId).slice(0, TEACHING_PAGE_SETTINGS.upcomingCount || 6);
   section.hidden = items.length === 0;
   wrap.innerHTML = items.map(teachingCardHtml).join('');
+  wireTeachingCardTransitions(wrap);
 }
 
 function renderTeachingLibrarySection(){

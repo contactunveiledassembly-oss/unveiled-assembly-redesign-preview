@@ -1720,6 +1720,30 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 @media(max-width:900px){.teaching-cards-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.teaching-cards-grid{grid-template-columns:1fr}.teaching-card-art-text{min-height:300px}}
 
+/* Teaching cards: restrained depth-and-settle transition. The movement
+   suggests layered editorial cards, then resolves completely flat so the
+   class information remains calm and easy to read. */
+body[data-page="teachings"] .teaching-cards-grid{perspective:1400px;perspective-origin:50% 34%}
+body[data-page="teachings"] .teaching-card-reveal{
+  --teaching-tilt-x:0deg;--teaching-tilt-y:0deg;
+  opacity:0;transform-origin:50% 100%;transform:perspective(1200px) translate3d(0,34px,-42px) rotateX(7deg) rotateY(-1.2deg) scale(.985);
+  box-shadow:0 0 0 rgba(0,0,0,0);transition:opacity .82s cubic-bezier(.22,1,.36,1) var(--teaching-delay,0ms),transform .95s cubic-bezier(.22,1,.36,1) var(--teaching-delay,0ms),box-shadow .45s ease,border-color .3s ease;will-change:transform,opacity
+}
+body[data-page="teachings"] .teaching-card-reveal:nth-child(even){transform:perspective(1200px) translate3d(0,38px,-48px) rotateX(7deg) rotateY(1.2deg) scale(.985)}
+body[data-page="teachings"] .teaching-card-reveal.is-visible{opacity:1;transform:perspective(1200px) translate3d(0,0,0) rotateX(var(--teaching-tilt-x)) rotateY(var(--teaching-tilt-y)) scale(1)}
+body[data-page="teachings"] .teaching-card-reveal.is-visible:hover{transform:perspective(1200px) translate3d(0,-8px,18px) rotateX(var(--teaching-tilt-x)) rotateY(var(--teaching-tilt-y)) scale(1.008);box-shadow:0 26px 52px rgba(0,0,0,.35);border-color:rgba(245,243,238,.5);transition-delay:0ms}
+body[data-page="teachings"] .teaching-card-reveal .teaching-card-art-text{overflow:hidden}
+body[data-page="teachings"] .teaching-card-reveal .teaching-card-art-text::after{content:"";position:absolute;inset:0;background:linear-gradient(112deg,transparent 30%,rgba(255,255,255,.07) 49%,transparent 68%);transform:translateX(-120%);transition:transform .9s cubic-bezier(.22,1,.36,1);pointer-events:none}
+body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-card-art-text::after{transform:translateX(120%)}
+@media(max-width:700px),(hover:none){
+  body[data-page="teachings"] .teaching-card-reveal.is-visible:hover{transform:perspective(1200px) translate3d(0,-4px,8px) scale(1.003);box-shadow:0 18px 34px rgba(0,0,0,.28)}
+  body[data-page="teachings"] .teaching-card-reveal .teaching-card-art-text::after{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  body[data-page="teachings"] .teaching-card-reveal,body[data-page="teachings"] .teaching-card-reveal:nth-child(even),body[data-page="teachings"] .teaching-card-reveal.is-visible,body[data-page="teachings"] .teaching-card-reveal.is-visible:hover{opacity:1;transform:none;transition:none;box-shadow:none}
+  body[data-page="teachings"] .teaching-card-reveal .teaching-card-art-text::after{display:none}
+}
+
 /* =================================================================
    One-on-One Sessions — public selection page. Dark/cinematic, same
    family as the Teaching cards above, but a distinct "soft black card"
