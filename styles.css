@@ -2801,8 +2801,9 @@ body[data-page="give"] .gv-donate-panel{padding:78px 6vw}.gv-donate-image .give-
 .portal-view[data-portal-view="prospect"] .member-location-block{margin:24px 0 18px;padding-top:20px;border-top:1px solid var(--line-dark)}
 .portal-view[data-portal-view="prospect"] .admin-microlabel{color:var(--ivory)}
 .portal-view[data-portal-view="prospect"] .admin-hint{color:var(--stone-dim)}
-.portal-view[data-portal-view="prospect"] .permission-label{color:var(--stone);font-size:12px;line-height:1.45}
-.portal-view[data-portal-view="prospect"] .permission-label input{min-height:0;accent-color:var(--ivory)}
+.portal-view[data-portal-view="prospect"] .portal-field label.permission-label{display:flex;align-items:flex-start;gap:10px;width:100%;color:var(--stone);font-family:var(--sans);font-size:12px;letter-spacing:.03em;text-transform:none;line-height:1.45}
+.portal-view[data-portal-view="prospect"] .portal-field .permission-label input[type="checkbox"]{width:16px;min-width:16px;height:16px;min-height:16px;flex:0 0 16px;margin:1px 0 0;padding:0;border:1px solid var(--line-dark);accent-color:var(--ivory)}
+.portal-view[data-portal-view="prospect"] .portal-field .permission-label span{display:block;min-width:0;flex:1 1 auto;white-space:normal;word-break:normal;overflow-wrap:break-word}
 .portal-view[data-portal-view="prospect"] .portal-status{color:var(--stone);text-align:center}
 .portal-view[data-portal-view="prospect"] .verify-panel-links{border-top-color:var(--line-dark)}
 
