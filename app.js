@@ -2956,12 +2956,6 @@ function hideBrokenLogoImage(img){ img.style.display = 'none'; }
 document.querySelectorAll('.brand-logo, .portal-brand img, .member-topnav-brand img').forEach(img => {
   img.addEventListener('error', () => hideBrokenLogoImage(img));
 });
-if(DEMO_MODE){
-  document.body.classList.add('demo-mode');
-  document.body.insertAdjacentHTML('afterbegin',
-    '<div class="preview-banner">Preview Site — Sign-in, booking, and account activity here use sample data only. Nothing is saved to the real ministry database.</div>');
-}
-
 // Mark the current page's nav link, driven by <body data-page="...">.
 const currentPage = document.body.dataset.page;
 if(currentPage){
