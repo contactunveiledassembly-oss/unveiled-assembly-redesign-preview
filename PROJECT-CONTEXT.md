@@ -675,4 +675,15 @@ The owner approved moving the reviewed Give-page prototype to the live GitHub Pa
 - Audited the former Give imagery: the source images were only about 138–377 px wide and were being enlarged substantially. The replacements are 1672×941 to prevent the same visible softness at large display sizes.
 - Cache-busting was advanced for the Give page and `site-management.js` so the new editor and design load immediately after deployment.
 
+## 30. Session Log — 2026-10-08: Sanctuary sign-in entrance
+
+The owner approved replacing the crowded signed-out Member Portal entrance with the contained “Sanctuary” modal prototype. The redesign is applied only while `data-portal-view="prospect"` is visible; the existing signed-in Member Portal and Owner Portal retain their current layouts and behavior.
+
+- The dialog remains a contained overlay rather than taking over the full viewport. It uses an editorial image panel, a dark focused form panel, and the existing site typography and monochrome palette.
+- Sign In is the primary visible task. Phone sign-in, account creation, and password recovery are secondary transitions that reuse the existing IDs, panels, handlers, validation, reCAPTCHA containers, and status regions.
+- No parallel or disconnected data system was created. Production registration continues to create the Firebase Authentication account and write the member profile to `users/{uid}` with first name, last name, full name, email, E.164 phone number, state, optional city, role, verification flags, age confirmation, and `createdAt`. Passwords remain solely with Firebase Authentication and are never written to Firestore.
+- The Owner Portal continues to read these member profiles through its existing People/analytics surfaces. Phone verification still depends on Firebase Phone Authentication, an authorized production domain, reCAPTCHA, and the ministry's provider configuration.
+- The GitHub Pages preview and localhost remain protected by `DEMO_MODE`; those hosts use sample/local data and do not write real member information. Real collection begins only on the configured production host.
+- Cache-busting for both `app.js` and `styles.css` was advanced sitewide so the redesigned entrance is loaded consistently from every public page.
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

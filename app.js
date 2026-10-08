@@ -725,14 +725,9 @@ function dialogsHtml(){
     <div class="portal-view" data-portal-view="prospect">
       <div class="portal-two">
         <div class="portal-welcome">
-          <div class="kicker">My Assembly</div>
-          <h3 id="memberPortalTitle">A place to continue growing.</h3>
-          <p>People can create an account after joining a class or becoming involved with The Assembly.</p>
-          <div class="portal-perks">
-            <div class="portal-perk"><span>01</span>See upcoming classes, sessions, and prayer gatherings.</div>
-            <div class="portal-perk"><span>02</span>Access private Zoom links, materials, and recordings.</div>
-            <div class="portal-perk"><span>03</span>Manage bookings and follow learning progress.</div>
-          </div>
+          <div class="portal-entry-brand"><img src="${BASE}assets/ua-logo-transparent.png" alt="" /><span>The Unveiled<br>Assembly of Christ Jesus</span></div>
+          <div class="portal-entry-copy"><div class="kicker">Your Assembly</div><h3 id="memberPortalTitle">A Place To<br>Continue.</h3></div>
+          <div class="portal-entry-concept">Concept imagery · Not an actual ministry photograph</div>
         </div>
         <div class="portal-login">
           <div class="kicker on-light">Join or Sign In</div>
@@ -744,9 +739,11 @@ function dialogsHtml(){
 
           <!-- ===== SIGN IN ===== -->
           <div class="auth-panel" data-auth-panel="signin">
+            <div class="auth-entry-number">01 / Member Access</div>
+            <div class="auth-entry-heading"><h4>Welcome<br>Back.</h4><p>Sign in to continue to your classes, sessions, and ministry resources.</p></div>
             <div class="auth-method-tabs" role="tablist" aria-label="Sign-in method">
-              <button type="button" class="auth-method-tab active" data-auth-method="email" id="signinMethodEmail" role="tab" aria-selected="true">Email</button>
-              <button type="button" class="auth-method-tab" data-auth-method="phone" id="signinMethodPhone" role="tab" aria-selected="false">Phone Number</button>
+              <button type="button" class="auth-method-tab active" data-auth-method="email" id="signinMethodEmail" role="tab" aria-selected="true">Use Email Instead</button>
+              <button type="button" class="auth-method-tab" data-auth-method="phone" id="signinMethodPhone" role="tab" aria-selected="false">Use Phone Number Instead</button>
             </div>
 
             <form id="emailSignInForm" data-auth-method-panel="email">
@@ -796,6 +793,8 @@ function dialogsHtml(){
 
           <!-- ===== FORGOT PASSWORD ===== -->
           <div class="auth-panel" data-auth-panel="forgot" hidden>
+            <div class="auth-entry-number">02 / Account Help</div>
+            <div class="auth-entry-heading"><h4>Reset Your<br>Password.</h4></div>
             <p class="auth-panel-intro">Enter your email and we'll send a link to reset your password.</p>
             <div class="portal-field">
               <label for="forgotEmail">Email address</label>
@@ -810,6 +809,8 @@ function dialogsHtml(){
 
           <!-- ===== CREATE ACCOUNT ===== -->
           <div class="auth-panel" data-auth-panel="register" hidden>
+            <div class="auth-entry-number">02 / Begin</div>
+            <div class="auth-entry-heading"><h4>Create Your<br>Account.</h4><p>One account for your classes, sessions, and ministry resources.</p></div>
             <form id="registerForm">
               <div class="portal-field-row">
                 <div class="portal-field"><label for="regFirstName">First name</label><input id="regFirstName" type="text" autocomplete="given-name" required /></div>
