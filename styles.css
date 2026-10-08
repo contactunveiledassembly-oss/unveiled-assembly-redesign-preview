@@ -1699,10 +1699,17 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .teaching-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
 .teaching-card{
   display:flex;flex-direction:column;color:var(--ivory);border:1px solid var(--line-dark);transition:.25s;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
 }
 .teaching-card:hover{border-color:rgba(245,243,238,.4);transform:translateY(-3px)}
 .teaching-card-art-text{
-  position:relative;min-height:360px;background-size:cover;background-position:center;background-color:var(--panel);
+  /* Transparent on purpose: the card's photo/fallback-gradient art is
+     set on the parent .teaching-card (teachingCardHtml()), not here —
+     an opaque background-color on this element was silently covering
+     it completely (pre-existing, not introduced by any image added
+     here). This element only supplies the sizing box; the image
+     itself paints on .teaching-card below. */
+  position:relative;min-height:360px;background-size:cover;background-position:center;background-color:transparent;
   display:flex;flex-direction:column;justify-content:flex-end;padding:26px 22px;
 }
 .teaching-card-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--stone);display:block;margin-bottom:12px}

@@ -318,38 +318,48 @@ const DEMO_TEACHINGS = {
     fullDescription: 'A deep dive into spiritual discernment — what it is, how to recognize it, and how to sharpen it in a world full of confusion.',
     whatYouWillLearn: ['What spiritual discernment is', 'Types of discernment', 'How to recognize what you are perceiving', 'Biblical examples', 'Discernment vs. assumption', 'Practical exercises'],
     date: demoNextWeekdayStr(4, 0), startTime: '19:30', price: 25, capacity: 50, unlimitedCapacity: false,
-    status: 'registration-open', featured: true },
+    status: 'registration-open', featured: true,
+    // Scenery placeholder so the featured hero/card show real
+    // photography instead of the plain category gradient — reuses an
+    // already-approved site photo, not a new or stock image. Swap
+    // anytime from Teaching Manager -> this class -> Images.
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/hero-v4.png' } },
   'demo-prophetic': { id: 'demo-prophetic', ...demoTeachingDefaults(),
     title: 'The Prophetic', subtitle: 'Developing Prophetic Sensitivity', category: 'Prophetic',
     shortDescription: 'Understanding the prophetic gift and how to grow in spiritual sensitivity and maturity.',
     fullDescription: 'Understanding the prophetic gift and how to grow in spiritual sensitivity and maturity.',
     whatYouWillLearn: ['What the prophetic gift is', 'How prophetic sensitivity develops', 'Testing and confirming what you sense'],
     date: demoNextWeekdayStr(4, 1), startTime: '19:30', price: 25,
-    status: 'published' },
+    status: 'published',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/expect-v3.png' } },
   'demo-voice': { id: 'demo-voice', ...demoTeachingDefaults(),
     title: 'Hearing the Voice of God', subtitle: 'Recognizing How He Speaks', category: 'Hearing the Voice of God',
     shortDescription: 'Learning to recognize and respond to the voice of God in everyday life.',
     fullDescription: 'Learning to recognize and respond to the voice of God in everyday life.',
     date: demoNextWeekdayStr(4, 2), startTime: '19:30', price: 25,
-    status: 'draft' },
+    status: 'draft',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/hero.png' } },
   'demo-warfare': { id: 'demo-warfare', ...demoTeachingDefaults(),
     title: 'Spiritual Warfare', subtitle: 'Understanding The Invisible', category: 'Spiritual Warfare',
     shortDescription: 'A grounded look at spiritual warfare — what Scripture actually says, and how to stand without fear.',
     fullDescription: 'A grounded look at spiritual warfare — what Scripture actually says, and how to stand without fear.',
     date: demoNextWeekdayStr(4, 3), startTime: '19:30', price: 25,
-    status: 'published' },
+    status: 'published',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/closing-v3.png' } },
   'demo-identity': { id: 'demo-identity', ...demoTeachingDefaults(),
     title: 'Identity in Christ', subtitle: 'Know Who You Are', category: 'Identity',
     shortDescription: 'Rooting your sense of self in who God says you are, not in performance or circumstance.',
     fullDescription: 'Rooting your sense of self in who God says you are, not in performance or circumstance.',
     date: demoNextWeekdayStr(4, 4), startTime: '19:30', price: 25,
-    status: 'published' },
+    status: 'published',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/beliefs-hero-v3.png' } },
   'demo-foundations': { id: 'demo-foundations', ...demoTeachingDefaults(),
     title: 'Foundations of Faith', subtitle: 'Rooted Before You Rise', category: 'Foundations',
     shortDescription: 'A practical foundation for understanding grace, identity, prayer, and spiritual maturity.',
     fullDescription: 'A practical foundation for understanding grace, identity, prayer, and spiritual maturity.',
     date: new Date(Date.now() - 21 * 86400000).toISOString().slice(0, 10), startTime: '19:00', price: 20,
-    status: 'published' },
+    status: 'published',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/booking.png' } },
 };
 let DEMO_TEACHING_ZOOM = {
   'demo-discernment': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '000 000 0000', passcode: 'demo' },
@@ -3116,7 +3126,11 @@ let TEACHING_PAGE_SETTINGS = {
   showLibrary: false, showScripture: true, showNewsletter: true,
   defaultThursdayTime: '19:30', defaultTimeZone: 'America/New_York', autoArchiveCompleted: true,
   scriptureText: 'But the natural man receiveth not the things of the Spirit of God: for they are foolishness unto him: neither can he know them, because they are spiritually discerned.',
-  scriptureReference: '1 Corinthians 2:14', scriptureImage: ''
+  // Scenery placeholder, not new/stock photography — reuses an
+  // already-approved site photo so the Foundation section isn't a
+  // flat gradient. Owner-editable anytime from Teaching Manager ->
+  // Page Settings -> Scripture Image.
+  scriptureReference: '1 Corinthians 2:14', scriptureImage: 'assets/one-on-one/booking-v2.png'
 };
 let TEACHINGS = DEMO_TEACHINGS;
 let MEDIA_LIBRARY = [];
