@@ -686,4 +686,15 @@ The owner approved replacing the crowded signed-out Member Portal entrance with 
 - The GitHub Pages preview and localhost remain protected by `DEMO_MODE`; those hosts use sample/local data and do not write real member information. Real collection begins only on the configured production host.
 - Cache-busting for both `app.js` and `styles.css` was advanced sitewide so the redesigned entrance is loaded consistently from every public page.
 
+## 31. Session Log — 2026-10-23: Our Story redesign integration
+
+The approved private Our Story prototype has been integrated into the main website source instead of remaining a separate ChatGPT Sites preview.
+
+- Replaced the older generic Story layout with the approved editorial page: Born From Encounter, Who We Are, Vision, Mission, founder testimony, Why Jesus, ministry heart, declaration, and next-step links.
+- Preserved the founder testimony and the existing Inter + Courier Prime typography, monochrome palette, shared `app.js` navigation/account/booking system, and shared footer.
+- Added the page-scoped stylesheet at `assets/story-v5/story-v5.css`; no shared portal, booking, or admin styles were changed.
+- Converted prototype-only absolute GitHub Pages URLs to site-relative routes and asset paths so the page works on localhost, GitHub Pages, and the future custom domain without environment-specific links.
+- Reused the existing approved ministry imagery already stored in `assets/give/`; no new stock or generated imagery was introduced.
+- Verified the repository's existing automated browser tests, JavaScript syntax, all Story asset loads, reveal-on-scroll behavior, shared navigation/footer injection, Inter font use, and responsive desktop/mobile layouts. Both audited viewports had no horizontal overflow or page errors.
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*
