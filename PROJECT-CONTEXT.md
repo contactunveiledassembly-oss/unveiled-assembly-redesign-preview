@@ -695,6 +695,7 @@ The approved private Our Story prototype has been integrated into the main websi
 - Added the page-scoped stylesheet at `assets/story-v5/story-v5.css`; no shared portal, booking, or admin styles were changed.
 - Converted prototype-only absolute GitHub Pages URLs to site-relative routes and asset paths so the page works on localhost, GitHub Pages, and the future custom domain without environment-specific links.
 - Reused the existing approved ministry imagery already stored in `assets/give/`; no new stock or generated imagery was introduced.
+- Revised the opening after owner review: the former split-layout hero is now a Revelation Church-inspired, full-screen black typographic entrance with generous negative space, thin architectural rules, layered monochrome imagery, and an original CSS 3D scene. Pointer movement and scroll create restrained depth on capable devices; `prefers-reduced-motion` disables the live movement while preserving the complete composition and content.
 - Verified the repository's existing automated browser tests, JavaScript syntax, all Story asset loads, reveal-on-scroll behavior, shared navigation/footer injection, Inter font use, and responsive desktop/mobile layouts. Both audited viewports had no horizontal overflow or page errors.
 
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*
