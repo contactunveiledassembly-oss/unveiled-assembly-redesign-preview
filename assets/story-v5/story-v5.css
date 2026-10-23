@@ -152,3 +152,107 @@ body[data-page="story"] { margin:0; background:var(--v5-black); color:#fff; font
 }
 
 @media (max-width:430px) { .v5-heart__gallery { height:570px; grid-template-columns:1fr; } .v5-heart__gallery figure { min-height:275px; } }
+
+/* Calm editorial pass — aligns Our Story with One-on-One and Teachings. */
+body[data-page="story"] .nav,body[data-page="story"] .nav.scrolled { border-bottom:0; box-shadow:none; }
+.story5 em { font-style:normal; color:var(--v5-silver); }
+.v5-index,.v5-eyebrow { font-size:9px; }
+.v5-cover { min-height:82svh; padding-bottom:104px; }
+.v5-cover__content { max-width:1050px; }
+.v5-cover__content h1 { font-size:clamp(68px,9vw,132px); }
+.v5-cover__intro { margin-top:36px; line-height:1.7; }
+.v5-eyebrow { margin-bottom:38px; }
+.v5-cover__footer { padding-top:16px; }
+
+.v5-manifesto { grid-template-columns:1.05fr .95fr; gap:clamp(48px,8vw,110px); max-width:1160px; padding:clamp(90px,10vw,132px) 30px; }
+.v5-manifesto .v5-index { grid-column:1/-1; color:#85827c; margin-bottom:-14px; }
+.v5-manifesto__lead { max-width:15ch; font-size:clamp(38px,4.5vw,58px); letter-spacing:-.045em; line-height:1.04; }
+.v5-manifesto__lead { color:#f2f0eb; }
+.v5-manifesto__lead em { font-size:1em; color:#aaa7a1; }
+.v5-manifesto__copy { align-self:end; padding-top:24px; color:#c6c3bc; }
+.v5-manifesto__copy h2 { margin-bottom:26px; font-size:12px; }
+.v5-manifesto__copy p { font-size:15px; line-height:1.75; }
+
+.v5-direction { grid-template-columns:repeat(2,minmax(0,1fr)); max-width:1160px; margin:0 auto clamp(90px,10vw,132px); border:0; border-block:1px solid var(--v5-line); background:transparent; }
+.v5-direction__rail { display:none; }
+.v5-direction__item { min-height:330px; padding:56px clamp(32px,5vw,68px); }
+.v5-direction__item > span { top:26px; left:clamp(32px,5vw,68px); right:auto; color:#74716c; font-size:9px; }
+.v5-direction__item h2 { margin-bottom:24px; font-size:clamp(42px,4.5vw,60px); font-weight:400; letter-spacing:-.045em; }
+.v5-direction__item h2 { color:#f0eee9; }
+.v5-direction__item p { font-size:16px; line-height:1.65; }
+.v5-direction__item small { color:#85827c; line-height:1.6; }
+
+.v5-testimony { grid-template-columns:1fr 1fr; column-gap:0; max-width:1160px; padding:0 30px clamp(100px,11vw,148px); }
+.v5-testimony__title { grid-template-columns:.55fr 1.45fr; align-items:end; margin-bottom:0; padding-bottom:46px; }
+.v5-testimony__title .v5-index { color:#85827c; }
+.v5-testimony__title h2 { max-width:760px; font-size:clamp(42px,5.6vw,72px); font-weight:300; letter-spacing:-.05em; line-height:.94; }
+.v5-testimony__title h2 { color:#f0eee9; }
+.v5-testimony__image { height:auto; min-height:600px; border:0; }
+.v5-testimony__image img { filter:grayscale(1) contrast(1.16); }
+.v5-image-stamp { right:22px; bottom:22px; font-size:clamp(23px,2.7vw,36px); font-weight:500; letter-spacing:-.04em; }
+.v5-testimony__copy { display:flex; flex-direction:column; justify-content:center; padding:clamp(48px,6vw,78px); background:#111; }
+.v5-testimony__copy > p,.v5-details p { font-size:15px; line-height:1.78; }
+.v5-testimony__copy .v5-drop { font-size:clamp(28px,3vw,39px); letter-spacing:-.04em; }
+.v5-details { margin-top:28px; }
+
+.v5-why { grid-template-columns:1fr 1fr; gap:clamp(48px,8vw,110px); padding:clamp(90px,10vw,130px) max(30px,calc((100vw - 1160px)/2)); }
+.v5-why__ghost { display:none; }
+.v5-why__statement h2 { max-width:11ch; font-size:clamp(40px,5vw,64px); font-weight:400; letter-spacing:-.05em; line-height:.96; }
+.v5-why__statement h2 em { color:#5f5c57; }
+.v5-why__copy { align-self:start; padding-top:26px; border-color:rgba(0,0,0,.25); }
+.v5-why__copy p { color:#403e3a; font-size:15px; line-height:1.78; }
+.v5-why blockquote { grid-column:2; margin-top:6px; color:#282724; font-size:clamp(22px,2.4vw,32px); font-style:normal; letter-spacing:-.025em; line-height:1.25; }
+
+.v5-heart { max-width:1160px; padding:clamp(96px,11vw,142px) 30px; }
+.v5-heart__header { grid-template-columns:1fr 1fr; gap:clamp(40px,7vw,90px); margin-bottom:48px; }
+.v5-heart__header .v5-index { grid-column:1/-1; color:#85827c; margin-bottom:-14px; }
+.v5-heart__header h2 { font-size:clamp(44px,5.8vw,72px); font-weight:300; letter-spacing:-.05em; line-height:.9; }
+.v5-heart__header h2 { color:#f0eee9; }
+.v5-heart__header > p { max-width:470px; font-size:15px; line-height:1.75; }
+.v5-heart__gallery { grid-template-columns:1.3fr .7fr; gap:12px; height:450px; }
+.v5-heart__gallery figure { border:0; }
+.v5-heart__gallery img { filter:grayscale(1) contrast(1.1); }
+.v5-heart__gallery figcaption { font-size:8px; }
+.v5-heart__pillars span { border-right:0; color:#99968f; font-size:9px; }
+.v5-heart__pillars span:nth-child(2) { text-align:center; }
+
+.v5-declaration { padding:clamp(92px,10vw,132px) 24px; }
+.v5-declaration h2 { font-size:clamp(44px,7vw,88px); font-weight:400; letter-spacing:-.055em; line-height:.86; }
+.v5-declaration h2 i { font-style:normal; color:#77736d; }
+.v5-declaration p { color:#494743; line-height:1.7; }
+.v5-next { grid-template-columns:.72fr 1.28fr; max-width:1160px; padding:clamp(78px,9vw,112px) 30px; }
+.v5-next__title h2 { font-style:normal; font-size:clamp(34px,4vw,50px); }
+.v5-next a { grid-template-columns:38px 1fr auto; padding:21px 2px; }
+.v5-next a span { font-size:clamp(17px,2vw,23px); font-weight:400; }
+
+@media (prefers-reduced-motion:no-preference) {
+  .v5-reveal { transform:translateY(14px); transition-duration:.8s,.9s; transition-timing-function:cubic-bezier(.22,1,.36,1); }
+}
+
+@media (max-width:760px) {
+  .v5-cover { min-height:76svh; padding-bottom:94px; }
+  .v5-cover__content h1 { font-size:clamp(50px,14.2vw,64px); }
+  .v5-cover__intro { margin-top:27px; }
+  .v5-eyebrow { margin-bottom:28px; }
+  .v5-manifesto { grid-template-columns:1fr; gap:32px; padding:74px 20px 82px; }
+  .v5-manifesto .v5-index { grid-column:1; margin-bottom:0; }
+  .v5-manifesto__lead { font-size:37px; }
+  .v5-direction { grid-template-columns:1fr; margin:0 20px 82px; }
+  .v5-direction__item { min-height:280px; padding:54px 26px 42px; }
+  .v5-direction__item > span { left:26px; }
+  .v5-testimony { grid-template-columns:1fr; padding:0 20px 82px; }
+  .v5-testimony__title { grid-template-columns:1fr; gap:24px; padding-bottom:34px; }
+  .v5-testimony__image { min-height:410px; }
+  .v5-testimony__copy { padding:42px 24px; }
+  .v5-why { grid-template-columns:1fr; gap:38px; padding:76px 20px 84px; }
+  .v5-why blockquote { grid-column:1; }
+  .v5-heart { padding:80px 20px; }
+  .v5-heart__header { grid-template-columns:1fr; gap:28px; }
+  .v5-heart__header .v5-index { grid-column:1; margin-bottom:0; }
+  .v5-heart__gallery { height:520px; grid-template-columns:1fr; gap:8px; }
+  .v5-heart__gallery figure { min-height:250px; }
+  .v5-heart__pillars { grid-template-columns:1fr; }
+  .v5-heart__pillars span,.v5-heart__pillars span:nth-child(2),.v5-heart__pillars span:last-child { border-bottom:1px solid var(--v5-line); text-align:left; }
+  .v5-declaration h2 { font-size:clamp(42px,13vw,62px); }
+  .v5-next { grid-template-columns:1fr; gap:38px; padding:68px 20px 78px; }
+}
