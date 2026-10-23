@@ -256,3 +256,23 @@ body[data-page="story"] .nav,body[data-page="story"] .nav.scrolled { border-bott
   .v5-declaration h2 { font-size:clamp(42px,13vw,62px); }
   .v5-next { grid-template-columns:1fr; gap:38px; padding:68px 20px 78px; }
 }
+
+/* Hero reset — name the page first, then let its story carry the personality. */
+.v5-cover { min-height:80svh; display:flex; align-items:flex-end; justify-content:flex-start; padding:132px max(6vw,calc((100vw - 1160px)/2)) 62px; }
+.v5-cover::before { background:linear-gradient(180deg,rgba(8,8,8,.08) 0%,rgba(8,8,8,.18) 38%,rgba(8,8,8,.82) 82%,#080808 100%),linear-gradient(90deg,rgba(8,8,8,.5),transparent 58%); }
+.v5-cover__content { max-width:760px; text-align:left; }
+.v5-cover__content h1 { font-size:clamp(72px,11vw,158px); line-height:.79; letter-spacing:-.055em; }
+.v5-cover__content h1 em { color:#c5c2bc; }
+.v5-eyebrow { margin-bottom:20px; }
+.v5-cover__kicker { margin:24px 0 0; color:#d0cdc7; font-size:11px; font-weight:600; letter-spacing:.3em; line-height:1.5; text-transform:uppercase; }
+.v5-cover__intro { max-width:44ch; margin:18px 0 0; color:#aaa7a0; font-size:13px; line-height:1.7; text-shadow:none; }
+.v5-story-link { display:inline-flex; margin-top:28px; text-decoration:none; }
+
+@media (max-width:760px) {
+  .v5-cover { min-height:68svh; padding:108px 20px 42px; }
+  .v5-cover::before { background:linear-gradient(180deg,rgba(8,8,8,.12),rgba(8,8,8,.22) 34%,rgba(8,8,8,.86) 82%,#080808); }
+  .v5-cover__content h1 { font-size:clamp(64px,19vw,86px); }
+  .v5-cover__kicker { margin-top:20px; font-size:9px; letter-spacing:.22em; }
+  .v5-cover__intro { max-width:34ch; margin-top:14px; font-size:12px; }
+  .v5-story-link { margin-top:22px; }
+}
