@@ -2864,11 +2864,11 @@ body[data-page="give"] .gv-donate-panel{padding:78px 6vw}.gv-donate-image .give-
 .events-hero:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 37%,rgba(119,31,18,.12),transparent 30%),linear-gradient(180deg,#030303 0%,#080706 60%,#050505 100%);z-index:-1}
 .events-hero-copy{position:relative;z-index:2;margin:auto}.events-hero-copy .eyebrow{font:700 9px var(--mono);letter-spacing:.3em;margin-bottom:30px;color:var(--stone)}
 .events-hero h1{max-width:8ch;margin:0 auto;font:300 clamp(82px,13vw,205px)/.74 var(--sans);letter-spacing:-.085em;text-transform:uppercase}
-.events-hero-copy>p{max-width:42ch;margin:30px auto 0;color:var(--stone);font-size:clamp(14px,1.25vw,18px);line-height:1.65}
+.events-hero-copy>p{max-width:62ch;margin:30px auto 0;color:var(--stone);font:400 clamp(12px,1vw,15px)/1.75 var(--mono);letter-spacing:.035em}
 
 .events-poster-wrap{position:relative;width:min(470px,72vw);margin:72px auto 0;filter:drop-shadow(0 45px 70px rgba(0,0,0,.55))}
 .events-poster{position:relative;width:100%;aspect-ratio:2/3;margin:0;overflow:hidden;background:#130a08 center/cover no-repeat;color:#fff}
-.events-poster:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.48),transparent 27%,transparent 58%,rgba(0,0,0,.78));z-index:1}
+.events-poster:before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.22),rgba(0,0,0,.22)),linear-gradient(180deg,rgba(0,0,0,.5),transparent 27%,transparent 58%,rgba(0,0,0,.82));z-index:1}
 .events-poster:after{content:"";position:absolute;inset:12px;border:1px solid rgba(255,255,255,.2);z-index:1;pointer-events:none}
 .events-poster-grid{display:none}.events-poster-kicker{position:absolute;z-index:2;top:34px;left:34px;font:700 8px var(--mono);letter-spacing:.26em;text-transform:uppercase}
 .events-poster-word{position:absolute;z-index:2;left:28px;bottom:96px;text-align:left;font:300 clamp(54px,5.8vw,82px)/.73 var(--sans);letter-spacing:-.075em;text-transform:uppercase;text-shadow:0 2px 28px rgba(0,0,0,.45)}

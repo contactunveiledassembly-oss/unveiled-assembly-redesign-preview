@@ -15,6 +15,7 @@ const DEFAULT_EVENT = {
   city: '',
   format: 'hybrid',
   status: 'published',
+  pageMode: 'live',
   featured: true,
   posterUrl: '',
   ticketUrl: '',
@@ -138,16 +139,19 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
   }
 
   function renderPublic(){
+    const config = editableEvent();
+    const pageMode = config.pageMode || 'live';
+    document.querySelectorAll('[data-events-nav-link]').forEach(link => { link.hidden = pageMode === 'hidden'; });
     const root = document.getElementById('eventsPageRoot');
     if(!root) return;
-    const event = publicEvent();
-    const title = event ? event.title : 'Assembly Nights';
+    const event = pageMode === 'live' ? publicEvent() : null;
+    const title = event ? event.title : 'Stay Close';
     const titleEl = document.getElementById('eventsHeroTitle');
     const kickerEl = document.getElementById('eventsHeroKicker');
     const taglineEl = document.getElementById('eventsHeroTagline');
     if(titleEl) titleEl.textContent = title;
-    if(kickerEl) kickerEl.textContent = event ? (event.kicker || 'A Special Gathering') : 'Gather With Us';
-    if(taglineEl) taglineEl.textContent = event ? (event.tagline || '') : 'The next special gathering will be announced soon.';
+    if(kickerEl) kickerEl.textContent = event ? (event.kicker || 'A Special Gathering') : 'Upcoming Gatherings';
+    if(taglineEl) taglineEl.textContent = event ? (event.tagline || '') : 'No event is currently scheduled. When the next gathering is ready, every detail will appear here.';
 
     const poster = document.getElementById('eventsPoster');
     if(poster){
@@ -161,9 +165,9 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     }
 
     const status = document.getElementById('eventsStatusLine');
-    if(status) status.textContent = event ? [dateLabel(event.date), timeLabel(event.time), event.venue, event.city].filter(Boolean).join(' · ') : 'The next gathering will be announced soon.';
+    if(status) status.textContent = event ? [dateLabel(event.date), timeLabel(event.time), event.venue, event.city].filter(Boolean).join(' · ') : 'No Upcoming Events';
     const description = document.getElementById('eventsDescription');
-    if(description) description.textContent = event ? event.description : 'A set-apart gathering for worship, prayer, the Word, and the presence of Jesus.';
+    if(description) description.textContent = event ? event.description : 'This space will hold the next special gathering while keeping the same quiet, intentional flow of the page.';
 
     const actions = document.getElementById('eventsActionRow');
     if(actions){
@@ -184,7 +188,7 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     if(pressSection) pressSection.hidden = !(event && event.pressNotice);
 
     const announcementWrap = document.getElementById('eventsAnnouncements');
-    const publicAnnouncements = announcements
+    const publicAnnouncements = (event ? announcements : [])
       .filter(item => item.status === 'published')
       .sort((a,b) => Number(b.pinned) - Number(a.pinned) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     if(announcementWrap){
@@ -215,6 +219,7 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     assign('eventAdminCity', event.city);
     assign('eventAdminFormat', event.format || 'in-person');
     assign('eventAdminStatus', event.status || 'draft');
+    assign('eventAdminPageMode', event.pageMode || 'live');
     assign('eventAdminDescription', event.description);
     assign('eventAdminPosterUrl', event.posterUrl);
     assign('eventAdminTicketUrl', event.ticketUrl);
@@ -228,10 +233,12 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     if(stats){
       const published = events.filter(item => item.status === 'published').length;
       const drafts = events.filter(item => item.status === 'draft').length;
+      const pageModeLabel = event.pageMode === 'hidden' ? 'Hidden From Navigation' : event.pageMode === 'empty' ? 'No Upcoming Events' : 'Showing Published Event';
       stats.innerHTML = '<div class="admin-stat-tile"><span>Published Events</span><strong>' + published + '</strong></div>' +
         '<div class="admin-stat-tile"><span>Drafts</span><strong>' + drafts + '</strong></div>' +
         '<div class="admin-stat-tile"><span>Announcements</span><strong>' + announcements.length + '</strong></div>' +
-        '<div class="admin-stat-tile admin-stat-tile-wide"><span>Featured Event</span><strong style="font-size:18px">' + escapeHtml(event.title || 'Not set') + '</strong></div>';
+        '<div class="admin-stat-tile admin-stat-tile-wide"><span>Featured Event</span><strong style="font-size:18px">' + escapeHtml(event.title || 'Not set') + '</strong></div>' +
+        '<div class="admin-stat-tile admin-stat-tile-wide"><span>Event Page</span><strong style="font-size:16px">' + escapeHtml(pageModeLabel) + '</strong></div>';
     }
     const preview = document.getElementById('eventsAdminPreview');
     if(preview){
@@ -287,6 +294,7 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
       city: document.getElementById('eventAdminCity').value.trim(),
       format: document.getElementById('eventAdminFormat').value,
       status: document.getElementById('eventAdminStatus').value,
+      pageMode: document.getElementById('eventAdminPageMode').value,
       description: document.getElementById('eventAdminDescription').value.trim(),
       posterUrl: document.getElementById('eventAdminPosterUrl').value.trim(),
       featured: document.getElementById('eventAdminFeatured').checked,

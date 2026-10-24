@@ -479,7 +479,7 @@ function socialIconsHtml(extraClass){
 }
 
 function navHtml(){
-  const links = NAV_LINKS.map(l => `<a href="${BASE}${l.href}" data-page="${l.page}">${l.label}</a>`).join('');
+  const links = NAV_LINKS.map(l => `<a href="${BASE}${l.href}" data-page="${l.page}"${l.page === 'events' ? ' data-events-nav-link' : ''}>${l.label}</a>`).join('');
   return `
   <nav class="nav" id="nav">
     <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
@@ -522,7 +522,7 @@ function footerHtml(){
       <div class="footer-links">
         <a href="${BASE}story.html">Our Story</a>
         <a href="${BASE}beliefs.html">Beliefs</a>
-        <a href="${BASE}events.html">Events</a>
+        <a href="${BASE}events.html" data-events-nav-link>Events</a>
         <a href="${BASE}prayer.html">Prayer</a>
         <a href="${BASE}connect.html">Contact</a>
         <a href="${BASE}shop/">Shop</a>
@@ -1245,7 +1245,7 @@ function dialogsHtml(){
           </div>
 
           <div class="admin-edit-panel" data-events-panel="details" hidden>
-            <p class="admin-hint" style="margin-bottom:16px">This controls the featured event visitors see first. Leave the date blank when it has not been announced—the page will say so honestly instead of showing a made-up date.</p>
+            <p class="admin-hint" style="margin-bottom:16px">This controls the featured event visitors see first. Leave the date blank when it has not been announced—the page will say so honestly instead of showing a made-up date. Page Mode controls what visitors see between events.</p>
             <form id="eventDetailsForm">
               <div class="booking-grid">
                 <div class="booking-field"><label for="eventAdminTitle">Event Name</label><input id="eventAdminTitle" required /></div>
@@ -1257,8 +1257,9 @@ function dialogsHtml(){
                 <div class="booking-field"><label for="eventAdminCity">City / Location</label><input id="eventAdminCity" placeholder="Macon, Georgia" /></div>
                 <div class="booking-field"><label for="eventAdminFormat">Format</label><select id="eventAdminFormat"><option value="in-person">In Person</option><option value="online">Online</option><option value="hybrid">In Person + Online</option></select></div>
                 <div class="booking-field"><label for="eventAdminStatus">Visibility</label><select id="eventAdminStatus"><option value="draft">Draft — hidden</option><option value="published">Published</option><option value="cancelled">Cancelled</option></select></div>
+                <div class="booking-field full"><label for="eventAdminPageMode">Event Page Mode</label><select id="eventAdminPageMode"><option value="live">Show the published event</option><option value="empty">Keep Events in navigation — show no upcoming events</option><option value="hidden">Hide Events from the website navigation</option></select></div>
                 <div class="booking-field full"><label for="eventAdminDescription">Description</label><textarea id="eventAdminDescription" rows="5"></textarea></div>
-                <div class="booking-field full"><label for="eventAdminPosterUrl">Poster Image URL <span class="admin-hint">(optional—the built-in worship photograph appears when blank)</span></label><input id="eventAdminPosterUrl" type="url" placeholder="https://…" /></div>
+                <div class="booking-field full"><label for="eventAdminPosterUrl">Poster Image URL <span class="admin-hint">(optional—the built-in conceptual artwork appears when blank)</span></label><input id="eventAdminPosterUrl" type="url" placeholder="https://…" /></div>
               </div>
               <label class="admin-checkbox-field" style="padding-top:14px"><input id="eventAdminFeatured" type="checkbox" checked /> Feature this event at the top of the page</label>
               <button class="admin-btn-solid" type="submit" style="margin-top:16px">Save Event</button>

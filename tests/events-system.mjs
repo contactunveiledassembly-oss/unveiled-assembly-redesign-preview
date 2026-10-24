@@ -24,6 +24,25 @@ try {
   assert.equal(await desktop.locator('[data-owner-section="events"]').isVisible(), true);
   assert.equal(await desktop.locator('#eventAdminTitle').inputValue(), 'Assembly Nights');
   assert.equal(await desktop.locator('#eventAdminStatus').inputValue(), 'published');
+  assert.equal(await desktop.locator('#eventAdminPageMode').inputValue(), 'live');
+
+  await desktop.evaluate(() => {
+    const events = JSON.parse(localStorage.getItem('ua_preview_events_v1')) || [];
+    const fallback = { id:'assembly-nights', title:'Assembly Nights', status:'published', featured:true };
+    localStorage.setItem('ua_preview_events_v1', JSON.stringify([{ ...(events[0] || fallback), pageMode:'empty' }]));
+  });
+  await desktop.reload({ waitUntil:'networkidle' });
+  assert.equal(await desktop.locator('#eventsHeroTitle').textContent(), 'Stay Close');
+  assert.equal(await desktop.locator('#eventsStatusLine').textContent(), 'No Upcoming Events');
+  assert.equal(await desktop.locator('[data-events-nav-link]').first().isVisible(), true);
+
+  await desktop.evaluate(() => {
+    const events = JSON.parse(localStorage.getItem('ua_preview_events_v1'));
+    events[0].pageMode = 'hidden';
+    localStorage.setItem('ua_preview_events_v1', JSON.stringify(events));
+  });
+  await desktop.reload({ waitUntil:'networkidle' });
+  assert.equal(await desktop.locator('[data-events-nav-link]').first().isHidden(), true);
 
   const tablet = await browser.newPage({ viewport: { width: 1024, height: 844 } });
   tablet.on('pageerror', error => errors.push(error.message));
