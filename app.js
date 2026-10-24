@@ -1188,6 +1188,10 @@ function dialogsHtml(){
             <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
             Settings
           </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="policies">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/><path d="M15 3.5V7.5a.5.5 0 0 0 .5.5H19"/><path d="M10 12.5h5M10 15.5h5M10 9.5h2"/></svg>
+            Policies
+          </button>
           <div class="owner-sidebar-profile">
             <div class="owner-sidebar-avatar" id="ownerSidebarAvatar">?</div>
             <div class="owner-sidebar-profile-text">
@@ -3895,9 +3899,6 @@ function initOwnerInboxNavigation(){
   if(!content.querySelector('[data-owner-section="class-reviews"]')) {
     content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="class-reviews"><div class="admin-panel-head"><div><span class="portal-label">Class Reviews</span><p class="admin-panel-intro">Review class feedback, publish approved responses, and keep private entries out of sight.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-review-filter="all">All</button><button type="button" class="admin-tab" data-review-filter="pending">Pending</button><button type="button" class="admin-tab" data-review-filter="published">Published</button><button type="button" class="admin-tab" data-review-filter="private">Private</button><button type="button" class="admin-tab" data-review-filter="archived">Archived</button></div><div id="classReviewInboxList"></div><div class="admin-subsection-label">Class Review Terms</div><p class="admin-hint">Shown to visitors on the Class Review form. Editing here or from Policies changes the same real thing.</p><div id="reviewPolicyTermsEmbed"></div></article>');
     renderPolicyCardInto('reviewPolicyTermsEmbed', 'reviewTerms');
-  }
-  if(!sidebar.querySelector('[data-owner-nav="policies"]')) {
-    sidebar.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="policies"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/><path d="M15 3.5V7.5a.5.5 0 0 0 .5.5H19"/><path d="M10 12.5h5M10 15.5h5M10 9.5h2"/></svg>Policies</button>');
   }
   if(!content.querySelector('[data-ministry-policy-settings]')) {
     content.insertAdjacentHTML('beforeend', '<article class="portal-panel" style="grid-column:1/-1" data-owner-section="policies" data-ministry-policy-settings><div class="admin-panel-head"><div><span class="portal-label">Policies &amp; Agreements</span><p class="admin-panel-intro">Edit the terms visitors see on ministry forms (prayer, testimonies, class reviews) and the no-refund policy shown at booking checkout. Preview changes persist in this browser only.</p></div></div><div id="ministryPolicySettings"></div></article>');
