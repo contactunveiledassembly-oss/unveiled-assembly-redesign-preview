@@ -76,9 +76,6 @@ body{
   --owner-radius-lg:20px; --owner-radius:14px; --owner-radius-sm:10px; --owner-radius-pill:999px;
   --owner-shadow:0 1px 2px rgba(20,20,22,.04), 0 10px 28px rgba(20,20,22,.06);
 }
-body[data-owner-accent="gold"]{ --owner-accent:#a9782f; --owner-accent-text:#ffffff }
-body[data-owner-accent="taupe"]{ --owner-accent:#7a6552; --owner-accent-text:#ffffff }
-body[data-owner-accent="bluegray"]{ --owner-accent:#3d4f68; --owner-accent-text:#ffffff }
 
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -2107,10 +2104,11 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 .admin-image-preview.is-drag-over{border-color:var(--owner-text);background-color:var(--owner-surface)}
 .admin-image-empty{font-family:var(--sans);font-size:11px;color:var(--owner-text-faint);text-align:center;padding:0 14px;line-height:1.5;position:relative;z-index:1}
 .admin-image-preview[class*="teaching-art-"] .admin-image-empty{color:rgba(255,255,255,.62)}
-.admin-image-actions{display:flex;gap:8px}
+.admin-image-actions{display:flex;gap:8px;flex-wrap:wrap}
 .admin-image-upload-btn,.admin-image-remove-btn{
   font-family:var(--sans);font-size:11px;letter-spacing:.01em;font-weight:600;
-  padding:8px 12px;border-radius:var(--owner-radius-pill);cursor:pointer;text-align:center;flex:1;
+  padding:8px 12px;border-radius:var(--owner-radius-pill);cursor:pointer;text-align:center;
+  flex:1 1 auto;white-space:nowrap;
 }
 .admin-image-upload-btn{background:var(--owner-accent);color:var(--owner-accent-text)}
 .admin-image-upload-btn:hover{opacity:.88}
@@ -2455,7 +2453,7 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
   margin-top:auto;display:flex;align-items:center;gap:10px;padding:16px 12px 6px;border-top:1px solid rgba(255,255,255,.1);
 }
 .owner-sidebar-avatar{
-  width:34px;height:34px;border-radius:50%;background:#26262b;color:#fff;display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:50%;background-color:#26262b;background-size:cover;background-position:center;color:#fff;display:flex;align-items:center;justify-content:center;
   font-family:var(--serif);font-size:14px;flex:0 0 auto;
 }
 .owner-sidebar-profile-text{display:flex;flex-direction:column;min-width:0}
@@ -2552,26 +2550,6 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 .admin-dpad-row{display:flex;gap:6px}
 .admin-dpad .admin-btn-ghost{min-width:78px;text-align:center}
 .admin-adjust-btn-row{display:flex;gap:8px;flex-wrap:wrap}
-
-/* ---------- Owner Appearance settings preview ---------- */
-.appearance-preview{
-  display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:22px;border:1px solid var(--owner-border);
-  border-radius:var(--owner-radius);background:var(--owner-surface);box-shadow:var(--owner-shadow);
-}
-.appearance-preview-card{
-  border:1px solid var(--owner-border);border-radius:var(--owner-radius-sm);padding:14px 16px;background:var(--owner-surface-sunken);
-  font-family:var(--sans);font-size:12px;color:var(--owner-text-muted);min-width:140px;
-}
-.appearance-preview-card strong{display:block;color:var(--owner-text);font-size:13px;margin-bottom:4px}
-.appearance-swatches{display:flex;gap:10px}
-.appearance-swatch{
-  width:38px;height:38px;border-radius:50%;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;
-}
-.appearance-swatch.active{border-color:var(--owner-text)}
-.appearance-option-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
-.appearance-preview-sidebar{background:#0c0c0e;border-radius:var(--owner-radius-sm);padding:8px;display:flex;flex-direction:column;gap:4px;min-width:150px}
-.appearance-preview-sidebar-item{padding:8px 12px;border-radius:var(--owner-radius-pill);font-family:var(--sans);font-size:12px;font-weight:600;color:#9a9aa2}
-.appearance-preview-sidebar-item.active{background:var(--owner-accent);color:var(--owner-accent-text)}
 
 /* ---------- In-editor full preview + dashboard responsive ---------- */
 .admin-preview-embed{position:relative;min-height:260px}

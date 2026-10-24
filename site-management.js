@@ -148,7 +148,7 @@ function normalizeCode(value){ return String(value || '').trim().toUpperCase().r
 function htmlLines(value, escapeHtml){ return String(value || '').split('\n').map(escapeHtml).join('<br>'); }
 
 export function initSiteManagement(context){
-  const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary } = context;
+  const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary, policyCardHtml } = context;
   const { doc, setDoc, getDoc, collection, getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction } = firestore;
   const PAGE_STORAGE_KEYS = { 'one-on-one': 'uaOneOnOnePageContent', home: 'uaHomePageContent', beliefs: 'uaBeliefsPageContent', give: 'uaGivePageContent' };
   const DISCOUNT_STORAGE_KEY = 'uaDiscountCodes';
@@ -372,6 +372,20 @@ export function initSiteManagement(context){
       '<button type="button" class="admin-image-remove-btn" data-oo-image-reset="' + key + '">Use Approved Image</button></div>' +
       '<details class="admin-image-advanced"><summary>Advanced: paste an image URL</summary><input id="ooEditImage' + cap + '" data-oo-image-input="' + key + '" type="text" /></details></div>';
   }
+  // Same component as imageField() above, just namespaced data-gv-*
+  // instead of data-oo-* (and reusing the "giveEditImage{Cap}" ids
+  // ChatGPT's Give editor already reads/writes as plain text) so this
+  // doesn't collide with or disturb the One-on-One editor's own image
+  // fields, which share some of the same keys (e.g. "hero").
+  function giveImageField(label, key){
+    const cap = key.charAt(0).toUpperCase() + key.slice(1);
+    return '<div class="site-editor-image">' +
+      '<span class="admin-microlabel">' + label + '</span>' +
+      '<div class="admin-image-preview" id="giveEditImage' + cap + 'Preview"></div>' +
+      '<div class="admin-image-actions"><label class="admin-image-upload-btn">Upload / Replace<input type="file" accept="image/*" data-gv-image-upload="' + key + '" hidden></label>' +
+      '<button type="button" class="admin-image-remove-btn" data-gv-image-reset="' + key + '">Use Approved Image</button></div>' +
+      '<details class="admin-image-advanced"><summary>Advanced: paste an image URL</summary><input id="giveEditImage' + cap + '" data-gv-image-input="' + key + '" type="text" /></details></div>';
+  }
   function oneOnOneEditorHtml(){
     return '<form id="ownerOneOnOneEditor" class="site-editor">' +
       '<div class="site-editor-head"><div><span class="portal-label">Edit One-on-One Page</span><p class="admin-panel-intro">Change the words and photographs visitors see. Your design, spacing, colors, and booking system stay protected.</p></div>' +
@@ -441,8 +455,10 @@ export function initSiteManagement(context){
       GIVE_DEFAULTS.community.stories.map((_, i) => '<div class="admin-subsection-label">Story ' + (i + 1) + '</div><div class="site-editor-grid">' + field('Heading', 'giveEditStoryTitle' + i) + field('Description', 'giveEditStoryCopy' + i, 3) + '</div>').join('') +
       '<div class="admin-subsection-label">Giving Form</div><div class="site-editor-grid">' + field('Small heading', 'giveEditFormEyebrow') + field('Main heading', 'giveEditFormTitle') + '</div><div class="site-editor-grid site-editor-single">' + field('Instruction line', 'giveEditFormCopy', 2) + '</div>' +
       '<div class="admin-subsection-label">Closing Statement</div><div class="site-editor-grid">' + field('Small heading', 'giveEditClosingEyebrow') + field('Main heading — use a new line to control the break', 'giveEditClosingTitle', 2) + '</div><div class="site-editor-grid site-editor-single">' + field('Closing message', 'giveEditClosingCopy', 3) + '</div>' +
-      '<div class="admin-subsection-label">Photography</div><p class="admin-hint">Use an approved site asset path or image URL. Concept photographs remain labeled on the public page.</p><div class="site-editor-grid">' +
-      field('Opening photograph', 'giveEditImageHero') + field('Featured-event photograph', 'giveEditImageEvent') + field('Food-drive photograph', 'giveEditImageCommunity') + field('Giving-form photograph', 'giveEditImageGiving') + '</div>' +
+      '<div class="admin-subsection-label">Giving Terms</div><p class="admin-hint">Shown to visitors as a required checkbox before they give. Editing here or from the main Policies section changes the same real thing.</p>' +
+      (policyCardHtml ? policyCardHtml('givingTerms') : '') +
+      '<div class="admin-subsection-label">Photography</div><p class="admin-hint">Upload a photo or paste an image URL. Large files are resized before saving. Concept photographs remain labeled on the public page.</p><div class="site-editor-images">' +
+      giveImageField('Opening photograph', 'hero') + giveImageField('Featured-event photograph', 'event') + giveImageField('Food-drive photograph', 'community') + giveImageField('Giving-form photograph', 'giving') + '</div>' +
       '<div class="site-editor-actions"><button class="admin-btn-solid" type="submit">Save Give Page</button><button class="admin-btn-ghost" type="button" id="ownerGiveResetBtn">Restore Approved Version</button><span class="form-status" id="ownerGiveStatus" role="status" aria-live="polite"></span></div></form>';
   }
 
@@ -485,6 +501,7 @@ export function initSiteManagement(context){
     setValue('giveEditFormEyebrow', giveContent.form.eyebrow); setValue('giveEditFormTitle', giveContent.form.title); setValue('giveEditFormCopy', giveContent.form.copy);
     setValue('giveEditClosingEyebrow', giveContent.closing.eyebrow); setValue('giveEditClosingTitle', giveContent.closing.title); setValue('giveEditClosingCopy', giveContent.closing.copy);
     setValue('giveEditImageHero', giveContent.images.hero); setValue('giveEditImageEvent', giveContent.images.event); setValue('giveEditImageCommunity', giveContent.images.community); setValue('giveEditImageGiving', giveContent.images.giving);
+    ['hero', 'event', 'community', 'giving'].forEach(refreshGiveImagePreview);
   }
   function collectOneOnOneEditor(){
     return {
@@ -528,6 +545,14 @@ export function initSiteManagement(context){
     const cap = key.charAt(0).toUpperCase() + key.slice(1);
     const input = document.getElementById('ooEditImage' + cap);
     const preview = document.getElementById('ooEditImage' + cap + 'Preview');
+    if(!input || !preview) return;
+    preview.style.backgroundImage = input.value ? "url('" + input.value.replace(/'/g, '%27') + "')" : '';
+    preview.innerHTML = input.value ? '' : '<span class="admin-image-empty">No image selected</span>';
+  }
+  function refreshGiveImagePreview(key){
+    const cap = key.charAt(0).toUpperCase() + key.slice(1);
+    const input = document.getElementById('giveEditImage' + cap);
+    const preview = document.getElementById('giveEditImage' + cap + 'Preview');
     if(!input || !preview) return;
     preview.style.backgroundImage = input.value ? "url('" + input.value.replace(/'/g, '%27') + "')" : '';
     preview.innerHTML = input.value ? '' : '<span class="admin-image-empty">No image selected</span>';
@@ -831,19 +856,32 @@ export function initSiteManagement(context){
   });
   document.getElementById('ownerWebsiteEditor')?.addEventListener('input', event => {
     const input = event.target.closest('[data-oo-image-input]'); if(input) refreshImagePreview(input.dataset.ooImageInput);
+    const gvInput = event.target.closest('[data-gv-image-input]'); if(gvInput) refreshGiveImagePreview(gvInput.dataset.gvImageInput);
   });
   document.getElementById('ownerWebsiteEditor')?.addEventListener('change', async event => {
     const input = event.target.closest('[data-oo-image-upload]');
-    if(!input || !input.files?.[0]) return;
-    const key = input.dataset.ooImageUpload, cap = key.charAt(0).toUpperCase() + key.slice(1);
-    const status = document.getElementById('ownerOneOnOneStatus'); if(status) status.textContent = 'Preparing image…';
-    try { document.getElementById('ooEditImage' + cap).value = await resizeImage(input.files[0]); refreshImagePreview(key); if(status) status.textContent = 'Image ready — save the page when finished.'; }
-    catch (err) { if(status) status.textContent = 'That image could not be prepared. Try another file.'; }
-    input.value = '';
+    if(input && input.files?.[0]){
+      const key = input.dataset.ooImageUpload, cap = key.charAt(0).toUpperCase() + key.slice(1);
+      const status = document.getElementById('ownerOneOnOneStatus'); if(status) status.textContent = 'Preparing image…';
+      try { document.getElementById('ooEditImage' + cap).value = await resizeImage(input.files[0]); refreshImagePreview(key); if(status) status.textContent = 'Image ready — save the page when finished.'; }
+      catch (err) { if(status) status.textContent = 'That image could not be prepared. Try another file.'; }
+      input.value = '';
+      return;
+    }
+    const gvInput = event.target.closest('[data-gv-image-upload]');
+    if(gvInput && gvInput.files?.[0]){
+      const key = gvInput.dataset.gvImageUpload, cap = key.charAt(0).toUpperCase() + key.slice(1);
+      const status = document.getElementById('ownerGiveStatus'); if(status) status.textContent = 'Preparing image…';
+      try { document.getElementById('giveEditImage' + cap).value = await resizeImage(gvInput.files[0]); refreshGiveImagePreview(key); if(status) status.textContent = 'Image ready — save the page when finished.'; }
+      catch (err) { if(status) status.textContent = 'That image could not be prepared. Try another file.'; }
+      gvInput.value = '';
+    }
   });
   document.getElementById('ownerWebsiteEditor')?.addEventListener('click', async event => {
     const resetImage = event.target.closest('[data-oo-image-reset]');
     if(resetImage){ const key = resetImage.dataset.ooImageReset, cap = key.charAt(0).toUpperCase() + key.slice(1); document.getElementById('ooEditImage' + cap).value = ONE_ON_ONE_DEFAULTS.images[key]; refreshImagePreview(key); return; }
+    const gvResetImage = event.target.closest('[data-gv-image-reset]');
+    if(gvResetImage){ const key = gvResetImage.dataset.gvImageReset, cap = key.charAt(0).toUpperCase() + key.slice(1); document.getElementById('giveEditImage' + cap).value = GIVE_DEFAULTS.images[key]; refreshGiveImagePreview(key); return; }
     if(event.target.closest('#ownerOneOnOnePreviewBtn')){ window.open('one-on-one.html', '_blank', 'noopener'); return; }
     if(event.target.closest('#ownerHomePreviewBtn')){ window.open('index.html', '_blank', 'noopener'); return; }
     if(event.target.closest('#ownerBeliefsPreviewBtn')){ window.open('beliefs.html', '_blank', 'noopener'); return; }
