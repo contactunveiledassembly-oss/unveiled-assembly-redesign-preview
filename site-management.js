@@ -148,7 +148,7 @@ function normalizeCode(value){ return String(value || '').trim().toUpperCase().r
 function htmlLines(value, escapeHtml){ return String(value || '').split('\n').map(escapeHtml).join('<br>'); }
 
 export function initSiteManagement(context){
-  const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary } = context;
+  const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary, policyCardHtml } = context;
   const { doc, setDoc, getDoc, collection, getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction } = firestore;
   const PAGE_STORAGE_KEYS = { 'one-on-one': 'uaOneOnOnePageContent', home: 'uaHomePageContent', beliefs: 'uaBeliefsPageContent', give: 'uaGivePageContent' };
   const DISCOUNT_STORAGE_KEY = 'uaDiscountCodes';
@@ -441,6 +441,8 @@ export function initSiteManagement(context){
       GIVE_DEFAULTS.community.stories.map((_, i) => '<div class="admin-subsection-label">Story ' + (i + 1) + '</div><div class="site-editor-grid">' + field('Heading', 'giveEditStoryTitle' + i) + field('Description', 'giveEditStoryCopy' + i, 3) + '</div>').join('') +
       '<div class="admin-subsection-label">Giving Form</div><div class="site-editor-grid">' + field('Small heading', 'giveEditFormEyebrow') + field('Main heading', 'giveEditFormTitle') + '</div><div class="site-editor-grid site-editor-single">' + field('Instruction line', 'giveEditFormCopy', 2) + '</div>' +
       '<div class="admin-subsection-label">Closing Statement</div><div class="site-editor-grid">' + field('Small heading', 'giveEditClosingEyebrow') + field('Main heading — use a new line to control the break', 'giveEditClosingTitle', 2) + '</div><div class="site-editor-grid site-editor-single">' + field('Closing message', 'giveEditClosingCopy', 3) + '</div>' +
+      '<div class="admin-subsection-label">Giving Terms</div><p class="admin-hint">Shown to visitors as a required checkbox before they give. Editing here or from the main Policies section changes the same real thing.</p>' +
+      (policyCardHtml ? policyCardHtml('givingTerms') : '') +
       '<div class="admin-subsection-label">Photography</div><p class="admin-hint">Use an approved site asset path or image URL. Concept photographs remain labeled on the public page.</p><div class="site-editor-grid">' +
       field('Opening photograph', 'giveEditImageHero') + field('Featured-event photograph', 'giveEditImageEvent') + field('Food-drive photograph', 'giveEditImageCommunity') + field('Giving-form photograph', 'giveEditImageGiving') + '</div>' +
       '<div class="site-editor-actions"><button class="admin-btn-solid" type="submit">Save Give Page</button><button class="admin-btn-ghost" type="button" id="ownerGiveResetBtn">Restore Approved Version</button><span class="form-status" id="ownerGiveStatus" role="status" aria-live="polite"></span></div></form>';

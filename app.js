@@ -1491,7 +1491,7 @@ function dialogsHtml(){
               <div class="form-field" style="flex:0 0 170px"><label for="schedMaxPerDay">Maximum Appointments Per Day</label><input id="schedMaxPerDay" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 150px"><label for="schedMinNotice">Minimum Notice (hours)</label><input id="schedMinNotice" type="number" min="0" placeholder="None" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 170px"><label for="schedMaxAdvance">Maximum Advance Booking (days)</label><input id="schedMaxAdvance" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <label style="display:flex;align-items:center;gap:8px;color:var(--owner-text);font-size:13px;padding-bottom:8px">
+              <label style="display:flex;align-items:center;gap:8px;color:var(--owner-text);font-size:13px;padding-bottom:8px;white-space:nowrap;flex:0 0 auto">
                 <input id="schedBookingPaused" type="checkbox" style="accent-color:var(--owner-accent)" />
                 Pause all new booking requests
               </label>
@@ -1606,7 +1606,7 @@ function dialogsHtml(){
                 <div id="schedOverrideTypesCheckboxes" class="sched-session-type-options"></div>
               </div>
               <div class="form-field" style="flex:1;min-width:160px"><label for="schedOverrideNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedOverrideNotes" type="text" placeholder="e.g. Ministry event" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--owner-text);padding-bottom:8px">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--owner-text);padding-bottom:8px;white-space:nowrap;flex:0 0 auto">
                 <input id="schedOverrideClosed" type="checkbox" style="accent-color:var(--owner-accent)" /> Fully closed this date
               </label>
               <button class="admin-btn-ghost" type="submit">Save Override</button>
@@ -1615,37 +1615,9 @@ function dialogsHtml(){
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="policies" hidden>
-            <p class="admin-hint" style="margin-bottom:20px">The exact wording shown to visitors at checkout. They must agree to both before completing a booking.</p>
-
-            <div class="admin-image-card">
-              <div class="admin-image-card-head">
-                <span class="admin-image-card-title">Terms and Conditions</span>
-                <p class="admin-hint">Shown as a required checkbox and a "Read Terms and Conditions" link at checkout.</p>
-              </div>
-              <div class="booking-grid">
-                <div class="booking-field full"><label for="policyTermsTitle">Policy Title</label><input id="policyTermsTitle" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-                <div class="booking-field full"><label for="policyTermsText">Policy Text</label><textarea id="policyTermsText" rows="5" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"></textarea></div>
-              </div>
-              <label class="admin-checkbox-field" style="padding-top:0;margin-top:4px"><input id="policyTermsActive" type="checkbox" /> Show this policy at checkout (turn off to hide it)</label>
-              <p class="admin-hint" id="policyTermsUpdated" style="margin-top:8px"></p>
-              <button class="admin-btn-solid" type="button" id="policyTermsSaveBtn" style="margin-top:12px">Save Changes</button>
-              <div class="form-status" id="policyTermsStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
-            </div>
-
-            <div class="admin-image-card">
-              <div class="admin-image-card-head">
-                <span class="admin-image-card-title">No Refund Policy</span>
-                <p class="admin-hint">Shown as a required checkbox and a "Read No Refund Policy" link at checkout.</p>
-              </div>
-              <div class="booking-grid">
-                <div class="booking-field full"><label for="policyNoRefundTitle">Policy Title</label><input id="policyNoRefundTitle" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-                <div class="booking-field full"><label for="policyNoRefundText">Policy Text</label><textarea id="policyNoRefundText" rows="5" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf"></textarea></div>
-              </div>
-              <label class="admin-checkbox-field" style="padding-top:0;margin-top:4px"><input id="policyNoRefundActive" type="checkbox" /> Show this policy at checkout (turn off to hide it)</label>
-              <p class="admin-hint" id="policyNoRefundUpdated" style="margin-top:8px"></p>
-              <button class="admin-btn-solid" type="button" id="policyNoRefundSaveBtn" style="margin-top:12px">Save Changes</button>
-              <div class="form-status" id="policyNoRefundStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
-            </div>
+            <p class="admin-hint" style="margin-bottom:20px">The exact wording shown to visitors at checkout. They must agree to both before completing a booking. Editing here or from the main Policies section changes the same real policy — there's only one copy of each.</p>
+            <div id="bookingsPolicyTermsEmbed"></div>
+            <div id="bookingsPolicyNoRefundEmbed" style="margin-top:18px"></div>
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="notifications" hidden>
@@ -1955,6 +1927,10 @@ function dialogsHtml(){
 
             <button class="admin-btn-solid" type="button" id="teachingSettingsSaveBtn">Save Changes</button>
             <div class="form-status" id="teachingSettingsStatus" style="color:var(--owner-text-muted);margin-top:10px"></div>
+
+            <div class="admin-subsection-label">Checkout Policy</div>
+            <p class="admin-hint" style="margin-bottom:12px">The no-refund policy shown to visitors registering for a class. Same policy shown at One-on-One booking checkout — editing it here or under Policies changes the same real thing.</p>
+            <div id="teachingPolicyNoRefundEmbed"></div>
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="settings">
@@ -1977,35 +1953,6 @@ function dialogsHtml(){
           <p class="admin-hint" style="margin:10px 0 16px">To change your email or phone number, use Account Settings below.</p>
           <button class="admin-btn-solid" type="button" id="ownerProfileSaveBtn">Save Changes</button>
           <div class="form-status" id="ownerProfileStatus" style="color:var(--owner-text-muted);margin-top:10px"></div>
-        </article>
-        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="settings">
-          <span class="portal-label">Appearance</span>
-          <p class="admin-panel-intro">This changes how your Owner dashboard looks on this device — it has no effect on the public website.</p>
-
-          <div class="admin-subsection-label" style="border-top:0;padding-top:0;margin-top:18px">Owner Theme</div>
-          <p class="admin-hint" style="margin-bottom:18px">Modern Light — a clean white-and-light-gray layout with a black sidebar. This is the Owner dashboard's only theme, so it always looks and feels the same.</p>
-
-          <div class="admin-subsection-label">Accent Style</div>
-          <p class="admin-hint" style="margin-bottom:14px">Only changes small details — the highlighted sidebar item, small badges, focus outlines, and thin accent lines. It never changes your page backgrounds or text color.</p>
-          <div class="appearance-swatches" id="appearanceAccentRow" style="margin-bottom:22px">
-            <button type="button" class="appearance-swatch" data-appearance-accent="ink" style="background:#000000" title="Neutral Black"></button>
-            <button type="button" class="appearance-swatch" data-appearance-accent="gold" style="background:#a9782f" title="Soft Gold"></button>
-            <button type="button" class="appearance-swatch" data-appearance-accent="taupe" style="background:#7a6552" title="Warm Taupe"></button>
-            <button type="button" class="appearance-swatch" data-appearance-accent="bluegray" style="background:#3d4f68" title="Soft Blue Gray"></button>
-          </div>
-
-          <div class="admin-subsection-label">Preview</div>
-          <div class="appearance-preview">
-            <button type="button" class="admin-btn-solid">Primary Button</button>
-            <button type="button" class="admin-btn-ghost">Outline Button</button>
-            <input type="text" placeholder="Input field" style="max-width:160px;padding:9px 14px;border-radius:var(--owner-radius-pill);border:1px solid var(--owner-border-strong);background:var(--owner-surface);color:var(--owner-text)" readonly />
-            <span class="admin-status-pill published">Badge</span>
-            <div class="appearance-preview-sidebar">
-              <div class="appearance-preview-sidebar-item">Dashboard</div>
-              <div class="appearance-preview-sidebar-item active">Teachings</div>
-            </div>
-            <div class="appearance-preview-card"><strong>Sample Card</strong>This is what a card looks like.</div>
-          </div>
         </article>
         ${accountSettingsHtml('owner')}
       </div>
@@ -2417,6 +2364,10 @@ function dialogsHtml(){
           <div class="checkout-order-summary" id="teachingRegisterOrderSummary"></div>
 
           <div class="booking-policy-checks">
+            <label class="booking-policy-check">
+              <input type="checkbox" id="teachingRegisterAgreeNoRefund" required />
+              <span>I understand that all class purchases are final and non-refundable. <button type="button" class="link-btn" id="teachingRegisterViewNoRefund">Read No Refund Policy</button></span>
+            </label>
             <label class="booking-policy-check">
               <input type="checkbox" id="teachingRegisterAgreeSms" />
               <span>I agree to receive booking/class confirmation and reminder text messages related to this registration. Not marketing — transactional only.</span>
@@ -3114,7 +3065,7 @@ let BOOKING_POLICIES = {
   },
   noRefund: {
     title: 'No Refund Policy',
-    text: 'All one-on-one booking payments are final and non-refundable. If you are unable to attend, you may request a reschedule based on availability, but refunds are not guaranteed.',
+    text: 'All one-on-one bookings and teaching purchases are final and non-refundable. If you are unable to attend, you may request a reschedule based on availability, but refunds are not guaranteed.',
     lastUpdated: '', active: true
   }
 };
@@ -3551,11 +3502,17 @@ const DEFAULT_MINISTRY_POLICIES = {
     text: 'All ministry forms are intended for prayer, testimony, and class feedback. Information is reviewed by The Unveiled Assembly and may be kept private or published only with ministry approval. No information submitted through these forms is a guarantee of pastoral response or publication.',
     lastUpdated: '2026-09-16', active: true
   },
-  noRefund: {
-    title: 'No Refund Policy',
-    text: 'All one-on-one bookings and teaching purchases are final and non-refundable. Requests may be rescheduled only when the ministry approves a new time.',
+  givingTerms: {
+    title: 'Giving Terms and Conditions',
+    text: 'All gifts and donations given through this website are voluntary and non-refundable. Giving does not purchase a service, product, or guaranteed outcome. Funds are used to support the ongoing work of The Unveiled Assembly, including outreach, ministry resources, and operational needs.',
     lastUpdated: '2026-09-16', active: true
   }
+  // 'noRefund' and 'terms' are intentionally NOT here — they live in
+  // BOOKING_POLICIES instead (see the unified policy editor comment
+  // near renderMinistryPolicySettings), which is the one with real
+  // Firestore persistence. Keeping a second noRefund copy here was
+  // the actual cause of the "two different No Refund Policy screens"
+  // confusion — don't re-add it.
 };
 
 const DEFAULT_PRAYER_REQUESTS = [
@@ -3928,16 +3885,22 @@ function initOwnerInboxNavigation(){
   }
 
   if(!content.querySelector('[data-owner-section="prayer-requests"]')) {
-    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="prayer-requests"><div class="admin-panel-head"><div><span class="portal-label">Prayer Requests</span><p class="admin-panel-intro">Prayer submissions, status tracking, private handling, and ministry follow-up.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-prayer-filter="all">All</button><button type="button" class="admin-tab" data-prayer-filter="new">New</button><button type="button" class="admin-tab" data-prayer-filter="in-progress">In Progress</button><button type="button" class="admin-tab" data-prayer-filter="completed">Completed</button><button type="button" class="admin-tab" data-prayer-filter="archived">Archived</button></div><div id="prayerInboxList"></div></article>');
+    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="prayer-requests"><div class="admin-panel-head"><div><span class="portal-label">Prayer Requests</span><p class="admin-panel-intro">Prayer submissions, status tracking, private handling, and ministry follow-up.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-prayer-filter="all">All</button><button type="button" class="admin-tab" data-prayer-filter="new">New</button><button type="button" class="admin-tab" data-prayer-filter="in-progress">In Progress</button><button type="button" class="admin-tab" data-prayer-filter="completed">Completed</button><button type="button" class="admin-tab" data-prayer-filter="archived">Archived</button></div><div id="prayerInboxList"></div><div class="admin-subsection-label">Prayer Request Terms</div><p class="admin-hint">Shown to visitors on the Prayer Request form. Editing here or from Policies changes the same real thing.</p><div id="prayerPolicyTermsEmbed"></div></article>');
+    renderPolicyCardInto('prayerPolicyTermsEmbed', 'prayerTerms');
   }
   if(!content.querySelector('[data-owner-section="testimonials"]')) {
-    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="testimonials"><div class="admin-panel-head"><div><span class="portal-label">Testimonials</span><p class="admin-panel-intro">Review, publish, keep private, and manage personal testimony submissions.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-story-filter="all">All</button><button type="button" class="admin-tab" data-story-filter="pending">Pending</button><button type="button" class="admin-tab" data-story-filter="published">Published</button><button type="button" class="admin-tab" data-story-filter="private">Private</button><button type="button" class="admin-tab" data-story-filter="archived">Archived</button></div><div id="testimonyInboxList"></div></article>');
+    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="testimonials"><div class="admin-panel-head"><div><span class="portal-label">Testimonials</span><p class="admin-panel-intro">Review, publish, keep private, and manage personal testimony submissions.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-story-filter="all">All</button><button type="button" class="admin-tab" data-story-filter="pending">Pending</button><button type="button" class="admin-tab" data-story-filter="published">Published</button><button type="button" class="admin-tab" data-story-filter="private">Private</button><button type="button" class="admin-tab" data-story-filter="archived">Archived</button></div><div id="testimonyInboxList"></div><div class="admin-subsection-label">Testimony Submission Terms</div><p class="admin-hint">Shown to visitors on the Testimony form. Editing here or from Policies changes the same real thing.</p><div id="testimonyPolicyTermsEmbed"></div></article>');
+    renderPolicyCardInto('testimonyPolicyTermsEmbed', 'testimonyTerms');
   }
   if(!content.querySelector('[data-owner-section="class-reviews"]')) {
-    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="class-reviews"><div class="admin-panel-head"><div><span class="portal-label">Class Reviews</span><p class="admin-panel-intro">Review class feedback, publish approved responses, and keep private entries out of sight.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-review-filter="all">All</button><button type="button" class="admin-tab" data-review-filter="pending">Pending</button><button type="button" class="admin-tab" data-review-filter="published">Published</button><button type="button" class="admin-tab" data-review-filter="private">Private</button><button type="button" class="admin-tab" data-review-filter="archived">Archived</button></div><div id="classReviewInboxList"></div></article>');
+    content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="class-reviews"><div class="admin-panel-head"><div><span class="portal-label">Class Reviews</span><p class="admin-panel-intro">Review class feedback, publish approved responses, and keep private entries out of sight.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-review-filter="all">All</button><button type="button" class="admin-tab" data-review-filter="pending">Pending</button><button type="button" class="admin-tab" data-review-filter="published">Published</button><button type="button" class="admin-tab" data-review-filter="private">Private</button><button type="button" class="admin-tab" data-review-filter="archived">Archived</button></div><div id="classReviewInboxList"></div><div class="admin-subsection-label">Class Review Terms</div><p class="admin-hint">Shown to visitors on the Class Review form. Editing here or from Policies changes the same real thing.</p><div id="reviewPolicyTermsEmbed"></div></article>');
+    renderPolicyCardInto('reviewPolicyTermsEmbed', 'reviewTerms');
+  }
+  if(!sidebar.querySelector('[data-owner-nav="policies"]')) {
+    sidebar.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="policies"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/><path d="M15 3.5V7.5a.5.5 0 0 0 .5.5H19"/><path d="M10 12.5h5M10 15.5h5M10 9.5h2"/></svg>Policies</button>');
   }
   if(!content.querySelector('[data-ministry-policy-settings]')) {
-    content.insertAdjacentHTML('beforeend', '<article class="portal-panel" style="grid-column:1/-1" data-owner-section="settings" data-ministry-policy-settings><div class="admin-panel-head"><div><span class="portal-label">Policies &amp; Agreements</span><p class="admin-panel-intro">Edit the terms visitors see on ministry forms. Preview changes persist in this browser only.</p></div></div><div id="ministryPolicySettings"></div></article>');
+    content.insertAdjacentHTML('beforeend', '<article class="portal-panel" style="grid-column:1/-1" data-owner-section="policies" data-ministry-policy-settings><div class="admin-panel-head"><div><span class="portal-label">Policies &amp; Agreements</span><p class="admin-panel-intro">Edit the terms visitors see on ministry forms (prayer, testimonies, class reviews) and the no-refund policy shown at booking checkout. Preview changes persist in this browser only.</p></div></div><div id="ministryPolicySettings"></div></article>');
     renderMinistryPolicySettings();
   }
   renderOwnerInboxBadges();
@@ -3987,33 +3950,91 @@ function renderMinistryInboxViews(){
   renderOwnerInboxBadges();
 }
 
+/* ---------------------------------------------------------------
+   Unified policy editor. Two backends share one card UI/one save
+   button so there is only ever one real place each policy's data
+   lives, no matter how many sections embed a card for it:
+     - 'terms'/'noRefund' are BOOKING_POLICIES, which is the one that
+       was already real (Firestore doc per key in production, same
+       localStorage preview as everything else in DEMO_MODE) — see
+       loadSchedulingConfig()/saveBookingPolicy() above. Kept as the
+       source of truth rather than folding it into the newer,
+       preview-only ministry list, so nothing regresses.
+     - everything else (prayerTerms, testimonyTerms, reviewTerms,
+       generalTerms, givingTerms) is MINISTRY_POLICIES, preview-only
+       (persistMinistryDataLocal — this browser only), same as it's
+       always been and same as it's labeled in the UI.
+   A card embedded in, say, Bookings and a card embedded in the
+   central Policies list for the same key read/write the exact same
+   object — editing either one is editing the real thing, not a copy.
+   --------------------------------------------------------------- */
+const BOOKING_BACKED_POLICY_KEYS = ['terms', 'noRefund'];
+const POLICY_DEFAULT_TITLES = {
+  terms: 'Terms and Conditions', noRefund: 'No Refund Policy',
+  prayerTerms: 'Prayer Request Terms', testimonyTerms: 'Testimony Submission Terms',
+  reviewTerms: 'Class Review Terms', generalTerms: 'General Terms and Conditions',
+  givingTerms: 'Giving Terms and Conditions'
+};
+function policyRecord(key){
+  const store = BOOKING_BACKED_POLICY_KEYS.includes(key) ? BOOKING_POLICIES : MINISTRY_POLICIES;
+  return store[key] || { title: POLICY_DEFAULT_TITLES[key] || key, text: '', lastUpdated: '', active: true };
+}
+function policyLastUpdatedDisplay(value){
+  if(!value) return '';
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+  if(!iso) return value; // already a formatted string from older data — show as-is
+  const parsed = new Date(iso + 'T00:00:00');
+  return isNaN(parsed) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(parsed);
+}
+function policyCardHtml(key){
+  const p = policyRecord(key);
+  const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(p.lastUpdated || '') ? p.lastUpdated : '';
+  return '<div class="ministry-policy-editor" data-policy-key="' + key + '">' +
+    '<div class="ministry-policy-editor-head"><strong>' + escapeHtml(p.title || POLICY_DEFAULT_TITLES[key] || key) + '</strong><label><input type="checkbox" data-policy-active ' + (p.active !== false ? 'checked' : '') + ' /> Active</label></div>' +
+    '<div class="booking-grid"><div class="booking-field"><label>Title</label><input data-policy-title value="' + escapeHtml(p.title || '') + '" /></div><div class="booking-field"><label>Last Updated</label><input data-policy-date type="date" value="' + escapeHtml(dateValue) + '" /></div><div class="booking-field full"><label>Policy Text</label><textarea data-policy-text rows="4">' + escapeHtml(p.text || '') + '</textarea></div></div>' +
+    '<button type="button" class="admin-btn-solid" data-policy-save="' + key + '">Save Policy</button><span class="form-status" data-policy-status></span></div>';
+}
+function renderPolicyCardInto(containerId, key){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML = policyCardHtml(key);
+}
 function renderMinistryPolicySettings(){
   const wrap = document.getElementById('ministryPolicySettings');
   if(!wrap) return;
-  const keys = ['prayerTerms', 'testimonyTerms', 'reviewTerms', 'noRefund', 'generalTerms'];
-  wrap.innerHTML = keys.map(key => {
-    const policy = MINISTRY_POLICIES[key] || { title: '', text: '', lastUpdated: '', active: true };
-    return '<div class="ministry-policy-editor" data-policy-key="' + key + '">' +
-      '<div class="ministry-policy-editor-head"><strong>' + escapeHtml(policy.title || key) + '</strong><label><input type="checkbox" data-policy-active ' + (policy.active !== false ? 'checked' : '') + ' /> Active</label></div>' +
-      '<div class="booking-grid"><div class="booking-field"><label>Title</label><input data-policy-title value="' + escapeHtml(policy.title || '') + '" /></div><div class="booking-field"><label>Last Updated</label><input data-policy-date type="date" value="' + escapeHtml(policy.lastUpdated || '') + '" /></div><div class="booking-field full"><label>Policy Text</label><textarea data-policy-text rows="4">' + escapeHtml(policy.text || '') + '</textarea></div></div>' +
-      '<button type="button" class="admin-btn-solid" data-policy-save="' + key + '">Save Policy</button><span class="form-status" data-policy-status></span></div>';
-  }).join('');
+  const keys = ['terms', 'noRefund', 'prayerTerms', 'testimonyTerms', 'reviewTerms', 'givingTerms', 'generalTerms'];
+  wrap.innerHTML = keys.map(key => policyCardHtml(key)).join('');
 }
 
-function saveMinistryPolicy(key){
-  const editor = document.querySelector('[data-policy-key="' + key + '"]');
-  if(!editor) return;
-  const policy = MINISTRY_POLICIES[key] || {};
-  policy.title = editor.querySelector('[data-policy-title]').value.trim();
-  policy.text = editor.querySelector('[data-policy-text]').value.trim();
-  policy.lastUpdated = editor.querySelector('[data-policy-date]').value || new Date().toISOString().slice(0, 10);
-  policy.active = editor.querySelector('[data-policy-active]').checked;
-  MINISTRY_POLICIES[key] = policy;
-  if(key === 'noRefund') BOOKING_POLICIES.noRefund = { ...policy };
-  persistMinistryDataLocal();
-  saveBookingsPreviewToStorage();
-  const status = editor.querySelector('[data-policy-status]');
-  if(status) status.textContent = 'Saved in preview.';
+async function saveMinistryPolicy(editorEl){
+  const key = editorEl.dataset.policyKey;
+  if(!key) return;
+  const title = editorEl.querySelector('[data-policy-title]').value.trim();
+  const text = editorEl.querySelector('[data-policy-text]').value.trim();
+  const lastUpdated = editorEl.querySelector('[data-policy-date]').value || new Date().toISOString().slice(0, 10);
+  const active = editorEl.querySelector('[data-policy-active]').checked;
+  const data = { title, text, lastUpdated, active };
+  const status = editorEl.querySelector('[data-policy-status]');
+  if(status) status.textContent = 'Saving…';
+  if(BOOKING_BACKED_POLICY_KEYS.includes(key)){
+    BOOKING_POLICIES[key] = data;
+    if(DEMO_MODE) saveBookingsPreviewToStorage();
+    else {
+      try { await setDoc(doc(db, 'bookingPolicies', key), data); }
+      catch (err) { if(status) status.textContent = 'Could not save that policy.'; return; }
+    }
+    if(status) status.textContent = SCHED_SAVE_NOTE;
+  } else {
+    MINISTRY_POLICIES[key] = data;
+    persistMinistryDataLocal();
+    if(status) status.textContent = 'Saved in preview.';
+  }
+  // Refresh every other rendered copy of this same card (e.g. the
+  // central Policies list and an embedded one in Bookings can both be
+  // in the DOM) so none of them show stale values after this save.
+  document.querySelectorAll('[data-policy-key="' + key + '"]').forEach(other => {
+    if(other !== editorEl) other.outerHTML = policyCardHtml(key);
+  });
 }
 
 function setMinistryFilter(type, filter){
@@ -4677,7 +4698,8 @@ function addMinistryDialogs(){
   document.addEventListener('click', async event => {
     const policySave = event.target.closest('[data-policy-save]');
     if(policySave){
-      saveMinistryPolicy(policySave.dataset.policySave);
+      const editorEl = policySave.closest('.ministry-policy-editor');
+      if(editorEl) saveMinistryPolicy(editorEl);
       return;
     }
     const prayerDelete = event.target.closest('[data-prayer-delete]');
@@ -6724,15 +6746,16 @@ function renderBookingOrderSummary(){
     '<div class="checkout-order-total"><span>Total</span><span>' + (pricing.total ? '$' + pricing.total.toFixed(2) : 'Free') + '</span></div>';
 }
 function openPolicyView(key){
-  const p = BOOKING_POLICIES[key] || MINISTRY_POLICIES[key];
+  const p = policyRecord(key);
   if(!p) return;
-  document.getElementById('policyViewTitle').textContent = p.title || (key === 'terms' ? 'Terms and Conditions' : 'No Refund Policy');
+  document.getElementById('policyViewTitle').textContent = p.title || POLICY_DEFAULT_TITLES[key] || key;
   document.getElementById('policyViewText').textContent = p.text || '';
-  document.getElementById('policyViewUpdated').textContent = p.lastUpdated ? 'Last updated ' + p.lastUpdated : '';
+  document.getElementById('policyViewUpdated').textContent = p.lastUpdated ? 'Last updated ' + policyLastUpdatedDisplay(p.lastUpdated) : '';
   document.getElementById('policyViewDialog').showModal();
 }
 document.getElementById('bookingViewTerms').addEventListener('click', () => openPolicyView('terms'));
 document.getElementById('bookingViewNoRefund').addEventListener('click', () => openPolicyView('noRefund'));
+document.getElementById('teachingRegisterViewNoRefund').addEventListener('click', () => openPolicyView('noRefund'));
 document.getElementById('closePolicyView').addEventListener('click', () => document.getElementById('policyViewDialog').close());
 document.getElementById('bookingConfirmCloseBtn').addEventListener('click', () => {
   bookingDialog.close();
@@ -6798,6 +6821,7 @@ function openBooking(service){
   showBookingWizardStep('session');
 }
 window.openBooking = openBooking; // pages can trigger booking directly, e.g. Prayer CTAs
+window.openPolicyView = openPolicyView; // give.html's own inline module can't see app.js's module scope otherwise
 
 document.addEventListener('click', event => {
   const trigger = event.target.closest('.book-session');
@@ -8466,7 +8490,7 @@ function renderOwnerNotifications(){
   container.innerHTML = DEMO_NOTIFICATIONS.map(n =>
     '<div class="portal-row" data-notif-id="' + n.id + '" style="opacity:' + (n.read ? '.55' : '1') + '">' +
     '<div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + '</small></div>' +
-    '<button class="portal-secondary owner-notif-toggle" type="button" style="min-height:28px;padding:0 10px;font-size:9px">' +
+    '<button class="portal-secondary owner-notif-toggle" type="button" style="min-height:28px;padding:0 10px;font-size:9px;flex-shrink:0;white-space:nowrap">' +
     (n.read ? 'Mark Unread' : 'Mark Read') + '</button></div>'
   ).join('');
 }
@@ -8549,7 +8573,8 @@ const OWNER_SECTION_DESCRIPTIONS = {
   registrations: 'See who registered for every class, and manage attendance.',
   people: 'Everyone who has created an account.',
   media: 'Every image currently uploaded to the website.',
-  settings: 'Your sign-in email, phone, and password.'
+  settings: 'Your sign-in email, phone, and password.',
+  policies: 'The terms and agreements visitors see across ministry forms and checkout.'
 };
 function showOwnerSection(name){
   document.querySelectorAll('#ownerSidebar .owner-sidebar-item').forEach(b => b.classList.toggle('active', b.dataset.ownerNav === name));
@@ -8649,7 +8674,7 @@ function updateOwnerSidebarProfile(){
   const name = currentProfile.name || currentProfile.email || 'Signed in';
   document.getElementById('ownerSidebarName').textContent = name;
   const avatar = document.getElementById('ownerSidebarAvatar');
-  const photo = getOwnerProfilePhoto();
+  const photo = currentOwnerProfilePhoto();
   if(photo){
     avatar.style.backgroundImage = "url('" + photo.replace(/'/g, '%27') + "')";
     avatar.textContent = '';
@@ -8686,10 +8711,20 @@ async function setOwnerProfilePhoto(dataUrl){
   }
   if(currentProfile) currentProfile.photoURL = dataUrl || '';
 }
+// Staged (not-yet-saved) photo change: undefined = no pending edit, use
+// whatever is actually saved; '' = pending removal; a data URL = a
+// pending new photo. Nothing here touches storage — only Save Changes
+// does, via ownerProfilePhotoPending below. Both the main preview and
+// the sidebar avatar read the pending value when one exists, so they
+// keep mirroring each other live while the change is still unsaved.
+let ownerProfilePhotoPending;
+function currentOwnerProfilePhoto(){
+  return ownerProfilePhotoPending !== undefined ? ownerProfilePhotoPending : getOwnerProfilePhoto();
+}
 function renderOwnerProfilePhotoPreview(){
   const el = document.getElementById('ownerProfilePhotoPreview');
   if(!el) return;
-  const photo = getOwnerProfilePhoto();
+  const photo = currentOwnerProfilePhoto();
   const name = (currentProfile && (currentProfile.name || currentProfile.email)) || '';
   if(photo){ el.style.backgroundImage = "url('" + photo.replace(/'/g, '%27') + "')"; el.textContent = ''; }
   else { el.style.backgroundImage = ''; el.textContent = name.trim().charAt(0).toUpperCase() || '?'; }
@@ -8703,19 +8738,23 @@ if(ownerProfilePhotoFile){
     if(!file.type || !file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
     try {
       const dataUrl = await resizeImageToDataUrl(file, 400, 0.82);
-      await setOwnerProfilePhoto(dataUrl);
+      ownerProfilePhotoPending = dataUrl;
       renderOwnerProfilePhotoPreview();
       updateOwnerSidebarProfile();
+      const status = document.getElementById('ownerProfileStatus');
+      if(status) status.textContent = 'Photo ready — select Save Changes to apply it.';
     } catch (err) {
       console.error('profile photo upload failed', err);
       alert(err && err.message ? err.message : 'Could not use that image — try a different file.');
     }
   });
 }
-document.getElementById('ownerProfilePhotoRemove').addEventListener('click', async () => {
-  await setOwnerProfilePhoto('');
+document.getElementById('ownerProfilePhotoRemove').addEventListener('click', () => {
+  ownerProfilePhotoPending = '';
   renderOwnerProfilePhotoPreview();
   updateOwnerSidebarProfile();
+  const status = document.getElementById('ownerProfileStatus');
+  if(status) status.textContent = 'Photo removal ready — select Save Changes to apply it.';
 });
 
 /* ---------------------------------------------------------------
@@ -8725,6 +8764,9 @@ document.getElementById('ownerProfilePhotoRemove').addEventListener('click', asy
    --------------------------------------------------------------- */
 function renderOwnerAccountProfile(){
   if(!currentProfile) return;
+  // Discard any unsaved photo edit from a previous visit — this panel
+  // always opens showing what's actually saved, never a stale draft.
+  ownerProfilePhotoPending = undefined;
   const parts = (currentProfile.name || '').split(' ');
   document.getElementById('ownerProfileFirstName').value = currentProfile.firstName || parts[0] || '';
   document.getElementById('ownerProfileLastName').value = currentProfile.lastName || parts.slice(1).join(' ') || '';
@@ -8748,6 +8790,11 @@ document.getElementById('ownerProfileSaveBtn').addEventListener('click', async (
       await updateDoc(doc(db, 'users', currentUser.uid), { firstName, lastName, name: fullName });
     }
     if(currentProfile){ currentProfile.name = fullName; currentProfile.firstName = firstName; currentProfile.lastName = lastName; }
+    if(ownerProfilePhotoPending !== undefined){
+      await setOwnerProfilePhoto(ownerProfilePhotoPending);
+      ownerProfilePhotoPending = undefined;
+    }
+    renderOwnerProfilePhotoPreview();
     updateOwnerSidebarProfile();
     status.textContent = 'Saved.';
   } catch (err) {
@@ -8788,10 +8835,17 @@ async function setMemberProfilePhoto(dataUrl){
   }
   if(currentProfile) currentProfile.photoURL = dataUrl || '';
 }
+// Staged (not-yet-saved) photo change — same pattern as the Owner's
+// own profile photo (see ownerProfilePhotoPending): nothing here
+// touches storage until Save Profile is clicked.
+let memberProfilePhotoPending;
+function currentMemberProfilePhoto(){
+  return memberProfilePhotoPending !== undefined ? memberProfilePhotoPending : getMemberProfilePhoto();
+}
 function renderMemberProfilePhotoPreview(){
   const el = document.getElementById('memberProfilePhotoPreview');
   if(!el) return;
-  const photo = getMemberProfilePhoto();
+  const photo = currentMemberProfilePhoto();
   const name = (currentProfile && (currentProfile.nickname || currentProfile.name || currentProfile.email)) || '';
   if(photo){ el.style.backgroundImage = "url('" + photo.replace(/'/g, "%27") + "')"; el.textContent = ''; }
   else { el.style.backgroundImage = ''; el.textContent = name.trim().charAt(0).toUpperCase() || '?'; }
@@ -8805,20 +8859,27 @@ if(memberProfilePhotoFile){
     if(!file.type || !file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
     try {
       const dataUrl = await resizeImageToDataUrl(file, 400, 0.82);
-      await setMemberProfilePhoto(dataUrl);
+      memberProfilePhotoPending = dataUrl;
       renderMemberProfilePhotoPreview();
+      const status = document.getElementById('memberProfileStatus');
+      if(status) status.textContent = 'Photo ready — select Save Profile to apply it.';
     } catch (err) {
       console.error('member profile photo upload failed', err);
       alert(err && err.message ? err.message : 'Could not use that image — try a different file.');
     }
   });
 }
-document.getElementById('memberProfilePhotoRemove')?.addEventListener('click', async () => {
-  await setMemberProfilePhoto('');
+document.getElementById('memberProfilePhotoRemove')?.addEventListener('click', () => {
+  memberProfilePhotoPending = '';
   renderMemberProfilePhotoPreview();
+  const status = document.getElementById('memberProfileStatus');
+  if(status) status.textContent = 'Photo removal ready — select Save Profile to apply it.';
 });
 function renderMemberProfileCard(){
   if(!currentProfile) return;
+  // Discard any unsaved photo edit from a previous visit — always show
+  // what's actually saved, never a stale draft.
+  memberProfilePhotoPending = undefined;
   const parts = (currentProfile.name || '').split(' ');
   document.getElementById('memberProfileFirstName').value = currentProfile.firstName || parts[0] || '';
   document.getElementById('memberProfileLastName').value = currentProfile.lastName || parts.slice(1).join(' ') || '';
@@ -8851,6 +8912,11 @@ document.getElementById('memberProfileSaveBtn')?.addEventListener('click', async
       currentProfile.nickname = nickname; currentProfile.birthday = birthday;
       currentProfile.state = state; currentProfile.city = city;
     }
+    if(memberProfilePhotoPending !== undefined){
+      await setMemberProfilePhoto(memberProfilePhotoPending);
+      memberProfilePhotoPending = undefined;
+    }
+    renderMemberProfilePhotoPreview();
     document.getElementById('memberWelcomeName').textContent = fullName ? ', ' + fullName.split(' ')[0] : '';
     status.textContent = 'Saved.';
   } catch (err) {
@@ -9017,50 +9083,6 @@ document.getElementById('mediaUseApplyBtn').addEventListener('click', async () =
   }
 });
 
-/* ---------------------------------------------------------------
-   Owner Appearance — a per-browser preference for how the OWNER
-   DASHBOARD looks (not the public website). There's only one theme
-   (Modern Light); the only real choice is a small accent color,
-   applied via data-owner-accent on <body>, which every owner- and
-   admin- prefixed CSS rule reads through the --owner-* custom
-   properties defined in styles.css. Stored in localStorage only.
-   Old saved preferences from an earlier version of this screen (which
-   also had a Dark Mode and a Classic layout option) are migrated to
-   the closest accent so nobody's saved pick just disappears.
-   --------------------------------------------------------------- */
-const OWNER_APPEARANCE_KEY = 'ua_owner_appearance_v1';
-const OWNER_APPEARANCE_ACCENT_MIGRATION = { slate: 'bluegray', espresso: 'taupe' };
-function loadOwnerAppearance(){
-  let accent = 'ink';
-  try {
-    const raw = localStorage.getItem(OWNER_APPEARANCE_KEY);
-    if(raw){
-      const parsed = JSON.parse(raw);
-      accent = OWNER_APPEARANCE_ACCENT_MIGRATION[parsed.accent] || parsed.accent || 'ink';
-    }
-  } catch (err) { /* ignore */ }
-  return { accent };
-}
-function saveOwnerAppearance(pref){
-  try { localStorage.setItem(OWNER_APPEARANCE_KEY, JSON.stringify(pref)); } catch (err) { /* ignore */ }
-}
-function renderOwnerAppearanceControls(pref){
-  document.querySelectorAll('#appearanceAccentRow [data-appearance-accent]').forEach(b => b.classList.toggle('active', b.dataset.appearanceAccent === pref.accent));
-}
-function applyOwnerAppearance(){
-  const pref = loadOwnerAppearance();
-  document.body.dataset.ownerAccent = pref.accent || 'ink';
-  renderOwnerAppearanceControls(pref);
-}
-document.getElementById('appearanceAccentRow').addEventListener('click', event => {
-  const btn = event.target.closest('[data-appearance-accent]');
-  if(!btn) return;
-  const pref = loadOwnerAppearance();
-  pref.accent = btn.dataset.appearanceAccent;
-  saveOwnerAppearance(pref);
-  applyOwnerAppearance();
-});
-applyOwnerAppearance();
 
 /* ---------------------------------------------------------------
    Owner Dashboard — Today + Action Required. Pulls from systems that
@@ -9208,7 +9230,6 @@ document.getElementById('ownerPaymentsTabs').addEventListener('click', event => 
 async function loadOwnerData(){
   if(!currentProfile || currentProfile.role !== 'admin') return;
   updateOwnerSidebarProfile();
-  applyOwnerAppearance();
   if(!DEMO_MODE){ try { await loadSchedulingConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadTeachingPageConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadMediaLibrary(); } catch (err) { /* keep whatever is already loaded */ } }
@@ -9798,38 +9819,9 @@ async function renderBookingsInsights(){
 }
 
 function renderBookingPolicies(){
-  const terms = BOOKING_POLICIES.terms || {};
-  const noRefund = BOOKING_POLICIES.noRefund || {};
-  document.getElementById('policyTermsTitle').value = terms.title || '';
-  document.getElementById('policyTermsText').value = terms.text || '';
-  document.getElementById('policyTermsActive').checked = terms.active !== false;
-  document.getElementById('policyTermsUpdated').textContent = terms.lastUpdated ? 'Last updated ' + terms.lastUpdated : 'Not saved yet.';
-  document.getElementById('policyNoRefundTitle').value = noRefund.title || '';
-  document.getElementById('policyNoRefundText').value = noRefund.text || '';
-  document.getElementById('policyNoRefundActive').checked = noRefund.active !== false;
-  document.getElementById('policyNoRefundUpdated').textContent = noRefund.lastUpdated ? 'Last updated ' + noRefund.lastUpdated : 'Not saved yet.';
+  renderPolicyCardInto('bookingsPolicyTermsEmbed', 'terms');
+  renderPolicyCardInto('bookingsPolicyNoRefundEmbed', 'noRefund');
 }
-async function saveBookingPolicy(key, idPrefix){
-  const status = document.getElementById(idPrefix + 'Status');
-  const title = document.getElementById(idPrefix + 'Title').value.trim();
-  const text = document.getElementById(idPrefix + 'Text').value.trim();
-  const active = document.getElementById(idPrefix + 'Active').checked;
-  if(!title || !text){ status.textContent = 'Both a title and policy text are required.'; return; }
-  const lastUpdated = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date());
-  const data = { title, text, active, lastUpdated };
-  status.textContent = 'Saving…';
-  if(DEMO_MODE){
-    BOOKING_POLICIES[key] = data;
-    saveBookingsPreviewToStorage();
-  } else {
-    try { await setDoc(doc(db, 'bookingPolicies', key), data); }
-    catch (err) { status.textContent = 'Could not save that policy.'; return; }
-  }
-  renderBookingPolicies();
-  status.textContent = SCHED_SAVE_NOTE;
-}
-document.getElementById('policyTermsSaveBtn').addEventListener('click', () => saveBookingPolicy('terms', 'policyTerms'));
-document.getElementById('policyNoRefundSaveBtn').addEventListener('click', () => saveBookingPolicy('noRefund', 'policyNoRefund'));
 
 function renderBookingsNotifications(){
   const n = SCHEDULING_SETTINGS.notifications || {};
@@ -10749,6 +10741,10 @@ teachingRegisterForm.addEventListener('submit', async event => {
   const smsConsent = document.getElementById('teachingRegisterAgreeSms').checked;
   const teachingPrice = Number(t.price) || 0;
   if(!phone){ teachingRegisterStatus.textContent = 'Enter a valid phone number, including country code.'; return; }
+  if(!document.getElementById('teachingRegisterAgreeNoRefund').checked){
+    teachingRegisterStatus.textContent = 'Please agree to the No Refund Policy to continue.';
+    return;
+  }
   teachingRegisterSubmitBtn.disabled = true;
   teachingRegisterStatus.textContent = 'Reserving your seat…';
   // Claim a limited-use code BEFORE creating the registration at its
@@ -12330,6 +12326,7 @@ function renderTeachingManager(){
   document.getElementById('teachingSettingsScriptureRef').value = TEACHING_PAGE_SETTINGS.scriptureReference || '';
   document.getElementById('teachingSettingsScriptureImage').value = TEACHING_PAGE_SETTINGS.scriptureImage || '';
   adminImagePreviewRefreshers.forEach(fn => fn());
+  renderPolicyCardInto('teachingPolicyNoRefundEmbed', 'noRefund');
 }
 
 document.getElementById('teachingMgrTabs').addEventListener('click', event => {
@@ -12346,6 +12343,7 @@ document.getElementById('teachingMgrPreviewPageBtn').addEventListener('click', (
 document.getElementById('teachingMgrResetPreviewBtn').addEventListener('click', () => {
   if(!confirm('Reset all preview Teaching data in this browser back to the original samples? This also removes any uploaded Media Library images, your profile photo, and any class registrations recorded in this browser. This cannot be undone.')) return;
   resetPreviewData();
+  ownerProfilePhotoPending = undefined;
   renderTeachingManager();
   renderPublicTeachingPages();
   renderOwnerMediaGallery();
@@ -12902,7 +12900,8 @@ siteManagement = initSiteManagement({
     return teaching ? Number(teaching.price) || 0 : 0;
   },
   rerenderBookingSummary: renderBookingOrderSummary,
-  rerenderTeachingSummary: renderTeachingRegistrationOrderSummary
+  rerenderTeachingSummary: renderTeachingRegistrationOrderSummary,
+  policyCardHtml
 });
 eventsSystem = initEventsSystem({
   DEMO_MODE,

@@ -38,6 +38,8 @@
       <div class="give-amount-grid" role="radiogroup" aria-label="Gift amount"><button type="button" class="give-amount-btn" data-amount="25" aria-pressed="false">$25</button><button type="button" class="give-amount-btn active" data-amount="50" aria-pressed="true">$50</button><button type="button" class="give-amount-btn" data-amount="100" aria-pressed="false">$100</button><button type="button" class="give-amount-btn" data-amount="250" aria-pressed="false">$250</button><label class="give-amount-custom"><span>$</span><input type="number" id="giveCustomAmount" min="1" step="1" inputmode="numeric" placeholder="Other" aria-label="Custom gift amount" /></label></div>
       <div class="give-frequency-toggle" role="radiogroup" aria-label="Giving frequency" style="margin-top:22px"><button type="button" class="oneonone-pill active" data-freq="once" aria-pressed="true">One Time</button><button type="button" class="oneonone-pill" data-freq="recurring" disabled aria-disabled="true" title="Monthly giving is not connected yet">Monthly <span class="coming-soon">Coming Soon</span></button></div>
       <div class="gv-payment-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Choose how you would like to give</div>
+      <div class="booking-policy-checks" style="margin-top:18px"><label class="booking-policy-check"><input type="checkbox" id="giveAgreeTerms" /><span>I understand that gifts given here are voluntary and non-refundable. <button type="button" class="link-btn" id="giveViewTerms">Read Giving Terms</button></span></label></div>
+      <p class="checkout-discount-status" id="giveTermsStatus" role="status" aria-live="polite"></p>
       <div class="gv-payment-methods" role="tablist" aria-label="Choose how to give"><button type="button" class="gv-payment-method active" data-method="cashapp" role="tab" aria-selected="true" aria-controls="giveMethodPanel-cashapp">Cash App</button><button type="button" class="gv-payment-method" data-method="card" role="tab" aria-selected="false" aria-controls="giveMethodPanel-card">Card Payment <span class="coming-soon">Soon</span></button></div>
       <div class="gv-payment-panel" id="giveMethodPanel-cashapp" data-method-panel="cashapp" role="tabpanel"><a class="btn fill" id="giveSubmitBtn" href="https://cash.app/$UnveiledAssemblyOCJ/50" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:center;margin-top:18px">Give $50 via Cash App</a><p class="admin-hint">Opens Cash App in a new tab to complete your gift securely.</p></div>
       <div class="gv-payment-panel" id="giveMethodPanel-card" data-method-panel="card" role="tabpanel" hidden><fieldset class="payment-demo checkout-payment-demo" disabled aria-hidden="true" style="margin-top:18px"><legend class="demo-badge">Card Payment Preview — Not Yet Connected</legend><div class="booking-grid"><div class="booking-field full"><label>Card number</label><input value="Card information will be entered securely" readonly /></div><div class="booking-field"><label>Expiry</label><input value="MM / YY" readonly /></div><div class="booking-field"><label>CVC</label><input value="•••" readonly /></div><div class="booking-field full"><label>Name on card</label><input value="Full name as shown on card" readonly /></div></div><p class="payment-demo-note">No card details are collected and no charge occurs. A secure card processor can be connected later.</p></fieldset></div>
@@ -54,6 +56,22 @@
       amountButtons.forEach(btn=>btn.addEventListener('click',()=>{amountButtons.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false')});btn.classList.add('active');btn.setAttribute('aria-pressed','true');selectedAmount=btn.dataset.amount;customInput.value='';updateSubmitLink()}));
       customInput.addEventListener('input',()=>{if(!customInput.value)return;amountButtons.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false')});selectedAmount=customInput.value;updateSubmitLink()});
       const methodButtons=document.querySelectorAll('.gv-payment-method'),panels=document.querySelectorAll('.gv-payment-panel');methodButtons.forEach(btn=>btn.addEventListener('click',()=>{methodButtons.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false')});btn.classList.add('active');btn.setAttribute('aria-selected','true');panels.forEach(p=>{p.hidden=p.dataset.methodPanel!==btn.dataset.method})}));
+
+      // Same "must agree before continuing" gate as Booking/Teaching
+      // checkout, adapted for a plain link instead of a form submit —
+      // openPolicyView('givingTerms') below reuses the one shared
+      // policy-view dialog app.js already builds for every page.
+      const giveTermsStatus=document.getElementById('giveTermsStatus');
+      submitBtn.addEventListener('click',(event)=>{
+        if(!document.getElementById('giveAgreeTerms').checked){
+          event.preventDefault();
+          giveTermsStatus.textContent='Please agree to the Giving Terms to continue.';
+        } else { giveTermsStatus.textContent=''; }
+      });
+      document.getElementById('giveViewTerms').addEventListener('click',()=>{
+        if(typeof openPolicyView==='function') openPolicyView('givingTerms');
+      });
+
       requestAnimationFrame(()=>document.body.classList.add('give-ready'));
     })();
   </script>
