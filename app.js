@@ -1433,9 +1433,9 @@ function dialogsHtml(){
               <div class="form-field" style="flex:0 0 120px"><label for="schedRuleStart">Start</label><input id="schedRuleStart" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedRuleEnd">End</label><input id="schedRuleEnd" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 110px"><label for="schedRuleCapacity">Capacity</label><input id="schedRuleCapacity" type="number" min="1" value="1" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:1;min-width:180px">
+              <div class="form-field" style="flex:1;min-width:220px">
                 <label>Session Types Allowed</label>
-                <div id="schedRuleTypesCheckboxes" style="display:flex;gap:14px;flex-wrap:wrap;padding-top:11px"></div>
+                <div id="schedRuleTypesCheckboxes" class="sched-session-type-options"></div>
               </div>
               <div class="form-field" style="flex:1;min-width:160px"><label for="schedRuleNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedRuleNotes" type="text" placeholder="e.g. Prayer line only" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <button class="admin-btn-ghost" type="submit">Add Window</button>
@@ -1520,9 +1520,9 @@ function dialogsHtml(){
               <div class="form-field" style="flex:1;min-width:150px"><label for="schedOverrideDate">Date</label><input id="schedOverrideDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideStart">Start</label><input id="schedOverrideStart" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideEnd">End</label><input id="schedOverrideEnd" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:1;min-width:180px">
+              <div class="form-field" style="flex:1;min-width:220px">
                 <label>Session Types Allowed</label>
-                <div id="schedOverrideTypesCheckboxes" style="display:flex;gap:14px;flex-wrap:wrap;padding-top:11px"></div>
+                <div id="schedOverrideTypesCheckboxes" class="sched-session-type-options"></div>
               </div>
               <div class="form-field" style="flex:1;min-width:160px"><label for="schedOverrideNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedOverrideNotes" type="text" placeholder="e.g. Ministry event" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--owner-text);padding-bottom:8px">
@@ -7276,8 +7276,9 @@ function renderSessionTypeCheckboxes(containerId, checkedIds){
   if(!el) return;
   const checked = checkedIds && checkedIds.length ? checkedIds : Object.keys(SESSION_TYPES);
   el.innerHTML = Object.keys(SESSION_TYPES).map(id =>
-    '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--owner-text)">' +
-    '<input type="checkbox" value="' + escapeHtml(id) + '"' + (checked.includes(id) ? ' checked' : '') + ' /> ' + escapeHtml(SESSION_TYPES[id].name) +
+    '<label class="sched-session-type-option">' +
+    '<input type="checkbox" value="' + escapeHtml(id) + '"' + (checked.includes(id) ? ' checked' : '') + ' />' +
+    '<span>' + escapeHtml(SESSION_TYPES[id].name) + '</span>' +
     '</label>'
   ).join('');
 }

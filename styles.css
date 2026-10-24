@@ -1237,6 +1237,12 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
   .member-feature-actions{grid-template-columns:1fr}.member-hero-title{font-size:42px}.member-topnav-account{display:none}
 }
 
+/* Keep scheduling choices readable in narrow admin form columns. */
+.sched-session-type-options{display:grid;grid-template-columns:1fr;gap:8px;padding-top:10px}
+.sched-session-type-option{display:grid;grid-template-columns:16px minmax(0,1fr);align-items:center;gap:8px;width:100%;color:var(--owner-text);font-size:12px;line-height:1.25}
+.sched-session-type-option input{width:14px;height:14px;margin:0;accent-color:var(--owner-accent)}
+.sched-session-type-option span{min-width:0;white-space:nowrap}
+
 /* Realistic populated views for the member portal's inner pages. */
 .member-page-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin:-4px 0 26px;padding:18px 0 28px;border-bottom:1px solid var(--line-dark)}
 .member-page-kicker{display:block;font-size:9px;letter-spacing:.34em;text-transform:uppercase;color:var(--stone-dim);margin-bottom:10px}
