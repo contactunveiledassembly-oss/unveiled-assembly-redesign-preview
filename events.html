@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Special gatherings, worship nights, prayer events, and ministry experiences from The Unveiled Assembly." />
+  <title>Events | The Unveiled Assembly</title>
+  <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
+  <meta name="theme-color" content="#050505" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=sitewide-20261024-events2" />
+</head>
+<body data-page="events">
+  <div class="grain"></div>
+  <main id="eventsPageRoot" class="events-page">
+    <header class="events-hero">
+      <div class="events-hero-copy reveal">
+        <div class="eyebrow" id="eventsHeroKicker">A Special Gathering</div>
+        <h1 id="eventsHeroTitle">Assembly Nights</h1>
+        <p id="eventsHeroTagline">A night of worship, prayer, and encounter.</p>
+      </div>
+      <div class="events-poster-wrap reveal" id="featured-event">
+        <figure class="events-poster" id="eventsPoster" aria-label="Featured event artwork"></figure>
+      </div>
+      <div class="events-essential reveal">
+        <div class="events-status-line" id="eventsStatusLine">The next gathering will be announced soon.</div>
+        <p id="eventsDescription">A set-apart gathering for worship, prayer, the Word, and the presence of Jesus.</p>
+        <div class="events-action-row" id="eventsActionRow" hidden></div>
+      </div>
+      <div class="events-countdown-block reveal">
+        <div class="events-countdown" id="eventsCountdown"></div>
+        <p id="eventsCountdownNote"></p>
+      </div>
+      <a class="events-back-link" href="gather.html">More ways to gather ↗</a>
+    </header>
+
+    <section class="events-announcements-section" hidden>
+      <div class="events-section-label">Event Announcements</div>
+      <div id="eventsAnnouncements"></div>
+    </section>
+
+    <section class="events-press-section" id="eventsPressSection" hidden>
+      <span>Press + Media</span>
+      <p id="eventsPressNotice" hidden></p>
+    </section>
+  </main>
+  <script type="module" src="app.js?v=sitewide-20261024-events2"></script>
+</body>
+</html>
