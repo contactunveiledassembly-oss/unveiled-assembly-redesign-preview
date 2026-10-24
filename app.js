@@ -29,7 +29,7 @@ import {
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { initSiteManagement } from "./site-management.js?v=2";
-import { initEventsSystem } from "./events-system.js?v=1";
+import { initEventsSystem } from "./events-system.js?v=2";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -9215,6 +9215,7 @@ async function loadOwnerData(){
   if(!DEMO_MODE){ try { await loadMinistryInboxData(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadNightOfPrayerConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadOwnerSearchCaches(); } catch (err) { /* keep whatever is already loaded */ } }
+  if(eventsSystem){ try { await eventsSystem.loadAdmin(); } catch (err) { /* keep the public event state */ } }
   renderOwnerProfilePhotoPreview();
   renderOwnerAccountProfile();
   renderSchedSettingsForm();
@@ -12906,7 +12907,7 @@ siteManagement = initSiteManagement({
 eventsSystem = initEventsSystem({
   DEMO_MODE,
   db,
-  firestore: { doc, setDoc, getDoc, collection, getDocs, deleteDoc, serverTimestamp },
+  firestore: { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, serverTimestamp },
   escapeHtml,
   base: BASE
 });

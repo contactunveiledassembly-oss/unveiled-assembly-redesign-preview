@@ -80,10 +80,34 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
         eventSnap.forEach(row => events.push({ id: row.id, ...row.data() }));
       } catch (err) { console.error('[events] could not load events', err); }
       try {
-        const announcementSnap = await firestore.getDocs(firestore.collection(db, 'eventAnnouncements'));
+        const announcementSnap = await firestore.getDocs(firestore.query(
+          firestore.collection(db, 'eventAnnouncements'),
+          firestore.where('status', '==', 'published')
+        ));
         announcements = [];
         announcementSnap.forEach(row => announcements.push({ id: row.id, ...row.data() }));
       } catch (err) { console.error('[events] could not load announcements', err); }
+    }
+    renderAdmin();
+    renderPublic();
+  }
+
+  async function loadAdmin(){
+    if(DEMO_MODE){
+      renderAdmin();
+      return;
+    }
+    try {
+      const [eventSnap, announcementSnap] = await Promise.all([
+        firestore.getDocs(firestore.collection(db, 'events')),
+        firestore.getDocs(firestore.collection(db, 'eventAnnouncements'))
+      ]);
+      events = [];
+      eventSnap.forEach(row => events.push({ id: row.id, ...row.data() }));
+      announcements = [];
+      announcementSnap.forEach(row => announcements.push({ id: row.id, ...row.data() }));
+    } catch (err) {
+      console.error('[events] could not load owner event data', err);
     }
     renderAdmin();
     renderPublic();
@@ -360,5 +384,5 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     }
   });
 
-  return { load, renderPublic, renderAdmin };
+  return { load, loadAdmin, renderPublic, renderAdmin };
 }

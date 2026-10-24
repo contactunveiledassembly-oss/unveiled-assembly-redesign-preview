@@ -137,6 +137,23 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // Special gatherings shown on the public Events page. Event records
+    // contain presentation details only (never attendee or payment data),
+    // so visitors may read them to determine the page mode and render the
+    // current gathering. Only the ministry owner can create or edit them.
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Draft event announcements remain private to the Owner Portal. The
+    // public page queries this collection with status == 'published', which
+    // lets Firestore prove every returned document satisfies this rule.
+    match /eventAnnouncements/{announcementId} {
+      allow read: if isAdmin() || resource.data.status == 'published';
+      allow write: if isAdmin();
+    }
     // Prayer requests are always private (never publicly readable, per
     // ministry policy — not just "admin-only by default" like bookings).
     // Anonymous submission is allowed (name/email/phone are optional on
