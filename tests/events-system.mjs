@@ -26,6 +26,19 @@ try {
   assert.equal(await desktop.locator('#eventAdminStatus').inputValue(), 'published');
   assert.equal(await desktop.locator('#eventAdminPageMode').inputValue(), 'live');
 
+  await desktop.locator('[data-owner-nav="website"]').click();
+  const eventsWebsiteRow = desktop.locator('#ownerWebsitePagesList [data-site-page="Events Page"]');
+  assert.equal(await eventsWebsiteRow.isVisible(), true);
+  assert.equal(await eventsWebsiteRow.isEnabled(), true);
+  assert.match(await eventsWebsiteRow.textContent(), /Events Page.*Editable/s);
+  await eventsWebsiteRow.click();
+  assert.equal(await desktop.locator('[data-owner-section="events"]').isVisible(), true);
+  assert.equal(await desktop.locator('[data-events-panel="details"]').isVisible(), true);
+  assert.equal(await desktop.locator('#eventAdminPosterFile').count(), 1);
+  await desktop.locator('#eventAdminPosterFile').setInputFiles('assets/story-v5/story-entrance-revelation-v2.png');
+  await desktop.waitForFunction(() => document.querySelector('#eventAdminPosterUrl').value.startsWith('data:image/jpeg;base64,'));
+  assert.match(await desktop.locator('#eventAdminPosterPreview').getAttribute('style'), /data:image\/jpeg;base64/);
+
   await desktop.evaluate(() => {
     const events = JSON.parse(localStorage.getItem('ua_preview_events_v1')) || [];
     const fallback = { id:'assembly-nights', title:'Assembly Nights', status:'published', featured:true };

@@ -33,6 +33,12 @@ function safeUrl(value){
   } catch (err) { return ''; }
 }
 
+function safeImageUrl(value){
+  if(!value) return '';
+  if(/^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=\r\n]+$/i.test(value)) return value;
+  return safeUrl(value);
+}
+
 function slugify(value){
   return (value || 'event').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'event';
 }
@@ -52,7 +58,7 @@ function timeLabel(time){
   return new Intl.DateTimeFormat('en-US', { hour:'numeric', minute: minute ? '2-digit' : undefined }).format(stamp) + ' ET';
 }
 
-export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
+export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeImage }){
   let events = DEMO_MODE ? [{ ...DEFAULT_EVENT }] : [];
   let announcements = [];
   let countdownTimer = null;
@@ -179,7 +185,7 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
 
     const poster = document.getElementById('eventsPoster');
     if(poster){
-      const posterUrl = event && safeUrl(event.posterUrl) ? safeUrl(event.posterUrl) : safeUrl(DEFAULT_POSTER_URL);
+      const posterUrl = event && safeImageUrl(event.posterUrl) ? safeImageUrl(event.posterUrl) : safeUrl(DEFAULT_POSTER_URL);
       poster.classList.add('has-image');
       poster.style.backgroundImage = 'url("' + posterUrl.replace(/"/g, '%22') + '")';
       poster.innerHTML = '<div class="events-poster-grid" aria-hidden="true"></div>' +
@@ -229,6 +235,18 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     document.querySelectorAll('[data-events-panel]').forEach(panel => { panel.hidden = panel.dataset.eventsPanel !== name; });
   }
 
+  function refreshPosterPreview(){
+    const input = document.getElementById('eventAdminPosterUrl');
+    const preview = document.getElementById('eventAdminPosterPreview');
+    const uploadText = document.getElementById('eventAdminPosterUploadText');
+    if(!input || !preview) return;
+    const custom = safeImageUrl(input.value.trim());
+    const url = custom || safeUrl(DEFAULT_POSTER_URL);
+    preview.style.backgroundImage = 'linear-gradient(rgba(0,0,0,.08),rgba(0,0,0,.2)),url("' + url.replace(/"/g, '%22') + '")';
+    preview.innerHTML = custom ? '' : '<span class="admin-image-empty">Approved event artwork</span>';
+    if(uploadText) uploadText.textContent = custom ? 'Replace Image' : 'Upload Image';
+  }
+
   function renderAdmin(){
     const form = document.getElementById('eventDetailsForm');
     if(!form) return;
@@ -246,6 +264,7 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     assign('eventAdminPageMode', event.pageMode || 'live');
     assign('eventAdminDescription', event.description);
     assign('eventAdminPosterUrl', event.posterUrl);
+    refreshPosterPreview();
     assign('eventAdminTicketUrl', event.ticketUrl);
     assign('eventAdminTicketLabel', event.ticketLabel || 'Register');
     assign('eventAdminStreamUrl', event.streamUrl);
@@ -302,6 +321,42 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
   document.getElementById('eventsAdminPreview')?.addEventListener('click', event => {
     if(event.target.closest('[data-event-edit]')) showAdminTab('details');
   });
+  document.getElementById('eventAdminPosterUrl')?.addEventListener('input', refreshPosterPreview);
+  document.getElementById('eventAdminPosterRemove')?.addEventListener('click', () => {
+    const input = document.getElementById('eventAdminPosterUrl');
+    if(input) input.value = '';
+    refreshPosterPreview();
+  });
+  const posterFile = document.getElementById('eventAdminPosterFile');
+  if(posterFile){
+    posterFile.addEventListener('change', async () => {
+      const file = posterFile.files && posterFile.files[0];
+      posterFile.value = '';
+      if(!file) return;
+      const status = document.getElementById('eventDetailsStatus');
+      if(!file.type || !file.type.startsWith('image/')){ if(status) status.textContent = 'Please choose an image file.'; return; }
+      if(status) status.textContent = 'Preparing image…';
+      try {
+        document.getElementById('eventAdminPosterUrl').value = await resizeImage(file, 1600, .75);
+        refreshPosterPreview();
+        if(status) status.textContent = 'Image ready — save the event when finished.';
+      } catch (err) {
+        console.error('[events] image upload failed', err);
+        if(status) status.textContent = 'That image could not be prepared. Try a JPG, PNG, or WebP.';
+      }
+    });
+    const preview = document.getElementById('eventAdminPosterPreview');
+    preview?.addEventListener('dragover', event => { event.preventDefault(); preview.classList.add('is-drag-over'); });
+    preview?.addEventListener('dragleave', () => preview.classList.remove('is-drag-over'));
+    preview?.addEventListener('drop', event => {
+      event.preventDefault(); preview.classList.remove('is-drag-over');
+      const file = event.dataTransfer.files && event.dataTransfer.files[0];
+      if(file){
+        const transfer = new DataTransfer(); transfer.items.add(file); posterFile.files = transfer.files;
+        posterFile.dispatchEvent(new Event('change'));
+      }
+    });
+  }
   document.getElementById('eventDetailsForm')?.addEventListener('submit', async event => {
     event.preventDefault();
     const current = editableEvent();
@@ -384,5 +439,7 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     }
   });
 
-  return { load, loadAdmin, renderPublic, renderAdmin };
+  function openEditor(){ showAdminTab('details'); renderAdmin(); }
+
+  return { load, loadAdmin, renderPublic, renderAdmin, openEditor };
 }

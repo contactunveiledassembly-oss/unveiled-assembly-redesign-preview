@@ -148,7 +148,7 @@ function normalizeCode(value){ return String(value || '').trim().toUpperCase().r
 function htmlLines(value, escapeHtml){ return String(value || '').split('\n').map(escapeHtml).join('<br>'); }
 
 export function initSiteManagement(context){
-  const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary, policyCardHtml } = context;
+  const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary, policyCardHtml, openEventsEditor } = context;
   const { doc, setDoc, getDoc, collection, getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction } = firestore;
   const PAGE_STORAGE_KEYS = { 'one-on-one': 'uaOneOnOnePageContent', home: 'uaHomePageContent', beliefs: 'uaBeliefsPageContent', give: 'uaGivePageContent' };
   const DISCOUNT_STORAGE_KEY = 'uaDiscountCodes';
@@ -583,6 +583,7 @@ export function initSiteManagement(context){
   const WEBSITE_PAGES = [
     { name: 'Home Page', key: 'home', html: homeEditorHtml, populate: populateHomeEditor, previewUrl: 'index.html' },
     { name: 'One-on-One Page', key: 'one-on-one', html: oneOnOneEditorHtml, populate: populateOneOnOneEditor, previewUrl: 'one-on-one.html' },
+    { name: 'Events Page', key: 'events', opensManager: true, previewUrl: 'events.html' },
     { name: 'Beliefs', key: 'beliefs', html: beliefsEditorHtml, populate: populateBeliefsEditor, previewUrl: 'beliefs.html' },
     { name: 'Give', key: 'give', html: giveEditorHtml, populate: populateGiveEditor, previewUrl: 'give.html' },
     { name: 'Teaching Page', key: null }, { name: 'Prayer Page', key: null }, { name: 'Our Story', key: null },
@@ -597,11 +598,12 @@ export function initSiteManagement(context){
       const connected = !!page.key;
       return '<button type="button" class="admin-website-page-row' + (connected ? ' is-connected' : '') + '" data-site-page="' + escapeHtml(page.name) + '"' + (connected ? '' : ' disabled') + '><span>' + escapeHtml(page.name) + '</span><span class="' + (connected ? 'admin-status-pill published' : 'demo-badge') + '">' + (connected ? 'Editable' : 'Coming Later') + '</span></button>';
     }).join('');
-    editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>Home, One-on-One, Beliefs, and Give are ready to edit. Other pages stay protected until their editors are approved.</p></div>';
+    editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>Home, One-on-One, Events, Beliefs, and Give are ready to edit. Other pages stay protected until their editors are approved.</p></div>';
   }
   function openWebsitePageEditor(pageName){
     const page = WEBSITE_PAGES.find(p => p.name === pageName && p.key);
     if(!page) return;
+    if(page.opensManager){ if(openEventsEditor) openEventsEditor(); return; }
     const editor = document.getElementById('ownerWebsiteEditor');
     editor.innerHTML = page.html();
     page.populate();

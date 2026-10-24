@@ -28,8 +28,8 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-import { initSiteManagement } from "./site-management.js?v=2";
-import { initEventsSystem } from "./events-system.js?v=2";
+import { initSiteManagement } from "./site-management.js?v=3";
+import { initEventsSystem } from "./events-system.js?v=3";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -1263,7 +1263,16 @@ function dialogsHtml(){
                 <div class="booking-field"><label for="eventAdminStatus">Visibility</label><select id="eventAdminStatus"><option value="draft">Draft — hidden</option><option value="published">Published</option><option value="cancelled">Cancelled</option></select></div>
                 <div class="booking-field full"><label for="eventAdminPageMode">Event Page Mode</label><select id="eventAdminPageMode"><option value="live">Show the published event</option><option value="empty">Keep Events in navigation — show no upcoming events</option><option value="hidden">Hide Events from the website navigation</option></select></div>
                 <div class="booking-field full"><label for="eventAdminDescription">Description</label><textarea id="eventAdminDescription" rows="5"></textarea></div>
-                <div class="booking-field full"><label for="eventAdminPosterUrl">Poster Image URL <span class="admin-hint">(optional—the built-in conceptual artwork appears when blank)</span></label><input id="eventAdminPosterUrl" type="url" placeholder="https://…" /></div>
+                <div class="booking-field full site-editor-image">
+                  <span class="admin-microlabel">Event Photography</span>
+                  <div class="admin-image-preview" id="eventAdminPosterPreview" style="margin-top:10px;min-height:240px;background-size:cover;background-position:center"></div>
+                  <div class="admin-image-actions">
+                    <label class="admin-image-upload-btn"><span id="eventAdminPosterUploadText">Upload / Replace</span><input id="eventAdminPosterFile" type="file" accept="image/*" hidden /></label>
+                    <button class="admin-image-remove-btn" id="eventAdminPosterRemove" type="button">Use Approved Artwork</button>
+                  </div>
+                  <p class="admin-hint">Choose a JPG, PNG, or WebP. Large photographs are resized before saving.</p>
+                  <details class="admin-image-advanced"><summary>Advanced: paste an image URL</summary><input id="eventAdminPosterUrl" type="text" placeholder="https://…" /></details>
+                </div>
               </div>
               <label class="admin-checkbox-field" style="padding-top:14px"><input id="eventAdminFeatured" type="checkbox" checked /> Feature this event at the top of the page</label>
               <button class="admin-btn-solid" type="submit" style="margin-top:16px">Save Event</button>
@@ -12915,13 +12924,18 @@ siteManagement = initSiteManagement({
   },
   rerenderBookingSummary: renderBookingOrderSummary,
   rerenderTeachingSummary: renderTeachingRegistrationOrderSummary,
-  policyCardHtml
+  policyCardHtml,
+  openEventsEditor: () => {
+    showOwnerSection('events');
+    if(eventsSystem) eventsSystem.openEditor();
+  }
 });
 eventsSystem = initEventsSystem({
   DEMO_MODE,
   db,
   firestore: { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, serverTimestamp },
   escapeHtml,
+  resizeImage: resizeImageToDataUrl,
   base: BASE
 });
 await eventsSystem.load();
