@@ -3976,6 +3976,18 @@ const POLICY_DEFAULT_TITLES = {
   reviewTerms: 'Class Review Terms', generalTerms: 'General Terms and Conditions',
   givingTerms: 'Giving Terms and Conditions'
 };
+// Answers "which system is this under" directly on the card, since
+// the central Policies list otherwise shows 7 similarly-named cards
+// with no indication of where each one actually appears to a visitor.
+const POLICY_LOCATIONS = {
+  terms: 'Shown at One-on-One booking checkout.',
+  noRefund: 'Shown at both One-on-One booking checkout and Teaching class registration checkout.',
+  prayerTerms: 'Shown on the Prayer Request form.',
+  testimonyTerms: 'Shown on the Testimony submission form.',
+  reviewTerms: 'Shown on the Class Review form.',
+  givingTerms: 'Shown on the Give page, before the Cash App button.',
+  generalTerms: 'Not currently shown to visitors anywhere — reference text only.'
+};
 function policyRecord(key){
   const store = BOOKING_BACKED_POLICY_KEYS.includes(key) ? BOOKING_POLICIES : MINISTRY_POLICIES;
   return store[key] || { title: POLICY_DEFAULT_TITLES[key] || key, text: '', lastUpdated: '', active: true };
@@ -3992,6 +4004,7 @@ function policyCardHtml(key){
   const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(p.lastUpdated || '') ? p.lastUpdated : '';
   return '<div class="ministry-policy-editor" data-policy-key="' + key + '">' +
     '<div class="ministry-policy-editor-head"><strong>' + escapeHtml(p.title || POLICY_DEFAULT_TITLES[key] || key) + '</strong><label><input type="checkbox" data-policy-active ' + (p.active !== false ? 'checked' : '') + ' /> Active</label></div>' +
+    '<p class="admin-hint" style="margin:-4px 0 12px">' + escapeHtml(POLICY_LOCATIONS[key] || '') + '</p>' +
     '<div class="booking-grid"><div class="booking-field"><label>Title</label><input data-policy-title value="' + escapeHtml(p.title || '') + '" /></div><div class="booking-field"><label>Last Updated</label><input data-policy-date type="date" value="' + escapeHtml(dateValue) + '" /></div><div class="booking-field full"><label>Policy Text</label><textarea data-policy-text rows="4">' + escapeHtml(p.text || '') + '</textarea></div></div>' +
     '<button type="button" class="admin-btn-solid" data-policy-save="' + key + '">Save Policy</button><span class="form-status" data-policy-status></span></div>';
 }
