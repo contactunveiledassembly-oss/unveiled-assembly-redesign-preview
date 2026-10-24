@@ -5,11 +5,19 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1624, height: 954 } });
 
 await page.goto('http://localhost:8080/story.html', { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('#schedRuleTypesCheckboxes');
+await page.waitForSelector('#schedRuleTypesCheckboxes', { state: 'attached' });
 await page.evaluate(() => {
+  document.querySelector('#memberPortalDialog').setAttribute('open', '');
+  document.querySelectorAll('.portal-view').forEach(view => { view.hidden = view.dataset.portalView !== 'owner'; });
+  document.querySelectorAll('[data-owner-section]').forEach(section => { section.hidden = false; });
   document.querySelector('[data-bookings-panel="availability"]').hidden = false;
-  renderSessionTypeCheckboxes('schedRuleTypesCheckboxes');
-  renderSessionTypeCheckboxes('schedOverrideTypesCheckboxes');
+  document.querySelector('[data-bookings-panel="blocked"]').hidden = false;
+  const choices = ['15-Minute One-on-One', '30-Minute One-on-One'];
+  for (const id of ['schedRuleTypesCheckboxes', 'schedOverrideTypesCheckboxes']) {
+    document.querySelector(`#${id}`).innerHTML = choices.map(label =>
+      `<label class="sched-session-type-option"><input type="checkbox"><span>${label}</span></label>`
+    ).join('');
+  }
 });
 
 for (const id of ['schedRuleTypesCheckboxes', 'schedOverrideTypesCheckboxes']) {

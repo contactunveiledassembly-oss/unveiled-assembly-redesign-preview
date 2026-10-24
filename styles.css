@@ -2443,11 +2443,11 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 .owner-sidebar-toggle{display:none}
 .owner-sidebar-backdrop{display:none}
 .owner-sidebar{
-  flex:0 0 208px;display:flex;flex-direction:column;gap:2px;padding:20px 12px;background:#0c0c0e;
+  flex:0 0 224px;display:flex;flex-direction:column;gap:2px;padding:20px 12px;background:#0c0c0e;
 }
 .owner-sidebar-item{
   display:flex;align-items:center;gap:10px;text-align:left;font-family:var(--sans);font-size:13px;font-weight:600;
-  padding:10px 14px;border-radius:var(--owner-radius-pill);border:0;background:none;color:#9a9aa2;cursor:pointer;transition:.15s;
+  padding:10px 14px;border-radius:var(--owner-radius-pill);border:0;background:none;color:#9a9aa2;cursor:pointer;transition:.15s;white-space:nowrap;
 }
 .owner-sidebar-item svg{width:16px;height:16px;flex:0 0 auto;stroke:currentColor;fill:none}
 .owner-sidebar-item:hover{background:rgba(255,255,255,.07);color:#fff}
