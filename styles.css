@@ -143,9 +143,14 @@ body.demo-mode .nav{top:26px}
 .links a:hover,.links a.current{opacity:1;border-color:currentColor}
 
 /* Shrink the nav row at medium/laptop widths before switching to the
-   structured menu. With Events in the primary navigation, the menu
-   collapses before any labels can crowd the account controls. */
-@media(max-width:1200px){
+   structured menu. With Events in the primary navigation, the full-size
+   row no longer fits at common laptop widths (1280px, 1366px) — only
+   below 1200px did it shrink, leaving a gap where the links overflowed
+   their grid column and bled into the brand logo and account controls.
+   Raised to 1500px so the shrink applies across that whole gap; the
+   smaller sizing already fits comfortably as low as 1120px, so it has
+   plenty of room up to 1500px. */
+@media(max-width:1500px){
   .nav{padding:0 2.4vw;column-gap:12px}
   .brand{gap:8px}
   .brand-text .line1{font-size:10px}
