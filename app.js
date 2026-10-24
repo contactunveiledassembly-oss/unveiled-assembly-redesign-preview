@@ -1258,7 +1258,7 @@ function dialogsHtml(){
                 <div class="booking-field"><label for="eventAdminFormat">Format</label><select id="eventAdminFormat"><option value="in-person">In Person</option><option value="online">Online</option><option value="hybrid">In Person + Online</option></select></div>
                 <div class="booking-field"><label for="eventAdminStatus">Visibility</label><select id="eventAdminStatus"><option value="draft">Draft — hidden</option><option value="published">Published</option><option value="cancelled">Cancelled</option></select></div>
                 <div class="booking-field full"><label for="eventAdminDescription">Description</label><textarea id="eventAdminDescription" rows="5"></textarea></div>
-                <div class="booking-field full"><label for="eventAdminPosterUrl">Poster Image URL <span class="admin-hint">(optional—the built-in editorial artwork appears when blank)</span></label><input id="eventAdminPosterUrl" type="url" placeholder="https://…" /></div>
+                <div class="booking-field full"><label for="eventAdminPosterUrl">Poster Image URL <span class="admin-hint">(optional—the built-in worship photograph appears when blank)</span></label><input id="eventAdminPosterUrl" type="url" placeholder="https://…" /></div>
               </div>
               <label class="admin-checkbox-field" style="padding-top:14px"><input id="eventAdminFeatured" type="checkbox" checked /> Feature this event at the top of the page</label>
               <button class="admin-btn-solid" type="submit" style="margin-top:16px">Save Event</button>

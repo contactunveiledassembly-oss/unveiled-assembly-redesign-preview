@@ -1,5 +1,6 @@
 const EVENTS_PREVIEW_KEY = 'ua_preview_events_v1';
 const EVENT_ANNOUNCEMENTS_PREVIEW_KEY = 'ua_preview_event_announcements_v1';
+const DEFAULT_POSTER_URL = 'assets/assembly-nights-concept-v2.png';
 
 const DEFAULT_EVENT = {
   id: 'assembly-nights',
@@ -150,8 +151,9 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
 
     const poster = document.getElementById('eventsPoster');
     if(poster){
-      poster.classList.toggle('has-image', !!(event && safeUrl(event.posterUrl)));
-      poster.style.backgroundImage = event && safeUrl(event.posterUrl) ? 'url("' + safeUrl(event.posterUrl).replace(/"/g, '%22') + '")' : '';
+      const posterUrl = event && safeUrl(event.posterUrl) ? safeUrl(event.posterUrl) : safeUrl(DEFAULT_POSTER_URL);
+      poster.classList.add('has-image');
+      poster.style.backgroundImage = 'url("' + posterUrl.replace(/"/g, '%22') + '")';
       poster.innerHTML = '<div class="events-poster-grid" aria-hidden="true"></div>' +
         '<div class="events-poster-kicker">The Unveiled Assembly</div>' +
         '<div class="events-poster-word">' + title.split(/\s+/).map(escapeHtml).join('<br>') + '</div>' +
@@ -174,10 +176,12 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml }){
     }
 
     const press = document.getElementById('eventsPressNotice');
+    const pressSection = document.getElementById('eventsPressSection');
     if(press){
       press.hidden = !(event && event.pressNotice);
       press.textContent = event ? event.pressNotice || '' : '';
     }
+    if(pressSection) pressSection.hidden = !(event && event.pressNotice);
 
     const announcementWrap = document.getElementById('eventsAnnouncements');
     const publicAnnouncements = announcements
