@@ -29,6 +29,7 @@ import {
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { initSiteManagement } from "./site-management.js?v=2";
+import { initEventsSystem } from "./events-system.js?v=1";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -440,6 +441,7 @@ const NAV_LINKS = [
   { page: 'story', href: 'story.html', label: 'Our Story' },
   { page: 'beliefs', href: 'beliefs.html', label: 'Beliefs' },
   { page: 'gather', href: 'gather.html', label: 'Gather' },
+  { page: 'events', href: 'events.html', label: 'Events' },
   { page: 'teachings', href: 'teachings.html', label: 'Teachings' },
   { page: 'one-on-one', href: 'one-on-one.html', label: 'One-on-One' },
   { page: 'prayer', href: 'prayer.html', label: 'Prayer' },
@@ -520,6 +522,7 @@ function footerHtml(){
       <div class="footer-links">
         <a href="${BASE}story.html">Our Story</a>
         <a href="${BASE}beliefs.html">Beliefs</a>
+        <a href="${BASE}events.html">Events</a>
         <a href="${BASE}prayer.html">Prayer</a>
         <a href="${BASE}connect.html">Contact</a>
         <a href="${BASE}shop/">Shop</a>
@@ -1149,6 +1152,10 @@ function dialogsHtml(){
             <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18H6.5A2.5 2.5 0 0 0 4 20.5"/></svg>
             Teachings
           </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="events">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5h16v15H4z"/><path d="M4 9h16M8 3v4M16 3v4"/><circle cx="9" cy="14" r="1.5"/><path d="M13 14h4M8 18h9"/></svg>
+            Events
+          </button>
           <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
             Bookings
@@ -1215,6 +1222,79 @@ function dialogsHtml(){
                 <button type="button" class="admin-btn-ghost" data-quick-action="website" style="text-align:left">Edit Website</button>
               </div>
             </div>
+          </div>
+        </article>
+        <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="events" hidden>
+          <div class="admin-panel-head">
+            <div>
+              <span class="portal-label">Events Manager</span>
+              <p class="admin-panel-intro">Create and publish special gatherings, control the public Events page, and keep event announcements and access links in one place.</p>
+            </div>
+            <div class="admin-panel-head-actions"><a class="admin-btn-ghost" href="${BASE}events.html" target="_blank" rel="noopener">Preview Events Page ↗</a></div>
+          </div>
+          <div class="admin-tabs" id="eventsAdminTabs" role="tablist" style="margin:16px 0">
+            <button type="button" class="admin-tab active" data-events-tab="overview">Overview</button>
+            <button type="button" class="admin-tab" data-events-tab="details">Event Details</button>
+            <button type="button" class="admin-tab" data-events-tab="announcements">Announcements</button>
+            <button type="button" class="admin-tab" data-events-tab="access">Tickets, Stream &amp; Press</button>
+          </div>
+
+          <div class="admin-edit-panel" data-events-panel="overview">
+            <div class="admin-stat-row" id="eventsAdminStats"></div>
+            <div id="eventsAdminPreview" style="margin-top:18px"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-events-panel="details" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">This controls the featured event visitors see first. Leave the date blank when it has not been announced—the page will say so honestly instead of showing a made-up date.</p>
+            <form id="eventDetailsForm">
+              <div class="booking-grid">
+                <div class="booking-field"><label for="eventAdminTitle">Event Name</label><input id="eventAdminTitle" required /></div>
+                <div class="booking-field"><label for="eventAdminKicker">Small Heading</label><input id="eventAdminKicker" placeholder="A Special Gathering" /></div>
+                <div class="booking-field full"><label for="eventAdminTagline">Tagline</label><input id="eventAdminTagline" placeholder="A night of worship, prayer, and encounter." /></div>
+                <div class="booking-field"><label for="eventAdminDate">Date</label><input id="eventAdminDate" type="date" /></div>
+                <div class="booking-field"><label for="eventAdminTime">Start Time</label><input id="eventAdminTime" type="time" /></div>
+                <div class="booking-field"><label for="eventAdminVenue">Venue</label><input id="eventAdminVenue" placeholder="To be announced" /></div>
+                <div class="booking-field"><label for="eventAdminCity">City / Location</label><input id="eventAdminCity" placeholder="Macon, Georgia" /></div>
+                <div class="booking-field"><label for="eventAdminFormat">Format</label><select id="eventAdminFormat"><option value="in-person">In Person</option><option value="online">Online</option><option value="hybrid">In Person + Online</option></select></div>
+                <div class="booking-field"><label for="eventAdminStatus">Visibility</label><select id="eventAdminStatus"><option value="draft">Draft — hidden</option><option value="published">Published</option><option value="cancelled">Cancelled</option></select></div>
+                <div class="booking-field full"><label for="eventAdminDescription">Description</label><textarea id="eventAdminDescription" rows="5"></textarea></div>
+                <div class="booking-field full"><label for="eventAdminPosterUrl">Poster Image URL <span class="admin-hint">(optional—the built-in editorial artwork appears when blank)</span></label><input id="eventAdminPosterUrl" type="url" placeholder="https://…" /></div>
+              </div>
+              <label class="admin-checkbox-field" style="padding-top:14px"><input id="eventAdminFeatured" type="checkbox" checked /> Feature this event at the top of the page</label>
+              <button class="admin-btn-solid" type="submit" style="margin-top:16px">Save Event</button>
+              <div class="form-status" id="eventDetailsStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
+            </form>
+          </div>
+
+          <div class="admin-edit-panel" data-events-panel="announcements" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">Publish updates such as location releases, schedule changes, arrival instructions, or important event notices.</p>
+            <form id="eventAnnouncementForm">
+              <div class="booking-grid">
+                <div class="booking-field"><label for="eventAnnouncementTitle">Title</label><input id="eventAnnouncementTitle" required /></div>
+                <div class="booking-field"><label for="eventAnnouncementStatus">Status</label><select id="eventAnnouncementStatus"><option value="draft">Draft</option><option value="published">Published</option></select></div>
+                <div class="booking-field full"><label for="eventAnnouncementBody">Announcement</label><textarea id="eventAnnouncementBody" rows="4" required></textarea></div>
+              </div>
+              <label class="admin-checkbox-field" style="padding-top:14px"><input id="eventAnnouncementPinned" type="checkbox" /> Pin this announcement</label>
+              <button class="admin-btn-solid" type="submit" style="margin-top:14px">Save Announcement</button>
+              <div class="form-status" id="eventAnnouncementStatusMsg" role="status" aria-live="polite" style="margin-top:10px"></div>
+            </form>
+            <div class="admin-subsection-label">Saved Announcements</div>
+            <div id="eventAnnouncementsAdminList"></div>
+          </div>
+
+          <div class="admin-edit-panel" data-events-panel="access" hidden>
+            <p class="admin-hint" style="margin-bottom:16px">Only buttons with a saved link appear publicly. Leave a field blank to hide that action.</p>
+            <form id="eventAccessForm">
+              <div class="booking-grid">
+                <div class="booking-field"><label for="eventAdminTicketUrl">Registration / Ticket Link</label><input id="eventAdminTicketUrl" type="url" placeholder="https://…" /></div>
+                <div class="booking-field"><label for="eventAdminTicketLabel">Button Label</label><input id="eventAdminTicketLabel" placeholder="Register" /></div>
+                <div class="booking-field"><label for="eventAdminStreamUrl">Livestream / Online Access</label><input id="eventAdminStreamUrl" type="url" placeholder="https://…" /></div>
+                <div class="booking-field"><label for="eventAdminPressUrl">Media / Press Application</label><input id="eventAdminPressUrl" type="url" placeholder="https://…" /></div>
+                <div class="booking-field full"><label for="eventAdminPressNotice">Press Notice</label><textarea id="eventAdminPressNotice" rows="4" placeholder="Information for members of the press and media."></textarea></div>
+              </div>
+              <button class="admin-btn-solid" type="submit" style="margin-top:16px">Save Access Links</button>
+              <div class="form-status" id="eventAccessStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
+            </form>
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="website">
@@ -2997,6 +3077,7 @@ setPersistence(auth, browserLocalPersistence).catch(() => {});
 let currentUser = null;
 let currentProfile = null;
 let siteManagement = null;
+let eventsSystem = null;
 // Ministry's scheduling timezone. The Scheduling Settings panel (below)
 // can change this in-memory for preview purposes; loadSchedulingConfig()
 // would also assign it once that panel is reconnected to Firestore.
@@ -8460,6 +8541,7 @@ document.getElementById('ownerNotifCenterTabs').addEventListener('click', event 
 const OWNER_SECTION_DESCRIPTIONS = {
   dashboard: "A quick look at what's happening across the site.",
   teachings: 'Create, edit, and publish the weekly Teaching classes.',
+  events: 'Create, publish, and manage special ministry events.',
   website: 'Control the words and images visitors see on each page.',
   payments: 'Every payment collected through the website, in one place.',
   bookings: 'Manage one-on-one session requests and your weekly availability.',
@@ -9142,6 +9224,7 @@ async function loadOwnerData(){
   populateAdminBookTypeSelect();
   renderOwnerNotifications();
   renderTeachingManager();
+  if(eventsSystem) eventsSystem.renderAdmin();
   renderOwnerWebsitePages();
   if(siteManagement) siteManagement.renderOwnerDiscountCodes();
   renderOwnerMediaGallery();
@@ -12819,4 +12902,13 @@ siteManagement = initSiteManagement({
   rerenderBookingSummary: renderBookingOrderSummary,
   rerenderTeachingSummary: renderTeachingRegistrationOrderSummary
 });
+eventsSystem = initEventsSystem({
+  DEMO_MODE,
+  db,
+  firestore: { doc, setDoc, getDoc, collection, getDocs, deleteDoc, serverTimestamp },
+  escapeHtml,
+  base: BASE
+});
+await eventsSystem.load();
+eventsSystem.renderPublic();
 renderOwnerWebsitePages();

@@ -2,9 +2,10 @@ import { chromium } from '/Users/yaunahlove/.cache/codex-runtimes/codex-primary-
 import assert from 'node:assert/strict';
 
 const browser = await chromium.launch({ headless: true });
+const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:8080';
 const auditAtWidth = async width => {
   const page = await browser.newPage({ viewport: { width, height: 954 } });
-  await page.goto('http://localhost:8080/story.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(`${baseUrl}/story.html`, { waitUntil: 'domcontentloaded' });
   const findings = await page.evaluate(() => {
   const dialog = document.querySelector('#memberPortalDialog');
   if (dialog) dialog.setAttribute('open', '');

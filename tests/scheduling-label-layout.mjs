@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1624, height: 954 } });
+const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:8080';
 
-await page.goto('http://localhost:8080/story.html', { waitUntil: 'domcontentloaded' });
+await page.goto(`${baseUrl}/story.html`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('#schedRuleTypesCheckboxes', { state: 'attached' });
 await page.evaluate(() => {
   document.querySelector('#memberPortalDialog').setAttribute('open', '');
