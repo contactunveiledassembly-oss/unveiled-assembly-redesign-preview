@@ -1,21 +1,21 @@
 /* One-on-One photography preview — page-scoped image replacements only. */
 body[data-page="one-on-one"] .oo-hero-media {
-  background-image: url('hero-v4.png');
+  background-image: url('hero-v4.jpg');
   background-position: center 48%;
 }
 
 body[data-page="one-on-one"] .oo-booking-image {
-  background-image: url('booking-v2.png');
+  background-image: url('booking-v2.jpg');
   background-position: center 54%;
 }
 
 body[data-page="one-on-one"] .oo-expect-media {
-  background-image: url('expect-v3.png');
+  background-image: url('expect-v3.jpg');
   background-position: center 48%;
 }
 
 body[data-page="one-on-one"] .oo-closing-media {
-  background-image: url('closing-v3.png');
+  background-image: url('closing-v3.jpg');
   background-position: center 48%;
 }
 

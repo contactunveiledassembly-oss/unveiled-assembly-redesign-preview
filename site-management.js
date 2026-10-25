@@ -29,8 +29,8 @@ const ONE_ON_ONE_DEFAULTS = {
     button: 'Book A Session →'
   },
   images: {
-    hero: 'assets/one-on-one/hero-v4.png', booking: 'assets/one-on-one/booking-v2.png',
-    expect: 'assets/one-on-one/expect-v3.png', closing: 'assets/one-on-one/closing-v3.png'
+    hero: 'assets/one-on-one/hero-v4.jpg', booking: 'assets/one-on-one/booking-v2.jpg',
+    expect: 'assets/one-on-one/expect-v3.jpg', closing: 'assets/one-on-one/closing-v3.jpg'
   }
 };
 
