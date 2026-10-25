@@ -3152,7 +3152,18 @@ async function loadSchedulingConfig(){
 // Only ever reads real Firestore on the production domain — the preview
 // safety lock (DEMO_MODE) keeps this panel fully local/sample on every
 // other host, same as every other admin feature.
-if(!DEMO_MODE) await loadSchedulingConfig();
+let schedulingConfigLoad = Promise.resolve();
+if(!DEMO_MODE){
+  // Never hold the public page hostage to network/database latency.
+  // Render with safe defaults now, then quietly refresh when live
+  // scheduling data arrives.
+  schedulingConfigLoad = loadSchedulingConfig()
+    .then(() => {
+      renderPublicTeachingPages();
+      requestAnimationFrame(observeRevealTargets);
+    })
+    .catch(() => {});
+}
 
 /* ---------------------------------------------------------------
    Teaching Manager configuration + public teaching data. Same
@@ -3373,13 +3384,23 @@ async function loadTeachingPageConfig(){
     if(settingsSnap.exists()) TEACHING_PAGE_SETTINGS = { ...TEACHING_PAGE_SETTINGS, ...settingsSnap.data() };
   } catch (err) { /* keep defaults */ }
   try {
-    const snap = await getDocs(collection(db, 'teachings'));
+    const snap = await getDocs(query(collection(db, 'teachings'), where('status', '!=', 'draft')));
     const map = {};
     snap.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
     TEACHINGS = map;
   } catch (err) { /* keep whatever we had */ }
 }
-if(!DEMO_MODE) await loadTeachingPageConfig();
+let teachingPageConfigLoad = Promise.resolve();
+if(!DEMO_MODE){
+  // Paint the approved fallback content immediately. Live teaching
+  // settings/classes hydrate in the background and then refresh the page.
+  teachingPageConfigLoad = loadTeachingPageConfig()
+    .then(() => {
+      renderPublicTeachingPages();
+      requestAnimationFrame(observeRevealTargets);
+    })
+    .catch(() => {});
+}
 
 async function loadMediaLibrary(){
   if(DEMO_MODE) return;
@@ -12903,7 +12924,10 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, { threshold: .12 });
 
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+function observeRevealTargets(){
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+}
+observeRevealTargets();
 setTimeout(() => document.querySelector('.reveal')?.classList.add('visible'), 100);
 
 /* Owner-managed page content and shared checkout discount codes. Kept
@@ -12925,9 +12949,12 @@ siteManagement = initSiteManagement({
   rerenderBookingSummary: renderBookingOrderSummary,
   rerenderTeachingSummary: renderTeachingRegistrationOrderSummary,
   policyCardHtml,
-  openEventsEditor: () => {
+  openEventsEditor: async () => {
     showOwnerSection('events');
-    if(eventsSystem) eventsSystem.openEditor();
+    if(eventsSystem){
+      await eventsSystem.loadAdmin();
+      eventsSystem.openEditor();
+    }
   }
 });
 eventsSystem = initEventsSystem({
@@ -12938,6 +12965,12 @@ eventsSystem = initEventsSystem({
   resizeImage: resizeImageToDataUrl,
   base: BASE
 });
-await eventsSystem.load();
+// Event data is only needed on the Events page (or when the owner opens
+// its editor). Do not make every unrelated page perform these requests.
 eventsSystem.renderPublic();
 renderOwnerWebsitePages();
+if(document.body.dataset.page === 'events'){
+  void eventsSystem.load()
+    .then(renderOwnerWebsitePages)
+    .catch(err => console.error('[events] background load failed', err));
+}
