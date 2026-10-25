@@ -133,8 +133,8 @@ const GIVE_DEFAULTS = {
   form: { eyebrow: 'Make A Difference', title: 'Give Today', copy: 'Choose an amount and a secure giving method.' },
   closing: { eyebrow: 'Together, We Go Further', title: 'More Than\nA Donation.', copy: 'Every gift can become a meal, a resource, a gathering, or a moment of care. Thank you for helping us serve with consistency and love.' },
   images: {
-    hero: 'assets/give/hero-editorial-v2.png', event: 'assets/give/event-handoff-v2.png',
-    community: 'assets/give/community-meals-v2.png', giving: 'assets/give/giving-panel-v2.png'
+    hero: 'assets/give/hero-editorial-v2.jpg', event: 'assets/give/event-handoff-v2.jpg',
+    community: 'assets/give/community-meals-v2.jpg', giving: 'assets/give/giving-panel-v2.jpg'
   }
 };
 

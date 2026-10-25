@@ -35,7 +35,7 @@ try {
   assert.equal(await desktop.locator('[data-owner-section="events"]').isVisible(), true);
   assert.equal(await desktop.locator('[data-events-panel="details"]').isVisible(), true);
   assert.equal(await desktop.locator('#eventAdminPosterFile').count(), 1);
-  await desktop.locator('#eventAdminPosterFile').setInputFiles('assets/story-v5/story-entrance-revelation-v2.png');
+  await desktop.locator('#eventAdminPosterFile').setInputFiles('assets/story-v5/story-entrance-revelation-v2.jpg');
   await desktop.waitForFunction(() => document.querySelector('#eventAdminPosterUrl').value.startsWith('data:image/jpeg;base64,'));
   assert.match(await desktop.locator('#eventAdminPosterPreview').getAttribute('style'), /data:image\/jpeg;base64/);
 

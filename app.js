@@ -353,7 +353,7 @@ const DEMO_TEACHINGS = {
     fullDescription: 'Rooting your sense of self in who God says you are, not in performance or circumstance.',
     date: demoNextWeekdayStr(4, 4), startTime: '19:30', price: 25,
     status: 'published',
-    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/beliefs-hero-v3.png' } },
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/beliefs-hero-v3.jpg' } },
   'demo-foundations': { id: 'demo-foundations', ...demoTeachingDefaults(),
     title: 'Foundations of Faith', subtitle: 'Rooted Before You Rise', category: 'Foundations',
     shortDescription: 'A practical foundation for understanding grace, identity, prayer, and spiritual maturity.',
@@ -3384,7 +3384,21 @@ async function loadTeachingPageConfig(){
     if(settingsSnap.exists()) TEACHING_PAGE_SETTINGS = { ...TEACHING_PAGE_SETTINGS, ...settingsSnap.data() };
   } catch (err) { /* keep defaults */ }
   try {
-    const snap = await getDocs(query(collection(db, 'teachings'), where('status', '!=', 'draft')));
+    // A plain collection-wide read can't satisfy the `teachings` rule
+    // (resource.data.status != 'draft') for a signed-out visitor — Firestore
+    // can only allow a list query like that when a matching where() lets it
+    // prove every possible result passes, so this came back empty/denied
+    // for the public page (same class of bug as eventAnnouncements).
+    // The admin IS allowed to list everything unfiltered (the rule's
+    // isAdmin() branch doesn't depend on resource.data at all), which this
+    // function also serves — loadOwnerData() awaits it again once signed in
+    // — so only the signed-out path needs the status filter, and Teaching
+    // Manager still sees drafts once the owner is actually signed in.
+    const isAdminContext = currentProfile && currentProfile.role === 'admin';
+    const teachingsQuery = isAdminContext
+      ? collection(db, 'teachings')
+      : query(collection(db, 'teachings'), where('status', '!=', 'draft'));
+    const snap = await getDocs(teachingsQuery);
     const map = {};
     snap.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
     TEACHINGS = map;

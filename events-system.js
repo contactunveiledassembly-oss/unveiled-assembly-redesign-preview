@@ -1,6 +1,6 @@
 const EVENTS_PREVIEW_KEY = 'ua_preview_events_v1';
 const EVENT_ANNOUNCEMENTS_PREVIEW_KEY = 'ua_preview_event_announcements_v1';
-const DEFAULT_POSTER_URL = 'assets/assembly-nights-concept-v2.png';
+const DEFAULT_POSTER_URL = 'assets/assembly-nights-concept-v2.jpg';
 
 const DEFAULT_EVENT = {
   id: 'assembly-nights',

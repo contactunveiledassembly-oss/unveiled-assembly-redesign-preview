@@ -159,7 +159,7 @@ to { opacity: .09; transform: translateY(-50%) scale(1.015); }
 .ub-reader-close { border: 0; background: none; color: var(--stone); cursor: pointer; font: 400 10px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; transition: color .2s ease; }
 .ub-reader-close:hover { color: var(--ivory); }
 .ub-reader-layout { min-height: 0; display: grid; grid-template-columns: minmax(240px, 30%) minmax(0, 1fr); }
-.ub-reader-sidebar { position: relative; min-height: 0; padding: clamp(28px, 4vw, 52px); overflow-y: auto; border-right: 1px solid var(--line-dark); background: linear-gradient(180deg, rgba(10,10,10,.48), rgba(10,10,10,.94)), url('beliefs-hero-v3.png') 73% center / cover; }
+.ub-reader-sidebar { position: relative; min-height: 0; padding: clamp(28px, 4vw, 52px); overflow-y: auto; border-right: 1px solid var(--line-dark); background: linear-gradient(180deg, rgba(10,10,10,.48), rgba(10,10,10,.94)), url('beliefs-hero-v3.jpg') 73% center / cover; }
 .ub-reader-sidebar::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(135deg, transparent 20%, rgba(245,243,238,.045), transparent 70%); }
 .ub-reader-side-inner { position: relative; z-index: 1; }
 .ub-reader-number { margin-bottom: 22px; color: rgba(245,243,238,.36); font: 300 clamp(58px, 7vw, 94px)/.8 var(--display); letter-spacing: -.055em; }
@@ -231,7 +231,7 @@ to { opacity: .09; transform: translateY(-50%) scale(1.015); }
       position: absolute;
       inset: 0;
       overflow: hidden;
-      background-image: url('beliefs-hero-v3.png');
+      background-image: url('beliefs-hero-v3.jpg');
       background-color: var(--black);
       background-size: cover;
       background-position: center 58%;
