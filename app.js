@@ -1209,6 +1209,10 @@ function dialogsHtml(){
         </button>
         <div class="owner-sidebar-backdrop" id="ownerSidebarBackdrop"></div>
         <nav class="owner-sidebar" id="ownerSidebar">
+          <button type="button" class="owner-sidebar-collapse-btn" id="ownerSidebarCollapseBtn" title="Collapse sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg>
+            <span>Collapse</span>
+          </button>
           <button type="button" class="owner-sidebar-item active" data-owner-nav="dashboard">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
             Dashboard
@@ -1275,6 +1279,7 @@ function dialogsHtml(){
           </div>
         </nav>
         <div class="owner-content">
+      <div class="owner-breadcrumb" id="ownerBreadcrumb"></div>
       <div class="portal-owner-grid">
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
           <h3 style="font-family:var(--serif);font-size:26px;font-weight:600;color:var(--owner-text);margin:0 0 4px" id="ownerDashboardWelcome">Welcome back.</h3>
@@ -8887,11 +8892,28 @@ const OWNER_SECTION_DESCRIPTIONS = {
   settings: 'Your sign-in email, phone, and password.',
   policies: 'The terms and agreements visitors see across ministry forms and checkout.'
 };
+// The nav button's own label text is the one place a department's
+// display name already lives (no second list to keep in sync) — it's
+// a bare text node between the icon and the optional unread-count
+// badge, e.g. <svg/>"Prayer Requests"<span class="owner-nav-count">.
+function ownerNavLabel(btn){
+  for(const node of btn.childNodes){
+    if(node.nodeType === 3 && node.textContent.trim()) return node.textContent.trim();
+  }
+  return '';
+}
 function showOwnerSection(name){
   document.querySelectorAll('#ownerSidebar .owner-sidebar-item').forEach(b => b.classList.toggle('active', b.dataset.ownerNav === name));
   document.querySelectorAll('[data-owner-section]').forEach(p => { p.hidden = p.dataset.ownerSection !== name; });
   const desc = document.getElementById('ownerSectionDescription');
   if(desc) desc.textContent = OWNER_SECTION_DESCRIPTIONS[name] || '';
+  const crumb = document.getElementById('ownerBreadcrumb');
+  if(crumb){
+    const navBtn = document.querySelector('#ownerSidebar .owner-sidebar-item[data-owner-nav="' + name + '"]');
+    const label = navBtn ? ownerNavLabel(navBtn) : '';
+    crumb.innerHTML = (name === 'dashboard' || !label) ? '<span class="owner-breadcrumb-current">Owner Portal</span>'
+      : '<span>Owner Portal</span><span class="owner-breadcrumb-sep">/</span><span class="owner-breadcrumb-current">' + escapeHtml(label) + '</span>';
+  }
   closeOwnerSidebarDrawer();
 }
 
@@ -8978,6 +9000,21 @@ document.getElementById('ownerSidebar').addEventListener('click', event => {
 });
 document.getElementById('ownerSidebarToggle').addEventListener('click', openOwnerSidebarDrawer);
 document.getElementById('ownerSidebarBackdrop').addEventListener('click', closeOwnerSidebarDrawer);
+
+// Desktop sidebar collapse — independent of the mobile drawer above
+// (that's a slide-in/out overlay; this is a persistent icon-only rail).
+const OWNER_SIDEBAR_COLLAPSED_KEY = 'ua_owner_sidebar_collapsed_v1';
+function setOwnerSidebarCollapsed(collapsed){
+  document.getElementById('ownerSidebar').classList.toggle('collapsed', collapsed);
+  const btn = document.getElementById('ownerSidebarCollapseBtn');
+  if(btn){ btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar'; btn.querySelector('span').textContent = collapsed ? 'Expand' : 'Collapse'; }
+  try { localStorage.setItem(OWNER_SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch (err) { /* ignore */ }
+}
+document.getElementById('ownerSidebarCollapseBtn').addEventListener('click', () => {
+  setOwnerSidebarCollapsed(!document.getElementById('ownerSidebar').classList.contains('collapsed'));
+});
+try { if(localStorage.getItem(OWNER_SIDEBAR_COLLAPSED_KEY) === '1') setOwnerSidebarCollapsed(true); } catch (err) { /* ignore */ }
+
 showOwnerSection('dashboard');
 
 function updateOwnerSidebarProfile(){

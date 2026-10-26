@@ -1323,7 +1323,15 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
      individually patched below. */
   --owner-accent:#f5f3ee;--owner-accent-text:#080808;
   --owner-shadow:0 16px 50px rgba(0,0,0,.34);
-  min-height:100dvh;padding:0;background:#050505;color:var(--owner-text)
+  min-height:100dvh;padding:0;background:#050505;color:var(--owner-text);
+  /* Department identity colors (Master Redesign, 2026-10-26) — restrained
+     accents (sidebar icon tint, a small heading dot, list-row left edge)
+     layered on top of the portal's existing black/white identity, never
+     replacing it. --owner-accent (white) stays the one color every
+     primary button/active-tab/active-pill uses, portal-wide. */
+  --dept-scheduling:#b3a7d6; --dept-prayer:#a3b596; --dept-testimony:#d6a8a8;
+  --dept-members:#94aed0; --dept-classes:#b09bd1; --dept-finance:#d9c69e;
+  --dept-system:#9aa0a8;
 }
 /* Same fix as .member-hero above — was a second hotlinked, non-
    desaturated color photo (the Ministry/Owner header), replaced with
@@ -2011,6 +2019,30 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 .admin-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:6px}
 .admin-panel-intro{color:var(--owner-text-muted);font-size:13.5px;max-width:56ch;margin:4px 0 0;line-height:1.55}
 .admin-panel-head-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Department identity, content side (Master Redesign) — same color
+   each department's sidebar icon already carries, mapped onto the
+   section wrapper so a small heading dot (and anything else that
+   wants it) can read --dept-accent without repeating the mapping. */
+[data-owner-section="bookings"]{--dept-accent:var(--dept-scheduling)}
+[data-owner-section="prayer-requests"]{--dept-accent:var(--dept-prayer)}
+[data-owner-section="testimonials"],
+[data-owner-section="class-reviews"]{--dept-accent:var(--dept-testimony)}
+[data-owner-section="people"]{--dept-accent:var(--dept-members)}
+[data-owner-section="teachings"],
+[data-owner-section="paths"],
+[data-owner-section="registrations"],
+[data-owner-section="events"]{--dept-accent:var(--dept-classes)}
+[data-owner-section="payments"]{--dept-accent:var(--dept-finance)}
+[data-owner-section="website"],
+[data-owner-section="settings"],
+[data-owner-section="policies"],
+[data-owner-section="media"]{--dept-accent:var(--dept-system)}
+.portal-view[data-portal-view="owner"] [data-owner-section] .portal-label{position:relative;padding-left:15px}
+.portal-view[data-portal-view="owner"] [data-owner-section] .portal-label::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:7px;height:7px;border-radius:50%;background:var(--dept-accent,var(--owner-text-faint));
+}
 .admin-mode-notice{
   border:1px solid var(--owner-border);background:var(--owner-surface-sunken);padding:13px 18px;margin:14px 0 20px;
   font-size:12.5px;line-height:1.6;color:var(--owner-text-muted);border-radius:var(--owner-radius);
@@ -2517,7 +2549,31 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 .owner-sidebar-backdrop{display:none}
 .owner-sidebar{
   flex:0 0 224px;display:flex;flex-direction:column;gap:2px;padding:20px 12px;background:#0c0c0e;
+  transition:flex-basis .2s ease,padding .2s ease;
 }
+/* Desktop collapse (Master Redesign) — icon-only rail. Text nodes
+   inside each nav button aren't wrapped in their own span, so the
+   cheapest reliable way to hide just the label while keeping the
+   (fixed-px, not em-based) icon full size is font-size:0 on the
+   button — the icon's explicit width/height is immune to it. */
+.owner-sidebar-collapse-btn{
+  display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;margin-bottom:8px;
+  border:0;background:none;color:#6c6c76;font:600 11px var(--sans);letter-spacing:.02em;cursor:pointer;
+  border-radius:var(--owner-radius-pill);transition:.15s;
+}
+.owner-sidebar-collapse-btn:hover{background:rgba(255,255,255,.06);color:#fff}
+.owner-sidebar-collapse-btn svg{width:14px;height:14px;flex:0 0 auto;transition:transform .2s ease}
+.owner-sidebar.collapsed{flex-basis:68px;padding-left:8px;padding-right:8px}
+.owner-sidebar.collapsed .owner-sidebar-item{font-size:0;justify-content:center;padding:10px;gap:0}
+.owner-sidebar.collapsed .owner-sidebar-item svg{width:18px;height:18px}
+.owner-sidebar.collapsed .owner-nav-count{display:none}
+.owner-sidebar.collapsed .owner-sidebar-group-label{display:none}
+.owner-sidebar.collapsed .owner-sidebar-collapse-btn{justify-content:center}
+.owner-sidebar.collapsed .owner-sidebar-collapse-btn span{display:none}
+.owner-sidebar.collapsed .owner-sidebar-collapse-btn svg{transform:rotate(180deg)}
+.owner-sidebar.collapsed .owner-sidebar-profile-text{display:none}
+.owner-sidebar.collapsed .owner-sidebar-profile{justify-content:center;padding-left:0;padding-right:0}
+@media(max-width:820px){.owner-sidebar-collapse-btn{display:none}}
 .owner-sidebar-item{
   display:flex;align-items:center;gap:10px;text-align:left;font-family:var(--sans);font-size:13px;font-weight:600;
   padding:10px 14px;border-radius:var(--owner-radius-pill);border:0;background:none;color:#9a9aa2;cursor:pointer;transition:.15s;white-space:nowrap;
@@ -2525,6 +2581,26 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 .owner-sidebar-item svg{width:16px;height:16px;flex:0 0 auto;stroke:currentColor;fill:none}
 .owner-sidebar-item:hover{background:rgba(255,255,255,.07);color:#fff}
 .owner-sidebar-item.active{background:#fff;color:#0c0c0e}
+/* Department icon tint (Master Redesign) — the icon keeps its
+   department color at every state, including the white active pill,
+   so the icon color itself is a "which department" signal at a
+   glance, not just the (identical-everywhere) pill shape. */
+.owner-sidebar-item[data-owner-nav="bookings"]{--dept-accent:var(--dept-scheduling)}
+.owner-sidebar-item[data-owner-nav="prayer-requests"]{--dept-accent:var(--dept-prayer)}
+.owner-sidebar-item[data-owner-nav="testimonials"],
+.owner-sidebar-item[data-owner-nav="class-reviews"]{--dept-accent:var(--dept-testimony)}
+.owner-sidebar-item[data-owner-nav="people"]{--dept-accent:var(--dept-members)}
+.owner-sidebar-item[data-owner-nav="teachings"],
+.owner-sidebar-item[data-owner-nav="paths"],
+.owner-sidebar-item[data-owner-nav="registrations"],
+.owner-sidebar-item[data-owner-nav="events"]{--dept-accent:var(--dept-classes)}
+.owner-sidebar-item[data-owner-nav="payments"]{--dept-accent:var(--dept-finance)}
+.owner-sidebar-item[data-owner-nav="website"],
+.owner-sidebar-item[data-owner-nav="settings"],
+.owner-sidebar-item[data-owner-nav="policies"],
+.owner-sidebar-item[data-owner-nav="media"]{--dept-accent:var(--dept-system)}
+.owner-sidebar-item svg{stroke:var(--dept-accent,currentColor);opacity:.75;transition:opacity .15s,stroke .15s}
+.owner-sidebar-item:hover svg,.owner-sidebar-item.active svg{opacity:1}
 /* Groups the 15 nav items into a few labeled clusters (Content,
    People & Bookings, Site, Inbox) instead of one flat 15-item list,
    so a quick glance lands on the right cluster instead of scanning
@@ -2542,6 +2618,12 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 .owner-sidebar-profile-text strong{font-size:12.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
 .owner-sidebar-profile-text span{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#87878f}
 .owner-content{flex:1;min-width:0;background:var(--owner-bg);color:var(--owner-text);padding:28px 30px}
+/* Location indicator (Master Redesign) — no breadcrumb existed before;
+   this is the one shared element outside any department's own markup,
+   updated by showOwnerSection() so every section gets it for free. */
+.owner-breadcrumb{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--owner-text-faint);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.owner-breadcrumb-sep{opacity:.5}
+.owner-breadcrumb-current{color:var(--owner-text-muted)}
 /* Every panel/form inside the Owner workspace uses the light-gray/white/
    charcoal Owner tokens, not the public site's own light/dark tokens —
    these are the SAME .portal-panel/.form-field classes the public member
