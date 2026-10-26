@@ -3001,10 +3001,10 @@ function dialogsHtml(){
       <div class="detail-section">
         <div class="detail-section-title">Registration Status</div>
         <div class="detail-action-row" id="classRegDetailStatusBtns">
-          <button class="admin-btn-ghost" type="button" data-classreg-status="confirmed">Confirm</button>
+          <button class="admin-btn-ghost" type="button" data-classreg-status="confirmed">Confirm / Grant Access</button>
           <button class="admin-btn-ghost" type="button" data-classreg-status="pending_payment">Mark Pending</button>
           <button class="admin-btn-ghost" type="button" data-classreg-status="cancelled">Cancel Registration</button>
-          <button class="admin-btn-ghost" type="button" data-classreg-status="refunded">Mark Refunded</button>
+          <button class="admin-btn-ghost" type="button" data-classreg-status="refunded">Record Refund Status</button>
         </div>
       </div>
       <div class="detail-section">
@@ -8708,7 +8708,9 @@ document.getElementById('memberNotificationsList').addEventListener('click', asy
   if(!row) return;
   const source = (DEMO_MODE || ownerPreviewActive) ? MEMBER_NOTIFICATIONS : MEMBER_OWN_NOTIFICATIONS;
   const n = source.find(x => x.id === row.dataset.mnId);
-  if(!n || n.read || ownerPreviewActive) return;
+  if(!n) return;
+  if(n.deepLink) showMemberTab(n.deepLink);
+  if(n.read || ownerPreviewActive) return;
   try {
     if(!DEMO_MODE) await updateDoc(doc(db, 'memberNotifications', n.id), { read: true });
     n.read = true;
@@ -12722,6 +12724,7 @@ function openClassRegDetail(id){
   document.querySelectorAll('#classRegDetailStatusBtns [data-classreg-status]').forEach(btn => {
     btn.classList.toggle('admin-btn-solid', btn.dataset.classregStatus === item.status);
     btn.classList.toggle('admin-btn-ghost', btn.dataset.classregStatus !== item.status);
+    if(btn.dataset.classregStatus === 'refunded') btn.disabled = !verifiedPaymentRecord(item);
   });
   const attendance = item.attendanceStatus || 'not-marked';
   document.querySelectorAll('#classRegDetailAttendanceBtns [data-classreg-attendance]').forEach(btn => {
@@ -12742,12 +12745,17 @@ document.getElementById('classRegDetailDialog').addEventListener('click', event 
 });
 document.getElementById('classRegResendBtn').addEventListener('click', () => {
   if(!classRegDetailId) return;
-  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
+  const item = classRegistrationSource().find(r => r.id === classRegDetailId);
   if(!item) return;
+  if(!(DEMO_MODE || (ownerSim && ownerSim.isActive()))){
+    document.getElementById('classRegResendStatus').textContent = 'Email and SMS delivery are not connected yet, so nothing was sent.';
+    return;
+  }
+  if(!Array.isArray(item.notificationLog)) item.notificationLog = [];
   appendResendToLog(item.notificationLog, item.smsConsent);
   saveTeachingRegistrationsToStorage();
   openClassRegDetail(classRegDetailId);
-  document.getElementById('classRegResendStatus').textContent = 'Resent — Preview Mode simulation, no real email' +
+  document.getElementById('classRegResendStatus').textContent = 'Preview only — no real email' +
     (item.smsConsent ? ' or text message' : ' message') + ' was sent.';
 });
 
@@ -12968,14 +12976,22 @@ document.getElementById('classRegAttendanceSubTabs')?.addEventListener('click', 
   document.querySelectorAll('#classRegAttendanceSubTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
   renderClassRegAttendanceList();
 });
-document.getElementById('classRegAttendanceList')?.addEventListener('click', event => {
+document.getElementById('classRegAttendanceList')?.addEventListener('click', async event => {
   const quickBtn = event.target.closest('[data-classreg-quick-attendance]');
   if(quickBtn){
-    const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === quickBtn.dataset.classregId);
+    const item = classRegistrationSource().find(r => r.id === quickBtn.dataset.classregId);
     if(item){
-      item.attendanceStatus = quickBtn.dataset.classregQuickAttendance;
-      saveTeachingRegistrationsToStorage();
-      renderClassRegAttendanceList();
+      const attendanceStatus = quickBtn.dataset.classregQuickAttendance;
+      try {
+        if(!(DEMO_MODE || (ownerSim && ownerSim.isActive()))){
+          await updateDoc(doc(db, 'teachingRegistrations', item.id), { attendanceStatus, updatedAt: serverTimestamp() });
+        }
+        item.attendanceStatus = attendanceStatus;
+        if(DEMO_MODE || (ownerSim && ownerSim.isActive())) saveTeachingRegistrationsToStorage();
+        renderClassRegAttendanceList();
+      } catch (err) {
+        console.error('[registrations] quick attendance update failed', err);
+      }
     }
     return;
   }
