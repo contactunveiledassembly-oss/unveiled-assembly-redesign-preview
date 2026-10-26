@@ -253,6 +253,18 @@ let DEMO_BOOKINGS = [
 // fixed while building the reschedule-window policy below, which
 // needs real booking data (createdAt, in particular) to work at all.
 let MEMBER_OWN_BOOKINGS = [];
+let MEMBER_OWN_TEACHING_REGISTRATIONS = [];
+let MEMBER_OWN_NOTIFICATIONS = [];
+let MEMBER_OWN_SUBMISSIONS = { prayer: [], testimonies: [] };
+
+function memberRecordTime(value){
+  if(!value) return 0;
+  if(typeof value.toMillis === 'function') return value.toMillis();
+  if(typeof value.toDate === 'function') return value.toDate().getTime();
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 async function loadMemberOwnBookings(){
   if(DEMO_MODE || !currentUser) return;
   try {
@@ -263,6 +275,53 @@ async function loadMemberOwnBookings(){
     if(typeof renderMemberDashboardPanels === 'function') renderMemberDashboardPanels();
   } catch (err) {
     console.error('[member] loadMemberOwnBookings failed', err);
+  }
+}
+
+async function loadMemberOwnTeachingRegistrations(){
+  if(DEMO_MODE || !currentUser) return;
+  try {
+    const snap = await getDocs(query(collection(db, 'teachingRegistrations'), where('uid', '==', currentUser.uid)));
+    MEMBER_OWN_TEACHING_REGISTRATIONS = [];
+    snap.forEach(docSnap => MEMBER_OWN_TEACHING_REGISTRATIONS.push({ id: docSnap.id, ...docSnap.data() }));
+    MEMBER_OWN_TEACHING_REGISTRATIONS.sort((a, b) => memberRecordTime(b.registeredAt) - memberRecordTime(a.registeredAt));
+    if(typeof renderMemberClassesList === 'function') renderMemberClassesList();
+    if(typeof renderMemberDashboardPanels === 'function') renderMemberDashboardPanels();
+    if(typeof renderMemberPurchases === 'function') renderMemberPurchases();
+  } catch (err) {
+    console.error('[member] loadMemberOwnTeachingRegistrations failed', err);
+  }
+}
+
+async function loadMemberOwnNotifications(){
+  if(DEMO_MODE || !currentUser) return;
+  try {
+    const snap = await getDocs(query(collection(db, 'memberNotifications'), where('uid', '==', currentUser.uid)));
+    MEMBER_OWN_NOTIFICATIONS = [];
+    snap.forEach(docSnap => MEMBER_OWN_NOTIFICATIONS.push({ id: docSnap.id, ...docSnap.data() }));
+    MEMBER_OWN_NOTIFICATIONS.sort((a, b) => memberRecordTime(b.createdAt) - memberRecordTime(a.createdAt));
+    if(typeof renderMemberNotifications === 'function') renderMemberNotifications();
+    if(typeof renderMemberRecentUpdates === 'function') renderMemberRecentUpdates();
+  } catch (err) {
+    console.error('[member] loadMemberOwnNotifications failed', err);
+  }
+}
+
+async function loadMemberOwnSubmissions(){
+  if(DEMO_MODE || !currentUser) return;
+  try {
+    const [prayerSnap, testimonySnap] = await Promise.all([
+      getDocs(query(collection(db, 'prayerRequests'), where('uid', '==', currentUser.uid))),
+      getDocs(query(collection(db, 'testimonials'), where('uid', '==', currentUser.uid)))
+    ]);
+    MEMBER_OWN_SUBMISSIONS = { prayer: [], testimonies: [] };
+    prayerSnap.forEach(docSnap => MEMBER_OWN_SUBMISSIONS.prayer.push({ id: docSnap.id, ...docSnap.data() }));
+    testimonySnap.forEach(docSnap => MEMBER_OWN_SUBMISSIONS.testimonies.push({ id: docSnap.id, ...docSnap.data() }));
+    MEMBER_OWN_SUBMISSIONS.prayer.sort((a, b) => memberRecordTime(b.createdAt) - memberRecordTime(a.createdAt));
+    MEMBER_OWN_SUBMISSIONS.testimonies.sort((a, b) => memberRecordTime(b.createdAt) - memberRecordTime(a.createdAt));
+    if(typeof renderMemberSubmissions === 'function') renderMemberSubmissions();
+  } catch (err) {
+    console.error('[member] loadMemberOwnSubmissions failed', err);
   }
 }
 // Location fields added for the Member Location feature — the extra
@@ -4016,8 +4075,8 @@ async function loadPublishedMinistryContent(){
 
 function shortDate(dateText){
   if(!dateText) return 'Recently';
-  const date = new Date(dateText);
-  if(Number.isNaN(date.getTime())) return dateText;
+  const date = typeof dateText.toDate === 'function' ? dateText.toDate() : new Date(dateText);
+  if(Number.isNaN(date.getTime())) return typeof dateText === 'string' ? dateText : 'Recently';
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
 }
 
@@ -5232,15 +5291,26 @@ let CLASSROOM_CONTENT = JSON.parse(JSON.stringify(DEFAULT_CLASSROOM_CONTENT));
 function saveClassroomContent(){
   try { localStorage.setItem(CLASSROOM_CONTENT_KEY, JSON.stringify(CLASSROOM_CONTENT)); } catch (err) { /* ignore */ }
 }
-// A member is "enrolled" in a class if they have any registration for
-// it (by uid, or by email for a guest registration before an account
-// existed) that isn't cancelled.
+// A registration request and a classroom enrollment are deliberately
+// different states. Paid material, private meeting links, and tickets
+// are only available after payment is verified or the owner explicitly
+// grants complimentary access.
+function registrationGrantsClassroomAccess(registration){
+  if(!registration || registration.status === 'cancelled') return false;
+  return registration.status === 'confirmed' ||
+    registration.status === 'complimentary' ||
+    registration.accessGranted === true ||
+    registration.paymentStatus === 'paid';
+}
 function memberRegistrationsFor(teachingId, uid, email){
-  return DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === teachingId && r.status !== 'cancelled' &&
+  const source = (DEMO_MODE || ownerPreviewActive)
+    ? DEMO_TEACHING_REGISTRATIONS
+    : MEMBER_OWN_TEACHING_REGISTRATIONS;
+  return source.filter(r => r.teachingId === teachingId &&
     ((uid && r.uid === uid) || (!r.uid && email && r.email && r.email.toLowerCase() === email.toLowerCase())));
 }
 function classroomAccessAllowed(teachingId, uid, email){
-  return memberRegistrationsFor(teachingId, uid, email).length > 0;
+  return memberRegistrationsFor(teachingId, uid, email).some(registrationGrantsClassroomAccess);
 }
 
 /* ---------------------------------------------------------------
@@ -8020,7 +8090,10 @@ document.addEventListener('click', event => {
 function myTeachingRegistrations(){
   if(!currentUser) return [];
   const uid = effectiveMemberUid(), email = effectiveMemberEmail();
-  return DEMO_TEACHING_REGISTRATIONS.filter(r => r.uid === uid ||
+  const source = (DEMO_MODE || ownerPreviewActive)
+    ? DEMO_TEACHING_REGISTRATIONS
+    : MEMBER_OWN_TEACHING_REGISTRATIONS;
+  return source.filter(r => r.uid === uid ||
     (!r.uid && email && r.email && r.email.toLowerCase() === email.toLowerCase()));
 }
 function myBookings(){
@@ -11027,24 +11100,28 @@ async function createTeachingRegistration({ teachingId, firstName, lastName, ema
     return record;
   }
   const ref = doc(collection(db, 'teachingRegistrations'));
-  await setDoc(ref, { ...data, registeredAt: serverTimestamp() });
-  // Classes require sign-in before registering (see
-  // requireAccountForTeachingRegister below), so uid is always present
-  // here. Mirrors this registration into classEnrollments/{teachingId}_
-  // {uid} — a deterministic-ID doc that firestore.rules' isEnrolledInClass()
-  // checks via exists()/get(), since rules can't run a `where` query
-  // against teachingRegistrations to answer "is this uid enrolled in
-  // this class." This is what actually gates classroom/Zoom/resource
-  // access in production — TODO before launch: write this doc for real
-  // once Firestore is connected (not yet exercised, since DEMO_MODE
-  // never reaches this branch).
-  if(uid){
-    await setDoc(doc(db, 'classEnrollments', teachingId + '_' + uid), {
-      memberUid: uid, teachingId, registrationId: ref.id, confirmationId,
-      status: 'confirmed', paymentStatus: 'pending', enrolledAt: serverTimestamp()
-    });
-  }
-  return { id: ref.id, ...data, registeredAt: new Date().toISOString() };
+  await setDoc(ref, {
+    ...data,
+    paymentStatus: 'pending',
+    accessGranted: false,
+    registeredAt: serverTimestamp()
+  });
+  // Do not create classEnrollments here. This browser has not verified a
+  // payment, and granting enrollment before verification would expose
+  // private classroom materials. The owner/payment-confirmation workflow
+  // creates that access record later.
+  const record = {
+    id: ref.id,
+    ...data,
+    paymentStatus: 'pending',
+    accessGranted: false,
+    registeredAt: new Date().toISOString()
+  };
+  MEMBER_OWN_TEACHING_REGISTRATIONS.unshift(record);
+  if(typeof renderMemberClassesList === 'function') renderMemberClassesList();
+  if(typeof renderMemberDashboardPanels === 'function') renderMemberDashboardPanels();
+  if(typeof renderMemberPurchases === 'function') renderMemberPurchases();
+  return record;
 }
 
 async function fetchTeachingRegistrations(teachingId){
@@ -13309,7 +13386,12 @@ onAuthStateChanged(auth, async (user) => {
       } catch (err) {
         currentProfile = { name: user.displayName || '', email: user.email, role: 'member' };
       }
-      loadMemberOwnBookings();
+      await Promise.all([
+        loadMemberOwnBookings(),
+        loadMemberOwnTeachingRegistrations(),
+        loadMemberOwnNotifications(),
+        loadMemberOwnSubmissions()
+      ]);
     }
     document.getElementById('memberWelcomeName').textContent = currentProfile.name ? ', ' + currentProfile.name.split(' ')[0] : '';
     document.getElementById('memberAccountLabel').textContent = currentProfile.role === 'admin' ? 'Admin Account' : 'Student Account';
