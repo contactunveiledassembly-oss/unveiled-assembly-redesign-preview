@@ -363,6 +363,36 @@ export function initSiteManagement(context){
     return '<div class="site-editor-field"><label for="' + id + '">' + label + '</label>' +
       (rows ? '<textarea id="' + id + '" rows="' + rows + '"></textarea>' : '<input id="' + id + '" type="text" />') + '</div>';
   }
+  // A clearly bounded card for a top-level editor section — stronger
+  // separation than the old thin-line label so a long form reads as
+  // distinct chunks at a glance instead of one continuous scroll.
+  function sectionHtml(title, bodyHtml, hint){
+    return '<div class="site-editor-section"><div class="site-editor-section-head">' + escapeHtml(title) + '</div>' +
+      (hint ? '<p class="admin-hint" style="margin:-6px 0 14px">' + hint + '</p>' : '') +
+      bodyHtml + '</div>';
+  }
+  // Collapsed-by-default row for one of a repeating set (belief
+  // statements, stories, etc.) — only the title shows until clicked, so
+  // finding "the one you want" doesn't mean scrolling past every other
+  // one fully expanded. See the delegated click handler below.
+  function accordionItemHtml(index, title, bodyHtml){
+    return '<div class="site-editor-accordion-item" data-accordion-item>' +
+      '<button type="button" class="site-editor-accordion-head" data-accordion-toggle aria-expanded="false">' +
+      '<span class="site-editor-accordion-index">' + index + '</span>' +
+      '<span class="site-editor-accordion-title">' + escapeHtml(title) + '</span>' +
+      '<span class="site-editor-accordion-chevron" aria-hidden="true"></span></button>' +
+      '<div class="site-editor-accordion-body" hidden>' + bodyHtml + '</div></div>';
+  }
+  document.addEventListener('click', event => {
+    const toggle = event.target.closest('[data-accordion-toggle]');
+    if(!toggle) return;
+    const item = toggle.closest('[data-accordion-item]');
+    const body = item?.querySelector('.site-editor-accordion-body');
+    if(!body) return;
+    const open = body.hidden;
+    body.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+  });
   function imageField(label, key){
     const cap = key.charAt(0).toUpperCase() + key.slice(1);
     return '<div class="site-editor-image">' +
@@ -421,20 +451,23 @@ export function initSiteManagement(context){
       '</form>';
   }
   function beliefsEditorHtml(){
-    const beliefFields = BELIEFS_DEFAULTS.order.map((id, i) =>
-      '<div class="admin-subsection-label">' + (i + 1) + '. ' + escapeHtml(BELIEFS_DEFAULTS.beliefs[id].title) + '</div><div class="site-editor-grid">' +
-      field('Title', 'beliefEditTitle_' + id) + field('Scripture references — separate with •', 'beliefEditScripture_' + id) +
-      '</div><div class="site-editor-grid site-editor-single">' + field('Doctrinal paragraph', 'beliefEditBody_' + id, 4) + '</div>'
+    const heroSection = sectionHtml('Hero',
+      '<div class="site-editor-grid">' + field('Small heading', 'beliefsEditHeroEyebrow') + field('Main heading — use a new line to control the break', 'beliefsEditHeroTitle', 2) + '</div>' +
+      '<div class="site-editor-grid site-editor-single">' + field('Supporting line', 'beliefsEditHeroSub', 2) + '</div>');
+    const introSection = sectionHtml('Our Foundation Introduction',
+      '<div class="site-editor-grid site-editor-single">' + field('Introduction paragraph (plain text — any bold emphasis is not preserved)', 'beliefsEditIntro', 3) + '</div>');
+    const beliefItems = BELIEFS_DEFAULTS.order.map((id, i) =>
+      accordionItemHtml(i + 1, BELIEFS_DEFAULTS.beliefs[id].title,
+        '<div class="site-editor-grid">' + field('Title', 'beliefEditTitle_' + id) + field('Scripture references — separate with •', 'beliefEditScripture_' + id) +
+        '</div><div class="site-editor-grid site-editor-single">' + field('Doctrinal paragraph', 'beliefEditBody_' + id, 4) + '</div>')
     ).join('');
+    const beliefsSection = sectionHtml('The Ten Beliefs',
+      '<div class="site-editor-accordion">' + beliefItems + '</div>',
+      'Click one to open it. The number and title tell you which is which before you open it.');
     return '<form id="ownerBeliefsEditor" class="site-editor">' +
       '<div class="site-editor-head"><div><span class="portal-label">Edit Beliefs Page</span><p class="admin-panel-intro">Change the hero words and the ten belief statements. Layout, order, the revelation interlude, and the Scripture reader stay protected.</p></div>' +
       '<button type="button" class="admin-btn-ghost" id="ownerBeliefsPreviewBtn">Open Page Preview ↗</button></div>' +
-      '<div class="admin-subsection-label">Hero</div><div class="site-editor-grid">' +
-      field('Small heading', 'beliefsEditHeroEyebrow') + field('Main heading — use a new line to control the break', 'beliefsEditHeroTitle', 2) + '</div>' +
-      '<div class="site-editor-grid site-editor-single">' + field('Supporting line', 'beliefsEditHeroSub', 2) + '</div>' +
-      '<div class="admin-subsection-label">Our Foundation Introduction</div><div class="site-editor-grid site-editor-single">' +
-      field('Introduction paragraph (plain text — any bold emphasis is not preserved)', 'beliefsEditIntro', 3) + '</div>' +
-      beliefFields +
+      heroSection + introSection + beliefsSection +
       '<div class="site-editor-actions"><button class="admin-btn-solid" type="submit">Save Beliefs Page</button><button class="admin-btn-ghost" type="button" id="ownerBeliefsResetBtn">Restore Approved Version</button><span class="form-status" id="ownerBeliefsStatus" role="status" aria-live="polite"></span></div>' +
       '</form>';
   }

@@ -16,6 +16,38 @@
 .site-editor-image .admin-image-preview{margin-top:10px;min-height:150px;background-size:cover;background-position:center}
 .site-editor-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--owner-border)}
 .site-editor-actions .form-status{flex:1;min-width:220px;color:var(--owner-text-muted)}
+
+/* A bounded card for one top-level section of a long editor (Hero,
+   Our Foundation Introduction, etc.) — a stronger break than a thin
+   top-line label, so a long form reads as distinct chunks at a glance
+   instead of one continuous scroll (sectionHtml() in site-management.js). */
+.site-editor-section{background:var(--owner-surface-sunken);border:1px solid var(--owner-border);border-radius:var(--owner-radius);padding:22px 24px;margin:0 0 18px}
+.site-editor-section-head{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--owner-text);margin-bottom:4px}
+.site-editor-section .site-editor-grid:first-of-type{margin-top:14px}
+
+/* Collapsed-by-default rows for a repeating set of items (the ten
+   beliefs, etc.) — see accordionItemHtml()/the delegated click handler
+   in site-management.js. Each row shows only its number and title
+   until clicked, so finding one doesn't mean scrolling past every
+   other one fully expanded. */
+.site-editor-accordion{border:1px solid var(--owner-border);border-radius:var(--owner-radius);overflow:hidden}
+.site-editor-accordion-item{border-bottom:1px solid var(--owner-border)}
+.site-editor-accordion-item:last-child{border-bottom:0}
+.site-editor-accordion-head{
+  width:100%;display:flex;align-items:center;gap:14px;padding:16px 18px;
+  background:var(--owner-surface);border:0;text-align:left;cursor:pointer;font:inherit;color:var(--owner-text);
+}
+.site-editor-accordion-head:hover{background:var(--owner-surface-subtle,var(--owner-surface))}
+.site-editor-accordion-index{
+  flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--owner-border);
+  display:flex;align-items:center;justify-content:center;font:600 12px var(--sans);color:var(--owner-text-muted);
+}
+.site-editor-accordion-title{flex:1;font-family:var(--serif);font-size:15px;font-weight:600}
+.site-editor-accordion-chevron{flex:0 0 auto;width:9px;height:9px;border-right:1.5px solid var(--owner-text-faint);border-bottom:1.5px solid var(--owner-text-faint);transform:rotate(45deg);transition:transform .18s ease}
+.site-editor-accordion-head[aria-expanded="true"] .site-editor-accordion-chevron{transform:rotate(-135deg)}
+.site-editor-accordion-body{padding:4px 18px 20px}
+
+@media(max-width:640px){.site-editor-section{padding:18px}}
 .discount-manager{margin-top:26px;padding-top:22px;border-top:1px solid var(--owner-border)}
 .discount-manager-form{display:grid;grid-template-columns:1.2fr .8fr .7fr 1fr .9fr .8fr auto;gap:10px;align-items:end;margin:14px 0 20px}
 .discount-manager-form label{display:flex;flex-direction:column;gap:6px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--owner-text-muted)}
