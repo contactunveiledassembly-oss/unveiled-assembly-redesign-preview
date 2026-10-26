@@ -28,8 +28,8 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-import { initSiteManagement } from "./site-management.js?v=3";
-import { initEventsSystem } from "./events-system.js?v=3";
+import { initSiteManagement } from "./site-management.js?v=4";
+import { initEventsSystem } from "./events-system.js?v=4";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -3479,7 +3479,7 @@ function backfillPreviewConfirmationFields(){
 // used for app.js/styles.css (see every page's `?v=` query string),
 // applied to localStorage. Bump this again any time the DEMO_*
 // content changes in a way visitors should actually see.
-const PREVIEW_DATA_VERSION = '2026-09-25-maya-v2';
+const PREVIEW_DATA_VERSION = '2026-10-25-media-library-seed';
 const PREVIEW_DATA_VERSION_KEY = 'ua_preview_data_version_v1';
 if(DEMO_MODE){
   try {

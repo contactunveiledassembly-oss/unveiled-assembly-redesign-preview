@@ -2566,6 +2566,13 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
   border-bottom:1px solid var(--owner-border);
 }
 .admin-website-page-row-wrap:last-child{border-bottom:0}
+/* The page-name button, its on/off switch, and the "View Page" link
+   compete for width — below ~900px give the button its own full row
+   instead of letting its text get squeezed into multiple lines. */
+@media(max-width:900px){
+  .admin-website-page-row-wrap{flex-wrap:wrap}
+  .admin-website-page-row-wrap .admin-website-page-row{flex-basis:100%}
+}
 .admin-website-page-row{
   flex:1;min-width:0;display:flex;justify-content:space-between;align-items:center;padding:0;
   border:0;font-family:var(--serif);font-size:15px;font-weight:600;color:var(--owner-text);
