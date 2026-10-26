@@ -28,7 +28,7 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-import { initSiteManagement } from "./site-management.js?v=4";
+import { initSiteManagement } from "./site-management.js?v=5";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
 
@@ -1070,7 +1070,7 @@ function dialogsHtml(){
             <div class="portal-status" id="verifyStatus" role="status" aria-live="polite"></div>
           </div>
 
-          <div class="portal-open-note">No account is needed to browse the website, give, request prayer, submit a testimony, or book an initial session.</div>
+          <div class="portal-open-note">No account is needed to browse the website, give, request prayer, or submit a testimony. An account is required to book a one-on-one or register for a teaching.</div>
         </div>
       </div>
     </div>
@@ -1319,7 +1319,7 @@ function dialogsHtml(){
       </div>
       <div id="ownerSimBar"></div>
       <div class="owner-global-search">
-        <input id="ownerGlobalSearch" type="text" placeholder="Search members, confirmation IDs, classes, prayer requests, testimonials…" autocomplete="off" />
+        <input id="ownerGlobalSearch" type="text" placeholder="Search members, confirmation IDs, classes, settings…" autocomplete="off" />
         <div id="ownerGlobalSearchResults" hidden></div>
       </div>
       <div class="owner-shell">
@@ -1544,7 +1544,7 @@ function dialogsHtml(){
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
           <span class="portal-label">Payments</span>
-          <p class="admin-panel-intro">Every payment collected through the website will appear here, in one place.</p>
+          <p class="admin-panel-intro">A unified view across every payment category, once a real payment processor is connected. Today, per-booking and per-registration payment status already live under Bookings → Payments and Registrations → Payments — this page will pull all of it together automatically, with totals by month, year, and category.</p>
           <div class="admin-tabs" id="ownerPaymentsTabs" role="tablist" style="margin:16px 0">
             <button type="button" class="admin-tab active" data-payments-tab="all">Overview</button>
             <button type="button" class="admin-tab" data-payments-tab="teaching">Teaching Payments</button>
@@ -1555,7 +1555,7 @@ function dialogsHtml(){
           </div>
           <div class="admin-payments-empty">
             <strong>Payments Not Connected</strong>
-            <p>There's no real payment processor connected to the website yet, so there's no transaction history to show. Once one is connected, every teaching payment, one-on-one booking payment, shop order, donation, and refund will show up here automatically — with totals for this month, this year, and by category.</p>
+            <p>There's no real payment processor connected to the website yet, so there's no unified transaction history to show here. Once one is connected, every teaching payment, one-on-one booking payment, shop order, donation, and refund will show up here automatically — with totals for this month, this year, and by category.</p>
           </div>
           <div class="discount-manager">
             <span class="portal-label">Discount Codes</span>
@@ -2384,7 +2384,7 @@ function dialogsHtml(){
 
           <div class="booking-step booking-confirm-step" data-booking-step="confirm" hidden>
             <div class="ticket-confirm-check">✓</div>
-            <div class="admin-microlabel" style="text-align:center;margin-bottom:6px">Session Confirmed</div>
+            <div class="admin-microlabel" style="text-align:center;margin-bottom:6px">Session Request Received</div>
             <h3 class="serif-heading" id="bookingConfirmTitle" style="text-align:center;margin-bottom:22px">30-Minute One-on-One</h3>
             <div class="ticket-card">
               <div class="ticket-row"><span>Attendee</span><strong id="bookingConfirmName"></strong></div>
@@ -2397,10 +2397,10 @@ function dialogsHtml(){
                 <button type="button" class="ticket-copy-btn" id="bookingCopyIdBtn">Copy Confirmation ID</button>
               </div>
             </div>
-            <p class="admin-hint" style="text-align:center;margin:18px 0">A confirmation has been sent to your email<span id="bookingConfirmSmsNote"></span>.</p>
+            <p class="admin-hint" style="text-align:center;margin:18px 0">Your confirmation is saved in My Assembly. Email and text delivery are not connected yet.</p>
             <div class="checkout-order-summary" id="bookingConfirmSummary" hidden></div>
             <div class="ticket-confirm-actions">
-              <button type="button" class="btn on-light fill" id="bookingViewSessionsBtn">View My Sessions</button>
+              <button type="button" class="btn on-light fill" id="bookingViewSessionsBtn">View My Schedule</button>
               <button type="button" class="btn on-light" id="bookingAddCalendarBtn">Add To Calendar</button>
             </div>
             <button type="button" class="admin-btn-ghost" id="bookingConfirmCloseBtn" style="margin-top:14px;width:100%">Done</button>
@@ -2643,7 +2643,7 @@ function dialogsHtml(){
         </form>
         <div class="ticket-confirm" id="teachingRegisterConfirmStep" hidden>
           <div class="ticket-confirm-check">✓</div>
-          <div class="admin-microlabel" style="text-align:center;margin-bottom:6px">Registration Confirmed</div>
+          <div class="admin-microlabel" style="text-align:center;margin-bottom:6px">Registration Request Received</div>
           <h3 class="serif-heading" id="teachingRegisterConfirmTitle" style="text-align:center;margin-bottom:2px">Discernment</h3>
           <p class="admin-hint" id="teachingRegisterConfirmSubtitle" style="text-align:center;margin-bottom:22px"></p>
           <div class="ticket-card">
@@ -2657,9 +2657,9 @@ function dialogsHtml(){
               <button type="button" class="ticket-copy-btn" id="teachingRegisterCopyIdBtn">Copy Confirmation ID</button>
             </div>
           </div>
-          <p class="admin-hint" style="text-align:center;margin:18px 0">A confirmation has been sent to your email<span id="teachingRegisterConfirmSmsNote"></span>.</p>
+          <p class="admin-hint" style="text-align:center;margin:18px 0">Your confirmation is saved in My Assembly. Email and text delivery are not connected yet.</p>
           <div class="ticket-confirm-actions">
-            <button type="button" class="btn on-light fill" id="teachingRegisterViewClassesBtn">View My Classes</button>
+            <button type="button" class="btn on-light fill" id="teachingRegisterViewClassesBtn">View My Learning</button>
             <button type="button" class="btn on-light" id="teachingRegisterAddCalendarBtn">Add To Calendar</button>
           </div>
           <button type="button" class="admin-btn-ghost" id="teachingRegisterConfirmCloseBtn" style="margin-top:14px;width:100%">Done</button>
@@ -5770,7 +5770,7 @@ portalTabs.forEach(tabButton => {
     ownerPreviewActive = false;
     document.getElementById('memberPreviewBar').hidden = true;
     if(currentProfile){
-      document.getElementById('memberWelcomeName').textContent = currentProfile.name ? ', ' + currentProfile.name.split(' ')[0] : '';
+      document.getElementById('memberWelcomeName').textContent = currentProfile.name ? currentProfile.name.split(' ')[0] : '';
     }
     showPortalView(tabButton.dataset.portalTarget);
     if(tabButton.dataset.portalTarget === 'member'){ renderMemberDashboardPanels(); showMemberTab('dashboard'); }
@@ -5789,7 +5789,7 @@ function updateMemberPreviewBar(){
   if(!bar) return;
   bar.hidden = !ownerPreviewActive;
   document.getElementById('memberPreviewViewingName').textContent = effectiveMemberName();
-  document.getElementById('memberWelcomeName').textContent = ', ' + effectiveMemberName();
+  document.getElementById('memberWelcomeName').textContent = effectiveMemberName();
   document.getElementById('memberAccountLabel').textContent = ownerPreviewMember ? 'Member Account (Preview)' : 'Sample Account (Preview)';
 }
 // enterOwnerMemberPreview(memberKey, openTeachingId)
@@ -7519,7 +7519,6 @@ bookingForm.addEventListener('submit', async event => {
     document.getElementById('bookingConfirmPayment').textContent = previewPaymentStatusLabel(discount.totalAfterDiscount) +
       (discountLimitReached ? ' (discount code reached its usage limit — full price applied)' : '');
     document.getElementById('bookingConfirmId').textContent = record.confirmationId;
-    document.getElementById('bookingConfirmSmsNote').textContent = smsConsent ? ' and phone' : '';
     bookingForm.dataset.lastBookingId = record.id;
     bookingStatus.textContent = '';
     showBookingWizardStep('confirm');
@@ -8121,10 +8120,11 @@ async function cancelOwnBooking(bookingId, slotId){
 }
 
 /* =================================================================
-   Member Portal — My Classes / My Sessions / Notifications / Account
-   tabs, the Classroom page, and the dashboard's Next Class card. All
-   of this reads DEMO_TEACHING_REGISTRATIONS / DEMO_BOOKINGS /
-   MEMBER_NOTIFICATIONS directly — no separate "enrollment" table.
+   Member Portal — learning, schedule, receipts, submissions,
+   notifications, account, the Classroom page, and the dashboard's
+   Next Class card. Production classroom access is read from the
+   admin-controlled classEnrollments collection; demo mode uses the
+   matching confirmed sample-registration state.
    ================================================================= */
 function showMemberTab(name){
   document.querySelectorAll('#memberTabs .member-nav-link').forEach(b => b.classList.toggle('active', b.dataset.memberTab === name));
@@ -9224,10 +9224,36 @@ function showOwnerSection(name){
    never private content (a prayer request's message, for example) —
    clicking opens the real, authorized detail view for that record.
    --------------------------------------------------------------- */
+// A static directory of named settings/controls, searched alongside
+// live records below — lets an admin type "discount" or "refund policy"
+// and jump straight there instead of hunting through every department's
+// tabs to find the one field they want.
+const OWNER_SETTINGS_CATALOG = [
+  { title: 'Home Page', keywords: 'home homepage hero website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('Home Page'); } },
+  { title: 'One-on-One Page', keywords: 'one on one booking page website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('One-on-One Page'); } },
+  { title: 'Events Page', keywords: 'events page gathering website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('Events Page'); } },
+  { title: 'Beliefs Page', keywords: 'beliefs doctrine statement website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('Beliefs'); } },
+  { title: 'Give Page', keywords: 'give giving donate donation page website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('Give'); } },
+  { title: 'Website Pages & Visibility', keywords: 'pages visibility publish hide show website', action: () => showOwnerSection('website') },
+  { title: 'Prayer Request Terms', keywords: 'prayer policy terms form', action: () => showOwnerSection('policies') },
+  { title: 'Testimony Submission Terms', keywords: 'testimony testimonial policy terms form', action: () => showOwnerSection('policies') },
+  { title: 'Class Review Terms', keywords: 'class review policy terms form', action: () => showOwnerSection('policies') },
+  { title: 'Booking / No-Refund Policy', keywords: 'refund cancellation policy booking checkout', action: () => showOwnerSection('policies') },
+  { title: 'Media Library', keywords: 'media images photos upload', action: () => showOwnerSection('media') },
+  { title: 'Account Profile', keywords: 'profile name photo account', action: () => showOwnerSection('settings') },
+  { title: 'Account Settings (Email & Password)', keywords: 'password email account security login', action: () => showOwnerSection('settings') },
+  { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => showOwnerSection('payments') },
+  { title: 'Session Types', keywords: 'session types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
+  { title: 'Blocked Dates', keywords: 'blocked dates vacation unavailable bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('blocked'); } },
+  { title: 'Availability', keywords: 'availability hours schedule windows bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('availability'); } },
+  { title: 'Booking Notifications', keywords: 'notifications reminders booking confirmation email', action: () => { showOwnerSection('bookings'); showBookingsTab('notifications'); } }
+];
 function ownerGlobalSearchResults(q){
   q = q.trim().toLowerCase();
   if(!q) return [];
   const results = [];
+  OWNER_SETTINGS_CATALOG.filter(s => (s.title + ' ' + s.keywords).toLowerCase().includes(q))
+    .forEach(s => results.push({ type: 'Setting', title: s.title, action: s.action }));
   // Correction from the earlier pass: on closer check, Class/Prayer
   // Request/Testimonial/Class Review search below were already reading
   // TEACHINGS/PRAYER_REQUESTS/TESTIMONIALS/CLASS_REVIEWS — the real,
@@ -9565,7 +9591,7 @@ document.getElementById('memberProfileSaveBtn')?.addEventListener('click', async
       memberProfilePhotoPending = undefined;
     }
     renderMemberProfilePhotoPreview();
-    document.getElementById('memberWelcomeName').textContent = fullName ? ', ' + fullName.split(' ')[0] : '';
+    document.getElementById('memberWelcomeName').textContent = fullName ? fullName.split(' ')[0] : '';
     status.textContent = 'Saved.';
   } catch (err) {
     console.error('save member profile failed', err);
@@ -10466,7 +10492,11 @@ function bookingsPaymentRowHtml(b){
     '</div></div>';
 }
 function bookingsPaymentsFilteredList(){
-  return DEMO_BOOKINGS.filter(b => Number(b.amountPaid) > 0 || b.status === 'pending')
+  // Real production bookings live in OWNER_ALL_BOOKINGS_CACHE, not the
+  // DEMO_BOOKINGS seed array — same reasoning as renderOwnerTodayView().
+  const useSeedArrays = DEMO_MODE || ownerSim.isActive();
+  const source = useSeedArrays ? DEMO_BOOKINGS : OWNER_ALL_BOOKINGS_CACHE;
+  return source.filter(b => Number(b.amountPaid) > 0 || b.status === 'pending')
     .sort((a, b) => new Date(b.bookedAt || 0) - new Date(a.bookedAt || 0));
 }
 function renderBookingsPayments(){
@@ -11299,9 +11329,9 @@ async function createTeachingRegistration({ teachingId, firstName, lastName, ema
     DEMO_TEACHING_REGISTRATIONS.push(record);
     saveTeachingRegistrationsToStorage();
     renderClassRegistrationsPanel();
-    // No separate "enrollment" record: a non-cancelled registration IS
-    // the enrollment (see classroomAccessAllowed) — this keeps
-    // registering and enrolling a single atomic step, per requirement.
+    // Demo registrations stay pending until the demo owner confirms
+    // them. This mirrors production's registration-vs-access boundary
+    // without writing a separate Firestore enrollment in preview mode.
     pushMemberNotification(uid, 'registration-received', 'Registration Received', (t.title || 'Class') + ' — payment or owner approval is still pending.');
     const timeLabel = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(registeredAt));
     DEMO_NOTIFICATIONS.unshift({
@@ -11549,7 +11579,6 @@ teachingRegisterForm.addEventListener('submit', async event => {
     document.getElementById('teachingRegisterConfirmPayment').textContent = previewPaymentStatusLabel(discount.totalAfterDiscount) +
       (discountLimitReached ? ' (discount code reached its usage limit — full price applied)' : '');
     document.getElementById('teachingRegisterConfirmId').textContent = record.confirmationId;
-    document.getElementById('teachingRegisterConfirmSmsNote').textContent = smsConsent ? ' and phone' : '';
     teachingRegisterForm.hidden = true;
     document.getElementById('teachingRegisterConfirmStep').hidden = false;
     teachingRegisterForm.reset();
@@ -13698,7 +13727,7 @@ onAuthStateChanged(auth, async (user) => {
         loadMemberOwnSubmissions()
       ]);
     }
-    document.getElementById('memberWelcomeName').textContent = currentProfile.name ? ', ' + currentProfile.name.split(' ')[0] : '';
+    document.getElementById('memberWelcomeName').textContent = currentProfile.name ? currentProfile.name.split(' ')[0] : '';
     document.getElementById('memberAccountLabel').textContent = currentProfile.role === 'admin' ? 'Admin Account' : 'Student Account';
     updateAccountSettingsDisplay('member');
     updateAccountSettingsDisplay('owner');

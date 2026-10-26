@@ -3075,6 +3075,7 @@ body[data-page="give"] .gv-donate-panel{padding:78px 6vw}.gv-donate-image .give-
 
 
 /* Member Portal Phase 1 — structured home, records, and navigation */
+.member-preview-bar[hidden]{display:none!important}
 .member-topnav-links{gap:2px}
 .member-nav-link{padding-inline:10px;font-size:9px;letter-spacing:.06em}
 .member-space-panel{grid-column:span 12;padding:28px}

@@ -1083,5 +1083,5 @@ export function initSiteManagement(context){
   loadGivePage();
   if(DEMO_MODE) loadDemoDiscounts();
 
-  return { renderOwnerWebsitePages, renderOwnerDiscountCodes, pricing, discountSummaryHtml, discountRecord, resetCheckout, claimDiscount, confirmDiscountClaim, releaseDiscountClaim };
+  return { renderOwnerWebsitePages, renderOwnerDiscountCodes, pricing, discountSummaryHtml, discountRecord, resetCheckout, claimDiscount, confirmDiscountClaim, releaseDiscountClaim, openWebsitePageEditor };
 }
