@@ -60,6 +60,30 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
   let events = DEMO_MODE ? [{ ...DEFAULT_EVENT }] : [];
   let announcements = [];
   let countdownTimer = null;
+  // Staged editing — Event Details/Announcements/Tickets & Stream all
+  // write into these drafts, not straight to events/announcements, so
+  // nothing reaches Firestore (or localStorage in DEMO_MODE) until
+  // "Save Changes" in the shared #eventsSaveBar is clicked. Previously
+  // each of the 3 forms saved immediately on its own submit, and an
+  // announcement's Publish/Delete button committed instantly too.
+  let EVENT_DRAFT = null;
+  let ANNOUNCEMENTS_DRAFT = [];
+  let eventsDirty = false;
+  let eventsDraftSeq = 1;
+  function cloneEventsDraftFromLive(){
+    EVENT_DRAFT = JSON.parse(JSON.stringify(editableEvent()));
+    ANNOUNCEMENTS_DRAFT = JSON.parse(JSON.stringify(announcements));
+  }
+  function markEventsDirty(){
+    eventsDirty = true;
+    const bar = document.getElementById('eventsSaveBar');
+    if(bar){ bar.classList.add('is-dirty'); document.getElementById('eventsSaveBarStatus').textContent = 'You have unsaved changes.'; }
+  }
+  function markEventsClean(){
+    eventsDirty = false;
+    const bar = document.getElementById('eventsSaveBar');
+    if(bar){ bar.classList.remove('is-dirty'); document.getElementById('eventsSaveBarStatus').textContent = 'No changes to save.'; }
+  }
 
   function savePreview(){
     if(!DEMO_MODE) return;
@@ -69,14 +93,18 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
     } catch (err) { /* preview still works without storage */ }
   }
 
+  function loadPreview(){
+    try {
+      const savedEvents = JSON.parse(localStorage.getItem(EVENTS_PREVIEW_KEY) || 'null');
+      const savedAnnouncements = JSON.parse(localStorage.getItem(EVENT_ANNOUNCEMENTS_PREVIEW_KEY) || 'null');
+      if(Array.isArray(savedEvents) && savedEvents.length) events = savedEvents;
+      if(Array.isArray(savedAnnouncements)) announcements = savedAnnouncements;
+    } catch (err) { /* keep defaults */ }
+  }
+
   async function load(){
     if(DEMO_MODE){
-      try {
-        const savedEvents = JSON.parse(localStorage.getItem(EVENTS_PREVIEW_KEY) || 'null');
-        const savedAnnouncements = JSON.parse(localStorage.getItem(EVENT_ANNOUNCEMENTS_PREVIEW_KEY) || 'null');
-        if(Array.isArray(savedEvents) && savedEvents.length) events = savedEvents;
-        if(Array.isArray(savedAnnouncements)) announcements = savedAnnouncements;
-      } catch (err) { /* keep defaults */ }
+      loadPreview();
     } else {
       try {
         const eventSnap = await firestore.getDocs(firestore.collection(db, 'events'));
@@ -98,6 +126,11 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
 
   async function loadAdmin(){
     if(DEMO_MODE){
+      // load() only runs on events.html itself (see the bottom of this
+      // file's caller in app.js) — an admin opening the portal from any
+      // other page would otherwise see/edit the hardcoded DEFAULT_EVENT
+      // instead of whatever was actually last saved to this preview.
+      loadPreview();
       renderAdmin();
       return;
     }
@@ -229,6 +262,8 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
   function showAdminTab(name){
     document.querySelectorAll('#eventsAdminTabs [data-events-tab]').forEach(button => button.classList.toggle('active', button.dataset.eventsTab === name));
     document.querySelectorAll('[data-events-panel]').forEach(panel => { panel.hidden = panel.dataset.eventsPanel !== name; });
+    const saveBar = document.getElementById('eventsSaveBar');
+    if(saveBar) saveBar.hidden = !['details', 'announcements', 'access'].includes(name);
   }
 
   function refreshPosterPreview(){
@@ -243,10 +278,10 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
     if(uploadText) uploadText.textContent = custom ? 'Replace Image' : 'Upload Image';
   }
 
-  function renderAdmin(){
+  function renderAdminDetailsForm(){
     const form = document.getElementById('eventDetailsForm');
-    if(!form) return;
-    const event = editableEvent();
+    if(!form || !EVENT_DRAFT) return;
+    const event = EVENT_DRAFT;
     const assign = (id, value) => { const el = document.getElementById(id); if(el) el.value = value || ''; };
     assign('eventAdminTitle', event.title);
     assign('eventAdminKicker', event.kicker);
@@ -265,7 +300,9 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
     assign('eventAdminTicketLabel', event.ticketLabel || 'Register');
     assign('eventAdminStreamUrl', event.streamUrl);
     document.getElementById('eventAdminFeatured').checked = event.featured !== false;
-
+  }
+  function renderAdminOverview(){
+    const event = editableEvent();
     const stats = document.getElementById('eventsAdminStats');
     if(stats){
       const published = events.filter(item => item.status === 'published').length;
@@ -281,12 +318,20 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
     if(preview){
       preview.innerHTML = '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(event.title || 'Untitled Event') + '</strong><span class="admin-status-pill ' + (event.status === 'published' ? 'published' : event.status === 'cancelled' ? 'cancelled' : 'draft') + '">' + escapeHtml(event.status || 'draft') + '</span></div><div class="admin-teaching-meta">' + escapeHtml(dateLabel(event.date)) + (event.venue ? ' · ' + escapeHtml(event.venue) : '') + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted)">' + escapeHtml(event.tagline || '') + '</p></div><div class="admin-teaching-actions"><button class="admin-btn-ghost" type="button" data-event-edit>Open Event</button></div></div>';
     }
+  }
+  function renderAdminAnnouncementsList(){
     const list = document.getElementById('eventAnnouncementsAdminList');
-    if(list){
-      list.innerHTML = announcements.length ? announcements.map(item =>
-        '<div class="admin-teaching-row" data-event-announcement-id="' + escapeHtml(item.id) + '"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(item.title) + '</strong><span class="admin-status-pill ' + (item.status === 'published' ? 'published' : 'draft') + '">' + escapeHtml(item.status) + '</span></div><p style="margin:7px 0 0;color:var(--owner-text-muted)">' + escapeHtml(item.body) + '</p></div><div class="admin-teaching-actions"><button class="admin-btn-ghost" type="button" data-event-announcement-toggle>' + (item.status === 'published' ? 'Move To Draft' : 'Publish') + '</button><button class="admin-btn-ghost" type="button" data-event-announcement-delete>Delete</button></div></div>'
-      ).join('') : '<p class="admin-hint">No event announcements yet.</p>';
-    }
+    if(!list) return;
+    list.innerHTML = ANNOUNCEMENTS_DRAFT.length ? ANNOUNCEMENTS_DRAFT.map(item =>
+      '<div class="admin-teaching-row" data-event-announcement-id="' + escapeHtml(item.id) + '"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(item.title) + '</strong><span class="admin-status-pill ' + (item.status === 'published' ? 'published' : 'draft') + '">' + escapeHtml(item.status) + '</span></div><p style="margin:7px 0 0;color:var(--owner-text-muted)">' + escapeHtml(item.body) + '</p></div><div class="admin-teaching-actions"><button class="admin-btn-ghost" type="button" data-event-announcement-toggle>' + (item.status === 'published' ? 'Move To Draft' : 'Publish') + '</button><button class="admin-btn-ghost" type="button" data-event-announcement-delete>Delete</button></div></div>'
+    ).join('') : '<p class="admin-hint">No event announcements yet.</p>';
+  }
+  function renderAdmin(){
+    if(!document.getElementById('eventDetailsForm')) return;
+    if(!EVENT_DRAFT || !eventsDirty) cloneEventsDraftFromLive();
+    renderAdminOverview();
+    renderAdminDetailsForm();
+    renderAdminAnnouncementsList();
   }
 
   async function persistEvent(event){
@@ -351,13 +396,12 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
       }
     });
   }
-  document.getElementById('eventDetailsForm')?.addEventListener('submit', async event => {
+  document.getElementById('eventDetailsForm')?.addEventListener('submit', event => {
     event.preventDefault();
-    const current = editableEvent();
     const title = document.getElementById('eventAdminTitle').value.trim();
-    const item = {
-      ...current,
-      id: current.id || slugify(title),
+    EVENT_DRAFT = {
+      ...EVENT_DRAFT,
+      id: EVENT_DRAFT.id || slugify(title),
       title,
       kicker: document.getElementById('eventAdminKicker').value.trim(),
       tagline: document.getElementById('eventAdminTagline').value.trim(),
@@ -370,65 +414,105 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
       pageMode: document.getElementById('eventAdminPageMode').value,
       description: document.getElementById('eventAdminDescription').value.trim(),
       posterUrl: document.getElementById('eventAdminPosterUrl').value.trim(),
-      featured: document.getElementById('eventAdminFeatured').checked,
-      updatedAt: new Date().toISOString()
+      featured: document.getElementById('eventAdminFeatured').checked
     };
-    const status = document.getElementById('eventDetailsStatus');
-    status.textContent = 'Saving…';
-    try { await persistEvent(item); status.textContent = DEMO_MODE ? 'Saved to this preview.' : 'Event saved.'; }
-    catch (err) { console.error(err); status.textContent = 'Could not save this event.'; }
+    document.getElementById('eventDetailsStatus').textContent = 'Updated in this draft — click Save Changes above to publish.';
+    markEventsDirty();
   });
-  document.getElementById('eventAccessForm')?.addEventListener('submit', async event => {
+  document.getElementById('eventAccessForm')?.addEventListener('submit', event => {
     event.preventDefault();
-    const current = editableEvent();
-    const item = {
-      ...current,
+    EVENT_DRAFT = {
+      ...EVENT_DRAFT,
       ticketUrl: document.getElementById('eventAdminTicketUrl').value.trim(),
       ticketLabel: document.getElementById('eventAdminTicketLabel').value.trim() || 'Register',
-      streamUrl: document.getElementById('eventAdminStreamUrl').value.trim(),
-      updatedAt: new Date().toISOString()
+      streamUrl: document.getElementById('eventAdminStreamUrl').value.trim()
     };
-    const status = document.getElementById('eventAccessStatus');
-    status.textContent = 'Saving…';
-    try { await persistEvent(item); status.textContent = DEMO_MODE ? 'Saved to this preview.' : 'Access links saved.'; }
-    catch (err) { console.error(err); status.textContent = 'Could not save those links.'; }
+    document.getElementById('eventAccessStatus').textContent = 'Updated in this draft — click Save Changes above to publish.';
+    markEventsDirty();
   });
-  document.getElementById('eventAnnouncementForm')?.addEventListener('submit', async event => {
+  document.getElementById('eventAnnouncementForm')?.addEventListener('submit', event => {
     event.preventDefault();
     const title = document.getElementById('eventAnnouncementTitle').value.trim();
     const body = document.getElementById('eventAnnouncementBody').value.trim();
-    const item = {
-      id: 'event-ann-' + Date.now().toString(36),
-      eventId: editableEvent().id,
+    ANNOUNCEMENTS_DRAFT.unshift({
+      id: 'draft-ann-' + (eventsDraftSeq++),
+      eventId: EVENT_DRAFT.id,
       title,
       body,
       status: document.getElementById('eventAnnouncementStatus').value,
       pinned: document.getElementById('eventAnnouncementPinned').checked,
       createdAt: new Date().toISOString()
-    };
-    const status = document.getElementById('eventAnnouncementStatusMsg');
-    status.textContent = 'Saving…';
-    try {
-      await persistAnnouncement(item);
-      event.target.reset();
-      status.textContent = DEMO_MODE ? 'Announcement saved to this preview.' : 'Announcement saved.';
-    } catch (err) { console.error(err); status.textContent = 'Could not save that announcement.'; }
+    });
+    renderAdminAnnouncementsList();
+    event.target.reset();
+    document.getElementById('eventAnnouncementStatusMsg').textContent = 'Added to this draft — click Save Changes above to publish.';
+    markEventsDirty();
   });
-  document.getElementById('eventAnnouncementsAdminList')?.addEventListener('click', async event => {
+  document.getElementById('eventAnnouncementsAdminList')?.addEventListener('click', event => {
     const row = event.target.closest('[data-event-announcement-id]');
     if(!row) return;
-    const item = announcements.find(entry => entry.id === row.dataset.eventAnnouncementId);
+    const item = ANNOUNCEMENTS_DRAFT.find(entry => entry.id === row.dataset.eventAnnouncementId);
     if(!item) return;
     if(event.target.closest('[data-event-announcement-toggle]')){
-      await persistAnnouncement({ ...item, status: item.status === 'published' ? 'draft' : 'published' });
+      item.status = item.status === 'published' ? 'draft' : 'published';
     }
     if(event.target.closest('[data-event-announcement-delete]')){
-      announcements = announcements.filter(entry => entry.id !== item.id);
-      if(DEMO_MODE) savePreview();
-      else await firestore.deleteDoc(firestore.doc(db, 'eventAnnouncements', item.id));
+      ANNOUNCEMENTS_DRAFT = ANNOUNCEMENTS_DRAFT.filter(entry => entry.id !== item.id);
+    }
+    renderAdminAnnouncementsList();
+    markEventsDirty();
+  });
+
+  document.getElementById('eventsSaveAllBtn')?.addEventListener('click', async () => {
+    const saveBtn = document.getElementById('eventsSaveAllBtn');
+    const discardBtn = document.getElementById('eventsDiscardBtn');
+    const statusEl = document.getElementById('eventsSaveBarStatus');
+    saveBtn.disabled = true; discardBtn.disabled = true;
+    statusEl.textContent = 'Saving…';
+    try {
+      const liveEvent = editableEvent();
+      if(JSON.stringify(EVENT_DRAFT) !== JSON.stringify(liveEvent)){
+        await persistEvent({ ...EVENT_DRAFT, updatedAt: new Date().toISOString() });
+      }
+      const liveIds = new Set(announcements.map(a => a.id));
+      const draftIds = new Set(ANNOUNCEMENTS_DRAFT.map(a => a.id));
+      for(const item of ANNOUNCEMENTS_DRAFT){
+        if(item.id.startsWith('draft-ann-')){
+          const { id, ...data } = item;
+          const realId = 'event-ann-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+          await persistAnnouncement({ id: realId, ...data });
+        } else {
+          const live = announcements.find(a => a.id === item.id);
+          if(!live || JSON.stringify(live) !== JSON.stringify(item)) await persistAnnouncement(item);
+        }
+      }
+      for(const id of liveIds){
+        if(!draftIds.has(id)){
+          announcements = announcements.filter(entry => entry.id !== id);
+          if(DEMO_MODE) savePreview();
+          else await firestore.deleteDoc(firestore.doc(db, 'eventAnnouncements', id));
+        }
+      }
+      cloneEventsDraftFromLive();
+      markEventsClean();
       renderAdmin();
       renderPublic();
+      statusEl.textContent = DEMO_MODE ? 'Saved to this preview.' : 'Saved.';
+    } catch (err) {
+      console.error('[events] save all failed', err);
+      statusEl.textContent = 'Could not save — please try again.';
+    } finally {
+      saveBtn.disabled = false; discardBtn.disabled = false;
     }
+  });
+  document.getElementById('eventsDiscardBtn')?.addEventListener('click', () => {
+    cloneEventsDraftFromLive();
+    renderAdminDetailsForm();
+    renderAdminAnnouncementsList();
+    ['eventDetailsStatus', 'eventAccessStatus', 'eventAnnouncementStatusMsg'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.textContent = '';
+    });
+    markEventsClean();
   });
 
   function openEditor(){ showAdminTab('details'); renderAdmin(); }

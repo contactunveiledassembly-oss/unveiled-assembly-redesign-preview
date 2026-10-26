@@ -1327,6 +1327,14 @@ function dialogsHtml(){
             <button type="button" class="admin-tab" data-events-tab="access">Tickets &amp; Stream</button>
           </div>
 
+          <div id="eventsSaveBar" class="admin-save-bar" hidden>
+            <span id="eventsSaveBarStatus">No changes to save.</span>
+            <div class="admin-save-bar-actions">
+              <button type="button" class="admin-btn-ghost" id="eventsDiscardBtn">Discard Changes</button>
+              <button type="button" class="admin-btn-solid" id="eventsSaveAllBtn">Save Changes</button>
+            </div>
+          </div>
+
           <div class="admin-edit-panel" data-events-panel="overview">
             <div class="admin-stat-row" id="eventsAdminStats"></div>
             <div id="eventsAdminPreview" style="margin-top:18px"></div>
@@ -1359,7 +1367,7 @@ function dialogsHtml(){
                 </div>
               </div>
               <label class="admin-checkbox-field" style="padding-top:14px"><input id="eventAdminFeatured" type="checkbox" checked /> Feature this event at the top of the page</label>
-              <button class="admin-btn-solid" type="submit" style="margin-top:16px">Save Event</button>
+              <button class="admin-btn-solid" type="submit" style="margin-top:16px">Update Event Details</button>
               <div class="form-status" id="eventDetailsStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
             </form>
           </div>
@@ -1373,7 +1381,7 @@ function dialogsHtml(){
                 <div class="booking-field full"><label for="eventAnnouncementBody">Announcement</label><textarea id="eventAnnouncementBody" rows="4" required></textarea></div>
               </div>
               <label class="admin-checkbox-field" style="padding-top:14px"><input id="eventAnnouncementPinned" type="checkbox" /> Pin this announcement</label>
-              <button class="admin-btn-solid" type="submit" style="margin-top:14px">Save Announcement</button>
+              <button class="admin-btn-solid" type="submit" style="margin-top:14px">Add Announcement</button>
               <div class="form-status" id="eventAnnouncementStatusMsg" role="status" aria-live="polite" style="margin-top:10px"></div>
             </form>
             <div class="admin-subsection-label">Saved Announcements</div>
@@ -1388,7 +1396,7 @@ function dialogsHtml(){
                 <div class="booking-field"><label for="eventAdminTicketLabel">Button Label</label><input id="eventAdminTicketLabel" placeholder="Register" /></div>
                 <div class="booking-field"><label for="eventAdminStreamUrl">Livestream / Online Access</label><input id="eventAdminStreamUrl" type="url" placeholder="https://…" /></div>
               </div>
-              <button class="admin-btn-solid" type="submit" style="margin-top:16px">Save Access Links</button>
+              <button class="admin-btn-solid" type="submit" style="margin-top:16px">Update Access Links</button>
               <div class="form-status" id="eventAccessStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
             </form>
           </div>
@@ -1397,6 +1405,7 @@ function dialogsHtml(){
           <span class="portal-label">Website Pages</span>
           <p class="admin-panel-intro">Edit approved pages without changing their design. We are connecting the site page by page; One-on-One is ready now.</p>
           <div id="ownerSiteMasterToggle"></div>
+          <div class="form-status" id="ownerPageVisibilityStatus" role="status" aria-live="polite" style="margin-bottom:10px"></div>
           <div id="ownerWebsitePagesList" class="admin-website-pages"></div>
           <div id="ownerWebsiteEditor"></div>
         </article>

@@ -619,9 +619,9 @@ export function initSiteManagement(context){
     { name: 'Events Page', key: 'events', visKey: 'events', opensManager: true, previewUrl: 'events.html' },
     { name: 'Beliefs', key: 'beliefs', visKey: 'beliefs', html: beliefsEditorHtml, populate: populateBeliefsEditor, previewUrl: 'beliefs.html' },
     { name: 'Give', key: 'give', visKey: 'give', html: giveEditorHtml, populate: populateGiveEditor, previewUrl: 'give.html' },
-    { name: 'Teaching Page', key: null, visKey: 'teachings' }, { name: 'Prayer Page', key: null, visKey: 'prayer' }, { name: 'Our Story', key: null, visKey: 'story' },
-    { name: 'Gather', key: null, visKey: 'gather' }, { name: 'Connect', key: null, visKey: 'connect' },
-    { name: 'Shop', key: null, visKey: 'shop' }, { name: 'Navigation', key: null }, { name: 'Footer', key: null }
+    { name: 'Teaching Page', key: null, visKey: 'teachings', previewUrl: 'teachings.html' }, { name: 'Prayer Page', key: null, visKey: 'prayer', previewUrl: 'prayer.html' }, { name: 'Our Story', key: null, visKey: 'story', previewUrl: 'story.html' },
+    { name: 'Gather', key: null, visKey: 'gather', previewUrl: 'gather.html' }, { name: 'Connect', key: null, visKey: 'connect', previewUrl: 'connect.html' },
+    { name: 'Shop', key: null, visKey: 'shop', previewUrl: 'shop/' }, { name: 'Navigation', key: null }, { name: 'Footer', key: null }
   ];
   // Owner-facing "is this page on or off" switch — independent of whether
   // the page has a content editor yet (Teaching/Prayer/Our Story/Gather/
@@ -646,8 +646,10 @@ export function initSiteManagement(context){
       '</p></div>' +
       '<label class="page-visibility-toggle" title="' + (on ? 'Turn the whole site off (shows Coming Soon everywhere)' : 'Turn the whole site back on') + '">' +
       '<input type="checkbox" data-site-master-visibility' + (on ? ' checked' : '') + ' />' +
-      '<span class="page-visibility-track"><span class="page-visibility-thumb"></span></span></label></div>';
+      '<span class="page-visibility-track"><span class="page-visibility-thumb"></span></span></label>' +
+      '<a class="admin-btn-ghost" href="' + (document.body.dataset.base || '') + 'index.html" target="_blank" rel="noopener" style="flex:0 0 auto">View Site ↗</a></div>';
   }
+  const SITE_BASE = document.body.dataset.base || '';
   function renderOwnerWebsitePages(){
     const list = document.getElementById('ownerWebsitePagesList');
     const editor = document.getElementById('ownerWebsiteEditor');
@@ -658,15 +660,21 @@ export function initSiteManagement(context){
       return '<div class="admin-website-page-row-wrap">' +
         '<button type="button" class="admin-website-page-row' + (connected ? ' is-connected' : '') + '" data-site-page="' + escapeHtml(page.name) + '"' + (connected ? '' : ' disabled') + '><span>' + escapeHtml(page.name) + '</span><span class="' + (connected ? 'admin-status-pill published' : 'demo-badge') + '">' + (connected ? 'Editable' : 'Coming Later') + '</span></button>' +
         pageVisibilityToggleHtml(page) +
+        (page.previewUrl ? '<a class="admin-btn-ghost" href="' + SITE_BASE + page.previewUrl + '" target="_blank" rel="noopener" style="flex:0 0 auto">View Page ↗</a>' : '') +
         '</div>';
     }).join('');
-    editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>Home, One-on-One, Events, Beliefs, and Give are ready to edit. Other pages stay protected until their editors are approved. The switch next to each page turns it on or off for visitors — off shows "Coming Soon" instead of the real page.</p></div>';
+    editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>Home, One-on-One, Events, Beliefs, and Give are ready to edit. Other pages stay protected until their editors are approved. The switch next to each page turns it on or off for visitors — off shows "Coming Soon" instead of the real page. Use "View Page" to open it and see the change for yourself.</p></div>';
   }
   document.getElementById('ownerSiteMasterToggle')?.addEventListener('change', async event => {
     const toggle = event.target.closest('[data-site-master-visibility]');
     if(!toggle) return;
+    const status = document.getElementById('ownerPageVisibilityStatus');
+    if(status) status.textContent = 'Saving…';
     PAGE_VISIBILITY.__siteWide = toggle.checked;
-    try { await savePageVisibility(); } catch (err) { /* preview still reflects the change locally */ }
+    try {
+      await savePageVisibility();
+      if(status) status.textContent = toggle.checked ? 'Saved — the whole site is live again.' : 'Saved — every page now shows "Coming Soon" to visitors.';
+    } catch (err) { if(status) status.textContent = 'Could not save that — showing the change here only.'; }
     applyPageVisibility();
     renderOwnerSiteMasterToggle();
   });
@@ -674,8 +682,14 @@ export function initSiteManagement(context){
     const toggle = event.target.closest('[data-page-visibility]');
     if(!toggle) return;
     const key = toggle.dataset.pageVisibility;
+    const pageName = (WEBSITE_PAGES.find(p => p.visKey === key) || {}).name || key;
+    const status = document.getElementById('ownerPageVisibilityStatus');
+    if(status) status.textContent = 'Saving…';
     PAGE_VISIBILITY[key] = toggle.checked;
-    try { await savePageVisibility(); } catch (err) { /* preview still reflects the change locally */ }
+    try {
+      await savePageVisibility();
+      if(status) status.textContent = toggle.checked ? 'Saved — ' + pageName + ' is live again.' : 'Saved — ' + pageName + ' now shows "Coming Soon" to visitors.';
+    } catch (err) { if(status) status.textContent = 'Could not save that — showing the change here only.'; }
     applyPageVisibility();
   });
   function openWebsitePageEditor(pageName){
