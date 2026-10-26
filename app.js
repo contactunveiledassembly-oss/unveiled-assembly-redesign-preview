@@ -4446,7 +4446,7 @@ function renderPublishedClassReviews(){
   const moreWrap = document.getElementById('publishedClassReviewsMore');
   if(moreWrap){
     moreWrap.innerHTML = (!classReviewsExpanded && items.length > 3)
-      ? '<button type="button" class="btn on-light" id="viewMoreClassReviews">View More Reviews</button>' : '';
+      ? '<button type="button" class="btn" id="viewMoreClassReviews">View More Reviews</button>' : '';
   }
 }
 document.addEventListener('click', event => {
@@ -4478,13 +4478,13 @@ function ensurePublicMinistrySections(){
   const reviewSection = document.getElementById('publishedClassReviewsSection');
   if(!reviewSection && document.body.dataset.page === 'teachings'){
     const target = document.getElementById('teachingCardsSection');
-    const html = '<section class="on-light-section" id="publishedClassReviewsSection" style="padding-top:0"><div class="section-inner"><div class="eyebrow reveal" style="margin-bottom:24px">Class Reviews</div><div class="preview-cards reveal" id="publishedClassReviewsList"></div><div style="margin-top:24px;text-align:center" id="publishedClassReviewsMore"></div></div></section>';
+    const html = '<section class="class-reviews-section" id="publishedClassReviewsSection"><div class="section-inner"><div class="eyebrow reveal" style="margin-bottom:24px">Class Reviews</div><div class="preview-cards reveal" id="publishedClassReviewsList"></div><div style="margin-top:24px;text-align:center" id="publishedClassReviewsMore"></div></div></section>';
     if(target) target.insertAdjacentHTML('afterend', html); else document.body.insertAdjacentHTML('beforeend', html);
   }
   const reviewButtonArea = document.getElementById('classReviewButtonArea');
   if(!reviewButtonArea && document.body.dataset.page === 'teachings'){
     const before = document.getElementById('teachingCardsSection');
-    if(before){ before.insertAdjacentHTML('beforeend', '<div class="reveal" style="margin-top:24px;display:flex;justify-content:flex-end"><button class="btn on-light fill" id="openClassReviewFromTeachings" type="button">Leave A Class Review</button></div>'); }
+    if(before){ before.insertAdjacentHTML('beforeend', '<div class="reveal" style="margin-top:24px;display:flex;justify-content:flex-end"><button class="btn fill" id="openClassReviewFromTeachings" type="button">Leave A Class Review</button></div>'); }
   }
   if(!document.getElementById('openClassReviewFromTestimonial')){
     const testimonialArea = document.querySelector('section.on-light-section:last-of-type .reveal');

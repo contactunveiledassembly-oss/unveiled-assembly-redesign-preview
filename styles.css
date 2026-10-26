@@ -518,6 +518,22 @@ section{padding:130px 5vw; position:relative; overflow:hidden}
 .video-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;color:#fff;background:rgba(0,0,0,.32)}
 .review-stars{display:block;color:#c9a227;letter-spacing:2px;margin:8px 0 4px;font-size:15px}
 
+/* Class Reviews on the Teachings page — a dark, editorial card instead
+   of the bright on-light-section block used for testimonials elsewhere
+   (that worked fine on Prayer's lighter layout but read as a jarring
+   white slab dropped into Teachings' otherwise dark, moody pages). */
+.class-reviews-section{border-top:1px solid var(--line-dark)}
+.class-reviews-section .preview-cards{background:var(--line-dark);border-color:var(--line-dark)}
+.review-card{background:var(--panel);padding:38px 32px 30px;position:relative;overflow:hidden;transition:.3s}
+.review-card:hover{background:var(--charcoal)}
+.review-card::before{
+  content:"\201C";position:absolute;top:2px;right:24px;
+  font-family:var(--serif);font-size:84px;line-height:1;color:var(--gold);opacity:.16;pointer-events:none;
+}
+.review-card span{color:var(--stone)}
+.review-card h4{color:var(--ivory);position:relative}
+.review-card p{color:var(--stone);position:relative}
+
 /* ---------- Numbered "discover more" list ----------
    Defaults are dark-context (this list is reused as-is on Connect,
    which has no light-section wrapper); .discover on the homepage is
