@@ -254,6 +254,7 @@ let DEMO_BOOKINGS = [
 // needs real booking data (createdAt, in particular) to work at all.
 let MEMBER_OWN_BOOKINGS = [];
 let MEMBER_OWN_TEACHING_REGISTRATIONS = [];
+let MEMBER_OWN_ENROLLMENTS = [];
 let MEMBER_OWN_NOTIFICATIONS = [];
 let MEMBER_OWN_SUBMISSIONS = { prayer: [], testimonies: [] };
 
@@ -290,6 +291,19 @@ async function loadMemberOwnTeachingRegistrations(){
     if(typeof renderMemberPurchases === 'function') renderMemberPurchases();
   } catch (err) {
     console.error('[member] loadMemberOwnTeachingRegistrations failed', err);
+  }
+}
+
+async function loadMemberOwnEnrollments(){
+  if(DEMO_MODE || !currentUser) return;
+  try {
+    const snap = await getDocs(query(collection(db, 'classEnrollments'), where('memberUid', '==', currentUser.uid)));
+    MEMBER_OWN_ENROLLMENTS = [];
+    snap.forEach(docSnap => MEMBER_OWN_ENROLLMENTS.push({ id: docSnap.id, ...docSnap.data() }));
+    if(typeof renderMemberClassesList === 'function') renderMemberClassesList();
+    if(typeof renderMemberDashboardPanels === 'function') renderMemberDashboardPanels();
+  } catch (err) {
+    console.error('[member] loadMemberOwnEnrollments failed', err);
   }
 }
 
@@ -5338,6 +5352,12 @@ function saveClassroomContent(){
 // grants complimentary access.
 function registrationGrantsClassroomAccess(registration){
   if(!registration || registration.status === 'cancelled') return false;
+  if(!(DEMO_MODE || ownerPreviewActive)){
+    return MEMBER_OWN_ENROLLMENTS.some(enrollment =>
+      enrollment.teachingId === registration.teachingId &&
+      enrollment.status === 'confirmed'
+    );
+  }
   return registration.status === 'confirmed' ||
     registration.status === 'complimentary' ||
     registration.accessGranted === true ||
@@ -13668,6 +13688,7 @@ onAuthStateChanged(auth, async (user) => {
       await Promise.all([
         loadMemberOwnBookings(),
         loadMemberOwnTeachingRegistrations(),
+        loadMemberOwnEnrollments(),
         loadMemberOwnNotifications(),
         loadMemberOwnSubmissions()
       ]);
