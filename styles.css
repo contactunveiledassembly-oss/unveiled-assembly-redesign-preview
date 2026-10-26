@@ -2105,6 +2105,19 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 .admin-editor-actions{flex-wrap:wrap}
 .admin-editor-actions .btn{font-size:11px;padding:0 20px}
 
+/* Scheduling & Availability: nothing below is live until this bar's
+   Save is clicked — see SCHED_DRAFT in app.js. Sticky so it stays in
+   view across the Availability/Session Types/Blocked Dates tabs. */
+.admin-save-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  margin:0 0 18px;padding:13px 18px;border-radius:var(--owner-radius-sm);
+  background:var(--owner-surface-sunken);border:1px solid var(--owner-border);
+  color:var(--owner-text-muted);font-size:13px;position:sticky;top:0;z-index:5;
+}
+.admin-save-bar.is-dirty{background:#2b1f12;border-color:#9a3412;color:#ffd9b3}
+.admin-save-bar-actions{display:flex;gap:10px;flex:0 0 auto}
+.admin-save-bar[hidden]{display:none}
+
 /* ---------- Image upload widget ---------- */
 .admin-image-card{
   background:var(--owner-surface);border:1px solid var(--owner-border);border-radius:var(--owner-radius);

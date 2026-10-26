@@ -1443,6 +1443,14 @@ function dialogsHtml(){
             <button type="button" class="admin-tab" data-bookings-tab="lookup">Lookup</button>
           </div>
 
+          <div id="schedSaveBar" class="admin-save-bar" hidden>
+            <span id="schedSaveBarStatus">No changes to save.</span>
+            <div class="admin-save-bar-actions">
+              <button type="button" class="admin-btn-ghost" id="schedDiscardBtn">Discard Changes</button>
+              <button type="button" class="admin-btn-solid" id="schedSaveAllBtn">Save Changes</button>
+            </div>
+          </div>
+
           <div class="admin-edit-panel" data-bookings-panel="payments" hidden>
             <p class="admin-hint" style="margin-bottom:14px">Every one-on-one payment, connected back to its appointment and confirmation ID.</p>
             <div class="admin-stat-row" id="bookingsPaymentsStats"></div>
@@ -1569,10 +1577,8 @@ function dialogsHtml(){
                 <input id="schedBookingPaused" type="checkbox" style="accent-color:var(--owner-accent)" />
                 Pause all new booking requests
               </label>
-              <button class="admin-btn-solid" type="button" id="schedSettingsSaveBtn">Save Settings</button>
             </div>
-            <div class="form-status" id="schedSettingsStatus" style="color:var(--owner-text-muted);margin-bottom:8px"></div>
-            <p class="admin-hint" style="margin-bottom:20px">"Buffer Time" is set per Session Type (see the Session Types tab) since different session lengths often need different breathing room.</p>
+            <p class="admin-hint" style="margin-bottom:20px">"Buffer Time" is set per Session Type (see the Session Types tab). Nothing on this screen takes effect until you click Save Changes above.</p>
 
             <div class="admin-subsection-label">Available Days &amp; Hours</div>
             <p class="admin-hint" style="margin-bottom:12px">These are the weekly windows visitors can request a time in. Add as many as you'd like — each one applies every week until removed.</p>
@@ -1604,9 +1610,8 @@ function dialogsHtml(){
               <div class="form-field" style="flex:0 0 170px"><label for="nightOfPrayerDate">Date</label><input id="nightOfPrayerDate" type="date" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 130px"><label for="nightOfPrayerTime">Time (Eastern)</label><input id="nightOfPrayerTime" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <button class="admin-btn-ghost" type="button" id="nightOfPrayerClearBtn">Clear (Unschedule)</button>
-              <button class="admin-btn-solid" type="button" id="nightOfPrayerSaveBtn">Save</button>
             </div>
-            <p class="admin-hint" style="margin-bottom:8px">Fixed for now: Zoom · Capacity 100 · Free · No registration required.</p>
+            <p class="admin-hint" style="margin-bottom:8px">Fixed for now: Zoom · Capacity 100 · Free · No registration required. This also only takes effect once you click Save Changes above.</p>
             <div class="form-status" id="nightOfPrayerStatus" style="color:var(--owner-text-muted)"></div>
           </div>
 
@@ -7394,23 +7399,22 @@ adminBookForm.addEventListener('submit', async event => {
 
 /* ---------------------------------------------------------------
    Admin: scheduling settings (timezone, pause, session types,
-   weekly availability windows). This panel is a VISUAL DEMONSTRATION
-   ONLY for now, on every host including production — it is not yet
-   approved to write to Firestore. Every save/add/delete below only
-   mutates the in-memory SESSION_TYPES/AVAILABILITY_RULES/
-   SCHEDULING_SETTINGS state that already drives the real booking
-   system's defaults; nothing here is ever persisted, and a page
-   refresh resets it back to the shipped defaults (Tue/Thu 2-6pm,
-   30/15-minute sessions) — so the real booking system's behavior
-   can never drift from what it is today. Reconnecting this panel to
-   Firestore is a later, separately-approved phase.
+   weekly availability windows, Night Of Prayer). Staged editing:
+   every control across the Availability/Session Types/Blocked Dates
+   tabs reads from and writes to SCHED_DRAFT, a working copy cloned
+   from the live state. Nothing reaches Firestore (or localStorage in
+   DEMO_MODE) until "Save Changes" in the shared #schedSaveBar is
+   clicked, which diffs SCHED_DRAFT against the live state and
+   commits only what changed; "Discard Changes" re-clones the draft
+   from live instead. This is deliberate — these screens previously
+   committed every click immediately (a stray "Deactivate"/"Delete"
+   was irreversible), which is exactly the complaint this fixes.
    --------------------------------------------------------------- */
 const schedTimezoneSelect = document.getElementById('schedTimezone');
 const schedBookingPausedInput = document.getElementById('schedBookingPaused');
 const schedMaxPerDayInput = document.getElementById('schedMaxPerDay');
 const schedMinNoticeInput = document.getElementById('schedMinNotice');
 const schedMaxAdvanceInput = document.getElementById('schedMaxAdvance');
-const schedSettingsStatus = document.getElementById('schedSettingsStatus');
 const schedTypesList = document.getElementById('schedTypesList');
 const schedTypeForm = document.getElementById('schedTypeForm');
 const schedTypeStatus = document.getElementById('schedTypeStatus');
@@ -7423,17 +7427,51 @@ const schedRangeStatus = document.getElementById('schedRangeStatus');
 const schedOverridesList = document.getElementById('schedOverridesList');
 const schedOverrideForm = document.getElementById('schedOverrideForm');
 const schedOverrideStatus = document.getElementById('schedOverrideStatus');
+const schedSaveBar = document.getElementById('schedSaveBar');
+const schedSaveBarStatus = document.getElementById('schedSaveBarStatus');
+const schedDiscardBtn = document.getElementById('schedDiscardBtn');
+const schedSaveAllBtn = document.getElementById('schedSaveAllBtn');
 // A short "saved where" note so it's always clear whether an edit is
 // real (production) or sample-only (every other host).
 const SCHED_SAVE_NOTE = DEMO_MODE ? 'Saved to this preview only — sample data, not connected to the live scheduling system.' : 'Saved.';
 
+function schedCloneLiveState(){
+  return {
+    settings: JSON.parse(JSON.stringify(SCHEDULING_SETTINGS)),
+    types: JSON.parse(JSON.stringify(SESSION_TYPES)),
+    rules: JSON.parse(JSON.stringify(AVAILABILITY_RULES)),
+    ranges: JSON.parse(JSON.stringify(BLOCKOUT_RANGES)),
+    overrides: JSON.parse(JSON.stringify(AVAILABILITY_OVERRIDES)),
+    nightOfPrayer: JSON.parse(JSON.stringify(NIGHT_OF_PRAYER))
+  };
+}
+function schedMarkDirty(){
+  schedDirty = true;
+  if(schedSaveBar) schedSaveBar.classList.add('is-dirty');
+  if(schedSaveBarStatus) schedSaveBarStatus.textContent = 'You have unsaved changes.';
+}
+function schedMarkClean(){
+  schedDirty = false;
+  if(schedSaveBar) schedSaveBar.classList.remove('is-dirty');
+  if(schedSaveBarStatus) schedSaveBarStatus.textContent = 'No changes to save.';
+}
+function schedRenderAllFromDraft(){
+  renderSchedSettingsForm();
+  renderNightOfPrayerAdminForm();
+  renderSchedTypesList();
+  renderSchedRulesList();
+  renderSchedRangesList();
+  renderSchedOverridesList();
+}
+
 function renderSchedSettingsForm(){
   if(!schedTimezoneSelect) return;
-  schedTimezoneSelect.value = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
-  schedBookingPausedInput.checked = !!SCHEDULING_SETTINGS.bookingPaused;
-  schedMaxPerDayInput.value = SCHEDULING_SETTINGS.maxBookingsPerDay || '';
-  schedMinNoticeInput.value = SCHEDULING_SETTINGS.minNoticeHours || '';
-  schedMaxAdvanceInput.value = SCHEDULING_SETTINGS.maxAdvanceDays || '';
+  const s = SCHED_DRAFT.settings;
+  schedTimezoneSelect.value = s.ministryTimeZone || 'America/New_York';
+  schedBookingPausedInput.checked = !!s.bookingPaused;
+  schedMaxPerDayInput.value = s.maxBookingsPerDay || '';
+  schedMinNoticeInput.value = s.minNoticeHours || '';
+  schedMaxAdvanceInput.value = s.maxAdvanceDays || '';
 }
 
 /* ---------------------------------------------------------------
@@ -7446,6 +7484,12 @@ function renderSchedSettingsForm(){
    yet — matches the decided configuration exactly, nothing more.
    --------------------------------------------------------------- */
 let NIGHT_OF_PRAYER = { date: '', time: '' };
+// schedCloneLiveState() reads NIGHT_OF_PRAYER, so the draft can only be
+// built once that's declared — hence this sits here, not up with the
+// other scheduling draft helpers above.
+let SCHED_DRAFT = schedCloneLiveState();
+let schedDirty = false;
+let schedDraftSeq = 1; // disambiguates temp ids for not-yet-saved rules/ranges
 async function loadNightOfPrayerConfig(){
   if(DEMO_MODE) return;
   try {
@@ -7459,8 +7503,8 @@ function renderNightOfPrayerAdminForm(){
   const dateInput = document.getElementById('nightOfPrayerDate');
   const timeInput = document.getElementById('nightOfPrayerTime');
   if(!dateInput || !timeInput) return;
-  dateInput.value = NIGHT_OF_PRAYER.date || '';
-  timeInput.value = NIGHT_OF_PRAYER.time || '';
+  dateInput.value = SCHED_DRAFT.nightOfPrayer.date || '';
+  timeInput.value = SCHED_DRAFT.nightOfPrayer.time || '';
 }
 function renderNightOfPrayerCard(){
   const card = document.getElementById('nightOfPrayerCard');
@@ -7484,14 +7528,14 @@ function renderNightOfPrayerCard(){
 
 function renderSchedTypesList(){
   if(!schedTypesList) return;
-  const ids = Object.keys(SESSION_TYPES);
+  const ids = Object.keys(SCHED_DRAFT.types);
   if(ids.length === 0){
     schedTypesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No session types yet — add one below.</p>';
     return;
   }
   const formatLabel = f => f === 'phone' ? 'Phone' : f === 'in-person' ? 'In Person' : 'Zoom';
   schedTypesList.innerHTML = ids.map(id => {
-    const t = SESSION_TYPES[id];
+    const t = SCHED_DRAFT.types[id];
     const buffer = (t.bufferBeforeMin || t.bufferAfterMin) ? ' · buffer ' + (t.bufferBeforeMin || 0) + '/' + (t.bufferAfterMin || 0) + ' min' : '';
     const capacity = t.capacity ? ' · capacity ' + t.capacity : '';
     const thumb = t.imageUrl
@@ -7519,29 +7563,29 @@ function sessionTypesAllowedLabel(ids){
 function renderSessionTypeCheckboxes(containerId, checkedIds){
   const el = document.getElementById(containerId);
   if(!el) return;
-  const checked = checkedIds && checkedIds.length ? checkedIds : Object.keys(SESSION_TYPES);
-  el.innerHTML = Object.keys(SESSION_TYPES).map(id =>
+  const checked = checkedIds && checkedIds.length ? checkedIds : Object.keys(SCHED_DRAFT.types);
+  el.innerHTML = Object.keys(SCHED_DRAFT.types).map(id =>
     '<label class="sched-session-type-option">' +
     '<input type="checkbox" value="' + escapeHtml(id) + '"' + (checked.includes(id) ? ' checked' : '') + ' />' +
-    '<span>' + escapeHtml(SESSION_TYPES[id].name) + '</span>' +
+    '<span>' + escapeHtml(SCHED_DRAFT.types[id].name) + '</span>' +
     '</label>'
   ).join('');
 }
 function checkedSessionTypeIds(containerId){
   const el = document.getElementById(containerId);
   if(!el) return [];
-  const all = Object.keys(SESSION_TYPES);
+  const all = Object.keys(SCHED_DRAFT.types);
   const checked = Array.from(el.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value);
   return checked.length === all.length ? [] : checked;
 }
 function renderSchedRulesList(){
   if(!schedRulesList) return;
   renderSessionTypeCheckboxes('schedRuleTypesCheckboxes');
-  if(AVAILABILITY_RULES.length === 0){
+  if(SCHED_DRAFT.rules.length === 0){
     schedRulesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No availability windows yet — booking is effectively closed until you add one.</p>';
     return;
   }
-  schedRulesList.innerHTML = AVAILABILITY_RULES.map(r => {
+  schedRulesList.innerHTML = SCHED_DRAFT.rules.map(r => {
     return '<div class="portal-row" data-rule-id="' + escapeHtml(r.id || '') + '" style="padding:8px 0">' +
       '<div><strong>' + DAY_NAMES[r.dayOfWeek] + '</strong><small>' + minutesToLabel(hhmmToMinutes(r.startTime)) + '–' + minutesToLabel(hhmmToMinutes(r.endTime)) +
       ' · capacity ' + (r.capacity || 1) + ' · ' + escapeHtml(sessionTypesAllowedLabel(r.sessionTypeIds)) +
@@ -7553,11 +7597,11 @@ function renderSchedRulesList(){
 
 function renderSchedRangesList(){
   if(!schedRangesList) return;
-  if(BLOCKOUT_RANGES.length === 0){
+  if(SCHED_DRAFT.ranges.length === 0){
     schedRangesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No blocked date ranges.</p>';
     return;
   }
-  schedRangesList.innerHTML = BLOCKOUT_RANGES.map(r =>
+  schedRangesList.innerHTML = SCHED_DRAFT.ranges.map(r =>
     '<div class="portal-row" data-range-id="' + escapeHtml(r.id || '') + '" style="padding:8px 0">' +
     '<div><strong>' + escapeHtml(r.startDate) + ' – ' + escapeHtml(r.endDate) + '</strong>' +
     (r.reason ? '<small>' + escapeHtml(r.reason) + '</small>' : '') + '</div>' +
@@ -7568,13 +7612,13 @@ function renderSchedRangesList(){
 function renderSchedOverridesList(){
   if(!schedOverridesList) return;
   renderSessionTypeCheckboxes('schedOverrideTypesCheckboxes');
-  const dates = Object.keys(AVAILABILITY_OVERRIDES).sort();
+  const dates = Object.keys(SCHED_DRAFT.overrides).sort();
   if(dates.length === 0){
     schedOverridesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No special-date overrides.</p>';
     return;
   }
   schedOverridesList.innerHTML = dates.map(d => {
-    const o = AVAILABILITY_OVERRIDES[d];
+    const o = SCHED_DRAFT.overrides[d];
     const desc = o.closed ? 'Fully closed' : (o.windows || []).map(w => minutesToLabel(hhmmToMinutes(w.startTime)) + '–' + minutesToLabel(hhmmToMinutes(w.endTime)) +
       ' (' + sessionTypesAllowedLabel(w.sessionTypeIds) + ')').join(', ');
     return '<div class="portal-row" data-override-date="' + escapeHtml(d) + '" style="padding:8px 0">' +
@@ -7584,51 +7628,35 @@ function renderSchedOverridesList(){
 }
 
 if(schedTimezoneSelect){
-  let schedRuleSeq = 1, schedRangeSeq = 1;
-
-  document.getElementById('schedSettingsSaveBtn').addEventListener('click', async () => {
-    const updated = {
-      ...SCHEDULING_SETTINGS,
-      ministryTimeZone: schedTimezoneSelect.value,
-      bookingPaused: schedBookingPausedInput.checked,
-      maxBookingsPerDay: schedMaxPerDayInput.value ? Number(schedMaxPerDayInput.value) : null,
-      minNoticeHours: schedMinNoticeInput.value ? Number(schedMinNoticeInput.value) : null,
-      maxAdvanceDays: schedMaxAdvanceInput.value ? Number(schedMaxAdvanceInput.value) : null
-    };
-    schedSettingsStatus.textContent = 'Saving…';
-    if(DEMO_MODE){
-      SCHEDULING_SETTINGS = updated;
-      saveBookingsPreviewToStorage();
-    } else {
-      try { await setDoc(doc(db, 'schedulingSettings', 'global'), updated); await loadSchedulingConfig(); }
-      catch (err) { schedSettingsStatus.textContent = 'Could not save settings.'; return; }
-    }
-    BUSINESS_TZ = SCHEDULING_SETTINGS.ministryTimeZone || 'America/New_York';
-    if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
-    schedSettingsStatus.textContent = SCHED_SAVE_NOTE;
+  // Settings fields apply straight to the draft as they change — no
+  // separate per-field save step, since the shared Save Changes bar
+  // is what actually commits them.
+  [[schedTimezoneSelect, 'ministryTimeZone', v => v],
+   [schedMaxPerDayInput, 'maxBookingsPerDay', v => v ? Number(v) : null],
+   [schedMinNoticeInput, 'minNoticeHours', v => v ? Number(v) : null],
+   [schedMaxAdvanceInput, 'maxAdvanceDays', v => v ? Number(v) : null]
+  ].forEach(([el, key, coerce]) => {
+    el.addEventListener('change', () => { SCHED_DRAFT.settings[key] = coerce(el.value); schedMarkDirty(); });
+  });
+  schedBookingPausedInput.addEventListener('change', () => {
+    SCHED_DRAFT.settings.bookingPaused = schedBookingPausedInput.checked;
+    schedMarkDirty();
   });
 
-  async function saveNightOfPrayer(next){
-    const status = document.getElementById('nightOfPrayerStatus');
-    status.textContent = 'Saving…';
-    if(DEMO_MODE){
-      NIGHT_OF_PRAYER = next;
-    } else {
-      try { await setDoc(doc(db, 'nightOfPrayer', 'config'), next); NIGHT_OF_PRAYER = next; }
-      catch (err) { status.textContent = 'Could not save.'; return; }
-    }
+  document.getElementById('nightOfPrayerDate').addEventListener('change', e => {
+    SCHED_DRAFT.nightOfPrayer.date = e.target.value; schedMarkDirty();
+  });
+  document.getElementById('nightOfPrayerTime').addEventListener('change', e => {
+    SCHED_DRAFT.nightOfPrayer.time = e.target.value; schedMarkDirty();
+  });
+  document.getElementById('nightOfPrayerClearBtn')?.addEventListener('click', () => {
+    SCHED_DRAFT.nightOfPrayer = { date: '', time: '' };
     renderNightOfPrayerAdminForm();
-    renderNightOfPrayerCard();
-    status.textContent = next.date ? 'Saved.' : 'Cleared — the homepage will show the neutral "announced soon" message.';
-  }
-  document.getElementById('nightOfPrayerSaveBtn')?.addEventListener('click', () => {
-    const date = document.getElementById('nightOfPrayerDate').value;
-    const time = document.getElementById('nightOfPrayerTime').value;
-    saveNightOfPrayer({ date, time });
+    document.getElementById('nightOfPrayerStatus').textContent = 'Cleared in this draft — click Save Changes above to publish.';
+    schedMarkDirty();
   });
-  document.getElementById('nightOfPrayerClearBtn')?.addEventListener('click', () => saveNightOfPrayer({ date: '', time: '' }));
 
-  schedTypeForm.addEventListener('submit', async event => {
+  schedTypeForm.addEventListener('submit', event => {
     event.preventDefault();
     const id = document.getElementById('schedTypeId').value.trim();
     const name = document.getElementById('schedTypeName').value.trim();
@@ -7641,34 +7669,24 @@ if(schedTimezoneSelect){
     const capacityRaw = document.getElementById('schedTypeCapacity').value;
     const imageUrl = document.getElementById('schedTypeImage').value.trim();
     if(!id || !name || !duration){ schedTypeStatus.textContent = 'ID, name, and minutes are required.'; return; }
-    const existing = SESSION_TYPES[id] || {};
-    const data = {
+    const existing = SCHED_DRAFT.types[id] || {};
+    SCHED_DRAFT.types[id] = {
       name, durationMinutes: duration,
       price: priceRaw ? Number(priceRaw) : null,
       bufferBeforeMin, bufferAfterMin, format,
       capacity: capacityRaw ? Number(capacityRaw) : null,
       imageUrl,
       description, active: existing.active !== false,
-      order: existing.order || (Object.keys(SESSION_TYPES).length + 1)
+      order: existing.order || (Object.keys(SCHED_DRAFT.types).length + 1)
     };
-    schedTypeStatus.textContent = 'Saving…';
-    if(DEMO_MODE){
-      SESSION_TYPES[id] = data;
-      saveBookingsPreviewToStorage();
-    } else {
-      try { await setDoc(doc(db, 'sessionTypes', id), data); await loadSchedulingConfig(); }
-      catch (err) { schedTypeStatus.textContent = 'Could not save that session type.'; return; }
-    }
     renderSchedTypesList();
-    renderBookingOptions();
-    populateAdminBookTypeSelect();
-    renderBookingsOverviewStats();
     schedTypeForm.reset();
     adminImagePreviewRefreshers.forEach(fn => fn());
-    schedTypeStatus.textContent = SCHED_SAVE_NOTE;
+    schedTypeStatus.textContent = 'Added to this draft — click Save Changes above to publish.';
+    schedMarkDirty();
   });
 
-  schedTypesList.addEventListener('click', async event => {
+  schedTypesList.addEventListener('click', event => {
     const toggleBtn = event.target.closest('.sched-type-toggle');
     const deleteBtn = event.target.closest('.sched-type-delete');
     const copyBtn = event.target.closest('.sched-type-copy-link');
@@ -7678,30 +7696,21 @@ if(schedTimezoneSelect){
     if(copyBtn){
       const link = new URL(BASE + 'one-on-one.html?service=' + encodeURIComponent(id), window.location.href).href;
       if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(link).then(() => { schedTypeStatus.textContent = 'Link copied for "' + SESSION_TYPES[id].name + '".'; })
+        navigator.clipboard.writeText(link).then(() => { schedTypeStatus.textContent = 'Link copied for "' + SCHED_DRAFT.types[id].name + '".'; })
           .catch(() => { schedTypeStatus.textContent = 'The link is: ' + link; });
       } else {
         schedTypeStatus.textContent = 'The link is: ' + link;
       }
       return;
     }
-    if(DEMO_MODE){
-      if(toggleBtn) SESSION_TYPES[id].active = SESSION_TYPES[id].active === false;
-      else delete SESSION_TYPES[id];
-      saveBookingsPreviewToStorage();
-    } else {
-      try {
-        if(toggleBtn) await setDoc(doc(db, 'sessionTypes', id), { ...SESSION_TYPES[id], active: SESSION_TYPES[id].active === false });
-        else await deleteDoc(doc(db, 'sessionTypes', id));
-        await loadSchedulingConfig();
-      } catch (err) { return; }
-    }
+    if(toggleBtn) SCHED_DRAFT.types[id].active = SCHED_DRAFT.types[id].active === false;
+    else delete SCHED_DRAFT.types[id];
     renderSchedTypesList();
-    renderBookingOptions();
-    populateAdminBookTypeSelect();
+    schedTypeStatus.textContent = 'Changed in this draft — click Save Changes above to publish.';
+    schedMarkDirty();
   });
 
-  schedRuleForm.addEventListener('submit', async event => {
+  schedRuleForm.addEventListener('submit', event => {
     event.preventDefault();
     const dayOfWeek = Number(document.getElementById('schedRuleDay').value);
     const startTime = document.getElementById('schedRuleStart').value;
@@ -7710,74 +7719,50 @@ if(schedTimezoneSelect){
     const notes = document.getElementById('schedRuleNotes').value.trim();
     if(!startTime || !endTime || endTime <= startTime){ schedRuleStatus.textContent = 'Choose a valid start and end time.'; return; }
     const sessionTypeIds = checkedSessionTypeIds('schedRuleTypesCheckboxes');
-    const data = { dayOfWeek, startTime, endTime, sessionTypeIds, capacity, notes };
-    schedRuleStatus.textContent = 'Saving…';
-    if(DEMO_MODE){
-      AVAILABILITY_RULES.push({ id: 'preview-rule-' + (schedRuleSeq++), ...data });
-      saveBookingsPreviewToStorage();
-    } else {
-      try { await setDoc(doc(collection(db, 'availabilityRules')), data); await loadSchedulingConfig(); }
-      catch (err) { schedRuleStatus.textContent = 'Could not add that window.'; return; }
-    }
+    SCHED_DRAFT.rules.push({ id: 'draft-rule-' + (schedDraftSeq++), dayOfWeek, startTime, endTime, sessionTypeIds, capacity, notes });
     renderSchedRulesList();
     if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
     schedRuleForm.reset();
     renderSessionTypeCheckboxes('schedRuleTypesCheckboxes');
-    schedRuleStatus.textContent = SCHED_SAVE_NOTE;
+    schedRuleStatus.textContent = 'Added to this draft — click Save Changes above to publish.';
+    schedMarkDirty();
   });
 
-  schedRulesList.addEventListener('click', async event => {
+  schedRulesList.addEventListener('click', event => {
     const deleteBtn = event.target.closest('.sched-rule-delete');
     if(!deleteBtn) return;
     const row = event.target.closest('[data-rule-id]');
-    if(DEMO_MODE){
-      const idx = AVAILABILITY_RULES.findIndex(r => r.id === row.dataset.ruleId);
-      if(idx !== -1) AVAILABILITY_RULES.splice(idx, 1);
-      saveBookingsPreviewToStorage();
-    } else {
-      try { await deleteDoc(doc(db, 'availabilityRules', row.dataset.ruleId)); await loadSchedulingConfig(); }
-      catch (err) { return; }
-    }
+    const idx = SCHED_DRAFT.rules.findIndex(r => r.id === row.dataset.ruleId);
+    if(idx !== -1) SCHED_DRAFT.rules.splice(idx, 1);
     renderSchedRulesList();
     if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
+    schedMarkDirty();
   });
 
-  schedRangeForm.addEventListener('submit', async event => {
+  schedRangeForm.addEventListener('submit', event => {
     event.preventDefault();
     const startDate = document.getElementById('schedRangeStart').value;
     const endDate = document.getElementById('schedRangeEnd').value;
     const reason = document.getElementById('schedRangeReason').value.trim();
     if(!startDate || !endDate || endDate < startDate){ schedRangeStatus.textContent = 'Choose a valid date range.'; return; }
-    const data = { startDate, endDate, reason };
-    schedRangeStatus.textContent = 'Saving…';
-    if(DEMO_MODE){
-      BLOCKOUT_RANGES.push({ id: 'preview-range-' + (schedRangeSeq++), ...data });
-      saveBookingsPreviewToStorage();
-    } else {
-      try { await setDoc(doc(collection(db, 'blockoutRanges')), data); await loadSchedulingConfig(); }
-      catch (err) { schedRangeStatus.textContent = 'Could not save that range.'; return; }
-    }
+    SCHED_DRAFT.ranges.push({ id: 'draft-range-' + (schedDraftSeq++), startDate, endDate, reason });
     renderSchedRangesList();
     schedRangeForm.reset();
-    schedRangeStatus.textContent = SCHED_SAVE_NOTE;
+    schedRangeStatus.textContent = 'Added to this draft — click Save Changes above to publish.';
+    schedMarkDirty();
   });
 
-  schedRangesList.addEventListener('click', async event => {
+  schedRangesList.addEventListener('click', event => {
     const deleteBtn = event.target.closest('.sched-range-delete');
     if(!deleteBtn) return;
     const row = event.target.closest('[data-range-id]');
-    if(DEMO_MODE){
-      const idx = BLOCKOUT_RANGES.findIndex(r => r.id === row.dataset.rangeId);
-      if(idx !== -1) BLOCKOUT_RANGES.splice(idx, 1);
-      saveBookingsPreviewToStorage();
-    } else {
-      try { await deleteDoc(doc(db, 'blockoutRanges', row.dataset.rangeId)); await loadSchedulingConfig(); }
-      catch (err) { return; }
-    }
+    const idx = SCHED_DRAFT.ranges.findIndex(r => r.id === row.dataset.rangeId);
+    if(idx !== -1) SCHED_DRAFT.ranges.splice(idx, 1);
     renderSchedRangesList();
+    schedMarkDirty();
   });
 
-  schedOverrideForm.addEventListener('submit', async event => {
+  schedOverrideForm.addEventListener('submit', event => {
     event.preventDefault();
     const date = document.getElementById('schedOverrideDate').value;
     const start = document.getElementById('schedOverrideStart').value;
@@ -7793,32 +7778,105 @@ if(schedTimezoneSelect){
       const sessionTypeIds = checkedSessionTypeIds('schedOverrideTypesCheckboxes');
       data = { closed: false, windows: [{ startTime: start, endTime: end, capacity: 1, sessionTypeIds }], notes };
     }
-    schedOverrideStatus.textContent = 'Saving…';
-    if(DEMO_MODE){
-      AVAILABILITY_OVERRIDES[date] = data;
-      saveBookingsPreviewToStorage();
-    } else {
-      try { await setDoc(doc(db, 'availabilityOverrides', date), data); await loadSchedulingConfig(); }
-      catch (err) { schedOverrideStatus.textContent = 'Could not save that override.'; return; }
-    }
+    SCHED_DRAFT.overrides[date] = data;
     renderSchedOverridesList();
     schedOverrideForm.reset();
-    schedOverrideStatus.textContent = SCHED_SAVE_NOTE;
+    schedOverrideStatus.textContent = 'Added to this draft — click Save Changes above to publish.';
+    schedMarkDirty();
   });
 
-  schedOverridesList.addEventListener('click', async event => {
+  schedOverridesList.addEventListener('click', event => {
     const deleteBtn = event.target.closest('.sched-override-delete');
     if(!deleteBtn) return;
     const row = event.target.closest('[data-override-date]');
-    const date = row.dataset.overrideDate;
-    if(DEMO_MODE){
-      delete AVAILABILITY_OVERRIDES[date];
-      saveBookingsPreviewToStorage();
-    } else {
-      try { await deleteDoc(doc(db, 'availabilityOverrides', date)); await loadSchedulingConfig(); }
-      catch (err) { return; }
-    }
+    delete SCHED_DRAFT.overrides[row.dataset.overrideDate];
     renderSchedOverridesList();
+    schedMarkDirty();
+  });
+
+  schedSaveAllBtn?.addEventListener('click', async () => {
+    schedSaveAllBtn.disabled = true;
+    schedDiscardBtn.disabled = true;
+    schedSaveBarStatus.textContent = 'Saving…';
+    try {
+      if(DEMO_MODE){
+        SCHEDULING_SETTINGS = SCHED_DRAFT.settings;
+        SESSION_TYPES = SCHED_DRAFT.types;
+        AVAILABILITY_RULES = SCHED_DRAFT.rules;
+        BLOCKOUT_RANGES = SCHED_DRAFT.ranges;
+        AVAILABILITY_OVERRIDES = SCHED_DRAFT.overrides;
+        NIGHT_OF_PRAYER = SCHED_DRAFT.nightOfPrayer;
+        saveBookingsPreviewToStorage();
+      } else {
+        const writes = [];
+        if(JSON.stringify(SCHED_DRAFT.settings) !== JSON.stringify(SCHEDULING_SETTINGS)){
+          writes.push(setDoc(doc(db, 'schedulingSettings', 'global'), SCHED_DRAFT.settings));
+        }
+        if(JSON.stringify(SCHED_DRAFT.nightOfPrayer) !== JSON.stringify(NIGHT_OF_PRAYER)){
+          writes.push(setDoc(doc(db, 'nightOfPrayer', 'config'), SCHED_DRAFT.nightOfPrayer));
+        }
+        Object.keys(SCHED_DRAFT.types).forEach(id => {
+          if(JSON.stringify(SCHED_DRAFT.types[id]) !== JSON.stringify(SESSION_TYPES[id])){
+            writes.push(setDoc(doc(db, 'sessionTypes', id), SCHED_DRAFT.types[id]));
+          }
+        });
+        Object.keys(SESSION_TYPES).forEach(id => {
+          if(!(id in SCHED_DRAFT.types)) writes.push(deleteDoc(doc(db, 'sessionTypes', id)));
+        });
+        const draftRuleIds = new Set(SCHED_DRAFT.rules.map(r => r.id));
+        SCHED_DRAFT.rules.forEach(r => {
+          if(r.id.startsWith('draft-rule-')){
+            const { id, ...data } = r;
+            writes.push(setDoc(doc(collection(db, 'availabilityRules')), data));
+          }
+        });
+        AVAILABILITY_RULES.forEach(r => { if(!draftRuleIds.has(r.id)) writes.push(deleteDoc(doc(db, 'availabilityRules', r.id))); });
+        const draftRangeIds = new Set(SCHED_DRAFT.ranges.map(r => r.id));
+        SCHED_DRAFT.ranges.forEach(r => {
+          if(r.id.startsWith('draft-range-')){
+            const { id, ...data } = r;
+            writes.push(setDoc(doc(collection(db, 'blockoutRanges')), data));
+          }
+        });
+        BLOCKOUT_RANGES.forEach(r => { if(!draftRangeIds.has(r.id)) writes.push(deleteDoc(doc(db, 'blockoutRanges', r.id))); });
+        Object.keys(SCHED_DRAFT.overrides).forEach(date => {
+          if(JSON.stringify(SCHED_DRAFT.overrides[date]) !== JSON.stringify(AVAILABILITY_OVERRIDES[date])){
+            writes.push(setDoc(doc(db, 'availabilityOverrides', date), SCHED_DRAFT.overrides[date]));
+          }
+        });
+        Object.keys(AVAILABILITY_OVERRIDES).forEach(date => {
+          if(!(date in SCHED_DRAFT.overrides)) writes.push(deleteDoc(doc(db, 'availabilityOverrides', date)));
+        });
+        await Promise.all(writes);
+        await loadSchedulingConfig();
+        await loadNightOfPrayerConfig();
+      }
+      if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
+      renderNightOfPrayerCard();
+      renderBookingOptions();
+      populateAdminBookTypeSelect();
+      renderBookingsOverviewStats();
+      SCHED_DRAFT = schedCloneLiveState();
+      schedRenderAllFromDraft();
+      schedMarkClean();
+      schedSaveBarStatus.textContent = SCHED_SAVE_NOTE;
+    } catch (err) {
+      schedSaveBarStatus.textContent = 'Could not save — please try again.';
+    } finally {
+      schedSaveAllBtn.disabled = false;
+      schedDiscardBtn.disabled = false;
+    }
+  });
+
+  schedDiscardBtn?.addEventListener('click', () => {
+    SCHED_DRAFT = schedCloneLiveState();
+    schedRenderAllFromDraft();
+    schedTypeStatus.textContent = '';
+    schedRuleStatus.textContent = '';
+    schedRangeStatus.textContent = '';
+    schedOverrideStatus.textContent = '';
+    document.getElementById('nightOfPrayerStatus').textContent = '';
+    schedMarkClean();
   });
 }
 
@@ -9378,7 +9436,12 @@ async function loadOwnerData(){
   if(eventsSystem){ try { await eventsSystem.loadAdmin(); } catch (err) { /* keep the public event state */ } }
   renderOwnerProfilePhotoPreview();
   renderOwnerAccountProfile();
+  // Re-sync the scheduling draft with whatever just loaded from
+  // Firestore — but never while the admin has unsaved edits sitting
+  // in it (this runs again every time they revisit the Owner tab).
+  if(!schedDirty){ SCHED_DRAFT = schedCloneLiveState(); }
   renderSchedSettingsForm();
+  renderNightOfPrayerAdminForm();
   renderSchedTypesList();
   renderSchedRulesList();
   renderSchedRangesList();
@@ -9800,6 +9863,7 @@ document.getElementById('bookingsQuickActions').addEventListener('click', event 
 function showBookingsTab(name){
   document.querySelectorAll('#bookingsSubNav .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.bookingsTab === name));
   document.querySelectorAll('[data-bookings-panel]').forEach(p => { p.hidden = p.dataset.bookingsPanel !== name; });
+  if(schedSaveBar) schedSaveBar.hidden = !['availability', 'types', 'blocked'].includes(name);
   if(name === 'overview'){ renderBookingsOverviewStats(); renderBookingsToday(); renderBookingsCalendarPreview(); renderBookingsInsights(); }
   if(name === 'calendar') renderBookingsCalendar();
   if(name === 'payments') renderBookingsPayments();
