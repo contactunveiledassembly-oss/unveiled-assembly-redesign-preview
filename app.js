@@ -11275,7 +11275,7 @@ async function createTeachingRegistration({ teachingId, firstName, lastName, ema
     // No separate "enrollment" record: a non-cancelled registration IS
     // the enrollment (see classroomAccessAllowed) — this keeps
     // registering and enrolling a single atomic step, per requirement.
-    pushMemberNotification(uid, 'registration-confirmed', 'Registration Confirmed', (t.title || 'Class') + ' — ' + confirmationId);
+    pushMemberNotification(uid, 'registration-received', 'Registration Received', (t.title || 'Class') + ' — payment or owner approval is still pending.');
     const timeLabel = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(registeredAt));
     DEMO_NOTIFICATIONS.unshift({
       id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'New Class Registration',
@@ -12366,23 +12366,28 @@ document.getElementById('teachingRegistrantsSearch').addEventListener('input', e
 /* =================================================================
    Class Registrations — Owner Portal (Calendly-style roster, kept as
    its own system separate from One-on-One Bookings per requirement).
-   Reads/writes the same DEMO_TEACHING_REGISTRATIONS array the public
+   Reads/writes the same classRegistrationSource() array the public
    checkout writes to via createTeachingRegistration — this is the
    real registration data, not a parallel demo list — persisted to
    this browser's localStorage like the rest of the Teaching preview.
    ================================================================= */
-const CLASS_REG_STATUS_LABELS = { confirmed: 'Confirmed', pending_payment: 'Pending', cancelled: 'Cancelled', refunded: 'Refunded' };
+function classRegistrationSource(){
+  return (DEMO_MODE || (ownerSim && ownerSim.isActive()))
+    ? classRegistrationSource()
+    : OWNER_ALL_REGISTRATIONS_CACHE;
+}
+const CLASS_REG_STATUS_LABELS = { confirmed: 'Confirmed', complimentary: 'Complimentary', pending_payment: 'Pending', cancelled: 'Cancelled', refunded: 'Refunded' };
 const CLASS_REG_ATTENDANCE_LABELS = { attended: 'Attended', 'no-show': 'No Show', 'not-marked': 'Not Marked' };
 function formatRegisteredAt(iso){
   if(!iso) return '—';
-  const d = new Date(iso);
+  const d = typeof iso.toDate === 'function' ? iso.toDate() : new Date(iso);
   if(Number.isNaN(d.getTime())) return '—';
   return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(d) +
     ' · ' + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(d) + ' ET';
 }
 function classRegPaymentStatus(item){
-  if(item.status === 'refunded') return 'refunded';
-  return Number(item.amountPaid) > 0 ? 'paid' : 'unpaid';
+  if(item.status === 'refunded' || item.paymentStatus === 'refunded') return 'refunded';
+  return verifiedPaymentRecord(item) ? 'paid' : 'unpaid';
 }
 function bookingPaymentStatus(item){
   // Refund is tracked separately from the appointment lifecycle status
@@ -12424,7 +12429,7 @@ function classRegFilteredList(){
   const classId = document.getElementById('classRegClassFilter')?.value || 'all';
   const status = document.getElementById('classRegStatusFilter')?.value || 'all';
   const payment = document.getElementById('classRegPaymentFilter')?.value || 'all';
-  return DEMO_TEACHING_REGISTRATIONS.filter(r => {
+  return classRegistrationSource().filter(r => {
     if(classId !== 'all' && r.teachingId !== classId) return false;
     if(status !== 'all' && r.status !== status) return false;
     if(payment !== 'all' && classRegPaymentStatus(r) !== payment) return false;
@@ -12477,17 +12482,17 @@ function renderClassRegList(){
 function renderClassRegOverview(){
   const statsWrap = document.getElementById('classRegOverviewStats');
   if(!statsWrap) return;
-  const confirmed = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'confirmed').length;
-  const pending = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'pending_payment').length;
-  const active = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status !== 'cancelled');
+  const confirmed = classRegistrationSource().filter(r => r.status === 'confirmed').length;
+  const pending = classRegistrationSource().filter(r => r.status === 'pending_payment').length;
+  const active = classRegistrationSource().filter(r => r.status !== 'cancelled');
   const revenue = active.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
   let seatsRemaining = 0;
   Object.values(TEACHINGS).filter(t => !t.archived && t.unlimitedCapacity === false).forEach(t => {
-    const registered = DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === t.id && r.status !== 'cancelled').length;
+    const registered = classRegistrationSource().filter(r => r.teachingId === t.id && r.status !== 'cancelled').length;
     seatsRemaining += Math.max(0, (Number(t.capacity) || 0) - registered);
   });
   statsWrap.innerHTML =
-    '<div class="admin-stat-tile"><span>Total Registered</span><strong>' + DEMO_TEACHING_REGISTRATIONS.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Total Registered</span><strong>' + classRegistrationSource().length + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Confirmed</span><strong>' + confirmed + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Pending</span><strong>' + pending + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Seats Remaining</span><strong>' + seatsRemaining + '</strong></div>' +
@@ -12501,7 +12506,7 @@ function renderClassRegOverview(){
     : '<p class="admin-hint">No upcoming classes scheduled.</p>';
   const recentWrap = document.getElementById('classRegRecentList');
   if(recentWrap){
-    const recent = [...DEMO_TEACHING_REGISTRATIONS].sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0)).slice(0, 5);
+    const recent = [...classRegistrationSource()].sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0)).slice(0, 5);
     recentWrap.innerHTML = recent.length ? recent.map(classRegRowHtml).join('') : '<p class="admin-hint">No registrations yet.</p>';
   }
   const activityWrap = document.getElementById('classRegRecentActivity');
@@ -12528,7 +12533,7 @@ function classRegAttendanceRowHtml(item){
     '</div></div>';
 }
 function classRegAttendanceFilteredList(){
-  const rows = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status !== 'cancelled');
+  const rows = classRegistrationSource().filter(r => r.status !== 'cancelled');
   if(classRegAttendanceActiveFilter === 'all') return rows;
   return rows.filter(r => (r.attendanceStatus || 'not-marked') === classRegAttendanceActiveFilter);
 }
@@ -12552,7 +12557,7 @@ function classRegPaymentRowHtml(item){
     '</div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-classreg-view="' + escapeHtml(item.id) + '">View</button></div></div>';
 }
 function classRegPaymentsFilteredList(){
-  return DEMO_TEACHING_REGISTRATIONS.filter(r => Number(r.amountPaid) > 0 || r.status === 'pending_payment')
+  return classRegistrationSource().filter(r => Number(r.amountPaid) > 0 || r.status === 'pending_payment')
     .sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
 }
 function renderClassRegPayments(){
@@ -12573,7 +12578,7 @@ function renderClassRegPayments(){
 function classRegLookupFilteredList(){
   const q = (document.getElementById('classRegLookupSearch')?.value || '').trim().toLowerCase();
   if(!q) return [];
-  return DEMO_TEACHING_REGISTRATIONS.filter(r => classRegSearchMatch(r, q))
+  return classRegistrationSource().filter(r => classRegSearchMatch(r, q))
     .sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
 }
 function renderClassRegLookup(){
@@ -12705,8 +12710,8 @@ function openClassRegDetail(id){
     detailSectionHtml('Payment',
       detailFieldHtml('Amount', '$' + (Number(item.amountPaid) || 0).toFixed(2)) +
       detailFieldHtml('Payment Status', paymentLabel) +
-      detailFieldHtml('Payment Method', Number(item.amountPaid) > 0 ? 'Preview Checkout (Card Demo)' : 'Not applicable') +
-      detailFieldHtml('Transaction ID', item.transactionId || 'Not applicable in Preview Mode', { mono: !!item.transactionId })
+      detailFieldHtml('Payment Method', verifiedPaymentRecord(item) ? (item.paymentMethod || 'Verified payment') : 'Not verified / not connected') +
+      detailFieldHtml('Transaction ID', item.transactionId || item.paymentIntentId || 'No verified transaction', { mono: !!(item.transactionId || item.paymentIntentId) })
     );
   const target = t ? etWallTimeToDate(item.teachingDate, hhmmToMinutes(t.startTime)) : null;
   const liveLog = notificationLogWithLiveReminders(item.notificationLog, target);
@@ -12828,54 +12833,125 @@ document.getElementById('bookingDetailSaveNotesBtn').addEventListener('click', (
   document.getElementById('bookingDetailStatus').textContent = 'Notes saved.';
 });
 
-document.getElementById('classRegDetailStatusBtns').addEventListener('click', event => {
+document.getElementById('classRegDetailStatusBtns').addEventListener('click', async event => {
   const btn = event.target.closest('[data-classreg-status]');
   if(!btn || !classRegDetailId) return;
-  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
+  const item = classRegistrationSource().find(r => r.id === classRegDetailId);
   if(!item) return;
+  const nextStatus = btn.dataset.classregStatus;
   const prevStatus = item.status;
-  item.status = btn.dataset.classregStatus;
-  if(item.status === 'confirmed' && !item.amountPaid){
-    const t = TEACHINGS[item.teachingId];
-    item.amountPaid = t && t.price ? Number(t.price) : item.amountPaid;
-    if(item.amountPaid > 0 && !item.transactionId) item.transactionId = synthesizeTransactionId();
+  btn.disabled = true;
+  document.getElementById('classRegDetailStatus').textContent = 'Saving…';
+  try {
+    if(DEMO_MODE || (ownerSim && ownerSim.isActive())){
+      item.status = nextStatus;
+      if(nextStatus === 'confirmed' && !item.amountPaid){
+        const t = TEACHINGS[item.teachingId];
+        item.amountPaid = t && t.price ? Number(t.price) : item.amountPaid;
+        if(item.amountPaid > 0 && !item.transactionId) item.transactionId = synthesizeTransactionId();
+      }
+      if(nextStatus === 'cancelled') item.amountPaid = 0;
+      saveTeachingRegistrationsToStorage();
+      if(nextStatus === 'cancelled' && prevStatus !== 'cancelled'){
+        DEMO_NOTIFICATIONS.unshift({ id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'Registration Cancelled',
+          detail: (item.firstName + ' ' + item.lastName).trim() + ' — ' + item.teachingTitle + '. Confirmation: ' + item.confirmationId });
+        renderOwnerNotifications();
+        pushMemberNotification(item.uid, 'class-cancelled', 'Class Cancelled', item.teachingTitle + ' — your registration was cancelled.');
+      }
+    } else {
+      const grantsAccess = nextStatus === 'confirmed' || nextStatus === 'complimentary';
+      const regRef = doc(db, 'teachingRegistrations', item.id);
+      const enrollmentRef = item.uid ? doc(db, 'classEnrollments', item.teachingId + '_' + item.uid) : null;
+      const notificationRef = item.uid ? doc(collection(db, 'memberNotifications')) : null;
+      const notificationTitle = grantsAccess ? 'Classroom Access Ready'
+        : nextStatus === 'cancelled' ? 'Registration Cancelled'
+        : nextStatus === 'refunded' ? 'Payment Status Updated'
+        : 'Registration Updated';
+      const notificationDetail = (item.teachingTitle || 'Your class') + ' — ' + (grantsAccess ? 'your classroom is now available.' : 'status: ' + nextStatus.replace(/_/g, ' ') + '.');
+      await runTransaction(db, async tx => {
+        const patch = { status: nextStatus, accessGranted: grantsAccess, updatedAt: serverTimestamp() };
+        if(nextStatus === 'refunded') patch.paymentStatus = 'refunded';
+        tx.update(regRef, patch);
+        if(enrollmentRef){
+          if(grantsAccess){
+            tx.set(enrollmentRef, {
+              memberUid: item.uid,
+              teachingId: item.teachingId,
+              registrationId: item.id,
+              confirmationId: item.confirmationId || '',
+              status: 'confirmed',
+              paymentStatus: item.paymentStatus || 'pending',
+              accessSource: 'owner-confirmed',
+              enrolledAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            });
+          } else {
+            tx.delete(enrollmentRef);
+          }
+        }
+        if(notificationRef){
+          tx.set(notificationRef, {
+            uid: item.uid,
+            type: grantsAccess ? 'registration-confirmed' : 'registration-status',
+            title: notificationTitle,
+            detail: notificationDetail,
+            deepLink: grantsAccess ? 'classes' : 'receipts',
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
+      });
+      item.status = nextStatus;
+      item.accessGranted = grantsAccess;
+      if(nextStatus === 'refunded') item.paymentStatus = 'refunded';
+    }
+    openClassRegDetail(classRegDetailId);
+    renderClassRegistrationsPanel();
+    document.getElementById('classRegDetailStatus').textContent = 'Updated.';
+  } catch (err) {
+    console.error('[registrations] status update failed', err);
+    document.getElementById('classRegDetailStatus').textContent = 'Could not update this registration.';
+  } finally {
+    btn.disabled = false;
   }
-  if(item.status === 'cancelled' || item.status === 'refunded') item.amountPaid = item.status === 'refunded' ? item.amountPaid : 0;
-  saveTeachingRegistrationsToStorage();
-  if(item.status === 'cancelled' && prevStatus !== 'cancelled'){
-    DEMO_NOTIFICATIONS.unshift({ id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'Registration Cancelled',
-      detail: (item.firstName + ' ' + item.lastName).trim() + ' — ' + item.teachingTitle + '. Confirmation: ' + item.confirmationId });
-    renderOwnerNotifications();
-    pushMemberNotification(item.uid, 'class-cancelled', 'Class Cancelled', item.teachingTitle + ' — your registration was cancelled.');
-  }
-  if(item.status === 'refunded'){
-    DEMO_NOTIFICATIONS.unshift({ id: 'n' + (++DEMO_NOTIF_SEQ), read: false, title: 'Payment Refunded (Preview)',
-      detail: (item.firstName + ' ' + item.lastName).trim() + ' — ' + item.teachingTitle + '. Confirmation: ' + item.confirmationId });
-    renderOwnerNotifications();
-  }
-  openClassRegDetail(classRegDetailId);
-  renderClassRegistrationsPanel();
-  document.getElementById('classRegDetailStatus').textContent = 'Updated.';
 });
-document.getElementById('classRegDetailAttendanceBtns').addEventListener('click', event => {
+document.getElementById('classRegDetailAttendanceBtns').addEventListener('click', async event => {
   const btn = event.target.closest('[data-classreg-attendance]');
   if(!btn || !classRegDetailId) return;
-  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
+  const item = classRegistrationSource().find(r => r.id === classRegDetailId);
   if(!item) return;
-  item.attendanceStatus = btn.dataset.classregAttendance;
-  saveTeachingRegistrationsToStorage();
-  openClassRegDetail(classRegDetailId);
-  renderClassRegistrationsPanel();
-  document.getElementById('classRegDetailStatus').textContent = 'Updated.';
+  const attendanceStatus = btn.dataset.classregAttendance;
+  try {
+    if(!(DEMO_MODE || (ownerSim && ownerSim.isActive()))){
+      await updateDoc(doc(db, 'teachingRegistrations', item.id), { attendanceStatus, updatedAt: serverTimestamp() });
+    }
+    item.attendanceStatus = attendanceStatus;
+    if(DEMO_MODE || (ownerSim && ownerSim.isActive())) saveTeachingRegistrationsToStorage();
+    openClassRegDetail(classRegDetailId);
+    renderClassRegistrationsPanel();
+    document.getElementById('classRegDetailStatus').textContent = 'Updated.';
+  } catch (err) {
+    console.error('[registrations] attendance update failed', err);
+    document.getElementById('classRegDetailStatus').textContent = 'Could not update attendance.';
+  }
 });
-document.getElementById('classRegDetailSaveNotesBtn').addEventListener('click', () => {
+document.getElementById('classRegDetailSaveNotesBtn').addEventListener('click', async () => {
   if(!classRegDetailId) return;
-  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === classRegDetailId);
+  const item = classRegistrationSource().find(r => r.id === classRegDetailId);
   if(!item) return;
-  item.notes = document.getElementById('classRegDetailNotes').value.trim();
-  saveTeachingRegistrationsToStorage();
-  document.getElementById('classRegDetailStatus').textContent = 'Notes saved.';
-  renderClassRegList();
+  const notes = document.getElementById('classRegDetailNotes').value.trim();
+  try {
+    if(!(DEMO_MODE || (ownerSim && ownerSim.isActive()))){
+      await updateDoc(doc(db, 'teachingRegistrations', item.id), { notes, updatedAt: serverTimestamp() });
+    }
+    item.notes = notes;
+    if(DEMO_MODE || (ownerSim && ownerSim.isActive())) saveTeachingRegistrationsToStorage();
+    document.getElementById('classRegDetailStatus').textContent = 'Notes saved.';
+    renderClassRegList();
+  } catch (err) {
+    console.error('[registrations] notes update failed', err);
+    document.getElementById('classRegDetailStatus').textContent = 'Could not save notes.';
+  }
 });
 ['classRegSearch'].forEach(id => document.getElementById(id)?.addEventListener('input', renderClassRegList));
 ['classRegClassFilter'].forEach(id => document.getElementById(id)?.addEventListener('change', () => { renderClassRegStats(); renderClassRegList(); }));
