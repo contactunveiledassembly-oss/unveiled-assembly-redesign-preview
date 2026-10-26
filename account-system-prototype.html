@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="description" content="Private member and owner account-system prototype for The Unveiled Assembly." />
+  <title>Account System Prototype | The Unveiled Assembly</title>
+  <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=account-prototype-20261025" />
+  <link rel="stylesheet" href="assets/account-system-prototype.css?v=1" />
+</head>
+<body class="ap-body">
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="ap-topbar">
+    <a class="ap-brand" href="index.html" aria-label="Back to The Unveiled Assembly home">
+      <img src="assets/ua-logo-tight.png" alt="" />
+      <span><strong>The Unveiled</strong><small>Assembly of Christ Jesus</small></span>
+    </a>
+    <div class="ap-prototype-label"><span></span> Private Prototype · Sample Data Only</div>
+    <div class="ap-view-switch" role="group" aria-label="Choose prototype view">
+      <button type="button" class="active" data-view-switch="member" aria-pressed="true">Member Experience</button>
+      <button type="button" data-view-switch="owner" aria-pressed="false">Owner Experience</button>
+    </div>
+  </header>
+
+  <main class="ap-stage">
+    <section class="ap-view active" data-prototype-view="member" aria-label="Member experience prototype">
+      <aside class="ap-sidebar">
+        <div class="ap-sidebar-head">
+          <span class="ap-avatar">M</span>
+          <div><strong>Maya Johnson</strong><small>Member Account</small></div>
+        </div>
+        <nav aria-label="Member prototype navigation">
+          <button type="button" class="active" data-member-target="overview"><span>01</span>Overview</button>
+          <button type="button" data-member-target="sessions"><span>02</span>My Sessions</button>
+          <button type="button" data-member-target="teachings"><span>03</span>My Teachings</button>
+          <button type="button" data-member-target="receipts"><span>04</span>Receipts</button>
+          <button type="button" data-member-target="notifications"><span>05</span>Notifications</button>
+          <button type="button" data-member-target="account"><span>06</span>Account</button>
+        </nav>
+        <div class="ap-sidebar-foot"><small>Christ Revealed.<br>A People Unveiled.</small><a href="index.html">Return to website ↗</a></div>
+      </aside>
+
+      <div class="ap-workspace">
+        <section class="ap-panel active" data-member-panel="overview">
+          <div class="ap-page-heading"><div><span class="ap-kicker">Member Dashboard</span><h1>Welcome back, Maya.</h1><p>Your sessions, teachings, receipts, and ministry updates—all in one quiet place.</p></div><div class="ap-verse">A people awakened.<br>A generation equipped.<br>Christ revealed.</div></div>
+          <div class="ap-card-grid ap-card-grid-two">
+            <article class="ap-card ap-feature-card">
+              <div class="ap-card-top"><span class="ap-micro">Upcoming Session</span><span class="ap-status">Confirmed</span></div>
+              <h2>30-Minute One-on-One</h2><p>Tuesday, November 10 · 3:00 PM ET</p>
+              <div class="ap-card-actions"><button type="button" class="ap-primary" data-member-target-jump="sessions">View Details</button><button type="button" class="ap-secondary" data-toast="A real reschedule flow would open here.">Reschedule</button></div>
+            </article>
+            <article class="ap-card ap-feature-card">
+              <div class="ap-card-top"><span class="ap-micro">Upcoming Teaching</span><span class="ap-status">Registered</span></div>
+              <h2>Discernment</h2><p>The Ability to See Clearly · Thursday, November 12 · 7:30 PM ET</p>
+              <div class="ap-card-actions"><button type="button" class="ap-primary" data-member-target-jump="teachings">Enter Classroom</button></div>
+            </article>
+          </div>
+          <div class="ap-card-grid ap-card-grid-two ap-lower-grid">
+            <article class="ap-card"><div class="ap-section-title"><span class="ap-micro">Notifications</span><button type="button" data-member-target-jump="notifications">View all</button></div><div class="ap-feed"><div><i></i><p><strong>Your session begins tomorrow</strong><span>We will remind you again one hour before your appointment.</span></p><time>Nov 9</time></div><div><i></i><p><strong>New class resource available</strong><span>A preparation guide was added to Discernment.</span></p><time>Nov 8</time></div></div></article>
+            <article class="ap-card"><div class="ap-section-title"><span class="ap-micro">Notification Preferences</span><button type="button" data-member-target-jump="notifications">Manage</button></div><div class="ap-pref-list"><div><p><strong>Booking confirmations</strong><span>Email</span></p><button class="ap-toggle on" type="button" aria-pressed="true"><span></span></button></div><div><p><strong>Session reminders</strong><span>Text</span></p><button class="ap-toggle on" type="button" aria-pressed="true"><span></span></button></div><div class="ap-optional"><p><strong>Assembly Updates</strong><span>Optional newsletter</span></p><button class="ap-toggle" type="button" aria-pressed="false"><span></span></button></div></div></article>
+          </div>
+          <article class="ap-card ap-wide-card"><div class="ap-section-title"><span class="ap-micro">Recent Receipts</span><button type="button" data-member-target-jump="receipts">View all</button></div><div class="ap-table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th></th></tr></thead><tbody><tr><td>Nov 10, 2026</td><td>One-on-One Session</td><td>$0.00</td><td><button class="ap-table-btn" data-receipt="TUA-1ON1-4812">View Receipt</button></td></tr><tr><td>Nov 5, 2026</td><td>Discernment Class</td><td>$25.00</td><td><button class="ap-table-btn" data-receipt="TUA-CLASS-2951">View Receipt</button></td></tr></tbody></table></div></article>
+        </section>
+
+        <section class="ap-panel" data-member-panel="sessions">
+          <div class="ap-page-heading compact"><div><span class="ap-kicker">My Sessions</span><h1>Your one-on-ones.</h1><p>Everything connected to your scheduled ministry sessions.</p></div></div>
+          <article class="ap-card ap-detail-card"><div class="ap-detail-date"><span>Nov</span><strong>10</strong><small>2026</small></div><div class="ap-detail-main"><span class="ap-status">Confirmed</span><h2>30-Minute One-on-One</h2><p>Tuesday · 3:00–3:30 PM ET</p><div class="ap-note">Your private meeting details will appear here before the session. Email and text reminders are enabled.</div></div><div class="ap-detail-actions"><button class="ap-primary" data-toast="The meeting room will become available at the scheduled time.">Meeting Details</button><button class="ap-secondary" data-toast="A real reschedule flow would open here.">Reschedule</button></div></article>
+        </section>
+
+        <section class="ap-panel" data-member-panel="teachings">
+          <div class="ap-page-heading compact"><div><span class="ap-kicker">My Teachings</span><h1>Your classroom.</h1><p>Registered classes, resources, announcements, and access links.</p></div></div>
+          <article class="ap-card ap-classroom-card"><div class="ap-class-art"><span>Registered</span><strong>Discernment</strong><small>The Ability to See Clearly</small></div><div class="ap-class-copy"><span class="ap-micro">Thursday · November 12 · 7:30 PM ET</span><h2>Prepare for class.</h2><p>Your preparation guide is ready. The Zoom room will appear inside this classroom before class begins.</p><div class="ap-resource-row"><span>Preparation Guide · PDF</span><button data-toast="This would open the member-only class resource.">Open</button></div><button class="ap-primary" data-toast="The live classroom would open here.">Enter Classroom</button></div></article>
+        </section>
+
+        <section class="ap-panel" data-member-panel="receipts">
+          <div class="ap-page-heading compact"><div><span class="ap-kicker">Receipts</span><h1>Your payment history.</h1><p>A permanent account copy, even when the receipt is also emailed to you.</p></div></div>
+          <article class="ap-card"><div class="ap-filter-row"><input type="search" placeholder="Search receipts…" aria-label="Search receipts"><select aria-label="Filter receipts"><option>All receipts</option><option>One-on-ones</option><option>Teachings</option></select></div><div class="ap-table-wrap"><table><thead><tr><th>Receipt</th><th>Date</th><th>Description</th><th>Status</th><th>Amount</th><th></th></tr></thead><tbody><tr><td>TUA-1ON1-4812</td><td>Nov 10</td><td>One-on-One Session</td><td><span class="ap-status">Confirmed</span></td><td>$0.00</td><td><button class="ap-table-btn" data-receipt="TUA-1ON1-4812">View</button></td></tr><tr><td>TUA-CLASS-2951</td><td>Nov 5</td><td>Discernment Class</td><td><span class="ap-status">Paid</span></td><td>$25.00</td><td><button class="ap-table-btn" data-receipt="TUA-CLASS-2951">View</button></td></tr></tbody></table></div></article>
+        </section>
+
+        <section class="ap-panel" data-member-panel="notifications">
+          <div class="ap-page-heading compact"><div><span class="ap-kicker">Notifications</span><h1>Choose how we reach you.</h1><p>Required service messages stay separate from optional ministry updates.</p></div></div>
+          <div class="ap-card-grid ap-card-grid-two">
+            <article class="ap-card"><span class="ap-micro">Booking & Class Messages</span><h2>Service notifications</h2><p class="ap-card-copy">Confirmations, schedule changes, receipts, classroom access, and reminders.</p><div class="ap-pref-list"><div><p><strong>Email confirmations</strong><span>Recommended</span></p><button class="ap-toggle on" type="button" aria-pressed="true"><span></span></button></div><div><p><strong>Text reminders</strong><span>24 hours and 1 hour before</span></p><button class="ap-toggle on" type="button" aria-pressed="true"><span></span></button></div><div><p><strong>In-account alerts</strong><span>Always available</span></p><button class="ap-toggle on" type="button" aria-pressed="true"><span></span></button></div></div></article>
+            <article class="ap-card ap-newsletter-card"><span class="ap-micro">Completely Optional</span><h2>Assembly Updates</h2><p class="ap-card-copy">New teachings, special gatherings, ministry letters, and important announcements—not booking receipts or required class messages.</p><label class="ap-consent"><input type="checkbox" id="memberNewsletterConsent"><span><strong>Yes, send me Assembly Updates.</strong><small>I can unsubscribe anytime without affecting my account, bookings, or classes.</small></span></label><button class="ap-primary" data-save-preferences>Save Preferences</button></article>
+          </div>
+        </section>
+
+        <section class="ap-panel" data-member-panel="account">
+          <div class="ap-page-heading compact"><div><span class="ap-kicker">Account</span><h1>Your information.</h1><p>One account supports every booking and class registration.</p></div></div>
+          <div class="ap-card-grid ap-card-grid-two"><article class="ap-card"><span class="ap-micro">Profile</span><div class="ap-form-grid"><label>Full name<input value="Maya Johnson"></label><label>Email<input type="email" value="maya@example.com"></label><label>Phone<input type="tel" value="(478) 555-0142"></label><label>Time zone<select><option>Eastern Time</option></select></label></div><button class="ap-primary" data-toast="Prototype profile saved.">Save Changes</button></article><article class="ap-card"><span class="ap-micro">Account Purpose</span><h2>Why an account is required.</h2><ul class="ap-check-list"><li>Keep receipts and confirmations together</li><li>Access your teaching classroom</li><li>Manage sessions and schedules</li><li>Receive only the messages you choose</li></ul></article></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="ap-view" data-prototype-view="owner" aria-label="Owner experience prototype" hidden>
+      <aside class="ap-sidebar ap-owner-sidebar">
+        <div class="ap-sidebar-head"><span class="ap-avatar">Y</span><div><strong>Yaunah</strong><small>Private Owner View</small></div></div>
+        <nav aria-label="Owner prototype navigation">
+          <button type="button" class="active" data-owner-target="dashboard"><span>01</span>Dashboard</button>
+          <button type="button" data-owner-target="bookings"><span>02</span>Bookings</button>
+          <button type="button" data-owner-target="registrations"><span>03</span>Registrations</button>
+          <button type="button" data-owner-target="people"><span>04</span>People</button>
+          <button type="button" data-owner-target="payments"><span>05</span>Payments</button>
+          <button type="button" data-owner-target="communications"><span>06</span>Communications</button>
+          <button type="button" data-owner-target="website"><span>07</span>Website</button>
+        </nav>
+        <div class="ap-sidebar-foot"><small>Same mission.<br>More people.<br>Deeper discipleship.</small><button type="button" data-view-switch="member">Preview Member View ↗</button></div>
+      </aside>
+
+      <div class="ap-workspace">
+        <section class="ap-panel active" data-owner-panel="dashboard">
+          <div class="ap-page-heading"><div><span class="ap-kicker">Ministry Dashboard</span><h1>Good morning, Yaunah.</h1><p>Here is what is happening across The Unveiled Assembly.</p></div><div class="ap-verse">Private owner view.<br>Live ministry activity.<br>Clear next steps.</div></div>
+          <div class="ap-stats"><article><span>Members</span><strong>128</strong><small>+8 this month</small></article><article><span>Upcoming Sessions</span><strong>12</strong><small>Next 30 days</small></article><article><span>Teaching Registrations</span><strong>34</strong><small>Across 3 classes</small></article><article><span>Collected</span><strong>$850</strong><small>Current month</small></article></div>
+          <div class="ap-card-grid ap-owner-dashboard-grid">
+            <article class="ap-card"><div class="ap-section-title"><span class="ap-micro">Recent Activity</span><button data-owner-target-jump="people">View all</button></div><div class="ap-activity-list"><div><span class="ap-avatar small">M</span><p><strong>Maya Johnson</strong><span>Booked a one-on-one session</span></p><em>Confirmed</em></div><div><span class="ap-avatar small">D</span><p><strong>Daniel Brooks</strong><span>Registered for Discernment</span></p><em>Registered</em></div><div><span class="ap-avatar small">T</span><p><strong>Tasha Reed</strong><span>Purchased a class recording</span></p><em>Paid</em></div></div></article>
+            <article class="ap-card"><div class="ap-section-title"><span class="ap-micro">Communications</span><button data-owner-target-jump="communications">Open</button></div><div class="ap-audience-mini"><div><strong>Transactional</strong><span>Confirmations & receipts</span><em>Automatic</em></div><div><strong>Service Updates</strong><span>People with active bookings</span><em>46 people</em></div><div><strong>Assembly Updates</strong><span>Opted-in subscribers only</span><em>82 people</em></div></div></article>
+          </div>
+          <article class="ap-card ap-wide-card"><div class="ap-section-title"><span class="ap-micro">Receipts & Payments</span><button data-owner-target-jump="payments">View all</button></div><div class="ap-table-wrap"><table><thead><tr><th>Date</th><th>Member</th><th>Description</th><th>Amount</th><th></th></tr></thead><tbody><tr><td>Nov 10</td><td>Maya Johnson</td><td>One-on-One Session</td><td>$0.00</td><td><button class="ap-table-btn" data-receipt="TUA-1ON1-4812">View Receipt</button></td></tr><tr><td>Nov 8</td><td>Daniel Brooks</td><td>Discernment Class</td><td>$25.00</td><td><button class="ap-table-btn" data-receipt="TUA-CLASS-8820">View Receipt</button></td></tr></tbody></table></div></article>
+        </section>
+
+        <section class="ap-panel" data-owner-panel="bookings"><div class="ap-page-heading compact"><div><span class="ap-kicker">Bookings</span><h1>One-on-one sessions.</h1><p>Appointments, schedules, confirmations, reminders, and receipts.</p></div></div><article class="ap-card"><div class="ap-filter-row"><input type="search" placeholder="Search a name or confirmation…" aria-label="Search bookings"><select><option>Upcoming</option><option>Pending</option><option>Completed</option></select><button class="ap-primary" data-toast="The real Add Appointment form would open here.">Add Appointment</button></div><div class="ap-table-wrap"><table><thead><tr><th>Member</th><th>Session</th><th>Date</th><th>Status</th><th>Reminder</th></tr></thead><tbody><tr><td>Maya Johnson</td><td>30-Minute One-on-One</td><td>Nov 10 · 3:00 PM</td><td><span class="ap-status">Confirmed</span></td><td>Email + Text</td></tr><tr><td>Amara Okafor</td><td>15-Minute One-on-One</td><td>Nov 14 · 2:30 PM</td><td><span class="ap-status pending">Pending</span></td><td>Email</td></tr></tbody></table></div></article></section>
+
+        <section class="ap-panel" data-owner-panel="registrations"><div class="ap-page-heading compact"><div><span class="ap-kicker">Registrations</span><h1>Teaching enrollment.</h1><p>Who registered, what they paid, and whether access is ready.</p></div></div><article class="ap-card"><div class="ap-table-wrap"><table><thead><tr><th>Member</th><th>Teaching</th><th>Payment</th><th>Classroom</th><th>Status</th></tr></thead><tbody><tr><td>Daniel Brooks</td><td>Discernment</td><td>$25.00</td><td>Access granted</td><td><span class="ap-status">Registered</span></td></tr><tr><td>Tasha Reed</td><td>Prayer & Fasting</td><td>Complimentary</td><td>Access granted</td><td><span class="ap-status">Registered</span></td></tr></tbody></table></div></article></section>
+
+        <section class="ap-panel" data-owner-panel="people"><div class="ap-page-heading compact"><div><span class="ap-kicker">People</span><h1>Members & communication.</h1><p>Account activity and consent are visible without mixing them together.</p></div></div><article class="ap-card"><div class="ap-filter-row"><input type="search" placeholder="Search members…" aria-label="Search members"><select><option>All members</option><option>Newsletter subscribers</option><option>Active bookings</option></select></div><div class="ap-table-wrap"><table><thead><tr><th>Member</th><th>Account</th><th>Email reminders</th><th>Text reminders</th><th>Assembly Updates</th></tr></thead><tbody><tr><td>Maya Johnson</td><td>Active</td><td>On</td><td>On</td><td>Not subscribed</td></tr><tr><td>Daniel Brooks</td><td>Active</td><td>On</td><td>Off</td><td>Subscribed</td></tr><tr><td>Tasha Reed</td><td>Active</td><td>On</td><td>On</td><td>Subscribed</td></tr></tbody></table></div></article></section>
+
+        <section class="ap-panel" data-owner-panel="payments"><div class="ap-page-heading compact"><div><span class="ap-kicker">Payments</span><h1>Receipts & transaction history.</h1><p>Every class payment and complimentary booking in one searchable record.</p></div></div><article class="ap-card"><div class="ap-filter-row"><input type="search" placeholder="Search transactions…" aria-label="Search transactions"><select><option>All transactions</option><option>Paid</option><option>Complimentary</option><option>Refunded</option></select></div><div class="ap-table-wrap"><table><thead><tr><th>Receipt</th><th>Member</th><th>Description</th><th>Status</th><th>Amount</th><th></th></tr></thead><tbody><tr><td>TUA-CLASS-8820</td><td>Daniel Brooks</td><td>Discernment Class</td><td><span class="ap-status">Paid</span></td><td>$25.00</td><td><button class="ap-table-btn" data-receipt="TUA-CLASS-8820">View</button> <button class="ap-table-btn" data-toast="Receipt resent to Daniel.">Resend</button></td></tr><tr><td>TUA-1ON1-4812</td><td>Maya Johnson</td><td>One-on-One Session</td><td><span class="ap-status">Confirmed</span></td><td>$0.00</td><td><button class="ap-table-btn" data-receipt="TUA-1ON1-4812">View</button> <button class="ap-table-btn" data-toast="Receipt resent to Maya.">Resend</button></td></tr></tbody></table></div></article></section>
+
+        <section class="ap-panel" data-owner-panel="communications"><div class="ap-page-heading compact"><div><span class="ap-kicker">Communications</span><h1>Send the right message.</h1><p>Required account messages and optional ministry updates stay clearly separated.</p></div><button class="ap-primary" data-open-composer>Create Update</button></div><div class="ap-card-grid ap-card-grid-three"><button class="ap-card ap-audience-card active" data-audience="transactional"><span>01</span><h2>Transactional</h2><p>Confirmations, receipts, password help, and changes tied to a person’s action.</p><strong>Automatic · All applicable members</strong></button><button class="ap-card ap-audience-card" data-audience="service"><span>02</span><h2>Service Updates</h2><p>Session or class information sent only to people already participating.</p><strong>46 active participants</strong></button><button class="ap-card ap-audience-card" data-audience="assembly"><span>03</span><h2>Assembly Updates</h2><p>New teachings, gatherings, ministry letters, and general announcements.</p><strong>82 opted-in subscribers</strong></button></div><article class="ap-card ap-insight"><span class="ap-micro">Owner Insight</span><h2>One rule keeps this clean.</h2><p>Never mix required booking messages with optional ministry updates. A person can leave the newsletter without losing receipts, class access, reminders, or their account.</p></article></section>
+
+        <section class="ap-panel" data-owner-panel="website"><div class="ap-page-heading compact"><div><span class="ap-kicker">Website</span><h1>Account experience.</h1><p>This prototype would eventually become editable inside your existing Website and Settings areas.</p></div></div><div class="ap-card-grid ap-card-grid-two"><article class="ap-card"><span class="ap-micro">Member Portal</span><h2>Editable labels & messages</h2><p class="ap-card-copy">Welcome copy, receipt language, notification explanations, and account-required messaging.</p><button class="ap-secondary" data-toast="This would open the real page editor.">Open Page Editor</button></article><article class="ap-card"><span class="ap-micro">Communications</span><h2>Defaults & consent language</h2><p class="ap-card-copy">Reminder timing, newsletter wording, unsubscribe language, and sender identity.</p><button class="ap-secondary" data-toast="This would open communication settings.">Open Settings</button></article></div></section>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="ap-dialog" id="apReceiptDialog">
+    <button class="ap-dialog-close" type="button" data-close-dialog aria-label="Close">×</button>
+    <div class="ap-receipt-head"><img src="assets/ua-logo-tight.png" alt=""><div><span>The Unveiled Assembly</span><small>Receipt & Confirmation</small></div></div>
+    <div class="ap-receipt-number"><span>Receipt</span><strong id="apReceiptNumber">TUA-CLASS-2951</strong></div>
+    <div class="ap-receipt-body"><div><span>Member</span><strong id="apReceiptMember">Maya Johnson</strong></div><div><span>Description</span><strong id="apReceiptDescription">Discernment Class</strong></div><div><span>Date</span><strong>November 5, 2026</strong></div><div><span>Status</span><strong>Confirmed</strong></div></div>
+    <div class="ap-receipt-total"><span>Total</span><strong id="apReceiptAmount">$25.00</strong></div>
+    <p>This receipt remains available in the member account and can also be delivered by email.</p>
+    <div class="ap-dialog-actions"><button class="ap-secondary" data-toast="A downloadable PDF would be created here.">Download PDF</button><button class="ap-primary" data-toast="Receipt sent by email.">Email Receipt</button></div>
+  </dialog>
+
+  <dialog class="ap-dialog ap-composer" id="apComposerDialog">
+    <button class="ap-dialog-close" type="button" data-close-dialog aria-label="Close">×</button>
+    <span class="ap-kicker">Create Communication</span><h2>Assembly Update</h2><p>Prototype only—nothing will actually be sent.</p>
+    <form id="apComposerForm"><label>Audience<select id="apComposerAudience"><option value="transactional">Transactional</option><option value="service">Service Updates</option><option value="assembly" selected>Assembly Updates · opted-in only</option></select></label><label>Subject<input required value="What’s happening at The Assembly"></label><label>Message<textarea rows="6" required>Grace and peace. Here is what is coming up at The Unveiled Assembly…</textarea></label><label class="ap-consent"><input type="checkbox" required><span><strong>I confirmed this is the correct audience.</strong><small>Optional updates will only go to people who subscribed.</small></span></label><button class="ap-primary" type="submit">Preview Update</button></form>
+  </dialog>
+
+  <div class="ap-toast" id="apToast" role="status" aria-live="polite"></div>
+  <script src="assets/account-system-prototype.js?v=1"></script>
+</body>
+</html>
