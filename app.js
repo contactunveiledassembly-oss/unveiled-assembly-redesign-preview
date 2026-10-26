@@ -28,7 +28,7 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-import { initSiteManagement } from "./site-management.js?v=4";
+import { initSiteManagement } from "./site-management.js?v=5";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
 
@@ -1207,7 +1207,7 @@ function dialogsHtml(){
       </div>
       <div id="ownerSimBar"></div>
       <div class="owner-global-search">
-        <input id="ownerGlobalSearch" type="text" placeholder="Search members, confirmation IDs, classes, prayer requests, testimonials…" autocomplete="off" />
+        <input id="ownerGlobalSearch" type="text" placeholder="Search members, confirmation IDs, classes, settings…" autocomplete="off" />
         <div id="ownerGlobalSearchResults" hidden></div>
       </div>
       <div class="owner-shell">
@@ -8937,10 +8937,36 @@ function showOwnerSection(name){
    never private content (a prayer request's message, for example) —
    clicking opens the real, authorized detail view for that record.
    --------------------------------------------------------------- */
+// A static directory of named settings/controls, searched alongside
+// live records below — lets an admin type "discount" or "refund policy"
+// and jump straight there instead of hunting through every department's
+// tabs to find the one field they want.
+const OWNER_SETTINGS_CATALOG = [
+  { title: 'Home Page', keywords: 'home homepage hero website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('Home Page'); } },
+  { title: 'One-on-One Page', keywords: 'one on one booking page website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('One-on-One Page'); } },
+  { title: 'Events Page', keywords: 'events page gathering website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('Events Page'); } },
+  { title: 'Beliefs Page', keywords: 'beliefs doctrine statement website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('Beliefs'); } },
+  { title: 'Give Page', keywords: 'give giving donate donation page website edit', action: () => { showOwnerSection('website'); siteManagement.openWebsitePageEditor('Give'); } },
+  { title: 'Website Pages & Visibility', keywords: 'pages visibility publish hide show website', action: () => showOwnerSection('website') },
+  { title: 'Prayer Request Terms', keywords: 'prayer policy terms form', action: () => showOwnerSection('policies') },
+  { title: 'Testimony Submission Terms', keywords: 'testimony testimonial policy terms form', action: () => showOwnerSection('policies') },
+  { title: 'Class Review Terms', keywords: 'class review policy terms form', action: () => showOwnerSection('policies') },
+  { title: 'Booking / No-Refund Policy', keywords: 'refund cancellation policy booking checkout', action: () => showOwnerSection('policies') },
+  { title: 'Media Library', keywords: 'media images photos upload', action: () => showOwnerSection('media') },
+  { title: 'Account Profile', keywords: 'profile name photo account', action: () => showOwnerSection('settings') },
+  { title: 'Account Settings (Email & Password)', keywords: 'password email account security login', action: () => showOwnerSection('settings') },
+  { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => showOwnerSection('payments') },
+  { title: 'Session Types', keywords: 'session types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
+  { title: 'Blocked Dates', keywords: 'blocked dates vacation unavailable bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('blocked'); } },
+  { title: 'Availability', keywords: 'availability hours schedule windows bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('availability'); } },
+  { title: 'Booking Notifications', keywords: 'notifications reminders booking confirmation email', action: () => { showOwnerSection('bookings'); showBookingsTab('notifications'); } }
+];
 function ownerGlobalSearchResults(q){
   q = q.trim().toLowerCase();
   if(!q) return [];
   const results = [];
+  OWNER_SETTINGS_CATALOG.filter(s => (s.title + ' ' + s.keywords).toLowerCase().includes(q))
+    .forEach(s => results.push({ type: 'Setting', title: s.title, action: s.action }));
   // Correction from the earlier pass: on closer check, Class/Prayer
   // Request/Testimonial/Class Review search below were already reading
   // TEACHINGS/PRAYER_REQUESTS/TESTIMONIALS/CLASS_REVIEWS — the real,
