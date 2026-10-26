@@ -479,27 +479,33 @@ async function savePageVisibility(){
 // A fixed overlay (not a content swap) so this works the same way on every
 // page regardless of that page's own markup.
 function applyPageVisibility(){
+  // __siteWide is the master switch: off overrides every individual page
+  // toggle (they keep their own saved state underneath — switching the
+  // master back on just goes back to respecting each one again).
+  const siteWideOff = PAGE_VISIBILITY.__siteWide === false;
   // The Events nav link also has its own hide reason (events-system.js's
   // pageMode) — only ever claim/release the hide owned by this toggle
   // (marked below), never clear a hide the other system owns.
   NAV_LINKS.forEach(l => {
-    const hidden = PAGE_VISIBILITY[l.page] === false;
+    const hidden = siteWideOff || PAGE_VISIBILITY[l.page] === false;
     document.querySelectorAll('a[data-page="' + l.page + '"]').forEach(a => {
       if(hidden){ a.hidden = true; a.dataset.hiddenByPageVisibility = '1'; }
       else if(a.dataset.hiddenByPageVisibility){ a.hidden = false; delete a.dataset.hiddenByPageVisibility; }
     });
   });
   const currentPage = document.body.dataset.page;
-  const isComingSoon = currentPage && PAGE_VISIBILITY[currentPage] === false;
+  const isNavPage = NAV_LINKS.some(l => l.page === currentPage);
+  const isComingSoon = isNavPage && (siteWideOff || PAGE_VISIBILITY[currentPage] === false);
   let overlay = document.getElementById('pageComingSoonOverlay');
   if(isComingSoon){
     if(!overlay){
       overlay = document.createElement('div');
       overlay.id = 'pageComingSoonOverlay';
       overlay.className = 'page-coming-soon-overlay';
-      const label = (NAV_LINKS.find(l => l.page === currentPage) || {}).label || 'This Page';
+      const label = siteWideOff ? 'The Unveiled Assembly' : ((NAV_LINKS.find(l => l.page === currentPage) || {}).label || 'This Page');
       overlay.innerHTML = '<div class="page-coming-soon-content"><div class="eyebrow">' + escapeHtml(label) + '</div>' +
         '<h1 class="teaching-display">Coming<br>Soon.</h1>' +
+        '<p class="page-coming-soon-sub">Stay updated — check back soon.</p>' +
         '<a href="' + BASE + 'index.html" class="btn">Return Home</a></div>';
       document.body.appendChild(overlay);
     }
@@ -1296,7 +1302,7 @@ function dialogsHtml(){
             <button type="button" class="admin-tab active" data-events-tab="overview">Overview</button>
             <button type="button" class="admin-tab" data-events-tab="details">Event Details</button>
             <button type="button" class="admin-tab" data-events-tab="announcements">Announcements</button>
-            <button type="button" class="admin-tab" data-events-tab="access">Tickets, Stream &amp; Press</button>
+            <button type="button" class="admin-tab" data-events-tab="access">Tickets &amp; Stream</button>
           </div>
 
           <div class="admin-edit-panel" data-events-panel="overview">
@@ -1359,8 +1365,6 @@ function dialogsHtml(){
                 <div class="booking-field"><label for="eventAdminTicketUrl">Registration / Ticket Link</label><input id="eventAdminTicketUrl" type="url" placeholder="https://…" /></div>
                 <div class="booking-field"><label for="eventAdminTicketLabel">Button Label</label><input id="eventAdminTicketLabel" placeholder="Register" /></div>
                 <div class="booking-field"><label for="eventAdminStreamUrl">Livestream / Online Access</label><input id="eventAdminStreamUrl" type="url" placeholder="https://…" /></div>
-                <div class="booking-field"><label for="eventAdminPressUrl">Media / Press Application</label><input id="eventAdminPressUrl" type="url" placeholder="https://…" /></div>
-                <div class="booking-field full"><label for="eventAdminPressNotice">Press Notice</label><textarea id="eventAdminPressNotice" rows="4" placeholder="Information for members of the press and media."></textarea></div>
               </div>
               <button class="admin-btn-solid" type="submit" style="margin-top:16px">Save Access Links</button>
               <div class="form-status" id="eventAccessStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
@@ -1370,6 +1374,7 @@ function dialogsHtml(){
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="website">
           <span class="portal-label">Website Pages</span>
           <p class="admin-panel-intro">Edit approved pages without changing their design. We are connecting the site page by page; One-on-One is ready now.</p>
+          <div id="ownerSiteMasterToggle"></div>
           <div id="ownerWebsitePagesList" class="admin-website-pages"></div>
           <div id="ownerWebsiteEditor"></div>
         </article>
@@ -3756,9 +3761,15 @@ const DEFAULT_CLASS_REVIEWS = [
 // fetch the real thing — a visitor must never see DEFAULT_TESTIMONIALS'
 // sample "Sarah..." story rendered as if it were real, even for the one
 // frame before a real fetch resolves.
+// Prayer requests are private submissions, never shown to visitors, so
+// production starts that one genuinely empty — nothing to preview there.
+// Testimonials/reviews ARE public showcase content, so production starts
+// with the same example cards DEMO_MODE shows (same reasoning as
+// Teachings below): gives the page a sense of the finished layout until
+// real published ones exist, which then always replace them for good.
 let PRAYER_REQUESTS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.prayerRequests, DEFAULT_PRAYER_REQUESTS) : [];
-let TESTIMONIALS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.testimonials, DEFAULT_TESTIMONIALS) : [];
-let CLASS_REVIEWS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.classReviews, DEFAULT_CLASS_REVIEWS) : [];
+let TESTIMONIALS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.testimonials, DEFAULT_TESTIMONIALS) : [...DEFAULT_TESTIMONIALS];
+let CLASS_REVIEWS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.classReviews, DEFAULT_CLASS_REVIEWS) : [...DEFAULT_CLASS_REVIEWS];
 let MINISTRY_POLICIES = loadStoredJson(MINISTRY_STORAGE_KEYS.policies, DEFAULT_MINISTRY_POLICIES);
 
 function loadStoredJson(key, fallback){
@@ -3917,8 +3928,12 @@ async function loadPublishedMinistryContent(){
       getDocs(collection(db, 'publicTestimonials')),
       getDocs(collection(db, 'publicClassReviews'))
     ]);
-    TESTIMONIALS = []; testimonySnap.forEach(d => TESTIMONIALS.push({ id: d.id, ...d.data() }));
-    CLASS_REVIEWS = []; reviewSnap.forEach(d => CLASS_REVIEWS.push({ id: d.id, ...d.data() }));
+    const testimonials = []; testimonySnap.forEach(d => testimonials.push({ id: d.id, ...d.data() }));
+    const reviews = []; reviewSnap.forEach(d => reviews.push({ id: d.id, ...d.data() }));
+    // Once a real published one exists it always wins — until then, keep
+    // showing the example cards instead of an empty section.
+    if(testimonials.length) TESTIMONIALS = testimonials;
+    if(reviews.length) CLASS_REVIEWS = reviews;
   } catch (err) {
     console.error('[ministry] could not load published testimonials/reviews', err);
   }
@@ -4953,10 +4968,11 @@ try { setupPublicFormButtons(); } catch (err) { console.error('setupPublicFormBu
 try { renderMinistryInboxViews(); } catch (err) { console.error('renderMinistryInboxViews failed', err); }
 try { renderPublishedTestimonials(); } catch (err) { console.error('renderPublishedTestimonials failed', err); }
 try { renderPublishedClassReviews(); } catch (err) { console.error('renderPublishedClassReviews failed', err); }
-// Production starts both arrays empty (see their declaration above) —
-// this fetches the real published testimonials/reviews and re-renders.
-// Demo mode already has its sample data synchronously, so this is a
-// no-op there (loadPublishedMinistryContent() returns immediately).
+// Production starts both arrays with the example cards (see their
+// declaration above) — this fetches the real published testimonials/
+// reviews and re-renders, replacing the examples only once real ones
+// exist. Demo mode already has its sample data synchronously, so this
+// is a no-op there (loadPublishedMinistryContent() returns immediately).
 if(!DEMO_MODE){
   loadPublishedMinistryContent().then(() => {
     try { renderPublishedTestimonials(); } catch (err) { console.error('renderPublishedTestimonials failed', err); }

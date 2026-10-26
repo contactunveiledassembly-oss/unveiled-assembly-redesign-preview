@@ -20,9 +20,7 @@ const DEFAULT_EVENT = {
   posterUrl: '',
   ticketUrl: '',
   ticketLabel: 'Register',
-  streamUrl: '',
-  pressUrl: '',
-  pressNotice: ''
+  streamUrl: ''
 };
 
 function safeUrl(value){
@@ -211,18 +209,9 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
       const buttons = [];
       if(event && safeUrl(event.ticketUrl)) buttons.push('<a class="events-action primary" target="_blank" rel="noopener" href="' + escapeHtml(safeUrl(event.ticketUrl)) + '">' + escapeHtml(event.ticketLabel || 'Register') + ' ↗</a>');
       if(event && safeUrl(event.streamUrl)) buttons.push('<a class="events-action" target="_blank" rel="noopener" href="' + escapeHtml(safeUrl(event.streamUrl)) + '">Watch Online ↗</a>');
-      if(event && safeUrl(event.pressUrl)) buttons.push('<a class="events-action" target="_blank" rel="noopener" href="' + escapeHtml(safeUrl(event.pressUrl)) + '">Media / Press ↗</a>');
       actions.innerHTML = buttons.join('');
       actions.hidden = buttons.length === 0;
     }
-
-    const press = document.getElementById('eventsPressNotice');
-    const pressSection = document.getElementById('eventsPressSection');
-    if(press){
-      press.hidden = !(event && event.pressNotice);
-      press.textContent = event ? event.pressNotice || '' : '';
-    }
-    if(pressSection) pressSection.hidden = !(event && event.pressNotice);
 
     const announcementWrap = document.getElementById('eventsAnnouncements');
     const publicAnnouncements = (event ? announcements : [])
@@ -275,8 +264,6 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
     assign('eventAdminTicketUrl', event.ticketUrl);
     assign('eventAdminTicketLabel', event.ticketLabel || 'Register');
     assign('eventAdminStreamUrl', event.streamUrl);
-    assign('eventAdminPressUrl', event.pressUrl);
-    assign('eventAdminPressNotice', event.pressNotice);
     document.getElementById('eventAdminFeatured').checked = event.featured !== false;
 
     const stats = document.getElementById('eventsAdminStats');
@@ -399,8 +386,6 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
       ticketUrl: document.getElementById('eventAdminTicketUrl').value.trim(),
       ticketLabel: document.getElementById('eventAdminTicketLabel').value.trim() || 'Register',
       streamUrl: document.getElementById('eventAdminStreamUrl').value.trim(),
-      pressUrl: document.getElementById('eventAdminPressUrl').value.trim(),
-      pressNotice: document.getElementById('eventAdminPressNotice').value.trim(),
       updatedAt: new Date().toISOString()
     };
     const status = document.getElementById('eventAccessStatus');

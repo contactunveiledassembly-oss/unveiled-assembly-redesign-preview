@@ -603,10 +603,23 @@ export function initSiteManagement(context){
       '<input type="checkbox" data-page-visibility="' + page.visKey + '"' + (on ? ' checked' : '') + ' />' +
       '<span class="page-visibility-track"><span class="page-visibility-thumb"></span></span></label>';
   }
+  function renderOwnerSiteMasterToggle(){
+    const wrap = document.getElementById('ownerSiteMasterToggle');
+    if(!wrap) return;
+    const on = PAGE_VISIBILITY.__siteWide !== false;
+    wrap.innerHTML = '<div class="owner-master-toggle' + (on ? '' : ' is-off') + '">' +
+      '<div><strong>Entire Site</strong><p class="admin-hint" style="margin:2px 0 0">' +
+      (on ? 'Live — each page below follows its own switch.' : 'Off — every page is showing "Coming Soon" to visitors right now, no matter what the switches below say.') +
+      '</p></div>' +
+      '<label class="page-visibility-toggle" title="' + (on ? 'Turn the whole site off (shows Coming Soon everywhere)' : 'Turn the whole site back on') + '">' +
+      '<input type="checkbox" data-site-master-visibility' + (on ? ' checked' : '') + ' />' +
+      '<span class="page-visibility-track"><span class="page-visibility-thumb"></span></span></label></div>';
+  }
   function renderOwnerWebsitePages(){
     const list = document.getElementById('ownerWebsitePagesList');
     const editor = document.getElementById('ownerWebsiteEditor');
     if(!list || !editor) return;
+    renderOwnerSiteMasterToggle();
     list.innerHTML = WEBSITE_PAGES.map(page => {
       const connected = !!page.key;
       return '<div class="admin-website-page-row-wrap">' +
@@ -616,6 +629,14 @@ export function initSiteManagement(context){
     }).join('');
     editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>Home, One-on-One, Events, Beliefs, and Give are ready to edit. Other pages stay protected until their editors are approved. The switch next to each page turns it on or off for visitors — off shows "Coming Soon" instead of the real page.</p></div>';
   }
+  document.getElementById('ownerSiteMasterToggle')?.addEventListener('change', async event => {
+    const toggle = event.target.closest('[data-site-master-visibility]');
+    if(!toggle) return;
+    PAGE_VISIBILITY.__siteWide = toggle.checked;
+    try { await savePageVisibility(); } catch (err) { /* preview still reflects the change locally */ }
+    applyPageVisibility();
+    renderOwnerSiteMasterToggle();
+  });
   document.getElementById('ownerWebsitePagesList')?.addEventListener('change', async event => {
     const toggle = event.target.closest('[data-page-visibility]');
     if(!toggle) return;
