@@ -1084,6 +1084,7 @@ function dialogsHtml(){
           </article>
           <article class="member-panel member-panel-compact" id="memberProfileSummaryCard"></article>
         </div>
+        <div id="memberLearningPaths" style="margin-top:18px"></div>
       </div>
 
       <div data-member-panel="classes" hidden>
@@ -8226,13 +8227,16 @@ function renderMemberLearningPaths(){
   if(!wrap || !currentUser) return;
   const uid = effectiveMemberUid(), email = effectiveMemberEmail();
   const myPaths = LEARNING_PATHS.filter(p => p.classIds.some(id => memberRegistrationsFor(id, uid, email).length > 0));
-  wrap.innerHTML = myPaths.length === 0 ? '' : myPaths.map(p => {
-    const { completed, total } = learningPathProgress(p, uid, email);
-    return '<article class="portal-panel member-record-card" style="margin-bottom:14px">' +
-      '<div class="member-record-head"><div><strong>' + escapeHtml(p.title) + '</strong></div>' +
-      '<span class="admin-status-pill draft">' + completed + ' of ' + total + ' Classes Completed</span></div>' +
-      '</article>';
-  }).join('');
+  if(myPaths.length === 0){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<span class="member-panel-label" style="display:block;margin-bottom:10px">Your Learning Paths</span>' +
+    myPaths.map(p => {
+      const { completed, total } = learningPathProgress(p, uid, email);
+      return '<article class="portal-panel member-record-card" style="margin-bottom:14px">' +
+        '<div class="member-record-head"><div><strong>' + escapeHtml(p.title) + '</strong>' +
+        (p.description ? '<p style="margin:4px 0 0;color:var(--owner-text-muted,var(--stone));font-size:12.5px">' + escapeHtml(p.description) + '</p>' : '') + '</div>' +
+        '<span class="admin-status-pill draft">' + completed + ' of ' + total + ' Classes Completed</span></div>' +
+        '</article>';
+    }).join('');
 }
 function openConfirmationRecap(kind, id){
   let title, when, status, confId;
@@ -8465,6 +8469,7 @@ function renderMemberDashboardPanels(){
   renderMemberNextSessionCard();
   renderMemberProfileSummary();
   renderMemberBookedClassesCompact();
+  renderMemberLearningPaths();
   renderMemberRecentUpdates();
   renderMemberResourcesSummary();
   renderMemberWaitlistOfferCard();
