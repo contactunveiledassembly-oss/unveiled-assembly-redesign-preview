@@ -12597,7 +12597,7 @@ function renderClassRegStats(){
   const classId = document.getElementById('classRegClassFilter')?.value || 'all';
   if(classId !== 'all' && TEACHINGS[classId]){
     const t = TEACHINGS[classId];
-    const rows = DEMO_TEACHING_REGISTRATIONS.filter(r => r.teachingId === classId);
+    const rows = classRegistrationSource().filter(r => r.teachingId === classId);
     const active = rows.filter(r => r.status !== 'cancelled');
     const revenue = active.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
     const attended = rows.filter(r => r.attendanceStatus === 'attended').length;
@@ -12610,12 +12610,12 @@ function renderClassRegStats(){
       '<div class="admin-stat-tile"><span>Attended</span><strong>' + attended + '</strong></div>';
     return;
   }
-  const active = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status !== 'cancelled');
-  const confirmed = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'confirmed').length;
-  const cancelled = DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'cancelled').length;
+  const active = classRegistrationSource().filter(r => r.status !== 'cancelled');
+  const confirmed = classRegistrationSource().filter(r => r.status === 'confirmed').length;
+  const cancelled = classRegistrationSource().filter(r => r.status === 'cancelled').length;
   const revenue = active.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
   wrap.innerHTML =
-    '<div class="admin-stat-tile"><span>Total Registered</span><strong>' + DEMO_TEACHING_REGISTRATIONS.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Total Registered</span><strong>' + classRegistrationSource().length + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Confirmed</span><strong>' + confirmed + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Cancelled</span><strong>' + cancelled + '</strong></div>' +
     '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
@@ -12688,7 +12688,7 @@ function appendResendToLog(log, smsConsent){
   return log;
 }
 function openClassRegDetail(id){
-  const item = DEMO_TEACHING_REGISTRATIONS.find(r => r.id === id);
+  const item = classRegistrationSource().find(r => r.id === id);
   if(!item) return;
   classRegDetailId = id;
   document.getElementById('classRegDetailTitle').textContent = (item.firstName + ' ' + item.lastName).trim() || 'Registrant';
