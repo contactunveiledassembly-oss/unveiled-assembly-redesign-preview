@@ -1082,12 +1082,13 @@ function dialogsHtml(){
           <span>The Unveiled Assembly</span>
         </div>
         <nav class="member-topnav-links" id="memberTabs" role="tablist" aria-label="Member Portal navigation">
-          <button type="button" class="member-nav-link active" data-member-tab="dashboard">Dashboard</button>
-          <button type="button" class="member-nav-link" data-member-tab="classes">My Classes</button>
-          <button type="button" class="member-nav-link" data-member-tab="sessions">My Sessions</button>
-          <button type="button" class="member-nav-link" data-member-tab="resources">My Notes / Resources</button>
+          <button type="button" class="member-nav-link active" data-member-tab="dashboard">Home</button>
+          <button type="button" class="member-nav-link" data-member-tab="classes">My Learning</button>
+          <button type="button" class="member-nav-link" data-member-tab="sessions">My Schedule</button>
+          <button type="button" class="member-nav-link" data-member-tab="receipts">Purchases &amp; Receipts</button>
+          <button type="button" class="member-nav-link" data-member-tab="submissions">My Submissions</button>
           <button type="button" class="member-nav-link" data-member-tab="notifications">Notifications<span class="owner-nav-count" id="memberNotifCount" hidden>0</span></button>
-          <button type="button" class="member-nav-link" data-member-tab="account">Profile</button>
+          <button type="button" class="member-nav-link" data-member-tab="account">My Account</button>
         </nav>
         <div class="member-topnav-account">
           <span class="member-topnav-badge" id="memberAccountLabel">Student Account</span>
@@ -1097,12 +1098,13 @@ function dialogsHtml(){
       </div>
       <div class="member-mobile-nav">
         <select id="memberMobileNavSelect" aria-label="Member Portal navigation">
-          <option value="dashboard">Dashboard</option>
-          <option value="classes">My Classes</option>
-          <option value="sessions">My Sessions</option>
-          <option value="resources">My Notes / Resources</option>
+          <option value="dashboard">Home</option>
+          <option value="classes">My Learning</option>
+          <option value="sessions">My Schedule / Appointments</option>
+          <option value="receipts">Purchases &amp; Receipts</option>
+          <option value="submissions">My Submissions</option>
           <option value="notifications">Notifications</option>
-          <option value="account">Profile</option>
+          <option value="account">My Account</option>
         </select>
       </div>
 
@@ -1128,7 +1130,7 @@ function dialogsHtml(){
           <article class="member-panel member-panel-feature" id="memberNextClassCard"></article>
           <article class="member-panel member-booked-panel">
             <div class="member-panel-head">
-              <span class="member-panel-label">Booked Classes</span>
+              <span class="member-panel-label">Continue Learning</span>
               <button type="button" class="member-view-all" data-member-tab-link="classes">View All&nbsp; →</button>
             </div>
             <div id="memberBookedClassesCompact"></div>
@@ -1145,18 +1147,27 @@ function dialogsHtml(){
           </article>
           <article class="member-panel member-resources-panel">
             <div class="member-panel-head">
-              <span class="member-panel-label">Resources &amp; Notes</span>
+              <span class="member-panel-label">Your Study Library</span>
               <button type="button" class="text-link on-light" data-member-tab-link="resources">View All →</button>
             </div>
             <div id="memberResourcesSummary"></div>
           </article>
           <article class="member-panel member-panel-compact" id="memberProfileSummaryCard"></article>
+          <article class="member-panel member-space-panel">
+            <span class="member-panel-label">Your Space</span>
+            <div class="member-space-links">
+              <button type="button" data-member-tab-link="classes"><span>01</span><strong>My Learning</strong><small>Classes, courses, tickets, and resources</small></button>
+              <button type="button" data-member-tab-link="sessions"><span>02</span><strong>My Schedule</strong><small>Appointments and one-on-one sessions</small></button>
+              <button type="button" data-member-tab-link="submissions"><span>03</span><strong>My Submissions</strong><small>Prayer requests and testimonies</small></button>
+              <button type="button" data-member-tab-link="account"><span>04</span><strong>My Account</strong><small>Profile, security, privacy, and preferences</small></button>
+            </div>
+          </article>
         </div>
         <div id="memberLearningPaths" style="margin-top:18px"></div>
       </div>
 
       <div data-member-panel="classes" hidden>
-        <div class="member-page-intro"><div><span class="member-page-kicker">Learning</span><h2>My Classes</h2><p>Enter your classroom, view tickets, revisit past teachings, and continue where you left off.</p></div><div class="member-page-stat"><strong>04</strong><span>Total Classes</span></div></div>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Learning</span><h2>My Learning</h2><p>Enter your classroom, follow course progress, view tickets, and return to your study materials.</p></div><div class="member-page-stat"><strong>04</strong><span>Enrolled</span></div></div>
         <div class="admin-tabs" id="memberClassesSubTabs" style="margin-bottom:16px">
           <button type="button" class="admin-tab active" data-member-classes-tab="upcoming">Upcoming</button>
           <button type="button" class="admin-tab" data-member-classes-tab="past">Past</button>
@@ -1165,7 +1176,7 @@ function dialogsHtml(){
       </div>
 
       <div data-member-panel="sessions" hidden>
-        <div class="member-page-intro"><div><span class="member-page-kicker">Personal Ministry</span><h2>My Sessions</h2><p>Manage upcoming spiritual-direction appointments and review previous sessions.</p></div><div class="member-page-stat"><strong>01</strong><span>Upcoming</span></div></div>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Personal Ministry</span><h2>My Schedule</h2><p>Manage upcoming one-on-one appointments and review previous sessions.</p></div><div class="member-page-stat"><strong>01</strong><span>Upcoming</span></div></div>
         <div class="admin-tabs" id="memberSessionsSubTabs" style="margin-bottom:16px">
           <button type="button" class="admin-tab active" data-member-sessions-tab="upcoming">Upcoming</button>
           <button type="button" class="admin-tab" data-member-sessions-tab="past">Past</button>
@@ -1182,8 +1193,36 @@ function dialogsHtml(){
         <div id="memberResourcesList"></div>
       </div>
 
+      <div data-member-panel="receipts" hidden>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Account History</span><h2>Purchases &amp; Receipts</h2><p>See every class registration and appointment in one place. A paid receipt only appears when a payment is verified.</p></div><div class="member-page-stat"><strong id="memberPurchasesCount">00</strong><span>Records</span></div></div>
+        <article class="member-panel member-ledger-panel">
+          <div class="member-panel-head"><span class="member-panel-label">Transactions &amp; Confirmations</span><span class="member-ledger-note">Verified records only</span></div>
+          <div id="memberPurchasesList"></div>
+        </article>
+      </div>
+
+      <div data-member-panel="submissions" hidden>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Your Ministry History</span><h2>My Submissions</h2><p>Follow prayer requests and testimonies submitted while signed in, including privacy and review status.</p></div><div class="member-page-stat"><strong id="memberSubmissionsCount">00</strong><span>Submissions</span></div></div>
+        <div class="member-submission-actions">
+          <button type="button" class="portal-primary open-prayer-request">Submit Prayer Request</button>
+          <button type="button" class="portal-secondary open-story">Share A Testimony</button>
+        </div>
+        <article class="member-panel member-submissions-panel">
+          <div id="memberSubmissionsList"></div>
+        </article>
+      </div>
+
       <div data-member-panel="notifications" hidden>
-        <div class="member-page-intro"><div><span class="member-page-kicker">Stay Connected</span><h2>Notifications</h2><p>Classroom updates, registration confirmations, released materials, and reminders.</p></div><div class="member-page-stat"><strong id="memberNotificationHeroCount">02</strong><span>Unread</span></div></div>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Stay Connected</span><h2>Notifications</h2><p>Classroom updates, registration confirmations, appointment reminders, and account notices.</p></div><div class="member-page-stat"><strong id="memberNotificationHeroCount">02</strong><span>Unread</span></div></div>
+        <div class="member-notification-tools">
+          <div class="admin-tabs" id="memberNotificationFilters" role="tablist">
+            <button type="button" class="admin-tab active" data-member-notification-filter="all">All</button>
+            <button type="button" class="admin-tab" data-member-notification-filter="classes">Classes</button>
+            <button type="button" class="admin-tab" data-member-notification-filter="appointments">Appointments</button>
+            <button type="button" class="admin-tab" data-member-notification-filter="account">Account</button>
+          </div>
+          <button type="button" class="admin-btn-ghost" id="memberNotificationsMarkAll">Mark All Read</button>
+        </div>
         <article class="member-panel">
           <span class="member-panel-label">Notifications</span>
           <div id="memberNotificationsList"></div>
@@ -1191,7 +1230,7 @@ function dialogsHtml(){
       </div>
 
       <div data-member-panel="account" hidden>
-        <div class="member-page-intro"><div><span class="member-page-kicker">Account</span><h2>My Profile</h2><p>Keep your contact information, verification methods, and account preferences current.</p></div><div class="member-page-stat"><strong>100%</strong><span>Complete</span></div></div>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Account</span><h2>My Account</h2><p>Manage your profile, notification preferences, security, and privacy details.</p></div><div class="member-page-stat"><strong>100%</strong><span>Complete</span></div></div>
         <div id="memberAccountPreviewLocked" hidden class="portal-panel">
           <span class="portal-label">Profile</span>
           <p style="color:var(--ink-muted);line-height:1.6">Profile editing isn't available in Member View preview — this reaches real account settings (email/phone/password), which stay tied to your own Owner account no matter who you're previewing. Exit Member View to manage your own profile.</p>
