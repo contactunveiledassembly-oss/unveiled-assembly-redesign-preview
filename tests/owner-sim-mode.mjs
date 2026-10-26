@@ -82,6 +82,27 @@ await page.waitForTimeout(300);
 const prayerText = await page.locator('#prayerInboxList').innerText();
 assert.ok(prayerText.length > 0, 'prayer inbox should show simulated requests');
 
+// Safety: a published sim testimonial must NEVER reach the real public
+// page, however it got there — approve one via the normal admin flow,
+// then visit the real public testimonials page in the SAME session
+// (sim mode still on) and confirm it shows nothing.
+await page.locator('[data-owner-nav="testimonials"]').click();
+await page.waitForTimeout(300);
+const testimonyViewBtn = page.locator('[data-testimony-view]').first();
+if (await testimonyViewBtn.count() > 0) {
+  await testimonyViewBtn.click();
+  await page.waitForSelector('#testimonyDetailDialog[open]', { timeout: 5000 });
+  const publishBtn = page.locator('#testimonyDetailDialog button', { hasText: 'Publish' });
+  if (await publishBtn.count() > 0) { await publishBtn.first().click(); await page.waitForTimeout(400); }
+}
+await page.goto(`${baseUrl}/testimonials.html`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(400);
+const leakedText = (await page.locator('#publishedTestimonialsList').innerText().catch(() => '')).trim();
+assert.equal(leakedText, '', 'simulated testimonials must never appear on the real public page, even mid-session');
+await page.goto(`${baseUrl}/story.html`, { waitUntil: 'domcontentloaded' });
+await page.locator('#navMemberPortal').click();
+await page.waitForSelector('#ownerSimToggle', { timeout: 15000 });
+
 // Returning to Live Data restores the exact original state.
 await page.locator('[data-owner-nav="dashboard"]').click();
 await page.waitForTimeout(200);

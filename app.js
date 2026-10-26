@@ -30,7 +30,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { initSiteManagement } from "./site-management.js?v=4";
 import { initEventsSystem } from "./events-system.js?v=4";
-import { initOwnerSimulation } from "./owner-simulation.js?v=1";
+import { initOwnerSimulation } from "./owner-simulation.js?v=2";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -3932,6 +3932,7 @@ async function publishPublicMirror(publicCollectionName, item, kind){
   }
 }
 async function unpublishPublicMirror(publicCollectionName, itemId){
+  if(ownerSim.isActive()) return { ok: true }; // nothing simulated was ever actually published
   if(DEMO_MODE) return { ok: true };
   try {
     await deleteDoc(doc(db, publicCollectionName, itemId));
@@ -4462,6 +4463,9 @@ function testimonialCardHtml(item){
 }
 
 function renderPublishedTestimonials(){
+  // Never show simulated content to a real visitor, however it got
+  // flipped on (reload, another tab, admin forgot it was active, etc).
+  if(ownerSim.isActive()) return;
   const page = document.body.dataset.page;
   if(page !== 'testimonials' && !document.getElementById('publishedTestimonialsSection')) return;
   const section = document.getElementById('publishedTestimonialsSection');
@@ -4488,6 +4492,7 @@ function classReviewCardHtml(item){
 }
 
 function renderPublishedClassReviews(){
+  if(ownerSim.isActive()) return; // never show simulated content to a real visitor
   const list = document.getElementById('publishedClassReviewsList');
   const section = document.getElementById('publishedClassReviewsSection');
   if(!list) return;

@@ -297,7 +297,16 @@ export function initOwnerSimulation({ SESSION_TYPES, getTeachings }){
   }
 
   let dataRefs = null;
-  function bindDataRefs(refs){ dataRefs = refs; }
+  // A fresh page load (e.g. the admin reloads, or navigates elsewhere and
+  // back) restores `active: true` from localStorage via ensureState(), but
+  // that alone never re-swaps the live arrays — only setActive()/
+  // setScenario()/advanceMs() do. Call this once right after bindDataRefs()
+  // so a persisted "on" state is actually reflected, not just displayed.
+  function bindDataRefs(refs){
+    dataRefs = refs;
+    ensureState();
+    if(state.active) swapIn(dataRefs);
+  }
 
   function isActive(){ ensureState(); return state.active; }
   function setActive(next){
