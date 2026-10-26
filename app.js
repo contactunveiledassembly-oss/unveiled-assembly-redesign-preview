@@ -8068,6 +8068,8 @@ function showMemberTab(name){
   if(name === 'classes') renderMemberClassesList();
   if(name === 'sessions') renderMemberSessionsList();
   if(name === 'resources') renderMemberResourcesList();
+  if(name === 'receipts') renderMemberPurchases();
+  if(name === 'submissions') renderMemberSubmissions();
   if(name === 'notifications') renderMemberNotifications();
   if(name === 'account'){
     document.getElementById('memberAccountPreviewLocked').hidden = !ownerPreviewActive;
@@ -8121,25 +8123,35 @@ function renderMemberNextClassCard(){
     .filter(r => r.status !== 'cancelled' && r.teachingDate >= today)
     .sort((a, b) => (a.teachingDate + (TEACHINGS[a.teachingId]?.startTime || '')).localeCompare(b.teachingDate + (TEACHINGS[b.teachingId]?.startTime || '')))[0];
   if(!upcoming){
-    card.innerHTML = '<span class="portal-label">Next Class</span><p style="color:#d7d7d7">You\'re not registered for an upcoming class yet.</p>' +
+    card.innerHTML = '<span class="portal-label">Coming Up</span><p style="color:#d7d7d7">You\'re not registered for an upcoming class yet.</p>' +
       '<div class="portal-inline-actions"><a class="portal-primary" href="teachings.html">Browse Teachings</a></div>';
     return;
   }
   const t = TEACHINGS[upcoming.teachingId] || {};
   const art = teachingCardArt(t);
   const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
-  const statusLabel = upcoming.status === 'confirmed' ? 'Registered' : upcoming.status === 'pending_payment' ? 'Pending' : upcoming.status;
+  const accessReady = registrationGrantsClassroomAccess(upcoming);
+  const statusLabel = upcoming.status === 'confirmed' ? 'Confirmed'
+    : upcoming.status === 'complimentary' ? 'Complimentary'
+    : upcoming.status === 'pending_payment' ? 'Payment Pending'
+    : upcoming.status === 'pending_approval' ? 'Approval Pending'
+    : upcoming.status || 'Pending';
   card.innerHTML =
-    '<div class="member-panel-head"><span class="member-panel-label">Your Next Class</span><span class="member-booked-pill">◉ Booked &amp; Paid</span></div>' +
+    '<div class="member-panel-head"><span class="member-panel-label">Coming Up</span><span class="member-booked-pill">' + (accessReady ? 'Access Ready' : 'Pending') + '</span></div>' +
     '<div class="member-feature-body">' +
       '<div class="member-feature-art"' + (art ? ' style="background-image:url(\'' + escapeHtml(art) + '\')"' : '') + '><span>Online Class</span></div>' +
       '<div class="member-feature-copy">' +
         '<h4>' + escapeHtml(t.title || upcoming.teachingTitle) + '</h4>' +
         (t.subtitle ? '<p class="member-feature-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
-        '<ul class="member-feature-meta"><li>▣ ' + escapeHtml(formatTeachingDate(upcoming.teachingDate)) + '</li><li>◷ ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</li><li>▣ ' + escapeHtml(formatLabel) + '</li><li>● ' + escapeHtml(statusLabel) + ' / Confirmed</li><li>▤ Confirmation ID: ' + escapeHtml(upcoming.confirmationId || '—') + '</li></ul>' +
+        '<ul class="member-feature-meta"><li>▣ ' + escapeHtml(formatTeachingDate(upcoming.teachingDate)) + '</li><li>◷ ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</li><li>▣ ' + escapeHtml(formatLabel) + '</li><li>● ' + escapeHtml(statusLabel) + '</li><li>▤ Confirmation ID: ' + escapeHtml(upcoming.confirmationId || '—') + '</li></ul>' +
       '</div>' +
     '</div>' +
-    '<div class="member-feature-actions"><button class="portal-primary" type="button" data-member-view-classroom="' + escapeHtml(upcoming.teachingId) + '">▶ &nbsp; Open Classroom</button><button class="portal-secondary" type="button" data-member-view-confirmation-class="' + escapeHtml(upcoming.id) + '">▱ &nbsp; View Ticket</button></div>';
+    '<div class="member-feature-actions">' +
+      (accessReady
+        ? '<button class="portal-primary" type="button" data-member-view-classroom="' + escapeHtml(upcoming.teachingId) + '">▶ &nbsp; Open Classroom</button>'
+        : '<button class="portal-primary" type="button" data-member-tab-link="receipts">Review Registration</button>') +
+      '<button class="portal-secondary" type="button" data-member-view-confirmation-class="' + escapeHtml(upcoming.id) + '">▱ &nbsp; View Confirmation</button>' +
+    '</div>';
 }
 function renderMemberNextSessionCard(){
   const card = document.getElementById('memberNextSessionCard');
@@ -8173,13 +8185,13 @@ function renderMemberDigitalTicket(){
   const card = document.getElementById('memberDigitalTicket');
   if(!card) return;
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = myTeachingRegistrations().filter(r => r.status !== 'cancelled' && r.teachingDate >= today)
+  const upcoming = myTeachingRegistrations()
+    .filter(r => registrationGrantsClassroomAccess(r) && r.teachingDate >= today)
     .sort((a, b) => (a.teachingDate + (TEACHINGS[a.teachingId] ? TEACHINGS[a.teachingId].startTime : '')).localeCompare(b.teachingDate + (TEACHINGS[b.teachingId] ? TEACHINGS[b.teachingId].startTime : '')))[0];
   if(!upcoming){
-    card.innerHTML = '<span class="member-panel-label">Digital Ticket</span><p class="member-empty-note">Your confirmation ticket will appear here once you register for a class.</p>';
+    card.innerHTML = '<span class="member-panel-label">Digital Ticket</span><p class="member-empty-note">Your ticket will appear after registration is confirmed.</p>';
     return;
   }
-  const t = TEACHINGS[upcoming.teachingId] || {};
   const confirmation = upcoming.confirmationId || 'TUA-MEMBER';
   card.innerHTML =
     '<div class="member-panel-head"><span class="member-panel-label">Digital Ticket</span><button class="member-view-all" type="button" data-member-view-confirmation-class="' + escapeHtml(upcoming.id) + '">View&nbsp; ⛶</button></div>' +
@@ -8187,7 +8199,6 @@ function renderMemberDigitalTicket(){
     ticketQrSvg(confirmation) + '<strong class="member-ticket-code">' + escapeHtml(confirmation) + '</strong></div>' +
     '<p class="member-ticket-instruction">Present this code for check-in<br>on class day.</p>';
 }
-
 function ticketQrSvg(value){
   const size = 21, cells = [];
   let seed = 0;
@@ -8215,8 +8226,9 @@ function memberBookedClassCompactRowHtml(r){
   const t = TEACHINGS[r.teachingId] || {};
   const art = teachingCardArt(t);
   const formatLabel = t.format === 'zoom' ? 'Online (Zoom)' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
-  const statusClass = r.status === 'confirmed' ? 'confirmed' : r.status === 'cancelled' ? 'cancelled' : 'pending';
-  const statusLabel = r.status === 'confirmed' ? 'Confirmed' : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  const accessReady = registrationGrantsClassroomAccess(r);
+  const statusClass = accessReady ? 'confirmed' : r.status === 'cancelled' ? 'cancelled' : 'pending';
+  const statusLabel = accessReady ? 'Confirmed' : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
   return '<div class="member-compact-row">' +
     '<div class="member-compact-thumb' + (art ? '' : ' member-compact-thumb-empty') + '"' + (art ? ' style="background-image:url(\'' + escapeHtml(art) + '\')"' : '') + '></div>' +
     '<div class="member-compact-info">' +
@@ -8226,7 +8238,7 @@ function memberBookedClassCompactRowHtml(r){
     '</div>' +
     '<span class="admin-status-pill ' + statusClass + '">' + statusLabel + '</span>' +
     '<div class="member-compact-actions">' +
-    (r.status !== 'cancelled' ? '<button class="text-link on-light" type="button" data-member-view-classroom="' + escapeHtml(r.teachingId) + '">Open Classroom →</button>' : '') +
+    (accessReady ? '<button class="text-link on-light" type="button" data-member-view-classroom="' + escapeHtml(r.teachingId) + '">Open Classroom →</button>' : '') +
     '<button class="text-link on-light" type="button" data-member-view-confirmation-class="' + escapeHtml(r.id) + '">View Confirmation →</button>' +
     '</div></div>';
 }
@@ -8257,7 +8269,7 @@ function memberResourceItemRowHtml(item, t){
     '</div>';
 }
 function memberResourceGroups(){
-  const regs = myTeachingRegistrations().filter(r => r.status !== 'cancelled');
+  const regs = myTeachingRegistrations().filter(registrationGrantsClassroomAccess);
   const seen = new Set();
   const groups = [];
   regs.forEach(r => {
@@ -8300,7 +8312,7 @@ document.addEventListener('click', event => {
 function renderMemberRecentUpdates(){
   const wrap = document.getElementById('memberRecentUpdates');
   if(!wrap || !currentUser) return;
-  const recent = MEMBER_NOTIFICATIONS.filter(n => n.uid === effectiveMemberUid()).slice(0, 5);
+  const recent = memberNotificationsForCurrent().slice(0, 5);
   wrap.innerHTML = recent.length === 0
     ? '<p style="color:#656565">Nothing new yet.</p>'
     : recent.map(n => '<div class="portal-row"><div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + '</small></div></div>').join('');
@@ -8385,8 +8397,9 @@ function memberClassRowHtml(r){
   const t = TEACHINGS[r.teachingId] || {};
   const art = teachingCardArt(t);
   const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
-  const statusClass = r.status === 'confirmed' ? 'confirmed' : r.status === 'cancelled' ? 'cancelled' : 'pending';
-  const statusLabel = r.status === 'confirmed' ? 'Registered' : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  const accessReady = registrationGrantsClassroomAccess(r);
+  const statusClass = accessReady ? 'confirmed' : r.status === 'cancelled' ? 'cancelled' : 'pending';
+  const statusLabel = accessReady ? (r.status === 'complimentary' ? 'Complimentary' : 'Confirmed') : r.status === 'cancelled' ? 'Cancelled' : 'Pending';
   return '<article class="portal-panel member-record-card">' +
     '<div class="member-record-art"' + (art ? ' style="background-image:url(\'' + escapeHtml(art) + '\')"' : '') + '></div><div class="member-record-content">' +
     '<div class="member-record-head">' +
@@ -8396,7 +8409,7 @@ function memberClassRowHtml(r){
     '<p class="member-record-meta">' + escapeHtml(formatTeachingDate(r.teachingDate)) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + ' · ' + escapeHtml(formatLabel) + '</p>' +
     '<p class="member-record-conf">Confirmation <strong>' + escapeHtml(r.confirmationId || '—') + '</strong></p>' +
     '<div class="member-record-actions">' +
-    (r.status !== 'cancelled' ? '<button class="portal-secondary" type="button" data-member-view-classroom="' + escapeHtml(r.teachingId) + '" style="min-height:32px;padding:0 12px;font-size:9px">Open Classroom</button>' : '') +
+    (accessReady ? '<button class="portal-secondary" type="button" data-member-view-classroom="' + escapeHtml(r.teachingId) + '" style="min-height:32px;padding:0 12px;font-size:9px">Open Classroom</button>' : '<button class="portal-secondary" type="button" data-member-tab-link="receipts" style="min-height:32px;padding:0 12px;font-size:9px">Review Status</button>') +
     '<button class="portal-secondary" type="button" data-member-view-confirmation-class="' + escapeHtml(r.id) + '" style="min-height:32px;padding:0 12px;font-size:9px">View Confirmation</button>' +
     '</div></div>' +
     '</article>';
@@ -8424,7 +8437,7 @@ document.getElementById('memberClassesSubTabs').addEventListener('click', event 
 // after booking — not any time before the session itself. Past that
 // window, rescheduling requires the ministry to actually have
 // availability, so it's a request the owner reviews, not a guarantee.
-const RESCHEDULE_SELF_SERVICE_WINDOW_MS = 2 * 60 * 60 * 1000;
+const RESCHEDULE_SELF_SERVICE_WINDOW_MS = 15 * 60 * 1000;
 function bookingCreatedAtMillis(b){
   const ts = b.createdAt || b.bookedAt;
   if(!ts) return null;
@@ -8528,6 +8541,101 @@ document.getElementById('memberSessionsSubTabs').addEventListener('click', event
   document.querySelectorAll('#memberSessionsSubTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
   renderMemberSessionsList();
 });
+function verifiedPaymentRecord(record){
+  const amount = Number(record && record.amountPaid);
+  return !!record && amount > 0 && (
+    record.paymentStatus === 'paid' ||
+    !!record.transactionId ||
+    !!record.paymentIntentId ||
+    !!record.chargeId
+  );
+}
+function memberPurchaseRowHtml(item){
+  const record = item.record;
+  const paid = verifiedPaymentRecord(record);
+  const complimentary = record.status === 'complimentary' || record.paymentStatus === 'not_required';
+  const amount = Number(record.amountPaid) || 0;
+  const state = paid ? 'Paid' : complimentary ? 'No payment required' : record.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  const stateClass = paid || complimentary ? 'confirmed' : record.status === 'cancelled' ? 'cancelled' : 'pending';
+  const reference = record.transactionId || record.paymentIntentId || record.confirmationId || record.id || '—';
+  return '<article class="member-transaction-row">' +
+    '<div><span class="member-transaction-kind">' + escapeHtml(item.kind) + '</span><strong>' + escapeHtml(item.title) + '</strong><small>' + escapeHtml(item.dateLabel || 'Date not set') + '</small></div>' +
+    '<div class="member-transaction-status"><span class="admin-status-pill ' + stateClass + '">' + escapeHtml(state) + '</span><small>' + (paid ? '$' + amount.toFixed(2) : complimentary ? '$0.00' : 'No paid receipt yet') + '</small></div>' +
+    '<div class="member-transaction-ref"><span>Reference</span><strong>' + escapeHtml(reference) + '</strong></div>' +
+    '</article>';
+}
+function renderMemberPurchases(){
+  const wrap = document.getElementById('memberPurchasesList');
+  if(!wrap || !currentUser) return;
+  const purchases = [];
+  myTeachingRegistrations().forEach(r => purchases.push({
+    kind: 'Teaching',
+    title: (TEACHINGS[r.teachingId] || {}).title || r.teachingTitle || 'Teaching registration',
+    dateLabel: formatTeachingDate(r.teachingDate || ''),
+    record: r,
+    time: memberRecordTime(r.registeredAt)
+  }));
+  myBookings().forEach(b => purchases.push({
+    kind: 'One-on-One',
+    title: sessionTypeName(b.sessionType),
+    dateLabel: formatLocalDateTime(b.date, b.time, b.clientTimeZone),
+    record: b,
+    time: memberRecordTime(b.createdAt || b.bookedAt)
+  }));
+  purchases.sort((a, b) => b.time - a.time);
+  wrap.innerHTML = purchases.length
+    ? purchases.map(memberPurchaseRowHtml).join('')
+    : '<div class="member-empty-state"><strong>No purchases or confirmations yet.</strong><span>Class registrations and one-on-one bookings will appear here.</span></div>';
+  const count = document.getElementById('memberPurchasesCount');
+  if(count) count.textContent = String(purchases.length).padStart(2, '0');
+}
+
+function memberSubmissionsForCurrent(){
+  if(!(DEMO_MODE || ownerPreviewActive)) return MEMBER_OWN_SUBMISSIONS;
+  const uid = effectiveMemberUid(), email = effectiveMemberEmail();
+  const belongs = item => (uid && item.uid === uid) || (!item.uid && email && item.email && item.email.toLowerCase() === email.toLowerCase());
+  return {
+    prayer: PRAYER_REQUESTS.filter(belongs),
+    testimonies: TESTIMONIALS.filter(belongs)
+  };
+}
+function memberSubmissionRowHtml(item, kind){
+  const status = item.status || (kind === 'Prayer Request' ? 'new' : 'pending');
+  const statusClass = ['published','approved','answered'].includes(status) ? 'confirmed' : status === 'declined' || status === 'archived' ? 'cancelled' : 'pending';
+  const privacy = kind === 'Prayer Request' ? 'Private' : item.visibility === 'public' ? 'Public if approved' : item.visibility === 'anonymous' ? 'Anonymous if approved' : 'Private';
+  const preview = (item.title ? item.title + ' — ' : '') + (item.message || '');
+  return '<article class="member-submission-row">' +
+    '<div><span class="member-transaction-kind">' + escapeHtml(kind) + '</span><strong>' + escapeHtml(preview.slice(0, 150) || kind) + (preview.length > 150 ? '…' : '') + '</strong><small>' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(privacy) + '</small></div>' +
+    '<span class="admin-status-pill ' + statusClass + '">' + escapeHtml(status.replace(/[-_]/g, ' ')) + '</span>' +
+    '</article>';
+}
+function renderMemberSubmissions(){
+  const wrap = document.getElementById('memberSubmissionsList');
+  if(!wrap || !currentUser) return;
+  const mine = memberSubmissionsForCurrent();
+  const rows = [
+    ...mine.prayer.map(item => ({ item, kind: 'Prayer Request' })),
+    ...mine.testimonies.map(item => ({ item, kind: 'Testimony' }))
+  ].sort((a, b) => memberRecordTime(b.item.createdAt) - memberRecordTime(a.item.createdAt));
+  wrap.innerHTML = rows.length
+    ? rows.map(row => memberSubmissionRowHtml(row.item, row.kind)).join('')
+    : '<div class="member-empty-state"><strong>No submissions yet.</strong><span>Your signed-in prayer requests and testimonies will appear here with their privacy and review status.</span></div>';
+  const count = document.getElementById('memberSubmissionsCount');
+  if(count) count.textContent = String(rows.length).padStart(2, '0');
+}
+
+let memberNotificationFilter = 'all';
+function memberNotificationCategory(n){
+  const type = String(n.type || '').toLowerCase();
+  if(type.includes('registration') || type.includes('class') || type.includes('resource') || type.includes('announcement')) return 'classes';
+  if(type.includes('session') || type.includes('booking') || type.includes('reminder')) return 'appointments';
+  return 'account';
+}
+function memberNotificationsForCurrent(){
+  const source = (DEMO_MODE || ownerPreviewActive) ? MEMBER_NOTIFICATIONS : MEMBER_OWN_NOTIFICATIONS;
+  return source.filter(n => n.uid === effectiveMemberUid());
+}
+
 function memberNotificationRowHtml(n){
   return '<div class="portal-row" data-mn-id="' + escapeHtml(n.id) + '" style="opacity:' + (n.read ? '.6' : '1') + '">' +
     '<div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + '</small></div>' +
@@ -8538,22 +8646,58 @@ function renderMemberNotifications(){
   const wrap = document.getElementById('memberNotificationsList');
   const countEl = document.getElementById('memberNotifCount');
   if(!currentUser) return;
-  const mine = MEMBER_NOTIFICATIONS.filter(n => n.uid === effectiveMemberUid());
+  const mine = memberNotificationsForCurrent();
   const unread = mine.filter(n => !n.read).length;
   if(countEl){ countEl.hidden = unread === 0; countEl.textContent = String(unread); }
   const heroCount = document.getElementById('memberNotificationHeroCount');
   if(heroCount) heroCount.textContent = String(unread).padStart(2, '0');
+  document.querySelectorAll('[data-member-notification-filter]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.memberNotificationFilter === memberNotificationFilter);
+  });
   if(!wrap) return;
-  wrap.innerHTML = mine.length === 0
-    ? '<p style="color:#656565">No notifications yet.</p>'
-    : mine.map(memberNotificationRowHtml).join('');
+  const visible = memberNotificationFilter === 'all'
+    ? mine
+    : mine.filter(n => memberNotificationCategory(n) === memberNotificationFilter);
+  wrap.innerHTML = visible.length === 0
+    ? '<div class="member-empty-state"><strong>No notifications here.</strong><span>New class, appointment, and account updates will appear as they are created.</span></div>'
+    : visible.map(memberNotificationRowHtml).join('');
 }
-document.getElementById('memberNotificationsList').addEventListener('click', event => {
+document.getElementById('memberNotificationsList').addEventListener('click', async event => {
   const row = event.target.closest('[data-mn-id]');
   if(!row) return;
-  const n = MEMBER_NOTIFICATIONS.find(x => x.id === row.dataset.mnId);
-  if(n && !n.read){ n.read = true; saveMemberNotifications(); renderMemberNotifications(); }
+  const source = (DEMO_MODE || ownerPreviewActive) ? MEMBER_NOTIFICATIONS : MEMBER_OWN_NOTIFICATIONS;
+  const n = source.find(x => x.id === row.dataset.mnId);
+  if(!n || n.read || ownerPreviewActive) return;
+  try {
+    if(!DEMO_MODE) await updateDoc(doc(db, 'memberNotifications', n.id), { read: true });
+    n.read = true;
+    if(DEMO_MODE) saveMemberNotifications();
+    renderMemberNotifications();
+    renderMemberRecentUpdates();
+  } catch (err) {
+    console.error('[member] could not mark notification read', err);
+  }
 });
+document.getElementById('memberNotificationFilters')?.addEventListener('click', event => {
+  const btn = event.target.closest('[data-member-notification-filter]');
+  if(!btn) return;
+  memberNotificationFilter = btn.dataset.memberNotificationFilter;
+  renderMemberNotifications();
+});
+document.getElementById('memberNotificationsMarkAll')?.addEventListener('click', async () => {
+  if(ownerPreviewActive) return;
+  const unread = memberNotificationsForCurrent().filter(n => !n.read);
+  try {
+    if(!DEMO_MODE) await Promise.all(unread.map(n => updateDoc(doc(db, 'memberNotifications', n.id), { read: true })));
+    unread.forEach(n => { n.read = true; });
+    if(DEMO_MODE) saveMemberNotifications();
+    renderMemberNotifications();
+    renderMemberRecentUpdates();
+  } catch (err) {
+    console.error('[member] could not mark all notifications read', err);
+  }
+});
+// Questions live only inside the Classroom now
 // Questions live only inside the Classroom now (My Classes → open a
 // class → Questions) — the standalone cross-class "My Questions" view
 // this used to render was removed from the top-level nav per the
@@ -8579,6 +8723,8 @@ function renderMemberDashboardPanels(){
   renderMemberRecentUpdates();
   renderMemberResourcesSummary();
   renderMemberWaitlistOfferCard();
+  renderMemberPurchases();
+  renderMemberSubmissions();
   renderMemberNotifications();
   if(memberWaitlistCountdownTimer) clearInterval(memberWaitlistCountdownTimer);
   memberWaitlistCountdownTimer = setInterval(renderMemberWaitlistOfferCard, 1000);
@@ -8594,7 +8740,7 @@ document.addEventListener('click', event => {
   }
   const calBtnB = event.target.closest('[data-member-add-calendar-booking]');
   if(calBtnB){
-    const b = DEMO_BOOKINGS.find(x => x.id === calBtnB.dataset.memberAddCalendarBooking);
+    const b = myBookings().find(x => x.id === calBtnB.dataset.memberAddCalendarBooking);
     if(b) downloadIcsEvent({ title: sessionTypeName(b.sessionType), description: 'The Unveiled Assembly — ' + sessionTypeName(b.sessionType), location: 'Live on Zoom', dateStr: b.date, hhmm: b.time, durationMinutes: SESSION_TYPES[b.sessionType]?.durationMinutes || 30 });
     return;
   }
@@ -8720,7 +8866,7 @@ function openClassroom(teachingId){
   // isn't (or isn't yet) actually enrolled, so a real member's access
   // is never affected by this.
   if(!ownerPreviewActive && !classroomAccessAllowed(teachingId, currentUser ? currentUser.uid : null, email)){
-    if(document.getElementById('portalMemberStatus')) document.getElementById('portalMemberStatus').textContent = "You're not registered for that class yet.";
+    if(document.getElementById('portalMemberStatus')) document.getElementById('portalMemberStatus').textContent = "Your classroom access is not active yet. Check Purchases & Receipts for the current registration status.";
     return;
   }
   classroomTeachingId = teachingId;
