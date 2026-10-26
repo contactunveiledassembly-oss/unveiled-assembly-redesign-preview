@@ -1218,8 +1218,8 @@ function dialogsHtml(){
       <div data-member-panel="submissions" hidden>
         <div class="member-page-intro"><div><span class="member-page-kicker">Your Ministry History</span><h2>My Submissions</h2><p>Follow prayer requests and testimonies submitted while signed in, including privacy and review status.</p></div><div class="member-page-stat"><strong id="memberSubmissionsCount">00</strong><span>Submissions</span></div></div>
         <div class="member-submission-actions">
-          <button type="button" class="portal-primary open-prayer-request">Submit Prayer Request</button>
-          <button type="button" class="portal-secondary open-story">Share A Testimony</button>
+          <button type="button" class="portal-primary" data-open-prayer-form>Submit Prayer Request</button>
+          <button type="button" class="portal-secondary" data-open-story-form>Share A Testimony</button>
         </div>
         <article class="member-panel member-submissions-panel">
           <div id="memberSubmissionsList"></div>
@@ -4742,6 +4742,7 @@ function bindMinistryFormDialogEvents(){
         return;
       }
       if(DEMO_MODE) renderMinistryInboxViews();
+      else if(currentUser) await loadMemberOwnSubmissions();
       form.reset();
       status.textContent = 'We received your prayer request and we are praying for you.';
       const dialog = document.getElementById('prayerRequestDialog');
@@ -4802,6 +4803,7 @@ function bindMinistryFormDialogEvents(){
         return;
       }
       if(DEMO_MODE){ renderMinistryInboxViews(); renderPublishedTestimonials(); }
+      else if(currentUser) await loadMemberOwnSubmissions();
       form.reset();
       status.textContent = 'Thank you for sharing your testimony.';
       const dialog = document.getElementById('storyDialog');
@@ -5143,6 +5145,9 @@ function addMinistryDialogs(){
 }
 
 if(openStoryForm) openStoryForm.addEventListener('click', () => { console.log('Testimony form opened'); storyDialog.showModal(); });
+document.addEventListener('click', event => {
+  if(event.target.closest('[data-open-story-form]')) storyDialog?.showModal();
+});
 if(closeStoryForm) closeStoryForm.addEventListener('click', () => storyDialog.close());
 if(storyDialog) storyDialog.addEventListener('click', event => {
   if(event.target === storyDialog) storyDialog.close();
