@@ -517,5 +517,5 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
 
   function openEditor(){ showAdminTab('details'); renderAdmin(); }
 
-  return { load, loadAdmin, renderPublic, renderAdmin, openEditor };
+  return { load, loadAdmin, renderPublic, renderAdmin, openEditor, publicEvent };
 }

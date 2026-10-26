@@ -2043,6 +2043,15 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
   content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
   width:7px;height:7px;border-radius:50%;background:var(--dept-accent,var(--owner-text-faint));
 }
+.owner-quick-action{position:relative;padding-left:26px!important}
+.owner-quick-action::before{
+  content:'';position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  width:7px;height:7px;border-radius:50%;background:var(--dept-accent,var(--owner-text-faint));
+}
+.owner-quick-action[data-dept="scheduling"]{--dept-accent:var(--dept-scheduling)}
+.owner-quick-action[data-dept="classes"]{--dept-accent:var(--dept-classes)}
+.owner-quick-action[data-dept="system"]{--dept-accent:var(--dept-system)}
+
 .admin-mode-notice{
   border:1px solid var(--owner-border);background:var(--owner-surface-sunken);padding:13px 18px;margin:14px 0 20px;
   font-size:12.5px;line-height:1.6;color:var(--owner-text-muted);border-radius:var(--owner-radius);

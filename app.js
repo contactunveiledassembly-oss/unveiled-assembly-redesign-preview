@@ -29,7 +29,7 @@ import {
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { initSiteManagement } from "./site-management.js?v=4";
-import { initEventsSystem } from "./events-system.js?v=4";
+import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
 
 /* ---------------------------------------------------------------
@@ -45,6 +45,14 @@ import { initOwnerSimulation } from "./owner-simulation.js?v=2";
    --------------------------------------------------------------- */
 const PRODUCTION_HOSTS = ['theunveiledassembly.com', 'www.theunveiledassembly.com'];
 const DEMO_MODE = !PRODUCTION_HOSTS.includes(window.location.hostname);
+// Declared here (not just where initOwnerSimulation() runs, far below)
+// because a couple of public-render functions near the top of the file
+// run synchronously during page load, before that later line executes —
+// referencing ownerSim there via a `const` would throw a "cannot access
+// before initialization" error on every page load. It's reassigned to
+// the real object once initOwnerSimulation() runs; until then it's null,
+// which is also the correct answer for "is Demo Mode active" that early.
+let ownerSim = null;
 // Used by generateConfirmationId() further down. Declared here (rather
 // than beside that function) because the preview-data backfill runs
 // very early during module load and needs this constant already
@@ -1303,6 +1311,11 @@ function dialogsHtml(){
             <div class="admin-stat-row" id="ownerDashboardStats"></div>
           </div>
 
+          <div class="owner-dash-card">
+            <div class="owner-dash-card-head"><span class="owner-dash-card-title">Upcoming Activity</span></div>
+            <div id="ownerUpcomingActivity"></div>
+          </div>
+
           <div class="owner-dash-card-row">
             <div class="owner-dash-card">
               <div class="owner-dash-card-head"><span class="owner-dash-card-title">Recent Activity</span></div>
@@ -1311,11 +1324,11 @@ function dialogsHtml(){
             <div class="owner-dash-card">
               <div class="owner-dash-card-head"><span class="owner-dash-card-title">Quick Actions</span></div>
               <div style="display:flex;flex-direction:column;gap:8px" id="ownerQuickActions">
-                <button type="button" class="admin-btn-ghost" data-quick-action="new-teaching" style="text-align:left">+ Create A Teaching Class</button>
-                <button type="button" class="admin-btn-ghost" data-quick-action="media" style="text-align:left">Upload Media</button>
-                <button type="button" class="admin-btn-ghost" data-quick-action="bookings" style="text-align:left">Manage Bookings</button>
-                <button type="button" class="admin-btn-ghost" data-quick-action="registrants" style="text-align:left">View Registrations</button>
-                <button type="button" class="admin-btn-ghost" data-quick-action="website" style="text-align:left">Edit Website</button>
+                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="new-teaching" data-dept="classes" style="text-align:left">+ Create A Teaching Class</button>
+                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="media" data-dept="system" style="text-align:left">Upload Media</button>
+                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="bookings" data-dept="scheduling" style="text-align:left">Manage Bookings</button>
+                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="registrants" data-dept="classes" style="text-align:left">View Registrations</button>
+                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="website" data-dept="system" style="text-align:left">Edit Website</button>
               </div>
             </div>
           </div>
@@ -4470,7 +4483,7 @@ function testimonialCardHtml(item){
 function renderPublishedTestimonials(){
   // Never show simulated content to a real visitor, however it got
   // flipped on (reload, another tab, admin forgot it was active, etc).
-  if(ownerSim.isActive()) return;
+  if(ownerSim && ownerSim.isActive()) return;
   const page = document.body.dataset.page;
   if(page !== 'testimonials' && !document.getElementById('publishedTestimonialsSection')) return;
   const section = document.getElementById('publishedTestimonialsSection');
@@ -4497,7 +4510,7 @@ function classReviewCardHtml(item){
 }
 
 function renderPublishedClassReviews(){
-  if(ownerSim.isActive()) return; // never show simulated content to a real visitor
+  if(ownerSim && ownerSim.isActive()) return; // never show simulated content to a real visitor
   const list = document.getElementById('publishedClassReviewsList');
   const section = document.getElementById('publishedClassReviewsSection');
   if(!list) return;
@@ -8996,7 +9009,7 @@ document.getElementById('ownerSidebar').addEventListener('click', event => {
   if(!btn) return;
   showOwnerSection(btn.dataset.ownerNav);
   if(btn.dataset.ownerNav === 'paths') renderOwnerLearningPaths();
-  if(btn.dataset.ownerNav === 'dashboard'){ renderOwnerTodayView(); renderOwnerActionRequired(); }
+  if(btn.dataset.ownerNav === 'dashboard'){ renderOwnerTodayView(); renderOwnerActionRequired(); renderOwnerUpcomingActivity(); }
 });
 document.getElementById('ownerSidebarToggle').addEventListener('click', openOwnerSidebarDrawer);
 document.getElementById('ownerSidebarBackdrop').addEventListener('click', closeOwnerSidebarDrawer);
@@ -9567,11 +9580,44 @@ document.getElementById('ownerActionRequired').addEventListener('click', event =
   if(item && item.action) item.action();
 });
 
+let ownerUpcomingActivityCache = [];
+function renderOwnerUpcomingActivity(){
+  const wrap = document.getElementById('ownerUpcomingActivity');
+  if(!wrap) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const items = [];
+  DEMO_BOOKINGS.filter(b => b.status === 'confirmed' && b.date >= today).forEach(b =>
+    items.push({ date: b.date, time: b.time || '', type: '1:1', label: (b.name || 'Guest') + ' — ' + sessionTypeName(b.sessionType),
+      action: () => { showOwnerSection('bookings'); openBookingDetail(b.id); } }));
+  teachingsForTab('upcoming').forEach(t =>
+    items.push({ date: t.date || '', time: t.startTime || '', type: 'Class', label: t.title || '(untitled)',
+      action: () => { showOwnerSection('teachings'); openTeachingEditor(t.id); } }));
+  const nextEvent = eventsSystem ? eventsSystem.publicEvent() : null;
+  if(nextEvent && nextEvent.date && nextEvent.date >= today){
+    items.push({ date: nextEvent.date, time: nextEvent.time || '', type: 'Gathering', label: nextEvent.title || 'Gathering',
+      action: () => { showOwnerSection('events'); } });
+  }
+  items.sort((a, b) => (a.date + 'T' + (a.time || '00:00')).localeCompare(b.date + 'T' + (b.time || '00:00')));
+  ownerUpcomingActivityCache = items.slice(0, 6);
+  wrap.innerHTML = ownerUpcomingActivityCache.length === 0
+    ? '<p class="admin-hint">Nothing scheduled yet.</p>'
+    : ownerUpcomingActivityCache.map((item, idx) => '<div class="portal-row" data-upcoming-idx="' + idx + '" style="cursor:pointer"><div><strong>' + escapeHtml(item.label) +
+      '</strong><div class="admin-hint" style="margin-top:2px">' + escapeHtml(formatTeachingDateShort(item.date)) + (item.time ? ' · ' + escapeHtml(formatTeachingTime(item.time)) : '') + '</div></div>' +
+      '<span class="admin-status-pill draft">' + item.type + '</span></div>').join('');
+}
+document.getElementById('ownerUpcomingActivity').addEventListener('click', event => {
+  const row = event.target.closest('[data-upcoming-idx]');
+  if(!row) return;
+  const item = ownerUpcomingActivityCache[Number(row.dataset.upcomingIdx)];
+  if(item && item.action) item.action();
+});
+
 async function renderOwnerDashboardStats(){
   const wrap = document.getElementById('ownerDashboardStats');
   if(!wrap) return;
   renderOwnerTodayView();
   renderOwnerActionRequired();
+  renderOwnerUpcomingActivity();
   const welcome = document.getElementById('ownerDashboardWelcome');
   if(welcome && currentProfile){
     const firstName = (currentProfile.name || '').split(' ')[0];
@@ -13361,7 +13407,7 @@ if(document.body.dataset.page === 'events'){
    Never touches DEMO_MODE or any real Firestore write path; see that
    file's header comment for the full safety reasoning.
    --------------------------------------------------------------- */
-const ownerSim = initOwnerSimulation({ SESSION_TYPES, getTeachings: () => TEACHINGS });
+ownerSim = initOwnerSimulation({ SESSION_TYPES, getTeachings: () => TEACHINGS });
 ownerSim.bindDataRefs({
   getDemoBookings: () => DEMO_BOOKINGS, setDemoBookings: v => { DEMO_BOOKINGS = v; },
   getDemoRegistrations: () => DEMO_TEACHING_REGISTRATIONS, setDemoRegistrations: v => { DEMO_TEACHING_REGISTRATIONS = v; },
