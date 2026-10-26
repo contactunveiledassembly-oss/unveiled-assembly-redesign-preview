@@ -31,6 +31,7 @@ import {
 import { initSiteManagement } from "./site-management.js?v=5";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
+import { initShopSystem } from "./shop-system.js?v=1";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -640,7 +641,7 @@ function navHtml(){
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
           <span class="account-btn-label">Sign In</span>
         </button>
-        <button class="cart-btn" id="cartBtn" type="button" title="Shop — coming soon" aria-disabled="true">
+        <button class="cart-btn" id="cartBtn" type="button" title="Open shopping cart">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="width:13px;height:13px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6"/></svg>
           <span>Cart 0</span>
         </button>
@@ -1372,6 +1373,13 @@ function dialogsHtml(){
             </button>
           </div>
           <div class="owner-sidebar-group">
+            <span class="owner-sidebar-group-label">Store</span>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="store">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8h16l-1 12H5z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></svg>
+              Shop
+            </button>
+          </div>
+          <div class="owner-sidebar-group">
             <span class="owner-sidebar-group-label">Site</span>
             <button type="button" class="owner-sidebar-item" data-owner-nav="website">
               <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg>
@@ -1533,6 +1541,9 @@ function dialogsHtml(){
               <div class="form-status" id="eventAccessStatus" role="status" aria-live="polite" style="margin-top:10px"></div>
             </form>
           </div>
+        </article>
+        <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="store" hidden>
+          <div id="ownerStoreRoot"><p class="admin-hint">Loading Store Management…</p></div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="website">
           <span class="portal-label">Website Pages</span>
@@ -3278,6 +3289,7 @@ let currentUser = null;
 let currentProfile = null;
 let siteManagement = null;
 let eventsSystem = null;
+let shopSystem = null;
 // Ministry's scheduling timezone. The Scheduling Settings panel (below)
 // can change this in-memory for preview purposes; loadSchedulingConfig()
 // would also assign it once that panel is reconnected to Firestore.
@@ -3762,6 +3774,8 @@ function setMenuOpen(isOpen){
 }
 btn.addEventListener('click', () => setMenuOpen(!nav.classList.contains('open')));
 navMobilePanel.querySelectorAll('a:not(.is-placeholder)').forEach(a => a.addEventListener('click', () => setMenuOpen(false)));
+// The Shop module owns the cart button. This shared click still closes the
+// mobile navigation first so opening the cart never leaves two overlays up.
 document.getElementById('cartBtn').addEventListener('click', () => setMenuOpen(false));
 
 /* ---------------------------------------------------------------
@@ -9184,6 +9198,7 @@ const OWNER_SECTION_DESCRIPTIONS = {
   teachings: 'Create, edit, and publish the weekly Teaching classes.',
   events: 'Create, publish, and manage special ministry events.',
   website: 'Control the words and images visitors see on each page.',
+  store: 'Create, organize, and publish the Shop collection.',
   payments: 'Every payment collected through the website, in one place.',
   bookings: 'Manage one-on-one session requests and your weekly availability.',
   registrations: 'See who registered for every class, and manage attendance.',
@@ -9243,6 +9258,7 @@ const OWNER_SETTINGS_CATALOG = [
   { title: 'Account Profile', keywords: 'profile name photo account', action: () => showOwnerSection('settings') },
   { title: 'Account Settings (Email & Password)', keywords: 'password email account security login', action: () => showOwnerSection('settings') },
   { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => showOwnerSection('payments') },
+  { title: 'Store Products', keywords: 'shop store product collection price publish inventory', action: () => showOwnerSection('store') },
   { title: 'Session Types', keywords: 'session types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
   { title: 'Blocked Dates', keywords: 'blocked dates vacation unavailable bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('blocked'); } },
   { title: 'Availability', keywords: 'availability hours schedule windows bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('availability'); } },
@@ -9322,6 +9338,7 @@ document.getElementById('ownerSidebar').addEventListener('click', event => {
   if(!btn) return;
   showOwnerSection(btn.dataset.ownerNav);
   if(btn.dataset.ownerNav === 'paths') renderOwnerLearningPaths();
+  if(btn.dataset.ownerNav === 'store' && shopSystem) void shopSystem.loadAdmin().catch(() => {});
   if(btn.dataset.ownerNav === 'dashboard'){ renderOwnerTodayView(); renderOwnerActionRequired(); renderOwnerUpcomingActivity(); }
 });
 document.getElementById('ownerSidebarToggle').addEventListener('click', openOwnerSidebarDrawer);
@@ -10008,6 +10025,7 @@ async function loadOwnerData(){
   if(!DEMO_MODE){ try { await loadNightOfPrayerConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadOwnerSearchCaches(); } catch (err) { /* keep whatever is already loaded */ } }
   if(eventsSystem){ try { await eventsSystem.loadAdmin(); } catch (err) { /* keep the public event state */ } }
+  if(shopSystem){ try { await shopSystem.loadAdmin(); } catch (err) { /* keep the Store panel available with its safe empty state */ } }
   renderOwnerProfilePhotoPreview();
   renderOwnerAccountProfile();
   // Re-sync the scheduling draft with whatever just loaded from
@@ -10025,6 +10043,7 @@ async function loadOwnerData(){
   renderOwnerNotifications();
   renderTeachingManager();
   if(eventsSystem) eventsSystem.renderAdmin();
+  if(shopSystem) shopSystem.renderAdmin();
   renderOwnerWebsitePages();
   if(siteManagement) siteManagement.renderOwnerDiscountCodes();
   renderOwnerMediaGallery();
@@ -13808,6 +13827,14 @@ eventsSystem = initEventsSystem({
   resizeImage: resizeImageToDataUrl,
   base: BASE
 });
+shopSystem = initShopSystem({
+  DEMO_MODE,
+  db,
+  firestore: { doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp },
+  escapeHtml,
+  resizeImage: resizeImageToDataUrl,
+  base: BASE
+});
 // Event data is only needed on the Events page (or when the owner opens
 // its editor). Do not make every unrelated page perform these requests.
 eventsSystem.renderPublic();
@@ -13816,6 +13843,9 @@ if(document.body.dataset.page === 'events'){
   void eventsSystem.load()
     .then(renderOwnerWebsitePages)
     .catch(err => console.error('[events] background load failed', err));
+}
+if(document.body.dataset.page === 'shop' || document.body.dataset.page === 'shop-product'){
+  void shopSystem.loadPublic().catch(err => console.error('[shop] background load failed', err));
 }
 
 /* ---------------------------------------------------------------
