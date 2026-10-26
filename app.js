@@ -7186,7 +7186,11 @@ async function createBooking({ name, email, phone, reason, sessionType, date, ti
   const slotId = date + '_' + time;
   const startAtUTC = etWallTimeToDate(date, hhmmToMinutes(time));
   const confirmationId = generateConfirmationId('1ON1');
-  if(DEMO_MODE){
+  // ownerSim.isActive() here matters specifically for the admin's own
+  // "manually book someone" Quick Action — without it, using that control
+  // while Demo Mode is on would fall through to the real Firestore
+  // transaction below and write an actual booking to production.
+  if(DEMO_MODE || ownerSim.isActive()){
     if(DEMO_BOOKINGS.some(b => b.slotId === slotId && b.status !== 'declined' && b.status !== 'cancelled')){
       throw new Error('slot-taken');
     }
@@ -7196,7 +7200,7 @@ async function createBooking({ name, email, phone, reason, sessionType, date, ti
     if(status === 'confirmed') markBookingPaid(record);
     DEMO_BOOKINGS.push(record);
     DEMO_HOLDS = DEMO_HOLDS.filter(h => h.id !== holdIdFor(date, time));
-    saveBookingsPreviewToStorage();
+    if(DEMO_MODE && !ownerSim.isActive()) saveBookingsPreviewToStorage();
     pushMemberNotification(uid, 'registration-confirmed', 'Session Confirmed', sessionTypeName(sessionType) + ' — ' + confirmationId);
     const timeLabel = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(bookedAt));
     DEMO_NOTIFICATIONS.unshift({
