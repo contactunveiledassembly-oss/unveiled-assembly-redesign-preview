@@ -1432,7 +1432,7 @@ function dialogsHtml(){
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
           <span class="portal-label">Payments</span>
-          <p class="admin-panel-intro">Every payment collected through the website will appear here, in one place.</p>
+          <p class="admin-panel-intro">A unified view across every payment category, once a real payment processor is connected. Today, per-booking and per-registration payment status already live under Bookings → Payments and Registrations → Payments — this page will pull all of it together automatically, with totals by month, year, and category.</p>
           <div class="admin-tabs" id="ownerPaymentsTabs" role="tablist" style="margin:16px 0">
             <button type="button" class="admin-tab active" data-payments-tab="all">Overview</button>
             <button type="button" class="admin-tab" data-payments-tab="teaching">Teaching Payments</button>
@@ -1443,7 +1443,7 @@ function dialogsHtml(){
           </div>
           <div class="admin-payments-empty">
             <strong>Payments Not Connected</strong>
-            <p>There's no real payment processor connected to the website yet, so there's no transaction history to show. Once one is connected, every teaching payment, one-on-one booking payment, shop order, donation, and refund will show up here automatically — with totals for this month, this year, and by category.</p>
+            <p>There's no real payment processor connected to the website yet, so there's no unified transaction history to show here. Once one is connected, every teaching payment, one-on-one booking payment, shop order, donation, and refund will show up here automatically — with totals for this month, this year, and by category.</p>
           </div>
           <div class="discount-manager">
             <span class="portal-label">Discount Codes</span>
@@ -10179,7 +10179,11 @@ function bookingsPaymentRowHtml(b){
     '</div></div>';
 }
 function bookingsPaymentsFilteredList(){
-  return DEMO_BOOKINGS.filter(b => Number(b.amountPaid) > 0 || b.status === 'pending')
+  // Real production bookings live in OWNER_ALL_BOOKINGS_CACHE, not the
+  // DEMO_BOOKINGS seed array — same reasoning as renderOwnerTodayView().
+  const useSeedArrays = DEMO_MODE || ownerSim.isActive();
+  const source = useSeedArrays ? DEMO_BOOKINGS : OWNER_ALL_BOOKINGS_CACHE;
+  return source.filter(b => Number(b.amountPaid) > 0 || b.status === 'pending')
     .sort((a, b) => new Date(b.bookedAt || 0) - new Date(a.bookedAt || 0));
 }
 function renderBookingsPayments(){
@@ -12288,7 +12292,12 @@ function classRegPaymentRowHtml(item){
     '</div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-classreg-view="' + escapeHtml(item.id) + '">View</button></div></div>';
 }
 function classRegPaymentsFilteredList(){
-  return DEMO_TEACHING_REGISTRATIONS.filter(r => Number(r.amountPaid) > 0 || r.status === 'pending_payment')
+  // Real production registrations live in OWNER_ALL_REGISTRATIONS_CACHE,
+  // not the DEMO_TEACHING_REGISTRATIONS seed array — same reasoning as
+  // renderOwnerTodayView().
+  const useSeedArrays = DEMO_MODE || ownerSim.isActive();
+  const source = useSeedArrays ? DEMO_TEACHING_REGISTRATIONS : OWNER_ALL_REGISTRATIONS_CACHE;
+  return source.filter(r => Number(r.amountPaid) > 0 || r.status === 'pending_payment')
     .sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
 }
 function renderClassRegPayments(){
