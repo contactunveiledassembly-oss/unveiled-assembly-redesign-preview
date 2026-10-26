@@ -12375,7 +12375,7 @@ document.getElementById('teachingRegistrantsSearch').addEventListener('input', e
    ================================================================= */
 function classRegistrationSource(){
   return (DEMO_MODE || (ownerSim && ownerSim.isActive()))
-    ? classRegistrationSource()
+    ? DEMO_TEACHING_REGISTRATIONS
     : OWNER_ALL_REGISTRATIONS_CACHE;
 }
 const CLASS_REG_STATUS_LABELS = { confirmed: 'Confirmed', complimentary: 'Complimentary', pending_payment: 'Pending', cancelled: 'Cancelled', refunded: 'Refunded' };
