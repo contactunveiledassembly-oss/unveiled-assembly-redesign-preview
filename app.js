@@ -1210,50 +1210,59 @@ function dialogsHtml(){
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
             Dashboard
           </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="teachings">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18H6.5A2.5 2.5 0 0 0 4 20.5"/></svg>
-            Teachings
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="events">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5h16v15H4z"/><path d="M4 9h16M8 3v4M16 3v4"/><circle cx="9" cy="14" r="1.5"/><path d="M13 14h4M8 18h9"/></svg>
-            Events
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
-            Bookings
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="registrations">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v15.5L14 18l-4.5 2.5L5 18V5A1.5 1.5 0 0 1 6.5 3.5z"/><path d="M9 9h6M9 12.5h6"/></svg>
-            Registrations
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="people">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
-            People
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="paths">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="20" cy="12" r="1.6"/><circle cx="19" cy="18" r="1.6"/></svg>
-            Learning Paths
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
-            Payments
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="media">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 16l-5.5-5.5a1.5 1.5 0 0 0-2 0L4 20"/></svg>
-            Media
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="website">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg>
-            Website
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="settings">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
-            Settings
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="policies">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/><path d="M15 3.5V7.5a.5.5 0 0 0 .5.5H19"/><path d="M10 12.5h5M10 15.5h5M10 9.5h2"/></svg>
-            Policies
-          </button>
+          <div class="owner-sidebar-group">
+            <span class="owner-sidebar-group-label">Content</span>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="teachings">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18H6.5A2.5 2.5 0 0 0 4 20.5"/></svg>
+              Teachings
+            </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="events">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5h16v15H4z"/><path d="M4 9h16M8 3v4M16 3v4"/><circle cx="9" cy="14" r="1.5"/><path d="M13 14h4M8 18h9"/></svg>
+              Events
+            </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="paths">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="20" cy="12" r="1.6"/><circle cx="19" cy="18" r="1.6"/></svg>
+              Learning Paths
+            </button>
+          </div>
+          <div class="owner-sidebar-group">
+            <span class="owner-sidebar-group-label">People &amp; Bookings</span>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
+              Bookings
+            </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="registrations">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v15.5L14 18l-4.5 2.5L5 18V5A1.5 1.5 0 0 1 6.5 3.5z"/><path d="M9 9h6M9 12.5h6"/></svg>
+              Registrations
+            </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="people">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
+              People
+            </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
+              Payments
+            </button>
+          </div>
+          <div class="owner-sidebar-group">
+            <span class="owner-sidebar-group-label">Site</span>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="website">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg>
+              Website
+            </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="media">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 16l-5.5-5.5a1.5 1.5 0 0 0-2 0L4 20"/></svg>
+              Media
+            </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="settings">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
+              Settings
+            </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="policies">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/><path d="M15 3.5V7.5a.5.5 0 0 0 .5.5H19"/><path d="M10 12.5h5M10 15.5h5M10 9.5h2"/></svg>
+              Policies
+            </button>
+          </div>
           <div class="owner-sidebar-profile">
             <div class="owner-sidebar-avatar" id="ownerSidebarAvatar">?</div>
             <div class="owner-sidebar-profile-text">
@@ -1266,20 +1275,33 @@ function dialogsHtml(){
       <div class="portal-owner-grid">
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
           <h3 style="font-family:var(--serif);font-size:26px;font-weight:600;color:var(--owner-text);margin:0 0 4px" id="ownerDashboardWelcome">Welcome back.</h3>
-          <p class="admin-panel-intro" style="margin-bottom:18px">Here's what's happening with your ministry.</p>
-          <div class="admin-subsection-label" style="border-top:0;padding-top:0">Today</div>
-          <div class="admin-stat-row" id="ownerTodayStats"></div>
-          <div class="admin-subsection-label">Action Required</div>
-          <div id="ownerActionRequired"></div>
-          <div class="admin-subsection-label">Overview</div>
-          <div class="admin-stat-row" id="ownerDashboardStats"></div>
-          <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:22px" class="owner-dashboard-lower">
-            <div>
-              <div class="admin-subsection-label" style="border-top:0;padding-top:0">Recent Activity</div>
+          <p class="admin-panel-intro" style="margin-bottom:22px">Here's what's happening with your ministry.</p>
+
+          <div class="owner-dash-card">
+            <div class="owner-dash-card-head"><span class="owner-dash-card-title">Today</span></div>
+            <div class="admin-stat-row admin-stat-row-3col" id="ownerTodayStats"></div>
+          </div>
+
+          <div class="owner-dash-card">
+            <div class="owner-dash-card-head">
+              <span class="owner-dash-card-title">Needs Your Attention</span>
+              <span class="owner-dash-card-count" id="ownerActionRequiredCount"></span>
+            </div>
+            <div id="ownerActionRequired"></div>
+          </div>
+
+          <div class="owner-dash-card">
+            <div class="owner-dash-card-head"><span class="owner-dash-card-title">Ministry Overview</span></div>
+            <div class="admin-stat-row" id="ownerDashboardStats"></div>
+          </div>
+
+          <div class="owner-dash-card-row">
+            <div class="owner-dash-card">
+              <div class="owner-dash-card-head"><span class="owner-dash-card-title">Recent Activity</span></div>
               <div id="ownerRecentActivity"></div>
             </div>
-            <div>
-              <div class="admin-subsection-label" style="border-top:0;padding-top:0">Quick Actions</div>
+            <div class="owner-dash-card">
+              <div class="owner-dash-card-head"><span class="owner-dash-card-title">Quick Actions</span></div>
               <div style="display:flex;flex-direction:column;gap:8px" id="ownerQuickActions">
                 <button type="button" class="admin-btn-ghost" data-quick-action="new-teaching" style="text-align:left">+ Create A Teaching Class</button>
                 <button type="button" class="admin-btn-ghost" data-quick-action="media" style="text-align:left">Upload Media</button>
@@ -3256,7 +3278,17 @@ let TEACHING_PAGE_SETTINGS = {
   scriptureReference: '1 Corinthians 2:14', scriptureImage: 'assets/one-on-one/booking-v2.jpg'
 };
 let TEACHINGS = DEMO_TEACHINGS;
-let MEDIA_LIBRARY = [];
+// Seeded so the Media Library doesn't read as empty/fake on a fresh
+// preview session — reuses real site photography, not placeholder
+// art, same reasoning as the Teachings/Testimonials demo seeds.
+const DAY_MS = 24 * 60 * 60 * 1000;
+let MEDIA_LIBRARY = [
+  { id: 'media-seed-1', url: 'assets/assembly-nights-concept-v2.jpg', label: 'Assembly Night', createdAtMs: Date.now() - 3 * DAY_MS },
+  { id: 'media-seed-2', url: 'assets/story-v5/service-meals-v1.jpg', label: 'Community Meal Night', createdAtMs: Date.now() - 9 * DAY_MS },
+  { id: 'media-seed-3', url: 'assets/story-v5/testimony-still-v1.png', label: 'Testimony Night', createdAtMs: Date.now() - 16 * DAY_MS },
+  { id: 'media-seed-4', url: 'assets/give/community-meals-v2.jpg', label: 'Fellowship Gathering', createdAtMs: Date.now() - 24 * DAY_MS },
+  { id: 'media-seed-5', url: 'assets/story-v5/service-provisions-v1.jpg', label: 'Outreach & Provisions Drive', createdAtMs: Date.now() - 31 * DAY_MS }
+];
 
 /* ---------------------------------------------------------------
    Preview persistence (DEMO_MODE only). Saves Teaching Manager edits
@@ -3274,7 +3306,7 @@ const TEACHING_PREVIEW_DEFAULTS = {
   teachings: JSON.parse(JSON.stringify(DEMO_TEACHINGS)),
   settings: JSON.parse(JSON.stringify(TEACHING_PAGE_SETTINGS)),
   zoom: JSON.parse(JSON.stringify(DEMO_TEACHING_ZOOM)),
-  media: [],
+  media: JSON.parse(JSON.stringify(MEDIA_LIBRARY)),
   profilePhoto: '',
   sessionTypes: JSON.parse(JSON.stringify(SESSION_TYPES)),
   schedulingSettings: JSON.parse(JSON.stringify(SCHEDULING_SETTINGS)),
@@ -3498,7 +3530,10 @@ async function loadMediaLibrary(){
     const items = [];
     snap.forEach(d => items.push({ id: d.id, ...d.data() }));
     items.sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
-    MEDIA_LIBRARY = items;
+    // Same reasoning as Teachings above: once something real is
+    // uploaded it always replaces the seeded examples, but until then
+    // keep showing those instead of an empty gallery.
+    if(items.length) MEDIA_LIBRARY = items;
   } catch (err) { /* keep whatever we had */ }
 }
 
@@ -4008,13 +4043,15 @@ function initOwnerInboxNavigation(){
   const content = document.querySelector('.owner-content');
   if(!sidebar || !content) return;
   if(!sidebar.querySelector('[data-owner-nav="prayer-requests"]')) {
-    sidebar.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="prayer-requests"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20H6.5A2.5 2.5 0 0 1 4 17.5zm0 0 8 6 8-6"/></svg>Prayer Requests<span class="owner-nav-count">0</span></button>');
+    sidebar.insertAdjacentHTML('beforeend', '<div class="owner-sidebar-group" data-owner-sidebar-group="inbox"><span class="owner-sidebar-group-label">Inbox</span>' +
+      '<button type="button" class="owner-sidebar-item" data-owner-nav="prayer-requests"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20H6.5A2.5 2.5 0 0 1 4 17.5zm0 0 8 6 8-6"/></svg>Prayer Requests<span class="owner-nav-count">0</span></button></div>');
   }
+  const inboxGroup = sidebar.querySelector('[data-owner-sidebar-group="inbox"]') || sidebar;
   if(!sidebar.querySelector('[data-owner-nav="testimonials"]')) {
-    sidebar.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="testimonials"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 18.5V5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5v8A1.5 1.5 0 0 1 17.5 15H9l-4 3.5z"/><path d="M9 8h6M9 11h6"/></svg>Testimonials<span class="owner-nav-count">0</span></button>');
+    inboxGroup.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="testimonials"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 18.5V5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5v8A1.5 1.5 0 0 1 17.5 15H9l-4 3.5z"/><path d="M9 8h6M9 11h6"/></svg>Testimonials<span class="owner-nav-count">0</span></button>');
   }
   if(!sidebar.querySelector('[data-owner-nav="class-reviews"]')) {
-    sidebar.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="class-reviews"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3.5 14.7 8l5 .7-3.6 3.5 1 4.9-4.7-2.4-4.7 2.4 1-4.9L4.3 8.7l5-.7L12 3.5z"/></svg>Class Reviews<span class="owner-nav-count">0</span></button>');
+    inboxGroup.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="class-reviews"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3.5 14.7 8l5 .7-3.6 3.5 1 4.9-4.7-2.4-4.7 2.4 1-4.9L4.3 8.7l5-.7L12 3.5z"/></svg>Class Reviews<span class="owner-nav-count">0</span></button>');
   }
 
   if(!content.querySelector('[data-owner-section="prayer-requests"]')) {
@@ -9340,6 +9377,8 @@ function renderOwnerActionRequired(){
   const wrap = document.getElementById('ownerActionRequired');
   if(!wrap) return;
   ownerActionItemsCache = ownerActionItems();
+  const countEl = document.getElementById('ownerActionRequiredCount');
+  if(countEl) countEl.textContent = ownerActionItemsCache.length === 0 ? 'All caught up' : String(ownerActionItemsCache.length);
   wrap.innerHTML = ownerActionItemsCache.length === 0
     ? '<p class="admin-hint">Nothing needs your attention right now.</p>'
     : ownerActionItemsCache.map((item, idx) => '<div class="portal-row" data-action-idx="' + idx + '" style="cursor:pointer"><div><strong>' + escapeHtml(item.label) + '</strong></div>' +

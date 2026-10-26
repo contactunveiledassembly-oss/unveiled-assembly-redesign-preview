@@ -2057,6 +2057,8 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 .admin-status-pill.unpaid{color:#4b5563;background:#f3f4f6}
 
 .admin-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:16px 0 20px}
+.admin-stat-row-3col{grid-template-columns:repeat(3,1fr)}
+@media(max-width:640px){.admin-stat-row-3col{grid-template-columns:repeat(2,1fr)}}
 .admin-stat-tile{
   border:1px solid var(--owner-border);border-radius:var(--owner-radius);padding:18px 18px;
   background:var(--owner-surface);box-shadow:var(--owner-shadow);
@@ -2070,6 +2072,20 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 .admin-checkbox-field{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--owner-text);padding-top:22px}
 .admin-checkbox-field input{accent-color:var(--owner-accent)}
 .admin-subsection-label{font-family:var(--sans);font-size:12px;letter-spacing:.03em;font-weight:600;color:var(--owner-text);margin:24px 0 12px;padding-top:18px;border-top:1px solid var(--owner-border)}
+
+/* Owner Dashboard cards — a bounded container per zone (Today, Needs
+   Attention, Overview, Activity/Quick Actions) instead of a flat
+   stack of stat rows separated only by a text label, so the eye has
+   a clear "this group ends here" boundary and the page reads as a
+   few distinct zones at a glance instead of one long scroll. */
+.owner-dash-card{background:var(--owner-surface-sunken);border:1px solid var(--owner-border);border-radius:var(--owner-radius-lg);padding:24px 26px;margin-bottom:18px}
+.owner-dash-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.owner-dash-card-title{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--owner-text)}
+.owner-dash-card-count{font:600 11px var(--mono);color:var(--owner-text-muted);background:var(--owner-surface);border:1px solid var(--owner-border);padding:3px 10px;border-radius:999px;white-space:nowrap}
+.owner-dash-card .admin-stat-row{margin:0}
+.owner-dash-card-row{display:grid;grid-template-columns:1.3fr 1fr;gap:18px}
+@media(max-width:860px){.owner-dash-card-row{grid-template-columns:1fr}}
+@media(max-width:640px){.owner-dash-card{padding:18px}}
 
 /* ---------- Owner Portal global search ---------- */
 .owner-global-search{position:relative;padding:0 22px;margin-top:-6px}
@@ -2496,6 +2512,12 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 .owner-sidebar-item svg{width:16px;height:16px;flex:0 0 auto;stroke:currentColor;fill:none}
 .owner-sidebar-item:hover{background:rgba(255,255,255,.07);color:#fff}
 .owner-sidebar-item.active{background:#fff;color:#0c0c0e}
+/* Groups the 15 nav items into a few labeled clusters (Content,
+   People & Bookings, Site, Inbox) instead of one flat 15-item list,
+   so a quick glance lands on the right cluster instead of scanning
+   every row in sequence. */
+.owner-sidebar-group{display:flex;flex-direction:column;gap:2px;margin-top:16px}
+.owner-sidebar-group-label{font:600 10px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:#5c5c66;padding:8px 14px 4px}
 .owner-sidebar-profile{
   margin-top:auto;display:flex;align-items:center;gap:10px;padding:16px 12px 6px;border-top:1px solid rgba(255,255,255,.1);
 }
