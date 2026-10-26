@@ -171,7 +171,14 @@ export function initEventsSystem({ DEMO_MODE, db, firestore, escapeHtml, resizeI
   function renderPublic(){
     const config = editableEvent();
     const pageMode = config.pageMode || 'live';
-    document.querySelectorAll('[data-events-nav-link]').forEach(link => { link.hidden = pageMode === 'hidden'; });
+    // The owner's site-wide page-visibility toggle (app.js) can also hide
+    // this same link — only ever claim/release the hide this function's
+    // own pageMode is responsible for, never clear a hide the other
+    // system owns (marked with data-hidden-by-page-visibility).
+    document.querySelectorAll('[data-events-nav-link]').forEach(link => {
+      if(pageMode === 'hidden') link.hidden = true;
+      else if(!link.dataset.hiddenByPageVisibility) link.hidden = false;
+    });
     const root = document.getElementById('eventsPageRoot');
     if(!root) return;
     const event = pageMode === 'live' ? publicEvent() : null;

@@ -450,6 +450,62 @@ const NAV_LINKS = [
   { page: 'shop', href: 'shop/', label: 'Shop' },
 ];
 
+// Owner-controlled per-page "Coming Soon" switch. Reuses the existing
+// pageContent collection (one doc per page, already public-read/admin-write
+// in firestore.rules) under the id 'visibility' instead of adding a new
+// collection — avoids needing another rules deploy for this feature.
+// Mutated in place (never reassigned) so the reference handed to
+// site-management.js via initSiteManagement() stays live.
+const PAGE_VISIBILITY_STORAGE_KEY = 'ua_preview_page_visibility_v1';
+const PAGE_VISIBILITY = Object.fromEntries(NAV_LINKS.map(l => [l.page, true]));
+async function loadPageVisibility(){
+  try {
+    if(DEMO_MODE){
+      const raw = localStorage.getItem(PAGE_VISIBILITY_STORAGE_KEY);
+      if(raw) Object.assign(PAGE_VISIBILITY, JSON.parse(raw));
+      return;
+    }
+    const snap = await getDoc(doc(db, 'pageContent', 'visibility'));
+    if(snap.exists()) Object.assign(PAGE_VISIBILITY, snap.data());
+  } catch (err) { /* keep defaults (everything visible) */ }
+}
+async function savePageVisibility(){
+  if(DEMO_MODE){ localStorage.setItem(PAGE_VISIBILITY_STORAGE_KEY, JSON.stringify(PAGE_VISIBILITY)); return; }
+  await setDoc(doc(db, 'pageContent', 'visibility'), { ...PAGE_VISIBILITY, updatedAt: serverTimestamp() });
+}
+// Hides this page's own nav link wherever a toggled-off page is still
+// reachable (every page renders the full nav), and — only on the toggled-off
+// page itself — swaps the real content for a plain "Coming Soon" panel.
+// A fixed overlay (not a content swap) so this works the same way on every
+// page regardless of that page's own markup.
+function applyPageVisibility(){
+  // The Events nav link also has its own hide reason (events-system.js's
+  // pageMode) — only ever claim/release the hide owned by this toggle
+  // (marked below), never clear a hide the other system owns.
+  NAV_LINKS.forEach(l => {
+    const hidden = PAGE_VISIBILITY[l.page] === false;
+    document.querySelectorAll('a[data-page="' + l.page + '"]').forEach(a => {
+      if(hidden){ a.hidden = true; a.dataset.hiddenByPageVisibility = '1'; }
+      else if(a.dataset.hiddenByPageVisibility){ a.hidden = false; delete a.dataset.hiddenByPageVisibility; }
+    });
+  });
+  const currentPage = document.body.dataset.page;
+  const isComingSoon = currentPage && PAGE_VISIBILITY[currentPage] === false;
+  let overlay = document.getElementById('pageComingSoonOverlay');
+  if(isComingSoon){
+    if(!overlay){
+      overlay = document.createElement('div');
+      overlay.id = 'pageComingSoonOverlay';
+      overlay.className = 'page-coming-soon-overlay';
+      const label = (NAV_LINKS.find(l => l.page === currentPage) || {}).label || 'This Page';
+      overlay.innerHTML = '<div class="page-coming-soon-content"><div class="eyebrow">' + escapeHtml(label) + '</div>' +
+        '<h1 class="teaching-display">Coming<br>Soon.</h1>' +
+        '<a href="' + BASE + 'index.html" class="btn">Return Home</a></div>';
+      document.body.appendChild(overlay);
+    }
+  } else if(overlay){ overlay.remove(); }
+}
+
 // Real URL on file. Facebook/YouTube have no confirmed URL yet — marked
 // coming-soon rather than guessed, per instruction not to invent links.
 const SOCIAL_LINKS = [
@@ -2998,6 +3054,11 @@ function dialogsHtml(){
 // anything below tries to query them.
 document.body.insertAdjacentHTML('afterbegin', navHtml());
 document.body.insertAdjacentHTML('beforeend', dialogsHtml() + footerHtml());
+// Paint with the safe default (everything visible) immediately, then
+// reconcile against the owner's real toggle state once it arrives —
+// never hold the page open waiting on this.
+applyPageVisibility();
+loadPageVisibility().then(applyPageVisibility).catch(() => {});
 // Belt-and-suspenders fallback for every "logo image next to text
 // branding" spot in the header/portals: if the PNG ever fails to load
 // again for any reason, the image is hidden and the text branding
@@ -3401,7 +3462,11 @@ async function loadTeachingPageConfig(){
     const snap = await getDocs(teachingsQuery);
     const map = {};
     snap.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
-    TEACHINGS = map;
+    // Once a real class exists, it always replaces the placeholders. Until
+    // then, keep showing the example teachings (the DEMO_TEACHINGS this
+    // started as) so the page gives a sense of the finished layout instead
+    // of an empty "Coming Soon" state — ministry decision, owner's call.
+    if(Object.keys(map).length) TEACHINGS = map;
   } catch (err) { /* keep whatever we had */ }
 }
 let teachingPageConfigLoad = Promise.resolve();
@@ -12963,6 +13028,9 @@ siteManagement = initSiteManagement({
   rerenderBookingSummary: renderBookingOrderSummary,
   rerenderTeachingSummary: renderTeachingRegistrationOrderSummary,
   policyCardHtml,
+  PAGE_VISIBILITY,
+  savePageVisibility,
+  applyPageVisibility,
   openEventsEditor: async () => {
     showOwnerSection('events');
     if(eventsSystem){

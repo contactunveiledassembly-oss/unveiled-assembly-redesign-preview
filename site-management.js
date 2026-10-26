@@ -148,7 +148,7 @@ function normalizeCode(value){ return String(value || '').trim().toUpperCase().r
 function htmlLines(value, escapeHtml){ return String(value || '').split('\n').map(escapeHtml).join('<br>'); }
 
 export function initSiteManagement(context){
-  const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary, policyCardHtml, openEventsEditor } = context;
+  const { DEMO_MODE, db, firestore, escapeHtml, getBookingSubtotal, getTeachingSubtotal, rerenderBookingSummary, rerenderTeachingSummary, policyCardHtml, openEventsEditor, PAGE_VISIBILITY, savePageVisibility, applyPageVisibility } = context;
   const { doc, setDoc, getDoc, collection, getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction } = firestore;
   const PAGE_STORAGE_KEYS = { 'one-on-one': 'uaOneOnOnePageContent', home: 'uaHomePageContent', beliefs: 'uaBeliefsPageContent', give: 'uaGivePageContent' };
   const DISCOUNT_STORAGE_KEY = 'uaDiscountCodes';
@@ -582,24 +582,48 @@ export function initSiteManagement(context){
 
   const WEBSITE_PAGES = [
     { name: 'Home Page', key: 'home', html: homeEditorHtml, populate: populateHomeEditor, previewUrl: 'index.html' },
-    { name: 'One-on-One Page', key: 'one-on-one', html: oneOnOneEditorHtml, populate: populateOneOnOneEditor, previewUrl: 'one-on-one.html' },
-    { name: 'Events Page', key: 'events', opensManager: true, previewUrl: 'events.html' },
-    { name: 'Beliefs', key: 'beliefs', html: beliefsEditorHtml, populate: populateBeliefsEditor, previewUrl: 'beliefs.html' },
-    { name: 'Give', key: 'give', html: giveEditorHtml, populate: populateGiveEditor, previewUrl: 'give.html' },
-    { name: 'Teaching Page', key: null }, { name: 'Prayer Page', key: null }, { name: 'Our Story', key: null },
-    { name: 'Gather', key: null }, { name: 'Connect', key: null },
-    { name: 'Shop', key: null }, { name: 'Navigation', key: null }, { name: 'Footer', key: null }
+    { name: 'One-on-One Page', key: 'one-on-one', visKey: 'one-on-one', html: oneOnOneEditorHtml, populate: populateOneOnOneEditor, previewUrl: 'one-on-one.html' },
+    { name: 'Events Page', key: 'events', visKey: 'events', opensManager: true, previewUrl: 'events.html' },
+    { name: 'Beliefs', key: 'beliefs', visKey: 'beliefs', html: beliefsEditorHtml, populate: populateBeliefsEditor, previewUrl: 'beliefs.html' },
+    { name: 'Give', key: 'give', visKey: 'give', html: giveEditorHtml, populate: populateGiveEditor, previewUrl: 'give.html' },
+    { name: 'Teaching Page', key: null, visKey: 'teachings' }, { name: 'Prayer Page', key: null, visKey: 'prayer' }, { name: 'Our Story', key: null, visKey: 'story' },
+    { name: 'Gather', key: null, visKey: 'gather' }, { name: 'Connect', key: null, visKey: 'connect' },
+    { name: 'Shop', key: null, visKey: 'shop' }, { name: 'Navigation', key: null }, { name: 'Footer', key: null }
   ];
+  // Owner-facing "is this page on or off" switch — independent of whether
+  // the page has a content editor yet (Teaching/Prayer/Our Story/Gather/
+  // Connect/Shop can still be toggled even with key:null above). Saves
+  // immediately on click, unlike the staged-save editors: a single-purpose
+  // on/off switch is expected to take effect the moment it's flipped, the
+  // same way a light switch does, not something you'd "undo" before saving.
+  function pageVisibilityToggleHtml(page){
+    if(!page.visKey) return '';
+    const on = PAGE_VISIBILITY[page.visKey] !== false;
+    return '<label class="page-visibility-toggle" title="' + (on ? 'Visible to visitors — click to show Coming Soon instead' : 'Showing Coming Soon to visitors — click to make live') + '">' +
+      '<input type="checkbox" data-page-visibility="' + page.visKey + '"' + (on ? ' checked' : '') + ' />' +
+      '<span class="page-visibility-track"><span class="page-visibility-thumb"></span></span></label>';
+  }
   function renderOwnerWebsitePages(){
     const list = document.getElementById('ownerWebsitePagesList');
     const editor = document.getElementById('ownerWebsiteEditor');
     if(!list || !editor) return;
     list.innerHTML = WEBSITE_PAGES.map(page => {
       const connected = !!page.key;
-      return '<button type="button" class="admin-website-page-row' + (connected ? ' is-connected' : '') + '" data-site-page="' + escapeHtml(page.name) + '"' + (connected ? '' : ' disabled') + '><span>' + escapeHtml(page.name) + '</span><span class="' + (connected ? 'admin-status-pill published' : 'demo-badge') + '">' + (connected ? 'Editable' : 'Coming Later') + '</span></button>';
+      return '<div class="admin-website-page-row-wrap">' +
+        '<button type="button" class="admin-website-page-row' + (connected ? ' is-connected' : '') + '" data-site-page="' + escapeHtml(page.name) + '"' + (connected ? '' : ' disabled') + '><span>' + escapeHtml(page.name) + '</span><span class="' + (connected ? 'admin-status-pill published' : 'demo-badge') + '">' + (connected ? 'Editable' : 'Coming Later') + '</span></button>' +
+        pageVisibilityToggleHtml(page) +
+        '</div>';
     }).join('');
-    editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>Home, One-on-One, Events, Beliefs, and Give are ready to edit. Other pages stay protected until their editors are approved.</p></div>';
+    editor.innerHTML = '<div class="site-editor-welcome"><strong>Choose an editable page.</strong><p>Home, One-on-One, Events, Beliefs, and Give are ready to edit. Other pages stay protected until their editors are approved. The switch next to each page turns it on or off for visitors — off shows "Coming Soon" instead of the real page.</p></div>';
   }
+  document.getElementById('ownerWebsitePagesList')?.addEventListener('change', async event => {
+    const toggle = event.target.closest('[data-page-visibility]');
+    if(!toggle) return;
+    const key = toggle.dataset.pageVisibility;
+    PAGE_VISIBILITY[key] = toggle.checked;
+    try { await savePageVisibility(); } catch (err) { /* preview still reflects the change locally */ }
+    applyPageVisibility();
+  });
   function openWebsitePageEditor(pageName){
     const page = WEBSITE_PAGES.find(p => p.name === pageName && p.key);
     if(!page) return;
