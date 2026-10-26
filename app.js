@@ -30,6 +30,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { initSiteManagement } from "./site-management.js?v=4";
 import { initEventsSystem } from "./events-system.js?v=4";
+import { initOwnerSimulation } from "./owner-simulation.js?v=1";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -267,7 +268,7 @@ async function loadMemberOwnBookings(){
 // existing ids/names/emails unchanged here). One entry (demo-m23)
 // deliberately has no location at all, to demo the "members without
 // location data" case real pre-this-feature accounts will have.
-const DEMO_MEMBERS = [
+let DEMO_MEMBERS = [
   { id: 'demo-m1', name: 'Jordan Lee', email: 'jordan@example.com', role: 'member', state: 'Georgia', city: 'Macon', createdAt: demoPastTimestamp(210, 9, 0) },
   { id: 'demo-m2', name: 'Amara Okafor', email: 'amara@example.com', role: 'member', state: 'North Carolina', city: 'Charlotte', createdAt: demoPastTimestamp(140, 14, 30) },
   { id: 'demo-m3', name: 'Sam Rivera', email: 'sam@example.com', role: 'member', state: 'Texas', city: 'Houston', createdAt: demoPastTimestamp(60, 11, 0) },
@@ -1196,6 +1197,7 @@ function dialogsHtml(){
           <button type="button" class="owner-header-btn owner-header-signout" id="ownerHeaderSignOutBtn">Sign Out</button>
         </div>
       </div>
+      <div id="ownerSimBar"></div>
       <div class="owner-global-search">
         <input id="ownerGlobalSearch" type="text" placeholder="Search members, confirmation IDs, classes, prayer requests, testimonials…" autocomplete="off" />
         <div id="ownerGlobalSearchResults" hidden></div>
@@ -1762,10 +1764,10 @@ function dialogsHtml(){
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
-          <span class="portal-label">Notification Center <span class="demo-badge">Visual Demonstration — Not Yet Connected</span></span>
+          <span class="portal-label">Notification Center <span class="demo-badge" id="notifCenterBadge">Visual Demonstration — Not Yet Connected</span></span>
           <p style="color:#656565;margin-bottom:14px">A preview of what admin alerts and outbound member notifications will look like once real email/SMS delivery is connected. These are sample/simulated entries, not live activity.</p>
           <div class="admin-tabs" id="ownerNotifCenterTabs" style="margin-bottom:16px">
-            <button type="button" class="admin-tab active" data-notif-center-tab="alerts">Owner Alerts</button>
+            <button type="button" class="admin-tab active" data-notif-center-tab="alerts">Owner Alerts<span class="owner-nav-count" id="ownerNotifUnreadBadge" hidden>0</span></button>
             <button type="button" class="admin-tab" data-notif-center-tab="history">Member Notification History</button>
           </div>
           <div data-notif-center-panel="alerts">
@@ -3881,6 +3883,9 @@ async function submitMinistryRecord(collectionName, targetArray, item){
 // replaces the old pattern of firing persistMinistryData() (unawaited)
 // after every such edit and never checking whether it actually landed.
 async function saveMinistryRecordEdit(collectionName, item){
+  // Demo Mode (simulation) edits in-memory sim records directly — never
+  // touch real Firestore or this browser's real localStorage preview data.
+  if(ownerSim.isActive()) return { ok: true };
   persistMinistryDataLocal();
   if(DEMO_MODE) return { ok: true };
   try {
@@ -3916,6 +3921,7 @@ function sanitizePublicMinistryRecord(item, kind){
   return sanitized;
 }
 async function publishPublicMirror(publicCollectionName, item, kind){
+  if(ownerSim.isActive()) return { ok: true }; // never publish a simulated record publicly
   if(DEMO_MODE) return { ok: true };
   try {
     await setDoc(doc(db, publicCollectionName, item.id), sanitizePublicMinistryRecord(item, kind));
@@ -8732,9 +8738,35 @@ const DEMO_NOTIFICATIONS = [
   { id: 'n3', title: 'New Class Registration', detail: 'Kayla R. — Discernment, ' + formatTeachingDate(DEMO_TEACHINGS['demo-discernment'].date) + ' · ' + formatTeachingTime(DEMO_TEACHINGS['demo-discernment'].startTime, DEMO_TEACHINGS['demo-discernment'].timeZone) + '. Registered at 8:43 PM ET.', read: true },
 ];
 let DEMO_NOTIF_SEQ = 3;
+function simNotifOpener(targetKind, targetId){
+  if(targetKind === 'booking') openBookingDetail(targetId);
+  else if(targetKind === 'prayer') { showOwnerSection('prayer-requests'); openPrayerDetailWindow(targetId); }
+  else if(targetKind === 'testimony') { showOwnerSection('testimonials'); openTestimonyDetailWindow(targetId); }
+  else if(targetKind === 'registration') { showOwnerSection('registrations'); openClassRegDetail(targetId); }
+}
 function renderOwnerNotifications(){
   const container = document.getElementById('ownerNotificationsList');
   if(!container) return;
+  const badge = document.getElementById('ownerNotifUnreadBadge');
+  const centerBadge = document.getElementById('notifCenterBadge');
+  if(ownerSim.isActive()){
+    const items = ownerSim.visibleNotifications().slice().reverse();
+    const unread = items.filter(n => !n.read).length;
+    if(badge){ badge.hidden = unread === 0; badge.textContent = unread; }
+    if(centerBadge) centerBadge.textContent = 'Simulated — Demo Mode Active';
+    container.innerHTML = items.length === 0
+      ? '<p class="admin-hint">No activity yet — advance the simulation clock to see it arrive.</p>'
+      : items.map(n => {
+        const time = ownerSimClockOffsetLabel(n.atMs);
+        return '<div class="portal-row" data-sim-notif-id="' + n.id + '" style="opacity:' + (n.read ? '.55' : '1') + ';cursor:pointer">' +
+          '<div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + ' — ' + escapeHtml(time) + '</small></div>' +
+          '<button class="portal-secondary owner-sim-notif-toggle" type="button" data-sim-notif-id="' + n.id + '" style="min-height:28px;padding:0 10px;font-size:9px;flex-shrink:0;white-space:nowrap">' +
+          (n.read ? 'Mark Unread' : 'Mark Read') + '</button></div>';
+      }).join('');
+    return;
+  }
+  if(badge) badge.hidden = true;
+  if(centerBadge) centerBadge.textContent = 'Visual Demonstration — Not Yet Connected';
   container.innerHTML = DEMO_NOTIFICATIONS.map(n =>
     '<div class="portal-row" data-notif-id="' + n.id + '" style="opacity:' + (n.read ? '.55' : '1') + '">' +
     '<div><strong>' + escapeHtml(n.title) + '</strong><small>' + escapeHtml(n.detail) + '</small></div>' +
@@ -8742,7 +8774,29 @@ function renderOwnerNotifications(){
     (n.read ? 'Mark Unread' : 'Mark Read') + '</button></div>'
   ).join('');
 }
+function ownerSimClockOffsetLabel(atMs){
+  const hour = Math.floor(atMs / 3600000) + 6;
+  const min = Math.floor((atMs % 3600000) / 60000);
+  const h12 = ((hour + 11) % 12) + 1;
+  return h12 + ':' + String(min).padStart(2, '0') + ' ' + (hour >= 12 ? 'PM' : 'AM');
+}
 document.addEventListener('click', event => {
+  const simToggle = event.target.closest('.owner-sim-notif-toggle');
+  if(simToggle){
+    const id = simToggle.dataset.simNotifId;
+    const current = ownerSim.visibleNotifications().find(n => n.id === id);
+    ownerSim.markNotificationRead(id, current ? !current.read : true);
+    return;
+  }
+  const simRow = event.target.closest('[data-sim-notif-id]');
+  if(simRow && !event.target.closest('.owner-sim-notif-toggle')){
+    const n = ownerSim.visibleNotifications().find(x => x.id === simRow.dataset.simNotifId);
+    if(n){
+      if(!n.read) ownerSim.markNotificationRead(n.id, true);
+      simNotifOpener(n.targetKind, n.targetId);
+    }
+    return;
+  }
   const btn = event.target.closest('.owner-notif-toggle');
   if(!btn) return;
   const row = event.target.closest('[data-notif-id]');
@@ -9333,6 +9387,60 @@ document.getElementById('mediaUseApplyBtn').addEventListener('click', async () =
 
 
 /* ---------------------------------------------------------------
+   Owner Portal Demo Mode bar — the toggle, the "you're viewing
+   simulated data" banner, and the Simulation Controls panel. Lives
+   above every Owner Portal screen so it's visible no matter which
+   section is open. See owner-simulation.js for the actual data layer.
+   --------------------------------------------------------------- */
+function renderOwnerSimBar(){
+  const wrap = document.getElementById('ownerSimBar');
+  if(!wrap) return;
+  const active = ownerSim.isActive();
+  const scenarios = ownerSim.SCENARIOS;
+  const pct = Math.round((ownerSim.clockMs / ownerSim.dayMs) * 100);
+  wrap.innerHTML =
+    '<div class="owner-sim-toggle-row">' +
+      '<div><strong>Live Data</strong><span class="admin-hint" style="margin:0 8px">/</span><strong>Demo Mode</strong>' +
+      '<p class="admin-hint" style="margin:2px 0 0">See the Owner Portal as if the ministry already has active bookings, payments, prayer requests, and members — entirely simulated, never touching real records.</p></div>' +
+      '<label class="page-visibility-toggle" title="' + (active ? 'Return to your real data' : 'Switch to simulated demo data') + '">' +
+      '<input type="checkbox" id="ownerSimToggle"' + (active ? ' checked' : '') + ' />' +
+      '<span class="page-visibility-track"><span class="page-visibility-thumb"></span></span></label>' +
+    '</div>' +
+    (active ? (
+      '<div class="owner-sim-banner">You are viewing simulated demo data — nothing here is real. Switch back to Live Data above at any time.</div>' +
+      '<div class="owner-sim-controls">' +
+        '<div class="owner-sim-controls-row">' +
+          '<select id="ownerSimScenario">' + Object.keys(scenarios).map(key =>
+            '<option value="' + key + '"' + (key === ownerSim.scenarioKey ? ' selected' : '') + '>' + escapeHtml(scenarios[key].label) + '</option>'
+          ).join('') + '</select>' +
+          '<span class="owner-sim-clock">' + escapeHtml(ownerSim.clockLabel()) + '</span>' +
+          '<span class="owner-sim-progress"><span style="width:' + pct + '%"></span></span>' +
+        '</div>' +
+        '<div class="owner-sim-controls-row">' +
+          '<button type="button" class="admin-btn-ghost" id="ownerSimStartPause">' + (ownerSim.running ? 'Pause' : 'Start') + '</button>' +
+          '<button type="button" class="admin-btn-ghost" id="ownerSimAdvanceHour">Advance 1 Hour</button>' +
+          '<button type="button" class="admin-btn-ghost" id="ownerSimAdvanceDay">Advance 1 Day</button>' +
+          '<select id="ownerSimSpeed">' +
+            '<option value="1">1x Speed</option><option value="2">2x Speed</option><option value="4">4x Speed</option>' +
+          '</select>' +
+          '<button type="button" class="admin-btn-ghost" id="ownerSimReset">Reset Simulation</button>' +
+        '</div>' +
+      '</div>'
+    ) : '');
+}
+document.getElementById('ownerSimBar').addEventListener('change', event => {
+  if(event.target.id === 'ownerSimToggle') ownerSim.setActive(event.target.checked);
+  if(event.target.id === 'ownerSimScenario') ownerSim.setScenario(event.target.value);
+  if(event.target.id === 'ownerSimSpeed') ownerSim.setSpeed(Number(event.target.value));
+});
+document.getElementById('ownerSimBar').addEventListener('click', event => {
+  if(event.target.id === 'ownerSimStartPause') (ownerSim.running ? ownerSim.pause() : ownerSim.start());
+  if(event.target.id === 'ownerSimAdvanceHour') ownerSim.advanceHour();
+  if(event.target.id === 'ownerSimAdvanceDay') ownerSim.advanceDay();
+  if(event.target.id === 'ownerSimReset') ownerSim.reset();
+});
+
+/* ---------------------------------------------------------------
    Owner Dashboard — Today + Action Required. Pulls from systems that
    already exist (prayer requests, testimonials, class reviews,
    registrations, waitlist) rather than inventing a parallel data
@@ -9342,10 +9450,18 @@ function renderOwnerTodayView(){
   const wrap = document.getElementById('ownerTodayStats');
   if(!wrap) return;
   const today = new Date().toISOString().slice(0, 10);
+  // Real production bookings/registrations live in OWNER_ALL_BOOKINGS_CACHE/
+  // OWNER_ALL_REGISTRATIONS_CACHE (populated once at dashboard load by
+  // loadOwnerSearchCaches()) — DEMO_BOOKINGS/DEMO_TEACHING_REGISTRATIONS are
+  // only the right source in DEMO_MODE or while Demo Mode (simulation) is
+  // active, in which case they've already been swapped to that data.
+  const useSeedArrays = DEMO_MODE || ownerSim.isActive();
+  const todaysBookings = useSeedArrays ? DEMO_BOOKINGS : OWNER_ALL_BOOKINGS_CACHE;
+  const todaysRegs = useSeedArrays ? DEMO_TEACHING_REGISTRATIONS : OWNER_ALL_REGISTRATIONS_CACHE;
   const todaysClasses = Object.values(TEACHINGS).filter(t => t.date === today && t.status !== 'draft' && t.status !== 'cancelled').length;
-  const todaysSessions = DEMO_BOOKINGS.filter(b => b.date === today && b.status === 'confirmed').length;
+  const todaysSessions = todaysBookings.filter(b => b.date === today && b.status === 'confirmed').length;
   const unreadPrayer = PRAYER_REQUESTS.filter(p => p.status === 'new').length;
-  const newRegsToday = DEMO_TEACHING_REGISTRATIONS.filter(r => (r.registeredAt || '').slice(0, 10) === today).length;
+  const newRegsToday = todaysRegs.filter(r => (r.registeredAt || '').slice(0, 10) === today).length;
   const pendingTestimonials = TESTIMONIALS.filter(t => t.status === 'pending').length;
   const pendingReviews = CLASS_REVIEWS.filter(r => r.status === 'pending').length;
   wrap.innerHTML =
@@ -9500,6 +9616,7 @@ async function loadOwnerData(){
   renderSchedRangesList();
   renderSchedOverridesList();
   populateAdminBookTypeSelect();
+  renderOwnerSimBar();
   renderOwnerNotifications();
   renderTeachingManager();
   if(eventsSystem) eventsSystem.renderAdmin();
@@ -9517,13 +9634,13 @@ async function rescheduleBooking(bookingId, oldSlotId, newDate, newTime, session
   const newSlotId = newDate + '_' + newTime;
   if(newSlotId === oldSlotId) return;
   const startAtUTC = etWallTimeToDate(newDate, hhmmToMinutes(newTime));
-  if(DEMO_MODE){
+  if(DEMO_MODE || ownerSim.isActive()){
     if(DEMO_BOOKINGS.some(b => b.slotId === newSlotId && b.id !== bookingId && b.status !== 'declined' && b.status !== 'cancelled')){
       throw new Error('slot-taken');
     }
     const b = DEMO_BOOKINGS.find(x => x.id === bookingId);
     if(b){ b.date = newDate; b.time = newTime; b.slotId = newSlotId; b.startAtUTC = startAtUTC; b.rescheduled = true; }
-    saveBookingsPreviewToStorage();
+    if(DEMO_MODE && !ownerSim.isActive()) saveBookingsPreviewToStorage();
     return;
   }
   const meta = slotMetaForBooking(newDate, newTime, sessionType);
@@ -9629,7 +9746,10 @@ document.getElementById('ownerConfirmedList').addEventListener('click', async ev
     if(!confirm('Cancel this confirmed appointment? The client will need a new booking if they want to reschedule.')) return;
     cancelBtn.disabled = true;
     try {
-      if(DEMO_MODE){
+      if(ownerSim.isActive()){
+        const b = DEMO_BOOKINGS.find(x => x.id === row.dataset.bookingId);
+        if(b) b.status = 'cancelled';
+      } else if(DEMO_MODE){
         const b = DEMO_BOOKINGS.find(x => x.id === row.dataset.bookingId);
         if(b) b.status = 'cancelled';
         saveBookingsPreviewToStorage();
@@ -9723,7 +9843,7 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
   const slotId = row.dataset.slotId;
   event.target.disabled = true;
   try {
-    if(DEMO_MODE){
+    if(DEMO_MODE || ownerSim.isActive()){
       const b = DEMO_BOOKINGS.find(x => x.id === bookingId);
       if(confirmBtn){
         if(b){ b.status = 'confirmed'; markBookingPaid(b); }
@@ -9734,7 +9854,7 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
         portalOwnerStatus.textContent = 'Booking declined and the time was freed up.';
         loadOwnerCancelled();
       }
-      saveBookingsPreviewToStorage();
+      if(DEMO_MODE && !ownerSim.isActive()) saveBookingsPreviewToStorage();
       loadOwnerBookings();
       renderBookingsOverviewStats();
       renderBookingsToday();
@@ -12329,9 +12449,9 @@ document.getElementById('bookingDetailFields').addEventListener('click', event =
   const item = DEMO_BOOKINGS.find(b => b.id === btn.dataset.bookingRefundId);
   if(!item) return;
   item.paymentRefunded = true;
-  saveBookingsPreviewToStorage();
+  if(!ownerSim.isActive()) saveBookingsPreviewToStorage();
   openBookingDetail(item.id);
-  document.getElementById('bookingDetailStatus').textContent = 'Marked refunded (Preview Mode — no real refund was issued).';
+  document.getElementById('bookingDetailStatus').textContent = ownerSim.isActive() ? 'Marked refunded in this simulation.' : 'Marked refunded (Preview Mode — no real refund was issued).';
 });
 document.getElementById('bookingDetailResendBtn').addEventListener('click', () => {
   if(!bookingDetailId) return;
@@ -13189,3 +13309,31 @@ if(document.body.dataset.page === 'events'){
     .then(renderOwnerWebsitePages)
     .catch(err => console.error('[events] background load failed', err));
 }
+
+/* ---------------------------------------------------------------
+   Owner Portal Demo Mode — additive simulation layer (owner-simulation.js).
+   Never touches DEMO_MODE or any real Firestore write path; see that
+   file's header comment for the full safety reasoning.
+   --------------------------------------------------------------- */
+const ownerSim = initOwnerSimulation({ SESSION_TYPES, getTeachings: () => TEACHINGS });
+ownerSim.bindDataRefs({
+  getDemoBookings: () => DEMO_BOOKINGS, setDemoBookings: v => { DEMO_BOOKINGS = v; },
+  getDemoRegistrations: () => DEMO_TEACHING_REGISTRATIONS, setDemoRegistrations: v => { DEMO_TEACHING_REGISTRATIONS = v; },
+  getDemoMembers: () => DEMO_MEMBERS, setDemoMembers: v => { DEMO_MEMBERS = v; },
+  getPrayerRequests: () => PRAYER_REQUESTS, setPrayerRequests: v => { PRAYER_REQUESTS = v; },
+  getTestimonials: () => TESTIMONIALS, setTestimonials: v => { TESTIMONIALS = v; },
+  getClassReviews: () => CLASS_REVIEWS, setClassReviews: v => { CLASS_REVIEWS = v; },
+  getOwnerAllBookingsCache: () => OWNER_ALL_BOOKINGS_CACHE, setOwnerAllBookingsCache: v => { OWNER_ALL_BOOKINGS_CACHE = v; },
+  getOwnerAllRegistrationsCache: () => OWNER_ALL_REGISTRATIONS_CACHE, setOwnerAllRegistrationsCache: v => { OWNER_ALL_REGISTRATIONS_CACHE = v; },
+  getProductionMembersCache: () => PRODUCTION_MEMBERS_CACHE, setProductionMembersCache: v => { PRODUCTION_MEMBERS_CACHE = v; }
+});
+ownerSim.onChange(() => {
+  renderOwnerSimBar();
+  if(document.getElementById('ownerTodayStats')) renderOwnerTodayView();
+  if(document.getElementById('ownerDashboardStats')) renderOwnerDashboardStats();
+  if(document.getElementById('ownerNotificationsList')) renderOwnerNotifications();
+  renderMinistryInboxViews();
+  if(document.getElementById('bookingsSubNav')) renderBookingsPanels();
+  if(document.getElementById('ownerMembersList')) renderOwnerPeopleList();
+  if(document.querySelector('[data-people-tab="analytics"].active')) renderLocationAnalytics();
+});

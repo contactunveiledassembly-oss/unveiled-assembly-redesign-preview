@@ -2087,6 +2087,19 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 @media(max-width:860px){.owner-dash-card-row{grid-template-columns:1fr}}
 @media(max-width:640px){.owner-dash-card{padding:18px}}
 
+/* ---------- Owner Portal Demo Mode (owner-simulation.js) ---------- */
+#ownerSimBar{padding:0 22px;margin:14px 0}
+.owner-sim-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border:1px solid var(--owner-border);border-radius:var(--owner-radius);background:var(--owner-surface-sunken)}
+.owner-sim-toggle-row strong{font-family:var(--serif);font-size:14px;color:var(--owner-text)}
+.owner-sim-banner{margin-top:10px;padding:10px 16px;border-radius:var(--owner-radius-sm);background:#2b1f12;border:1px solid #9a3412;color:#ffd9b3;font-size:12.5px;font-weight:600}
+.owner-sim-controls{margin-top:10px;padding:14px 16px;border:1px solid var(--owner-border);border-radius:var(--owner-radius);background:var(--owner-surface)}
+.owner-sim-controls-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.owner-sim-controls-row + .owner-sim-controls-row{margin-top:10px}
+.owner-sim-controls select{background:var(--owner-surface);color:var(--owner-text);border:1px solid var(--owner-border-strong);border-radius:var(--owner-radius-sm);padding:8px 10px;font:inherit}
+.owner-sim-clock{font-family:var(--mono);font-size:13px;color:var(--owner-text);white-space:nowrap}
+.owner-sim-progress{flex:1;min-width:80px;height:6px;border-radius:999px;background:var(--owner-border);overflow:hidden;display:block}
+.owner-sim-progress span{display:block;height:100%;background:var(--owner-accent);transition:width .3s ease}
+
 /* ---------- Owner Portal global search ---------- */
 .owner-global-search{position:relative;padding:0 22px;margin-top:-6px}
 .owner-global-search input{
