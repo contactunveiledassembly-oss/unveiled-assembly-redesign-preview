@@ -176,22 +176,23 @@ service cloud.firestore {
     // that only exists inside a nested `match` block; it has to be
     // handed in as a real parameter, same as `request.resource.data` is.
     function validPrayerSubmission(d, docId) {
-      return d.keys().hasOnly(['id','firstName','lastName','email','phone','message','visibility','status','notes','createdAt']) &&
+      return d.keys().hasOnly(['id','uid','firstName','lastName','email','phone','message','visibility','status','notes','createdAt']) &&
         d.keys().hasAll(['id','message','status','createdAt']) &&
         d.id is string && d.id == docId &&
+        (!('uid' in d) || d.uid == null || (isSignedIn() && d.uid == request.auth.uid)) &&
         (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
         (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
         (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
         (!('phone' in d) || (d.phone is string && d.phone.size() <= 40)) &&
         d.message is string && d.message.size() > 0 && d.message.size() <= 4000 &&
-        (!('visibility' in d) || d.visibility == 'private') && // prayer is always private — see below
+        (!('visibility' in d) || d.visibility == 'private') &&
         d.status == 'new' &&
         (!('notes' in d) || (d.notes is string && d.notes.size() <= 4000)) &&
         d.createdAt is string && d.createdAt.size() <= 40;
     }
     match /prayerRequests/{requestId} {
       allow create: if validPrayerSubmission(request.resource.data, requestId);
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -211,9 +212,10 @@ service cloud.firestore {
     // named explicitly (see the two submit handlers in app.js) — nothing
     // else gets through, and `id` must match the doc's own path.
     function validTestimonySubmission(d, docId) {
-      return d.keys().hasOnly(['id','firstName','lastName','email','phone','title','message','visibility','status','publicDisplayText','hasVideoPreview','createdAt']) &&
+      return d.keys().hasOnly(['id','uid','firstName','lastName','email','phone','title','message','visibility','status','publicDisplayText','hasVideoPreview','createdAt']) &&
         d.keys().hasAll(['id','message','visibility','status','createdAt']) &&
         d.id is string && d.id == docId &&
+        (!('uid' in d) || d.uid == null || (isSignedIn() && d.uid == request.auth.uid)) &&
         (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
         (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
         (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
@@ -228,7 +230,7 @@ service cloud.firestore {
     }
     match /testimonials/{itemId} {
       allow create: if validTestimonySubmission(request.resource.data, itemId);
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
