@@ -4699,6 +4699,7 @@ function bindMinistryFormDialogEvents(){
       const status = document.getElementById('prayerFormStatus');
       const request = {
         id: 'prayer-' + Date.now().toString(36),
+        uid: currentUser ? currentUser.uid : null,
         firstName: String(formData.get('firstName') || '').trim(),
         lastName: String(formData.get('lastName') || '').trim(),
         email: String(formData.get('email') || '').trim(),
@@ -4743,6 +4744,7 @@ function bindMinistryFormDialogEvents(){
       const status = document.getElementById('formStatus');
       const item = {
         id: 'story-' + Date.now().toString(36),
+        uid: currentUser ? currentUser.uid : null,
         firstName: String(formData.get('firstName') || '').trim(),
         lastName: String(formData.get('lastName') || '').trim(),
         email: String(formData.get('email') || '').trim(),
