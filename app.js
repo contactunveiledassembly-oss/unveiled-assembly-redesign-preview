@@ -1430,23 +1430,18 @@ function dialogsHtml(){
             <div class="admin-stat-row" id="ownerDashboardStats" style="margin-top:10px"></div>
           </div>
 
-          <div class="owner-dash-card">
-            <div class="owner-dash-card-head">
-              <span class="owner-dash-card-title">Needs Your Attention</span>
-              <span class="owner-dash-card-count" id="ownerActionRequiredCount"></span>
-            </div>
-            <div id="ownerActionRequired"></div>
-          </div>
-
-          <div class="owner-dash-card">
-            <div class="owner-dash-card-head"><span class="owner-dash-card-title">Upcoming Activity</span></div>
-            <div id="ownerUpcomingActivity"></div>
-          </div>
-
           <div class="owner-dash-card-row">
             <div class="owner-dash-card">
-              <div class="owner-dash-card-head"><span class="owner-dash-card-title">Recent Activity</span></div>
-              <div id="ownerRecentActivity"></div>
+              <div class="owner-dash-card-head">
+                <div class="admin-tabs" id="ownerActivityTabs" role="tablist">
+                  <button type="button" class="admin-tab active" data-activity-tab="attention">Needs Attention<span class="owner-dash-card-count" id="ownerActionRequiredCount"></span></button>
+                  <button type="button" class="admin-tab" data-activity-tab="upcoming">Upcoming</button>
+                  <button type="button" class="admin-tab" data-activity-tab="recent">Recent</button>
+                </div>
+              </div>
+              <div data-activity-panel="attention"><div id="ownerActionRequired"></div></div>
+              <div data-activity-panel="upcoming" hidden><div id="ownerUpcomingActivity"></div></div>
+              <div data-activity-panel="recent" hidden><div id="ownerRecentActivity"></div></div>
             </div>
             <div class="owner-dash-card">
               <div class="owner-dash-card-head"><span class="owner-dash-card-title">Quick Actions</span></div>
@@ -10064,6 +10059,17 @@ document.getElementById('ownerUpcomingActivity').addEventListener('click', event
   if(!row) return;
   const item = ownerUpcomingActivityCache[Number(row.dataset.upcomingIdx)];
   if(item && item.action) item.action();
+});
+// Dashboard: Needs Attention / Upcoming / Recent used to be three
+// separate stacked cards — consolidated into one tabbed card (user
+// feedback: the dashboard read as too busy) so only one list shows at
+// a time instead of three, with Needs Attention surfaced first since
+// it's the one that's actually actionable every day.
+document.getElementById('ownerActivityTabs').addEventListener('click', event => {
+  const btn = event.target.closest('[data-activity-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#ownerActivityTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('[data-activity-panel]').forEach(p => { p.hidden = p.dataset.activityPanel !== btn.dataset.activityTab; });
 });
 
 async function renderOwnerDashboardStats(){
