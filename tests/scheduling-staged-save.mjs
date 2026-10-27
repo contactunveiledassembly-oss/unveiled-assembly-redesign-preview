@@ -25,6 +25,10 @@ await page.evaluate(() => {
 await page.fill('#signinEmail', 'contactunveiledassembly@gmail.com');
 await page.fill('#signinPassword', 'whatever123');
 await page.locator('#emailSignInForm').evaluate(form => form.requestSubmit());
+// Bookings now lives nested under the Ministry Operations department
+// (Owner Portal navigation restructuring) — expand it first.
+await page.waitForSelector('[data-dept-toggle="ministry"]', { timeout: 15000 });
+await page.locator('[data-dept-toggle="ministry"]').click();
 await page.locator('[data-owner-nav="bookings"]').click();
 await page.waitForFunction(() => document.querySelectorAll('#schedTypesList [data-type-id]').length > 0, null, { timeout: 15000 });
 

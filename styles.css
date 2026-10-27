@@ -2618,6 +2618,31 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
    every row in sequence. */
 .owner-sidebar-group{display:flex;flex-direction:column;gap:2px;margin-top:16px}
 .owner-sidebar-group-label{font:600 10px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:#5c5c66;padding:8px 14px 4px}
+/* 7-department navigation restructuring — Ministry Operations and
+   Website & Settings are expandable parents wrapping several existing,
+   unchanged nav items; everything else (Dashboard/People/Finances/
+   Communications) stays a single-destination .owner-sidebar-item exactly
+   like before, just relabeled/regrouped. Toggle button reuses
+   .owner-sidebar-item's own look so it doesn't read as a different kind
+   of control. */
+.owner-sidebar-dept{margin-top:2px}
+.owner-sidebar-dept-toggle{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;font-family:var(--sans);font-size:13px;font-weight:600;
+  padding:10px 14px;border-radius:var(--owner-radius-pill);border:0;background:none;color:#9a9aa2;cursor:pointer;transition:.15s;white-space:nowrap;
+}
+.owner-sidebar-dept-toggle svg{width:16px;height:16px;flex:0 0 auto;stroke:currentColor;fill:none}
+.owner-sidebar-dept-toggle span:not(.owner-sidebar-dept-chevron){flex:1;overflow:hidden;text-overflow:ellipsis}
+.owner-sidebar-dept-toggle:hover{background:rgba(255,255,255,.07);color:#fff}
+/* Same rotating-chevron technique as .site-editor-accordion-chevron
+   (assets/owner-content-discounts.css) — reused, not reinvented. */
+.owner-sidebar-dept-chevron{flex:0 0 auto;width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;opacity:.6;transform:rotate(45deg);transition:transform .18s ease}
+.owner-sidebar-dept-toggle[aria-expanded="true"] .owner-sidebar-dept-chevron{transform:rotate(-135deg)}
+.owner-sidebar-dept-items{display:flex;flex-direction:column;gap:2px;padding-left:14px;margin-top:2px}
+.owner-sidebar-dept-items[hidden]{display:none}
+.owner-sidebar.collapsed .owner-sidebar-dept-toggle{font-size:0;justify-content:center;padding:10px;gap:0}
+.owner-sidebar.collapsed .owner-sidebar-dept-toggle svg{width:18px;height:18px}
+.owner-sidebar.collapsed .owner-sidebar-dept-chevron{display:none}
+.owner-sidebar.collapsed .owner-sidebar-dept-items{display:none}
 .owner-sidebar-profile{
   margin-top:auto;display:flex;align-items:center;gap:10px;padding:16px 12px 6px;border-top:1px solid rgba(255,255,255,.1);
 }

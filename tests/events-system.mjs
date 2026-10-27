@@ -26,6 +26,9 @@ try {
   assert.equal(await desktop.locator('#eventAdminStatus').inputValue(), 'published');
   assert.equal(await desktop.locator('#eventAdminPageMode').inputValue(), 'live');
 
+  // Website now lives nested under the Website & Settings department
+  // (Owner Portal navigation restructuring) — expand it first.
+  await desktop.locator('[data-dept-toggle="website-settings"]').click();
   await desktop.locator('[data-owner-nav="website"]').click();
   const eventsWebsiteRow = desktop.locator('#ownerWebsitePagesList [data-site-page="Events Page"]');
   assert.equal(await eventsWebsiteRow.isVisible(), true);

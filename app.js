@@ -1337,62 +1337,72 @@ function dialogsHtml(){
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
             Dashboard
           </button>
-          <div class="owner-sidebar-group">
-            <span class="owner-sidebar-group-label">Content</span>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="teachings">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18H6.5A2.5 2.5 0 0 0 4 20.5"/></svg>
-              Teachings
+          <button type="button" class="owner-sidebar-item" data-owner-nav="people">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
+            People
+          </button>
+          <div class="owner-sidebar-dept" data-dept="ministry">
+            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="ministry" aria-expanded="false">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="4.5" r="2"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/><path d="M12 6.5v4M12 10.5 6 17M12 10.5l6 6.5"/></svg>
+              <span>Ministry Operations</span>
+              <span class="owner-sidebar-dept-chevron" aria-hidden="true"></span>
             </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="events">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5h16v15H4z"/><path d="M4 9h16M8 3v4M16 3v4"/><circle cx="9" cy="14" r="1.5"/><path d="M13 14h4M8 18h9"/></svg>
-              Events
-            </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="paths">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="20" cy="12" r="1.6"/><circle cx="19" cy="18" r="1.6"/></svg>
-              Learning Paths
-            </button>
+            <div class="owner-sidebar-dept-items" data-dept-items="ministry" hidden>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="teachings">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18H6.5A2.5 2.5 0 0 0 4 20.5"/></svg>
+                Teachings
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="paths">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="20" cy="12" r="1.6"/><circle cx="19" cy="18" r="1.6"/></svg>
+                Learning Paths
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="registrations">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v15.5L14 18l-4.5 2.5L5 18V5A1.5 1.5 0 0 1 6.5 3.5z"/><path d="M9 9h6M9 12.5h6"/></svg>
+                Registrations
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="events">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5h16v15H4z"/><path d="M4 9h16M8 3v4M16 3v4"/><circle cx="9" cy="14" r="1.5"/><path d="M13 14h4M8 18h9"/></svg>
+                Events
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
+                One-on-One Scheduling
+              </button>
+              <div data-owner-sidebar-group="inbox"></div>
+            </div>
           </div>
-          <div class="owner-sidebar-group">
-            <span class="owner-sidebar-group-label">People &amp; Bookings</span>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
-              Bookings
-            </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="registrations">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v15.5L14 18l-4.5 2.5L5 18V5A1.5 1.5 0 0 1 6.5 3.5z"/><path d="M9 9h6M9 12.5h6"/></svg>
-              Registrations
-            </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="people">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
-              People
-            </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
-              Payments
-            </button>
-          </div>
-          <div class="owner-sidebar-group">
-            <span class="owner-sidebar-group-label">Site</span>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="website">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg>
-              Website
-            </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="media">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 16l-5.5-5.5a1.5 1.5 0 0 0-2 0L4 20"/></svg>
-              Media
-            </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="communication">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8A2.5 2.5 0 0 1 17.5 17H9l-5 4z"/><path d="M8 8.5h8M8 11.5h5"/></svg>
-              Communication
-            </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="settings">
+          <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
+            Finances
+          </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="communication">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8A2.5 2.5 0 0 1 17.5 17H9l-5 4z"/><path d="M8 8.5h8M8 11.5h5"/></svg>
+            Communications
+          </button>
+          <div class="owner-sidebar-dept" data-dept="website-settings">
+            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="website-settings" aria-expanded="false">
               <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
-              Settings
+              <span>Website &amp; Settings</span>
+              <span class="owner-sidebar-dept-chevron" aria-hidden="true"></span>
             </button>
-            <button type="button" class="owner-sidebar-item" data-owner-nav="policies">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/><path d="M15 3.5V7.5a.5.5 0 0 0 .5.5H19"/><path d="M10 12.5h5M10 15.5h5M10 9.5h2"/></svg>
-              Policies
-            </button>
+            <div class="owner-sidebar-dept-items" data-dept-items="website-settings" hidden>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="website">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg>
+                Website
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="media">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 16l-5.5-5.5a1.5 1.5 0 0 0-2 0L4 20"/></svg>
+                Media
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="settings">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
+                Settings
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="policies">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/><path d="M15 3.5V7.5a.5.5 0 0 0 .5.5H19"/><path d="M10 12.5h5M10 15.5h5M10 9.5h2"/></svg>
+                Policies
+              </button>
+            </div>
           </div>
           <div class="owner-sidebar-profile">
             <div class="owner-sidebar-avatar" id="ownerSidebarAvatar">?</div>
@@ -1547,7 +1557,7 @@ function dialogsHtml(){
           <div id="ownerWebsiteEditor"></div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
-          <span class="portal-label">Payments</span>
+          <span class="portal-label">Finances</span>
           <p class="admin-panel-intro">A unified view across every payment category, once a real payment processor is connected. Today, per-booking and per-registration payment status already live under Bookings → Payments and Registrations → Payments — this page will pull all of it together automatically, with totals by month, year, and category.</p>
           <div class="admin-tabs" id="ownerPaymentsTabs" role="tablist" style="margin:16px 0">
             <button type="button" class="admin-tab active" data-payments-tab="all">Overview</button>
@@ -4236,11 +4246,13 @@ function initOwnerInboxNavigation(){
   const sidebar = document.getElementById('ownerSidebar');
   const content = document.querySelector('.owner-content');
   if(!sidebar || !content) return;
-  if(!sidebar.querySelector('[data-owner-nav="prayer-requests"]')) {
-    sidebar.insertAdjacentHTML('beforeend', '<div class="owner-sidebar-group" data-owner-sidebar-group="inbox"><span class="owner-sidebar-group-label">Inbox</span>' +
-      '<button type="button" class="owner-sidebar-item" data-owner-nav="prayer-requests"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20H6.5A2.5 2.5 0 0 1 4 17.5zm0 0 8 6 8-6"/></svg>Prayer Requests<span class="owner-nav-count">0</span></button></div>');
-  }
+  // Nav buttons go inside Ministry Operations' sub-list (Master Redesign
+  // Phase 2 navigation restructuring), not appended to the end of the
+  // sidebar as a separate top-level group like before.
   const inboxGroup = sidebar.querySelector('[data-owner-sidebar-group="inbox"]') || sidebar;
+  if(!sidebar.querySelector('[data-owner-nav="prayer-requests"]')) {
+    inboxGroup.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="prayer-requests"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20H6.5A2.5 2.5 0 0 1 4 17.5zm0 0 8 6 8-6"/></svg>Prayer Requests<span class="owner-nav-count">0</span></button>');
+  }
   if(!sidebar.querySelector('[data-owner-nav="testimonials"]')) {
     inboxGroup.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="testimonials"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 18.5V5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5v8A1.5 1.5 0 0 1 17.5 15H9l-4 3.5z"/><path d="M9 8h6M9 11h6"/></svg>Testimonials<span class="owner-nav-count">0</span></button>');
   }
@@ -9250,17 +9262,37 @@ function ownerNavLabel(btn){
   }
   return '';
 }
+// Navigation restructuring (7-department sidebar) — which existing flat
+// nav items (unchanged ids, unchanged render functions) now live nested
+// under which expandable parent. Departments not listed here (Dashboard,
+// People, Finances, Communications) are single-destination top-level
+// buttons with nothing to expand.
+const OWNER_SIDEBAR_DEPTS = {
+  ministry: { label: 'Ministry Operations', members: ['teachings', 'paths', 'registrations', 'events', 'bookings', 'prayer-requests', 'testimonials', 'class-reviews'] },
+  'website-settings': { label: 'Website & Settings', members: ['website', 'media', 'settings', 'policies'] }
+};
+function ownerSidebarDeptFor(name){
+  for(const key of Object.keys(OWNER_SIDEBAR_DEPTS)){
+    if(OWNER_SIDEBAR_DEPTS[key].members.includes(name)) return key;
+  }
+  return null;
+}
 function showOwnerSection(name){
   document.querySelectorAll('#ownerSidebar .owner-sidebar-item').forEach(b => b.classList.toggle('active', b.dataset.ownerNav === name));
   document.querySelectorAll('[data-owner-section]').forEach(p => { p.hidden = p.dataset.ownerSection !== name; });
   const desc = document.getElementById('ownerSectionDescription');
   if(desc) desc.textContent = OWNER_SECTION_DESCRIPTIONS[name] || '';
+  const dept = ownerSidebarDeptFor(name);
+  if(dept) setOwnerSidebarDeptOpen(dept, true);
   const crumb = document.getElementById('ownerBreadcrumb');
   if(crumb){
     const navBtn = document.querySelector('#ownerSidebar .owner-sidebar-item[data-owner-nav="' + name + '"]');
     const label = navBtn ? ownerNavLabel(navBtn) : '';
+    const deptLabel = dept ? OWNER_SIDEBAR_DEPTS[dept].label : '';
     crumb.innerHTML = (name === 'dashboard' || !label) ? '<span class="owner-breadcrumb-current">Owner Portal</span>'
-      : '<span>Owner Portal</span><span class="owner-breadcrumb-sep">/</span><span class="owner-breadcrumb-current">' + escapeHtml(label) + '</span>';
+      : '<span>Owner Portal</span><span class="owner-breadcrumb-sep">/</span>' +
+        (deptLabel ? '<span>' + escapeHtml(deptLabel) + '</span><span class="owner-breadcrumb-sep">/</span>' : '') +
+        '<span class="owner-breadcrumb-current">' + escapeHtml(label) + '</span>';
   }
   closeOwnerSidebarDrawer();
 }
@@ -9388,6 +9420,31 @@ document.getElementById('ownerSidebarCollapseBtn').addEventListener('click', () 
   setOwnerSidebarCollapsed(!document.getElementById('ownerSidebar').classList.contains('collapsed'));
 });
 try { if(localStorage.getItem(OWNER_SIDEBAR_COLLAPSED_KEY) === '1') setOwnerSidebarCollapsed(true); } catch (err) { /* ignore */ }
+
+// Department disclosure (Ministry Operations / Website & Settings) — same
+// localStorage-persisted pattern as the collapse rail above. showOwnerSection()
+// auto-opens whichever department contains the section being navigated to,
+// so an item is never hidden behind a collapsed parent on direct navigation.
+const OWNER_SIDEBAR_DEPTS_OPEN_KEY = 'ua_owner_sidebar_depts_open_v1';
+function setOwnerSidebarDeptOpen(dept, open){
+  const toggle = document.querySelector('[data-dept-toggle="' + dept + '"]');
+  const items = document.querySelector('[data-dept-items="' + dept + '"]');
+  if(!toggle || !items) return;
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  items.hidden = !open;
+  try {
+    const raw = JSON.parse(localStorage.getItem(OWNER_SIDEBAR_DEPTS_OPEN_KEY) || '{}');
+    raw[dept] = open;
+    localStorage.setItem(OWNER_SIDEBAR_DEPTS_OPEN_KEY, JSON.stringify(raw));
+  } catch (err) { /* ignore */ }
+}
+document.querySelectorAll('.owner-sidebar-dept-toggle').forEach(btn => {
+  btn.addEventListener('click', () => setOwnerSidebarDeptOpen(btn.dataset.deptToggle, btn.getAttribute('aria-expanded') !== 'true'));
+});
+try {
+  const raw = JSON.parse(localStorage.getItem(OWNER_SIDEBAR_DEPTS_OPEN_KEY) || '{}');
+  Object.keys(OWNER_SIDEBAR_DEPTS).forEach(dept => { if(raw[dept]) setOwnerSidebarDeptOpen(dept, true); });
+} catch (err) { /* ignore */ }
 
 showOwnerSection('dashboard');
 

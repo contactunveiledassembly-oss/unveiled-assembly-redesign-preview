@@ -27,9 +27,13 @@ await page.waitForSelector('#ownerBreadcrumb', { timeout: 15000 });
 // Breadcrumb: "Owner Portal" alone on the dashboard, "Owner Portal / X"
 // elsewhere. The breadcrumb is CSS-uppercased, so match case-insensitively.
 assert.match((await page.locator('#ownerBreadcrumb').innerText()).trim(), /^owner portal$/i);
+// Prayer Requests now lives nested under the Ministry Operations
+// department (Owner Portal navigation restructuring) — expand it first;
+// the breadcrumb grows a middle segment for nested items.
+await page.locator('[data-dept-toggle="ministry"]').click();
 await page.locator('[data-owner-nav="prayer-requests"]').click();
 await page.waitForTimeout(150);
-assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*prayer requests/i);
+assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*ministry operations\s*\/\s*prayer requests/i);
 
 // Department accent: the heading dot before .portal-label reads a
 // non-default color on a themed section (sage for Prayer Requests).

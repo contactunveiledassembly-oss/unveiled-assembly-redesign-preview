@@ -47,6 +47,10 @@ assert.ok(atEnd >= at1h, 'advancing to end of day should reveal at least as many
 // Total booking volume (all statuses, via Reports — matches the scenario's
 // declared range; the Dashboard's "Today's 1:1s" tile only counts
 // confirmed ones, which is legitimately fewer once some are pending/cancelled).
+// Bookings/Prayer Requests/Testimonials all now live nested under the
+// Ministry Operations department (Owner Portal navigation restructuring) —
+// expand it once; it stays open for the later clicks into that same group.
+await page.locator('[data-dept-toggle="ministry"]').click();
 await page.locator('[data-owner-nav="bookings"]').click();
 await page.locator('#bookingsSubNav [data-bookings-tab="reports"]').click();
 await page.waitForTimeout(300);
