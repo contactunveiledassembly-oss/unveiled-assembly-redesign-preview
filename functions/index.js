@@ -36,7 +36,15 @@ const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
 // Checkout may only ever send a customer back to the real site. Matches
 // PRODUCTION_HOSTS in app.js — every other host runs in DEMO_MODE and
 // never calls this function at all.
-const ALLOWED_RETURN_ORIGINS = ['https://theunveiledassembly.com', 'https://www.theunveiledassembly.com'];
+// The temporary Firebase Hosting preview channel used for Stripe sandbox
+// testing (PROJECT-CONTEXT §32) is allowed alongside the production
+// domains. Only valid while these functions hold Stripe test keys —
+// remove it before switching to live keys.
+const SANDBOX_PREVIEW_ORIGIN = /^https:\/\/unveiledassembly--stripe-sandbox-[a-z0-9]+\.web\.app$/;
+const ALLOWED_RETURN_ORIGINS = ['https://theunveiledassembly.com', 'https://www.theunveiledassembly.com', SANDBOX_PREVIEW_ORIGIN];
+function originAllowed(origin){
+  return ALLOWED_RETURN_ORIGINS.some(allowed => typeof allowed === 'string' ? allowed === origin : allowed.test(origin));
+}
 const MINISTRY_NAME = 'The Unveiled Assembly';
 // Stable label for comparing this Checkout flow in Stripe Workbench.
 // The eight-letter suffix keeps it distinct from future integrations.
@@ -65,7 +73,7 @@ function hashCode(code){ return crypto.createHash('sha256').update(normalizeCode
 function safeReturnUrl(raw){
   let url;
   try { url = new URL(String(raw || '')); } catch (err) { throw new HttpsError('invalid-argument', 'A return address is required.'); }
-  if(!ALLOWED_RETURN_ORIGINS.includes(url.origin)) throw new HttpsError('permission-denied', 'Checkout is only available on the ministry website.');
+  if(!originAllowed(url.origin)) throw new HttpsError('permission-denied', 'Checkout is only available on the ministry website.');
   url.hash = '';
   ['checkout', 'kind', 'ref', 'session_id'].forEach(key => url.searchParams.delete(key));
   return url;

@@ -724,4 +724,40 @@ The approved private Our Story prototype has been integrated into the main websi
 3. Artifact Registry still needs an owner-approved cleanup policy; without one, old function container images can accumulate a small storage charge.
 4. Known gaps: Shop has no shipping charge or sales tax yet (Stripe collects a US address only); Shop discount codes aren't supported; monthly giving is still "Coming Soon"; digital Shop delivery is still a later phase. Refunds are issued from the Stripe Dashboard and sync back automatically.
 
+---
+
+## 34. Session Log — 2026-10-27: Stripe sandbox preview + end-to-end tests (branch `stripe-payments`)
+
+**Preview host (temporary, sandbox only):** https://unveiledassembly--stripe-sandbox-05balkts.web.app — Firebase Hosting preview channel `stripe-sandbox`, expires 2026-11-03. It runs the real site against the real database (not DEMO_MODE) and shows a red "Stripe sandbox preview — test cards only" bar. The live Hosting channel and theunveiledassembly.com were not touched.
+- `app.js`: `SANDBOX_PREVIEW_HOST` (`/^unveiledassembly--stripe-sandbox-[a-z0-9]+\.web\.app$/`) turns off DEMO_MODE only on that channel.
+- `functions/index.js`: the same origin added to `ALLOWED_RETURN_ORIGINS` (CORS + return URL) via `originAllowed()`. Functions redeployed. **Remove both before switching to live keys.**
+- `firebase.json`: `hosting` block (public `.`; ignores functions, tests, docs, zips, prototypes) so preview channels can be deployed. No live Hosting release was made.
+
+**Results (Stripe test card 4242…, Oct 27 2026):**
+| Test | Result |
+|---|---|
+| One-time donation $5 | PASS — Checkout opened (Sandbox), webhook marked `donations/{id}` `status: paid`, `paymentStatus: paid`, `amountPaid: 5`, `transactionId`, `donorName` (~13 s) |
+| Shop order (owner's digital "TESTING" product, $20) | PASS — `shopOrders/{id}` paid, `fulfillmentStatus: digital`, bag cleared on return |
+| One-on-One booking payment ($30, 15-minute default) | PASS — booking `confirmed`, `paymentStatus: paid`, `amountPaid: 30`, `paymentRefunded: false`, transaction stored |
+| Abandoned/expired checkout | PASS — 3 donations + 2 shop orders → `expired`/`unpaid`; booking → `cancelled` (`payment-not-completed`) ~30 min after opening |
+| Forged price (shop item sent with `priceCents: 1`) | PASS — Checkout still charged $20.00 |
+| Browser forgery via Firestore rules (booking created paid / with amountPaid / with paymentIntentId / as confirmed; registration with accessGranted; classEnrollments write; donations write; shopOrders write; member setting own booking confirmed) | PASS — all PERMISSION_DENIED |
+| Checkout from a foreign origin; booking checkout signed out; donation <$1 or >$10k; unknown product | PASS — all rejected by the function |
+| Unsigned fake webhook | PASS — HTTP 400 |
+| Browser suite against this branch | 12 pass; `owner-editor-discounts` fails (known stale); `discount-claim-lifecycle` skipped (known stale, hangs) |
+
+**Not tested yet (needs the owner's admin login — nothing was created on the owner's behalf):**
+1. **Paid class registration + classroom access** — no public class exists in production. Create a test class (e.g. dated in the past or archived afterwards), register on the preview with a test card, then confirm the registration is `confirmed`/`accessGranted` and the classroom opens.
+2. **Physical Shop order** (shipping address + stock decrement) — needs a physical product with "track inventory" on.
+3. **Booking calendar/slot handling** — production has no availability rules or scheduling settings, so no times are bookable. The test booking above was created directly (no `slotId`), so slots were untouched.
+4. **Refund sync** — refund the $30 test booking in the Stripe sandbox Dashboard; the booking should then show `paymentStatus: refunded`, `paymentRefunded: true`.
+5. **Owner Portal finance views** — sign in as owner on the preview and check Payments → Shop Orders / Donations / bookings show the test records.
+
+**Test data created in the production database (all from the test account):** Auth user + `users/LcJrthh9wlVGwX4t3vNlfqaFkZj2` ("Stripe Sandbox Test", `stripe.sandbox.test.20261027@example.com`); `donations` ×4 (1 paid, 3 expired); `shopOrders` ×3 (1 paid, 2 expired); `bookings/sbx-booking-paid` (confirmed, paid) and `bookings/sbx-booking-expire` (cancelled), both dated 2026-12-31 with "Stripe sandbox test record — safe to delete"; related `memberNotifications`. All are Stripe test-mode records — safe to delete once the owner has reviewed them.
+
+**Owner action items before launch:**
+- Stripe → Settings → Public details: the Checkout page currently shows the business name **"Myauna Lurry"** rather than the ministry name.
+- Artifact Registry still has **no cleanup policy** (Firebase warns on every deploy). Not enabled on purpose: automatic deletion reduces rollback history; it's the owner's call.
+- Launch = finish the 5 items above, remove the sandbox origin from `app.js`/`functions/index.js`, swap in live keys + live webhook, then merge to `main` with owner approval. Live mode was not activated and `main` was not given the checkout code.
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

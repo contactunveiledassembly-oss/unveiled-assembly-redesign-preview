@@ -5,5 +5,26 @@
   "functions": {
     "source": "functions",
     "runtime": "nodejs22"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "tests/**",
+      "**/*.md",
+      "**/*.zip",
+      "**/*prototype*",
+      "app(6).js",
+      "styles 3.css",
+      "styles(5).css",
+      "firestore.rules",
+      "CNAME",
+      "README*",
+      "assets/**/*.md"
+    ]
   }
 }

@@ -46,7 +46,13 @@ import { initShopSystem } from "./shop-system.js?v=3";
    off the production domain.
    --------------------------------------------------------------- */
 const PRODUCTION_HOSTS = ['theunveiledassembly.com', 'www.theunveiledassembly.com'];
-const DEMO_MODE = !PRODUCTION_HOSTS.includes(window.location.hostname);
+// Temporary Firebase Hosting preview channel for end-to-end Stripe
+// sandbox testing (PROJECT-CONTEXT §32). Runs the real site against the
+// real database like production does; the Cloud Functions only hold
+// Stripe test keys while this exists. Remove once launch testing is done.
+const SANDBOX_PREVIEW_HOST = /^unveiledassembly--stripe-sandbox-[a-z0-9]+\.web\.app$/;
+const IS_SANDBOX_PREVIEW = SANDBOX_PREVIEW_HOST.test(window.location.hostname);
+const DEMO_MODE = !PRODUCTION_HOSTS.includes(window.location.hostname) && !IS_SANDBOX_PREVIEW;
 // Declared here (not just where initOwnerSimulation() runs, far below)
 // because a couple of public-render functions near the top of the file
 // run synchronously during page load, before that later line executes —
@@ -3365,6 +3371,9 @@ const db = getFirestore(fbApp);
    checkouts keep their existing simulated behavior.
    --------------------------------------------------------------- */
 const LIVE_PAYMENTS = !DEMO_MODE;
+if(IS_SANDBOX_PREVIEW){
+  document.body.insertAdjacentHTML('afterbegin', '<div role="note" style="position:fixed;left:0;right:0;bottom:0;z-index:2000;padding:8px 16px;background:#5a1d1d;color:#fff;font:600 11px/1.4 Inter,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-align:center">Stripe sandbox preview — test cards only. Not the public website.</div>');
+}
 const createCheckoutSessionFn = LIVE_PAYMENTS ? httpsCallable(getFunctions(fbApp), 'createCheckoutSession') : null;
 
 // Resolves { url } (caller should redirect) or { free: true } (a
