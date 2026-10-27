@@ -2038,7 +2038,8 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 [data-owner-section="settings"],
 [data-owner-section="policies"],
 [data-owner-section="media"],
-[data-owner-section="communication"]{--dept-accent:var(--dept-system)}
+[data-owner-section="communication"],
+[data-owner-section="shop-resources"]{--dept-accent:var(--dept-system)}
 .portal-view[data-portal-view="owner"] [data-owner-section] .portal-label{position:relative;padding-left:15px}
 .portal-view[data-portal-view="owner"] [data-owner-section] .portal-label::before{
   content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
@@ -2609,7 +2610,8 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 .owner-sidebar-item[data-owner-nav="settings"],
 .owner-sidebar-item[data-owner-nav="policies"],
 .owner-sidebar-item[data-owner-nav="media"],
-.owner-sidebar-item[data-owner-nav="communication"]{--dept-accent:var(--dept-system)}
+.owner-sidebar-item[data-owner-nav="communication"],
+.owner-sidebar-item[data-owner-nav="shop-resources"]{--dept-accent:var(--dept-system)}
 .owner-sidebar-item svg{stroke:var(--dept-accent,currentColor);opacity:.75;transition:opacity .15s,stroke .15s}
 .owner-sidebar-item:hover svg,.owner-sidebar-item.active svg{opacity:1}
 /* Groups the 15 nav items into a few labeled clusters (Content,

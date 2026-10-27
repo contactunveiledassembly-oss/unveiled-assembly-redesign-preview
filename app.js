@@ -1371,6 +1371,10 @@ function dialogsHtml(){
               <div data-owner-sidebar-group="inbox"></div>
             </div>
           </div>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="shop-resources">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8l1.5-4h13L20 8"/><path d="M4 8h16v11.5a.5.5 0 0 1-.5.5h-15a.5.5 0 0 1-.5-.5z"/><path d="M9 12a3 3 0 0 0 6 0"/></svg>
+            Shop &amp; Resources
+          </button>
           <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
             Finances
@@ -1555,6 +1559,14 @@ function dialogsHtml(){
           <div class="form-status" id="ownerPageVisibilityStatus" role="status" aria-live="polite" style="margin-bottom:10px"></div>
           <div id="ownerWebsitePagesList" class="admin-website-pages"></div>
           <div id="ownerWebsiteEditor"></div>
+        </article>
+        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="shop-resources">
+          <span class="portal-label">Shop &amp; Resources <span class="demo-badge">Coming — Being Built Separately</span></span>
+          <p class="admin-panel-intro">Products, orders, inventory, digital resources, and store settings will live here once that work is ready to connect. Nothing is wired up yet, and nothing in the rest of the Owner Portal depends on it — this is just a placeholder so the navigation structure is complete.</p>
+          <div class="admin-payments-empty">
+            <strong>Not Connected Yet</strong>
+            <p>The Shop is being built as its own project. When it's ready, this department will organize Products, Collections, Orders, Inventory, Digital Resources, Fulfillment, Discounts, and Store Settings.</p>
+          </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
           <span class="portal-label">Finances</span>
@@ -9273,6 +9285,7 @@ const OWNER_SECTION_DESCRIPTIONS = {
   people: 'Everyone who has created an account.',
   media: 'Every image currently uploaded to the website.',
   communication: 'A preview of outbound email/SMS, once a real provider is connected.',
+  'shop-resources': "Not connected yet — the Shop is being built as its own project.",
   settings: 'Your sign-in email, phone, and password.',
   policies: 'The terms and agreements visitors see across ministry forms and checkout.'
 };

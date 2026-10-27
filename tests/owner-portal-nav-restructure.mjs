@@ -29,7 +29,7 @@ await page.waitForSelector('[data-dept-toggle="ministry"]', { timeout: 15000 });
 
 // Every old nav id survives the restructuring, exactly once.
 const ALL_NAV_IDS = ['dashboard', 'people', 'teachings', 'paths', 'registrations', 'events', 'bookings',
-  'prayer-requests', 'testimonials', 'class-reviews', 'payments', 'communication', 'website', 'media', 'settings', 'policies'];
+  'prayer-requests', 'testimonials', 'class-reviews', 'shop-resources', 'payments', 'communication', 'website', 'media', 'settings', 'policies'];
 for (const id of ALL_NAV_IDS) {
   const count = await page.locator('[data-owner-nav="' + id + '"]').count();
   assert.equal(count, 1, 'nav item "' + id + '" should exist exactly once, got ' + count);
@@ -66,6 +66,12 @@ await page.locator('[data-owner-nav="payments"]').click();
 assert.equal(await page.locator('[data-owner-section="payments"]').isVisible(), true);
 assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*finances/i);
 assert.match(await page.locator('[data-owner-section="payments"] .portal-label').first().innerText(), /finances/i);
+
+// Shop & Resources is an honest, clearly-labeled placeholder — no fake
+// content, since the real Shop is being built on a separate branch.
+await page.locator('[data-owner-nav="shop-resources"]').click();
+assert.equal(await page.locator('[data-owner-section="shop-resources"]').isVisible(), true);
+assert.match(await page.locator('[data-owner-section="shop-resources"] .demo-badge').innerText(), /coming|not connected/i);
 
 // Disclosure state persists across a reload.
 await page.locator('[data-dept-toggle="website-settings"]').click();
