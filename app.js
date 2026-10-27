@@ -1421,12 +1421,13 @@ function dialogsHtml(){
       <div class="owner-breadcrumb" id="ownerBreadcrumb"></div>
       <div class="portal-owner-grid">
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
-          <h3 style="font-family:var(--serif);font-size:26px;font-weight:600;color:var(--owner-text);margin:0 0 4px" id="ownerDashboardWelcome">Welcome back.</h3>
-          <p class="admin-panel-intro" style="margin-bottom:22px">Here's what's happening with your ministry.</p>
+          <h3 style="font-family:var(--serif);font-size:22px;font-weight:600;color:var(--owner-text);margin:0 0 4px" id="ownerDashboardWelcome">Welcome back.</h3>
+          <p class="admin-panel-intro" style="margin-bottom:16px">Here's what's happening with your ministry.</p>
 
           <div class="owner-dash-card">
-            <div class="owner-dash-card-head"><span class="owner-dash-card-title">Today</span></div>
+            <div class="owner-dash-card-head"><span class="owner-dash-card-title">Overview</span></div>
             <div class="admin-stat-row admin-stat-row-3col" id="ownerTodayStats"></div>
+            <div class="admin-stat-row" id="ownerDashboardStats" style="margin-top:10px"></div>
           </div>
 
           <div class="owner-dash-card">
@@ -1435,11 +1436,6 @@ function dialogsHtml(){
               <span class="owner-dash-card-count" id="ownerActionRequiredCount"></span>
             </div>
             <div id="ownerActionRequired"></div>
-          </div>
-
-          <div class="owner-dash-card">
-            <div class="owner-dash-card-head"><span class="owner-dash-card-title">Ministry Overview</span></div>
-            <div class="admin-stat-row" id="ownerDashboardStats"></div>
           </div>
 
           <div class="owner-dash-card">
@@ -9916,8 +9912,9 @@ function renderOwnerSimBar(){
   const pct = Math.round((ownerSim.clockMs / ownerSim.dayMs) * 100);
   wrap.innerHTML =
     '<div class="owner-sim-toggle-row">' +
-      '<div><strong>Live Data</strong><span class="admin-hint" style="margin:0 8px">/</span><strong>Demo Mode</strong>' +
-      '<p class="admin-hint" style="margin:2px 0 0">See the Owner Portal as if the ministry already has active bookings, payments, prayer requests, and members — entirely simulated, never touching real records.</p></div>' +
+      '<div><strong>Demo Mode</strong>' +
+      (active ? '' : '<span class="admin-hint" style="margin-left:8px">Preview simulated bookings, payments, and prayer requests without touching real data.</span>') +
+      '</div>' +
       '<label class="page-visibility-toggle" title="' + (active ? 'Return to your real data' : 'Switch to simulated demo data') + '">' +
       '<input type="checkbox" id="ownerSimToggle"' + (active ? ' checked' : '') + ' />' +
       '<span class="page-visibility-track"><span class="page-visibility-thumb"></span></span></label>' +
