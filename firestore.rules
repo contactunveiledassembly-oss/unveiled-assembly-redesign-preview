@@ -7,6 +7,41 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+    function validShopProduct(d, productId) {
+      return d.keys().hasAll([
+          'id','title','subtitle','type','category','status','featured',
+          'priceCents','availability','collection','image','images',
+          'description','included','delivery','options','tags',
+          'trackInventory','stock','isPlaceholder','updatedAt'
+        ]) &&
+        d.keys().hasOnly([
+          'id','title','subtitle','type','category','status','featured',
+          'priceCents','availability','collection','image','images',
+          'description','included','delivery','options','tags',
+          'trackInventory','stock','isPlaceholder','updatedAt'
+        ]) &&
+        d.id == productId &&
+        d.title is string && d.title.size() > 0 && d.title.size() <= 180 &&
+        d.subtitle is string && d.subtitle.size() <= 300 &&
+        d.type in ['digital', 'physical'] &&
+        d.category in ['digital', 'books', 'apparel'] &&
+        d.status in ['draft', 'coming_soon', 'published', 'archived'] &&
+        d.featured is bool &&
+        (d.priceCents == null || (d.priceCents is int && d.priceCents >= 0 && d.priceCents <= 100000000)) &&
+        d.availability is string && d.availability.size() <= 100 &&
+        d.collection is string && d.collection.size() <= 120 &&
+        d.image is string && d.image.size() <= 900000 &&
+        d.images is list && d.images.size() <= 12 &&
+        d.description is string && d.description.size() <= 10000 &&
+        d.included is list && d.included.size() <= 50 &&
+        d.delivery is string && d.delivery.size() <= 3000 &&
+        d.options is list && d.options.size() <= 100 &&
+        d.tags is list && d.tags.size() <= 100 &&
+        d.trackInventory is bool &&
+        (d.stock == null || (d.stock is int && d.stock >= 0 && d.stock <= 1000000)) &&
+        d.isPlaceholder is bool &&
+        d.updatedAt == request.time;
+    }
     // Firestore rules can't run a `where` query to answer "does this
     // person have a registration for this class" — only `exists`/`get`
     // on a KNOWN document path. So enrollment is mirrored into its own
@@ -633,6 +668,44 @@ service cloud.firestore {
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
          request.resource.data.status == 'cancelled');
       allow delete: if isAdmin();
+    }
+
+    // Public Shop catalog. Drafts and archives are owner-only. Product
+    // documents intentionally contain catalog/display data only — never a
+    // secure download URL, Stripe secret, payment proof, or order state.
+    match /shopProducts/{productId} {
+      allow read: if isAdmin() || resource.data.status in ['published', 'coming_soon'];
+      allow create, update: if isAdmin() && validShopProduct(request.resource.data, productId);
+      // Products leave the public collection by becoming archived; hard
+      // deletion is denied so owner actions remain recoverable.
+      allow delete: if false;
+    }
+
+    // Public-facing Shop copy only. Keeping this in its own document lets
+    // the owner edit the hero without mixing settings into product records.
+    match /shopSettings/{settingsId} {
+      allow read: if settingsId == 'public';
+      allow create, update: if isAdmin() && settingsId == 'public' &&
+        request.resource.data.keys().hasAll(['eyebrow','title','tagline','description','buttonLabel','updatedAt']) &&
+        request.resource.data.keys().hasOnly(['eyebrow','title','tagline','description','buttonLabel','updatedAt']) &&
+        request.resource.data.eyebrow is string && request.resource.data.eyebrow.size() <= 100 &&
+        request.resource.data.title is string && request.resource.data.title.size() <= 100 &&
+        request.resource.data.tagline is string && request.resource.data.tagline.size() <= 300 &&
+        request.resource.data.description is string && request.resource.data.description.size() <= 2000 &&
+        request.resource.data.buttonLabel is string && request.resource.data.buttonLabel.size() <= 100 &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // Integration boundaries for later phases. Digital files are never
+    // public. Orders cannot be created or marked paid by a visitor; a
+    // future trusted checkout/webhook (Admin SDK) will create them.
+    match /shopDigitalFiles/{fileId} {
+      allow read, write: if isAdmin();
+    }
+    match /shopOrders/{orderId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if isAdmin();
     }
   }
 }

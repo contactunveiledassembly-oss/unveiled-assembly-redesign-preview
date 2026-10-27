@@ -3,38 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="The Unveiled Assembly Shop — coming soon." />
-  <title>Shop | The Unveiled Assembly</title>
+  <meta name="description" content="The Unveiled Collection — study resources and ministry goods from The Unveiled Assembly." />
+  <title>The Shop | The Unveiled Assembly</title>
   <link rel="icon" type="image/png" href="../assets/ua-logo-tight.png" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css?v=sitewide-20261026-navrestruct3" />
+  <link rel="stylesheet" href="../styles.css?v=sitewide-20261026-shopmerge1" />
 </head>
 <body data-page="shop" data-base="../">
   <div class="grain"></div>
 
-  <header class="hero" style="min-height:78vh">
-    <div class="eyebrow reveal">The Shop</div>
-    <h1 class="display reveal" style="font-size:clamp(48px,9vw,130px)">Coming<br>Soon.</h1>
-    <p class="hero-sub reveal" style="max-width:540px">A dedicated space for teaching resources, ministry materials, and merchandise is on the way. This page is a visual placeholder — nothing here is connected to payments, inventory, or checkout yet.</p>
-    <div class="reveal" style="margin-top:40px">
-      <a class="btn" href="../index.html">← Back Home</a>
-    </div>
-  </header>
-
-  <section class="on-light-section" style="text-align:center">
-    <div class="reveal">
-      <div class="eyebrow on-light" style="margin-bottom:20px">In The Meantime</div>
-      <h2 class="serif-heading" style="font-size:clamp(30px,4vw,46px);margin-bottom:24px">Explore what's already here.</h2>
-      <div class="cta-row" style="justify-content:center">
-        <a class="btn on-light fill" href="../teachings.html">Teachings</a>
-        <a class="btn on-light" href="../give.html">Give</a>
+  <main class="shop-page">
+    <header class="shop-hero">
+      <div class="shop-hero-image" aria-hidden="true"></div>
+      <div class="shop-hero-content">
+        <p class="shop-micro reveal" id="shopHeroEyebrow">THE UNVEILED COLLECTION</p>
+        <h1 class="reveal" id="shopHeroTitle">THE SHOP</h1>
+        <p class="shop-hero-tagline reveal" id="shopHeroTagline">RESOURCES FOR A DEEPER UNDERSTANDING OF SCRIPTURE.</p>
+        <p class="shop-hero-description reveal" id="shopHeroDescription">Digital studies, workbooks, and resources designed to encourage your walk with Christ. Every resource is created with purpose, to help you grow, go deeper, and live what you learn.</p>
+        <a class="shop-primary-link reveal" id="shopHeroButton" href="#shopCollection">BROWSE THE COLLECTION</a>
       </div>
-    </div>
-  </section>
+      <div class="shop-hero-index" aria-hidden="true"><span>COLLECTION 001</span><span>STUDY · FORMATION · PRACTICE</span></div>
+    </header>
 
-  <script type="module" src="../app.js?v=sitewide-20261026-navrestruct3"></script>
+    <section class="shop-categories" aria-labelledby="shopCategoriesTitle">
+      <div class="shop-section-intro reveal">
+        <span class="shop-micro">Three Expressions</span>
+        <h2 id="shopCategoriesTitle">Made to be lived with.</h2>
+        <p>Thoughtful resources for study, daily formation, and the life built around what Scripture reveals.</p>
+      </div>
+      <div class="shop-category-grid reveal" id="shopCategoryButtons">
+        <button type="button" class="shop-category-card active" data-shop-category="all"><span>00</span><strong>All Resources</strong><small>View the full collection</small></button>
+        <button type="button" class="shop-category-card" data-shop-category="digital"><span>01</span><strong>Digital Study Resources</strong><small>Initial collection focus</small></button>
+        <button type="button" class="shop-category-card" data-shop-category="books"><span>02</span><strong>Physical Study Books</strong><small>Coming soon</small></button>
+        <button type="button" class="shop-category-card" data-shop-category="apparel"><span>03</span><strong>Apparel &amp; Accessories</strong><small>Coming soon</small></button>
+      </div>
+    </section>
+
+    <section class="shop-collection" id="shopCollection" aria-labelledby="shopCollectionTitle">
+      <div class="shop-collection-head reveal">
+        <div><span class="shop-micro">The Collection</span><h2 id="shopCollectionTitle">Study deeper. Live unveiled.</h2></div>
+        <div class="shop-controls">
+          <label>Category<select id="shopCategoryFilter"><option value="all">All Resources</option><option value="digital">Digital Study Resources</option><option value="books">Physical Study Books</option><option value="apparel">Apparel &amp; Accessories</option></select></label>
+          <label>Sort<select id="shopSort"><option value="featured">Featured</option><option value="title">Title A–Z</option><option value="price-asc">Price: Low to High</option><option value="price-desc">Price: High to Low</option></select></label>
+        </div>
+      </div>
+      <div class="shop-result-line"><span id="shopResultCount">0 items</span><span>Checkout is not active</span></div>
+      <div class="shop-product-grid" id="shopProductGrid" aria-live="polite"><div class="shop-collection-empty"><span class="shop-micro">Collection Update</span><h3>Loading the collection…</h3></div></div>
+    </section>
+
+    <section class="shop-closing reveal">
+      <div><span class="shop-micro">Christ Revealed</span><h2>Resources with<br>revelation at the center.</h2></div>
+      <p>Every future release will be added with care—never filler, never noise. Only what serves a deeper understanding of Scripture and a life transformed by truth.</p>
+    </section>
+  </main>
+
+  <script type="module" src="../app.js?v=sitewide-20261026-shopmerge1"></script>
 </body>
 </html>
