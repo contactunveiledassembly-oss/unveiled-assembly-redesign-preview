@@ -10,9 +10,9 @@ service cloud.firestore {
     // Firestore rules can't run a `where` query to answer "does this
     // person have a registration for this class" — only `exists`/`get`
     // on a KNOWN document path. So enrollment is mirrored into its own
-    // classEnrollments/{teachingId}_{uid} doc with a deterministic ID
-    // (write it alongside the registration itself — see the
-    // createTeachingRegistration() comment in app.js marking where).
+    // classEnrollments/{teachingId}_{uid} doc with a deterministic ID.
+    // The owner/payment-confirmation workflow creates it only after
+    // payment is verified or the owner explicitly grants access.
     // A non-cancelled mirror doc IS enrollment; nothing else grants it.
     function isEnrolledInClass(teachingId) {
       return isSignedIn() &&
@@ -176,22 +176,23 @@ service cloud.firestore {
     // that only exists inside a nested `match` block; it has to be
     // handed in as a real parameter, same as `request.resource.data` is.
     function validPrayerSubmission(d, docId) {
-      return d.keys().hasOnly(['id','firstName','lastName','email','phone','message','visibility','status','notes','createdAt']) &&
+      return d.keys().hasOnly(['id','uid','firstName','lastName','email','phone','message','visibility','status','notes','createdAt']) &&
         d.keys().hasAll(['id','message','status','createdAt']) &&
         d.id is string && d.id == docId &&
+        (!('uid' in d) || d.uid == null || (isSignedIn() && d.uid == request.auth.uid)) &&
         (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
         (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
         (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
         (!('phone' in d) || (d.phone is string && d.phone.size() <= 40)) &&
         d.message is string && d.message.size() > 0 && d.message.size() <= 4000 &&
-        (!('visibility' in d) || d.visibility == 'private') && // prayer is always private — see below
+        (!('visibility' in d) || d.visibility == 'private') &&
         d.status == 'new' &&
         (!('notes' in d) || (d.notes is string && d.notes.size() <= 4000)) &&
         d.createdAt is string && d.createdAt.size() <= 40;
     }
     match /prayerRequests/{requestId} {
       allow create: if validPrayerSubmission(request.resource.data, requestId);
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -211,9 +212,10 @@ service cloud.firestore {
     // named explicitly (see the two submit handlers in app.js) — nothing
     // else gets through, and `id` must match the doc's own path.
     function validTestimonySubmission(d, docId) {
-      return d.keys().hasOnly(['id','firstName','lastName','email','phone','title','message','visibility','status','publicDisplayText','hasVideoPreview','createdAt']) &&
+      return d.keys().hasOnly(['id','uid','firstName','lastName','email','phone','title','message','visibility','status','publicDisplayText','hasVideoPreview','createdAt']) &&
         d.keys().hasAll(['id','message','visibility','status','createdAt']) &&
         d.id is string && d.id == docId &&
+        (!('uid' in d) || d.uid == null || (isSignedIn() && d.uid == request.auth.uid)) &&
         (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 200)) &&
         (!('lastName' in d) || (d.lastName is string && d.lastName.size() <= 200)) &&
         (!('email' in d) || (d.email is string && d.email.size() <= 320)) &&
@@ -228,7 +230,7 @@ service cloud.firestore {
     }
     match /testimonials/{itemId} {
       allow create: if validTestimonySubmission(request.resource.data, itemId);
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -612,15 +614,19 @@ service cloud.firestore {
     }
 
     // Teaching registrations hold personal data, so the same pattern as
-    // `bookings` above: only the admin or the registrant themself (if
-    // signed in) can read one back; anyone can create one (guest
-    // registration allowed) but it must start 'pending_payment' unless
-    // an admin is creating it directly; a signed-in registrant may only
-    // ever update their own registration to cancel it.
+    // `bookings` above: only the admin or the registrant themself can
+    // read one back. An account is required to register, and the uid on
+    // the new record must be the caller's own uid. A member registration
+    // must begin pending payment; only an admin may create another state.
+    // A signed-in registrant may only cancel their own registration.
     match /teachingRegistrations/{regId} {
       allow create: if request.resource.data.keys().hasAll(
-                        ['teachingId','firstName','lastName','email','status']) &&
-                      (request.resource.data.status == 'pending_payment' || isAdmin());
+                        ['teachingId','firstName','lastName','email','status','uid']) &&
+                      (
+                        (isSignedIn() && request.resource.data.uid == request.auth.uid &&
+                         request.resource.data.status == 'pending_payment')
+                        || isAdmin()
+                      );
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin() ||
         (isSignedIn() && resource.data.uid == request.auth.uid &&
