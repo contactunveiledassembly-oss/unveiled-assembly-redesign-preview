@@ -527,7 +527,9 @@ const NAV_LINKS = [
   { page: 'events', href: 'events.html', label: 'Events' },
   { page: 'teachings', href: 'teachings.html', label: 'Teachings' },
   { page: 'one-on-one', href: 'one-on-one.html', label: 'One-on-One' },
-  { page: 'prayer', href: 'prayer.html', label: 'Prayer' },
+  // Prayer lives in Connect's dropdown rather than the top row; it stays
+  // in this list so page visibility and current-page marking still see it.
+  { page: 'prayer', href: 'prayer.html', label: 'Prayer', parent: 'connect' },
   { page: 'connect', href: 'connect.html', label: 'Connect' },
   { page: 'give', href: 'give.html', label: 'Give' },
   { page: 'shop', href: 'shop/', label: 'Shop' },
@@ -575,6 +577,9 @@ function applyPageVisibility(){
       if(hidden){ a.hidden = true; a.dataset.hiddenByPageVisibility = '1'; }
       else if(a.dataset.hiddenByPageVisibility){ a.hidden = false; delete a.dataset.hiddenByPageVisibility; }
     });
+  });
+  document.querySelectorAll('.nav-group').forEach(group => {
+    group.hidden = [...group.querySelectorAll('.nav-sub a')].every(a => a.hidden);
   });
   const currentPage = document.body.dataset.page;
   const isNavPage = NAV_LINKS.some(l => l.page === currentPage);
@@ -624,7 +629,17 @@ function socialIconsHtml(extraClass){
 }
 
 function navHtml(){
-  const links = NAV_LINKS.map(l => `<a href="${BASE}${l.href}" data-page="${l.page}"${l.page === 'events' ? ' data-events-nav-link' : ''}>${l.label}</a>`).join('');
+  const linkHtml = l => `<a href="${BASE}${l.href}" data-page="${l.page}"${l.page === 'events' ? ' data-events-nav-link' : ''}>${l.label}</a>`;
+  const links = NAV_LINKS.filter(l => !l.parent).map(l => {
+    const children = NAV_LINKS.filter(c => c.parent === l.page);
+    if(!children.length) return linkHtml(l);
+    // Second-level menu: hover or click the parent to open it; the
+    // parent's own page is the first item inside.
+    return `<div class="nav-group" data-nav-group="${l.page}">` +
+      `<button class="nav-group-toggle" type="button" aria-expanded="false" aria-controls="navSub-${l.page}">${l.label}` +
+      `<svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>` +
+      `<div class="nav-sub" id="navSub-${l.page}">${[l, ...children].map(linkHtml).join('')}</div></div>`;
+  }).join('');
   return `
   <nav class="nav" id="nav">
     <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
@@ -3314,8 +3329,21 @@ document.querySelectorAll('.brand-logo, .portal-brand img, .member-topnav-brand 
 const currentPage = document.body.dataset.page;
 if(currentPage){
   const match = document.querySelector('#navMobilePanel [data-page="' + currentPage + '"]');
-  if(match) match.classList.add('current');
+  if(match){
+    match.classList.add('current');
+    match.closest('.nav-group')?.querySelector('.nav-group-toggle')?.classList.add('current');
+  }
 }
+document.querySelectorAll('.nav-group').forEach(group => {
+  const toggle = group.querySelector('.nav-group-toggle');
+  const setOpen = open => { group.classList.toggle('open', open); toggle.setAttribute('aria-expanded', String(open)); };
+  toggle.addEventListener('click', () => setOpen(!group.classList.contains('open')));
+  group.addEventListener('keydown', event => {
+    if(event.key === 'Escape' && group.classList.contains('open')){ setOpen(false); toggle.focus(); }
+  });
+  group.addEventListener('focusout', event => { if(!group.contains(event.relatedTarget)) setOpen(false); });
+  document.addEventListener('click', event => { if(!group.contains(event.target)) setOpen(false); });
+});
 
 /* ---------------------------------------------------------------
    Firebase

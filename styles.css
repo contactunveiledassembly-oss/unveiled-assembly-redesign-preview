@@ -3596,3 +3596,36 @@ body[data-page="teachings"] :is(a,button):focus-visible{outline:2px solid var(--
   .teaching-class-body .teaching-detail-facts{border-right:0;padding-right:0;padding-bottom:32px;border-bottom:1px solid var(--line-dark)}
 }
 .teaching-class-body .teaching-learn-list li::before{background:var(--stone);top:25px}
+
+/* ---------- Nav second-level menu (Connect → Connect, Prayer) ---------- */
+.nav-group{position:relative;display:inline-flex;align-items:center}
+.nav-group[hidden]{display:none}
+.nav-group-toggle{
+  display:inline-flex;align-items:center;gap:6px;padding:0 0 3px;background:none;border:0;border-bottom:1px solid transparent;
+  color:var(--ivory);opacity:.8;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;white-space:nowrap;transition:.2s;
+}
+.nav-group-toggle svg{width:8px;height:6px;transition:transform .2s}
+.nav-group-toggle:hover,.nav-group-toggle.current,.nav-group.open .nav-group-toggle{opacity:1;border-color:currentColor}
+.nav-group-toggle:focus-visible{outline:2px solid var(--ivory);outline-offset:4px}
+.nav-group.open .nav-group-toggle svg{transform:rotate(180deg)}
+.nav-sub{
+  position:absolute;top:calc(100% + 22px);left:50%;transform:translate(-50%,-4px);min-width:180px;padding:8px 0;
+  display:flex;flex-direction:column;background:var(--black);border:1px solid var(--line-dark);
+  opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;z-index:110;
+}
+.nav-sub::before{content:"";position:absolute;left:0;right:0;top:-22px;height:22px}
+.nav-group.open .nav-sub{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .18s,transform .18s,visibility 0s}
+@media(hover:hover) and (min-width:1121px){
+  .nav-group:hover .nav-sub{opacity:1;visibility:visible;transform:translate(-50%,0)}
+  .nav-group:hover .nav-group-toggle{opacity:1;border-color:currentColor}
+}
+.links .nav-sub a{padding:11px 22px;border-bottom:0;opacity:.75;transition:opacity .2s,background-color .2s}
+.links .nav-sub a:hover,.links .nav-sub a.current{opacity:1;background:rgba(245,243,238,.06)}
+@media(max-width:1120px){
+  .nav.open .nav-group{flex-direction:column;align-items:stretch;width:100%}
+  .nav.open .nav-group-toggle{justify-content:space-between;width:100%;padding:14px 0;border-bottom:1px solid var(--line-dark)}
+  .nav.open .nav-sub{position:static;transform:none;min-width:0;padding:0 0 0 16px;border:0;background:none;display:none;opacity:1;visibility:visible}
+  .nav.open .nav-group.open .nav-sub{display:flex;transform:none}
+  .nav.open .links .nav-sub a{padding:13px 0;border-bottom:1px solid var(--line-dark)}
+}
+@media(prefers-reduced-motion:reduce){.nav-sub,.nav-group-toggle svg{transition:none}}
