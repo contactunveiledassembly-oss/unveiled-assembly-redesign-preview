@@ -4820,6 +4820,33 @@ function bindMinistryFormDialogEvents(){
     storyMediaInput.value = '';
     if(storyMediaHint) storyMediaHint.textContent = 'Photo and video attachments are coming soon — not available yet. Use the video link field below, or mention it in your testimony.';
   }
+
+  const reviewRatingGroup = document.getElementById('reviewRatingGroup');
+  const reviewRatingHint = document.getElementById('reviewRatingHint');
+  const clearReviewRating = document.getElementById('clearReviewRating');
+  const updateReviewRatingState = () => {
+    if(!reviewRatingGroup) return;
+    const selected = reviewRatingGroup.querySelector('input[name="rating"]:checked');
+    if(reviewRatingHint){
+      reviewRatingHint.textContent = selected
+        ? selected.value + ' out of 5 stars selected'
+        : 'Optional — select a star rating';
+    }
+    if(clearReviewRating) clearReviewRating.hidden = !selected;
+  };
+  if(reviewRatingGroup){
+    reviewRatingGroup.addEventListener('change', updateReviewRatingState);
+    clearReviewRating?.addEventListener('click', () => {
+      const selected = reviewRatingGroup.querySelector('input[name="rating"]:checked');
+      if(selected) selected.checked = false;
+      updateReviewRatingState();
+      reviewRatingGroup.querySelector('input[name="rating"][value="1"]')?.focus();
+    });
+    document.getElementById('classReviewForm')?.addEventListener('reset', () => {
+      setTimeout(updateReviewRatingState, 0);
+    });
+    updateReviewRatingState();
+  }
   if(document.getElementById('prayerRequestForm')) {
     document.getElementById('prayerRequestForm').addEventListener('submit', async event => {
       event.preventDefault();
@@ -5078,7 +5105,20 @@ function addMinistryDialogs(){
             <div class="form-field"><label for="reviewLastName">Reviewer Last Name</label><input id="reviewLastName" name="lastName" type="text" placeholder="Last name" required /></div>
             <div class="form-field"><label for="reviewEmail">Email</label><input id="reviewEmail" name="email" type="email" placeholder="Email address" required /></div>
             <div class="form-field"><label for="reviewPhone">Phone</label><input id="reviewPhone" name="phone" type="tel" placeholder="Phone optional" /></div>
-            <div class="form-field"><label for="reviewRating">Rating</label><select id="reviewRating" name="rating"><option value="">Optional</option><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div>
+            <fieldset class="form-field star-rating-field">
+              <legend>Rating</legend>
+              <div class="star-rating-row">
+                <div class="star-rating" id="reviewRatingGroup" aria-describedby="reviewRatingHint">
+                  <input id="reviewRating5" name="rating" type="radio" value="5" /><label for="reviewRating5" aria-label="5 stars"><span aria-hidden="true">★</span></label>
+                  <input id="reviewRating4" name="rating" type="radio" value="4" /><label for="reviewRating4" aria-label="4 stars"><span aria-hidden="true">★</span></label>
+                  <input id="reviewRating3" name="rating" type="radio" value="3" /><label for="reviewRating3" aria-label="3 stars"><span aria-hidden="true">★</span></label>
+                  <input id="reviewRating2" name="rating" type="radio" value="2" /><label for="reviewRating2" aria-label="2 stars"><span aria-hidden="true">★</span></label>
+                  <input id="reviewRating1" name="rating" type="radio" value="1" /><label for="reviewRating1" aria-label="1 star"><span aria-hidden="true">★</span></label>
+                </div>
+                <button class="star-rating-clear" id="clearReviewRating" type="button" hidden>Clear</button>
+              </div>
+              <span class="star-rating-hint" id="reviewRatingHint" aria-live="polite">Optional — select a star rating</span>
+            </fieldset>
             <div class="form-field"><label for="reviewRecommendation">Would You Recommend?</label><select id="reviewRecommendation" name="recommendation"><option value="">Optional</option><option>Yes</option><option>No</option><option>Maybe</option></select></div>
             <div class="form-field full"><label for="reviewMessage">Review Message</label><textarea id="reviewMessage" name="message" rows="6" placeholder="What changed for you?" required></textarea></div>
             <div class="form-field full">
