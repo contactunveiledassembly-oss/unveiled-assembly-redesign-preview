@@ -512,28 +512,61 @@ export function initShopSystem(context){
     wrap.innerHTML = ordered.length ? ordered.map(p => `<article class="store-product-row" data-store-product-id="${esc(p.id)}" data-product-status="${esc(p.status)}"><div class="store-product-thumb"${imageStyle(p.image)}></div><div><span>${esc(typeLabel(p.type))} · ${esc(categoryLabel(p.category))}</span><strong>${esc(p.title)}</strong><p>${esc(money(p.priceCents))}</p></div><span class="admin-status-pill ${p.status === 'published' ? 'published' : 'draft'}">${esc(statusLabel(p.status))}</span><button class="admin-btn-ghost" type="button" data-store-edit="${esc(p.id)}">Edit</button></article>`).join('') : '<p class="admin-hint">No products have been created yet.</p>';
   }
 
+  function storeProductPreviewHtml(p){
+    return `<div class="store-preview-image"${imageStyle(p.image)}>${p.image ? '' : coverCardHtml(p)}</div>
+      <div class="store-preview-copy"><span>${esc(typeLabel(p.type))} · ${esc(categoryLabel(p.category))}</span><strong>${esc(p.title || 'Untitled Product')}</strong><p>${esc(money(p.priceCents))}</p></div>`;
+  }
+
   function productEditorHtml(product){
     const p = product ? normalizeProduct(product) : normalizeProduct({ id:'', title:'', status:'draft' });
     const isNew = !p.id;
     return `<form id="ownerStoreProductForm" class="store-product-form" data-product-id="${esc(p.id)}"><div class="store-editor-head"><div><span class="portal-label">${isNew ? 'New Product' : 'Edit Product'}</span><h4>${isNew ? 'Create a product' : esc(p.title)}</h4></div><button type="button" class="admin-btn-ghost" id="ownerStoreCloseEditor">Close</button></div>
-      <div class="booking-grid">
-        <div class="booking-field full"><label>Product Title</label><input id="storeProductTitle" value="${esc(isNew ? '' : p.title)}" required /></div>
-        <div class="booking-field"><label>Product Type</label><select id="storeProductType"><option value="digital"${p.type === 'digital' ? ' selected' : ''}>Digital Resource</option><option value="physical"${p.type === 'physical' ? ' selected' : ''}>Physical Product</option></select></div>
-        <div class="booking-field"><label>Category</label><select id="storeProductCategory"><option value="digital"${p.category === 'digital' ? ' selected' : ''}>Digital Study Resources</option><option value="books"${p.category === 'books' ? ' selected' : ''}>Physical Study Books</option><option value="apparel"${p.category === 'apparel' ? ' selected' : ''}>Apparel &amp; Accessories</option></select></div>
-        <div class="booking-field"><label>Price (USD)</label><input id="storeProductPrice" type="number" min="0" step="0.01" value="${p.priceCents === null ? '' : (p.priceCents/100).toFixed(2)}" placeholder="Leave blank until approved" /></div>
-        <div class="booking-field"><label>Availability Label</label><input id="storeProductAvailability" value="${esc(p.availability === 'Not Published' ? '' : p.availability)}" placeholder="Available / Coming Soon" /></div>
-        <div class="booking-field"><label>Collection</label><input id="storeProductCollection" value="${esc(p.collection)}" placeholder="e.g. Study Resources" /></div>
-        <div class="booking-field"><label>Tags (comma separated)</label><input id="storeProductTags" value="${esc(p.tags.join(', '))}" /></div>
-        <div class="booking-field full"><label>Short Description</label><textarea id="storeProductDescription" rows="4">${esc(p.description)}</textarea></div>
-        <div class="booking-field full"><label>What’s Included (one item per line)</label><textarea id="storeProductIncluded" rows="3">${esc(p.included.join('\n'))}</textarea></div>
-        <div class="booking-field full"><label>Delivery Information</label><textarea id="storeProductDelivery" rows="3">${esc(p.delivery)}</textarea></div>
-        <div class="booking-field full"><label>Options / Sizes (one per line)</label><textarea id="storeProductOptions" rows="3">${esc(p.options.join('\n'))}</textarea></div>
-        <div class="booking-field"><label>Stock (physical only)</label><input id="storeProductStock" type="number" min="0" step="1" value="${p.stock === null ? '' : p.stock}" /></div>
-        <label class="admin-checkbox-field"><input id="storeProductTrackInventory" type="checkbox"${p.trackInventory ? ' checked' : ''} /> Track physical inventory</label>
-        <label class="admin-checkbox-field"><input id="storeProductFeatured" type="checkbox"${p.featured ? ' checked' : ''} /> Feature this product</label>
-        <div class="booking-field full site-editor-image"><span class="admin-microlabel">Product Image</span><div class="admin-image-preview store-image-preview" id="storeProductImagePreview"${imageStyle(p.image)}></div><div class="admin-image-actions"><label class="admin-image-upload-btn"><span>Upload / Replace</span><input id="storeProductImageFile" type="file" accept="image/*" hidden /></label><button class="admin-image-remove-btn" id="storeProductImageRemove" type="button">Remove</button></div><details class="admin-image-advanced"><summary>Advanced: paste an image URL</summary><input id="storeProductImage" value="${esc(p.image)}" placeholder="https://…" /></details></div>
-        <div class="booking-field full"><label>Additional Gallery Image URLs (one per line)</label><textarea id="storeProductImages" rows="3">${esc(p.images.join('\n'))}</textarea></div>
+
+      <div class="store-editor-step">
+        <span class="store-editor-step-label">Step 1 — Choose a product type</span>
+        <div class="store-type-cards" id="storeProductTypeCards">
+          <button type="button" class="store-type-card${p.type !== 'physical' ? ' active' : ''}" data-type-card="digital"><strong>Digital Resource</strong><p>PDF guides and studies delivered after purchase.</p></button>
+          <button type="button" class="store-type-card${p.type === 'physical' ? ' active' : ''}" data-type-card="physical"><strong>Physical Product</strong><p>Books, journals, and items that ship to the customer.</p></button>
+        </div>
+        <select id="storeProductType" class="store-visually-hidden" tabindex="-1" aria-hidden="true"><option value="digital"${p.type === 'digital' ? ' selected' : ''}>Digital Resource</option><option value="physical"${p.type === 'physical' ? ' selected' : ''}>Physical Product</option></select>
       </div>
+
+      <div class="store-editor-step">
+        <span class="store-editor-step-label">Step 2 — The essentials.</span>
+        <div class="booking-grid">
+          <div class="booking-field full"><label>Product Title</label><input id="storeProductTitle" value="${esc(isNew ? '' : p.title)}" required /></div>
+          <div class="booking-field"><label>Category</label><select id="storeProductCategory"><option value="digital"${p.category === 'digital' ? ' selected' : ''}>Digital Study Resources</option><option value="books"${p.category === 'books' ? ' selected' : ''}>Physical Study Books</option><option value="apparel"${p.category === 'apparel' ? ' selected' : ''}>Apparel &amp; Accessories</option></select></div>
+          <div class="booking-field"><label>Collection</label><input id="storeProductCollection" value="${esc(p.collection)}" placeholder="e.g. Study Resources" /></div>
+          <div class="booking-field"><label>Price (USD)</label><input id="storeProductPrice" type="number" min="0" step="0.01" value="${p.priceCents === null ? '' : (p.priceCents/100).toFixed(2)}" placeholder="Leave blank until approved" /></div>
+          <div class="booking-field full"><label>Short Description</label><textarea id="storeProductDescription" rows="4">${esc(p.description)}</textarea></div>
+        </div>
+      </div>
+
+      <div class="store-editor-step">
+        <span class="store-editor-step-label">Step 3 — Your study material.</span>
+        <div class="booking-field full site-editor-image"><span class="admin-microlabel">Product Image</span><div class="admin-image-preview store-image-preview" id="storeProductImagePreview"${imageStyle(p.image)}></div><div class="admin-image-actions"><label class="admin-image-upload-btn"><span>Upload / Replace</span><input id="storeProductImageFile" type="file" accept="image/*" hidden /></label><button class="admin-image-remove-btn" id="storeProductImageRemove" type="button">Remove</button></div><details class="admin-image-advanced"><summary>Advanced: paste an image URL</summary><input id="storeProductImage" value="${esc(p.image)}" placeholder="https://…" /></details></div>
+      </div>
+
+      <div class="store-editor-step">
+        <span class="store-editor-step-label">Preview</span>
+        <div class="store-preview-card" id="storeProductPreview">${storeProductPreviewHtml(p)}</div>
+      </div>
+
+      <details class="store-advanced-settings">
+        <summary>Advanced Settings</summary>
+        <div class="booking-grid" style="margin-top:18px">
+          <div class="booking-field"><label>Availability Label</label><input id="storeProductAvailability" value="${esc(p.availability === 'Not Published' ? '' : p.availability)}" placeholder="Available / Coming Soon" /></div>
+          <div class="booking-field"><label>Tags (comma separated)</label><input id="storeProductTags" value="${esc(p.tags.join(', '))}" /></div>
+          <div class="booking-field full"><label>What’s Included (one item per line)</label><textarea id="storeProductIncluded" rows="3">${esc(p.included.join('\n'))}</textarea></div>
+          <div class="booking-field full"><label>Delivery Information</label><textarea id="storeProductDelivery" rows="3">${esc(p.delivery)}</textarea></div>
+          <div class="booking-field full"><label>Options / Sizes (one per line)</label><textarea id="storeProductOptions" rows="3">${esc(p.options.join('\n'))}</textarea></div>
+          <div class="booking-field"><label>Stock (physical only)</label><input id="storeProductStock" type="number" min="0" step="1" value="${p.stock === null ? '' : p.stock}" /></div>
+          <label class="admin-checkbox-field"><input id="storeProductTrackInventory" type="checkbox"${p.trackInventory ? ' checked' : ''} /> Track physical inventory</label>
+          <label class="admin-checkbox-field"><input id="storeProductFeatured" type="checkbox"${p.featured ? ' checked' : ''} /> Feature this product</label>
+          <div class="booking-field full"><label>Additional Gallery Image URLs (one per line)</label><textarea id="storeProductImages" rows="3">${esc(p.images.join('\n'))}</textarea></div>
+        </div>
+      </details>
+
       <div class="store-save-actions"><button type="button" class="admin-btn-ghost" id="ownerStoreSaveDraftBtn" data-store-save-status="draft">Save Draft</button><button type="button" class="admin-btn-ghost" data-store-save-status="coming_soon">Mark Coming Soon</button><button type="button" class="admin-btn-solid" id="ownerStorePublishBtn" data-store-save-status="published">Publish</button>${isNew ? '' : '<button type="button" class="admin-btn-ghost store-archive" data-store-save-status="archived">Archive</button>'}</div><div class="form-status" id="ownerStoreProductStatus" role="status" aria-live="polite"></div></form>`;
   }
 
@@ -616,7 +649,9 @@ export function initShopSystem(context){
     wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const imageInput = document.getElementById('storeProductImage');
     const preview = document.getElementById('storeProductImagePreview');
-    const refresh = () => { const url = imageInput.value.trim(); preview.style.backgroundImage = url ? `url("${assetUrl(url).replace(/"/g, '%22')}")` : ''; };
+    const previewCard = document.getElementById('storeProductPreview');
+    const refreshPreviewCard = () => { if(previewCard) previewCard.innerHTML = storeProductPreviewHtml(editorProduct('draft')); };
+    const refresh = () => { const url = imageInput.value.trim(); preview.style.backgroundImage = url ? `url("${assetUrl(url).replace(/"/g, '%22')}")` : ''; refreshPreviewCard(); };
     imageInput.addEventListener('input', refresh);
     document.getElementById('storeProductImageRemove').addEventListener('click', () => { imageInput.value = ''; refresh(); });
     document.getElementById('storeProductImageFile').addEventListener('change', async event => {
@@ -624,6 +659,17 @@ export function initShopSystem(context){
       try { imageInput.value = await resizeImage(file, 1400, .76); refresh(); }
       catch (err) { document.getElementById('ownerStoreProductStatus').textContent = 'That image could not be read.'; }
     });
+    const typeSelect = document.getElementById('storeProductType');
+    document.getElementById('storeProductTypeCards').addEventListener('click', event => {
+      const card = event.target.closest('[data-type-card]'); if(!card) return;
+      typeSelect.value = card.dataset.typeCard;
+      wrap.querySelectorAll('[data-type-card]').forEach(button => button.classList.toggle('active', button === card));
+      refreshPreviewCard();
+    });
+    ['storeProductTitle','storeProductCategory','storeProductPrice'].forEach(id => {
+      document.getElementById(id).addEventListener('input', refreshPreviewCard);
+    });
+    document.getElementById('storeProductCategory').addEventListener('change', refreshPreviewCard);
     document.getElementById('ownerStoreCloseEditor').addEventListener('click', () => { editingProductId = null; wrap.innerHTML = ''; });
     wrap.querySelectorAll('[data-store-save-status]').forEach(button => button.addEventListener('click', () => saveOwnerProduct(button.dataset.storeSaveStatus)));
   }
