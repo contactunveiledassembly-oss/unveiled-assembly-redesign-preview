@@ -169,6 +169,8 @@ function categoryLabel(value){
   return ({ digital: 'Digital Study Resources', books: 'Physical Study Books', apparel: 'Apparel & Accessories' })[value] || 'Collection';
 }
 function typeLabel(value){ return value === 'digital' ? 'Digital Resource' : 'Physical Product'; }
+function formatLabel(value){ return value === 'digital' ? 'Digital PDF' : 'Physical Product'; }
+function accessLineLabel(value){ return value === 'digital' ? 'Digital PDF · Access After Purchase' : 'Physical Product · Ships After Purchase'; }
 function statusLabel(value){
   return ({ draft: 'Draft', coming_soon: 'Coming Soon', published: 'Published', archived: 'Archived' })[value] || value;
 }
@@ -197,6 +199,12 @@ export function initShopSystem(context){
     return base + url.replace(/^\.\//, '');
   }
   function imageStyle(url){ return url ? ' style="background-image:url(&quot;' + esc(assetUrl(url)) + '&quot;)"' : ''; }
+  // No real cover yet (a brand-new product before the owner uploads an
+  // image) — a generated placeholder card instead of a blank gray box,
+  // matching the reference design's own "no image yet" state.
+  function coverCardHtml(p){
+    return `<div class="shop-generated-cover"><strong>${esc(p.title)}</strong><span>${esc(categoryLabel(p.category))}</span><small>The Unveiled Assembly</small></div>`;
+  }
   function productById(id){ return products.find(product => product.id === id) || null; }
   function publicProducts(){ return products.filter(productIsPublic); }
 
@@ -294,7 +302,7 @@ export function initShopSystem(context){
     const p = normalizeProduct(product);
     const purchasable = productIsPurchasable(p);
     return `<article class="shop-product-card" data-product-id="${esc(p.id)}" data-product-type="${esc(p.type)}" data-product-category="${esc(p.category)}" data-price-cents="${p.priceCents === null ? '' : p.priceCents}">
-      <a class="shop-product-image" data-product-link href="${base}shop/product.html?id=${encodeURIComponent(p.id)}" aria-label="View ${esc(p.title)}"${imageStyle(p.image)}></a>
+      <a class="shop-product-image" data-product-link href="${base}shop/product.html?id=${encodeURIComponent(p.id)}" aria-label="View ${esc(p.title)}"${imageStyle(p.image)}>${p.image ? '' : coverCardHtml(p)}</a>
       <div class="shop-product-card-hover"><button type="button" data-quick-view="${esc(p.id)}">Quick View</button><button type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : 'Coming Soon'}</button></div>
       <div class="shop-product-card-copy"><a data-product-link href="${base}shop/product.html?id=${encodeURIComponent(p.id)}"><h3>${esc(p.title)}</h3></a><span class="shop-product-type">${esc(p.isPlaceholder ? 'Development Preview' : typeLabel(p.type))}</span><p class="shop-product-price">${esc(money(p.priceCents))}</p></div>
     </article>`;
@@ -330,7 +338,13 @@ export function initShopSystem(context){
   function productControlHtml(p, location){
     const purchasable = productIsPurchasable(p);
     const optionSelect = p.options.length ? `<label class="shop-option-label">Choose an option<select data-shop-option>${p.options.map(option => `<option value="${esc(option)}">${esc(option)}</option>`).join('')}</select></label>` : '';
-    return `${optionSelect}<button class="shop-primary-action" type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : p.status === 'coming_soon' ? 'Coming Soon' : 'Unavailable'}</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${location === 'detail' && !purchasable ? 'Purchasing is not active for this item.' : ''}</div>`;
+    // "Preview Sample Pages" only appears once a real sample file exists
+    // to show — there's no upload field or viewer for it yet, so showing
+    // the button with nothing behind it would be exactly the kind of
+    // decorative-looking-functional control this project avoids elsewhere.
+    const preview = (location === 'detail' && p.type === 'digital' && p.previewUrl)
+      ? `<a class="shop-outline-action" href="${esc(assetUrl(p.previewUrl))}" target="_blank" rel="noopener">Preview Sample Pages</a>` : '';
+    return `${optionSelect}${preview}<button class="shop-primary-action" type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : p.status === 'coming_soon' ? 'Coming Soon' : 'Unavailable'}</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${location === 'detail' && !purchasable ? 'Purchasing is not active for this item.' : ''}</div>`;
   }
 
   function openQuickView(id, message = ''){
@@ -339,9 +353,13 @@ export function initShopSystem(context){
     const wrap = document.getElementById('shopQuickViewContent');
     if(!p || !dialog || !wrap) return;
     wrap.dataset.productId = p.id;
-    wrap.innerHTML = `<div class="shop-quick-grid"><div class="shop-quick-image"${imageStyle(p.image)}><span>${p.isPlaceholder ? 'Development Preview' : esc(p.availability)}</span></div><div class="shop-quick-copy"><span class="shop-micro">${esc(categoryLabel(p.category))}</span><h2 id="shopQuickViewTitle">${esc(p.title)}</h2><p class="shop-quick-price">${esc(money(p.priceCents))}</p><p>${esc(p.description || 'Product details will be added by the ministry owner.')}</p>${productControlHtml(p, 'quick')}<a class="shop-text-link" href="${base}shop/product.html?id=${encodeURIComponent(p.id)}">View Full Details ↗</a></div></div>`;
+    wrap.innerHTML = `<div class="shop-quick-grid"><div class="shop-quick-image"${imageStyle(p.image)}>${p.image ? '' : coverCardHtml(p)}</div><div class="shop-quick-copy"><span class="shop-micro">${esc(categoryLabel(p.category))}</span><h2 id="shopQuickViewTitle">${esc(p.title)}</h2><p class="shop-quick-price">${esc(money(p.priceCents))} <span>·</span> ${esc(formatLabel(p.type))}</p><p>${esc(p.description || 'Product details will be added by the ministry owner.')}</p>${productControlHtml(p, 'quick')}<a class="shop-text-link" href="${base}shop/product.html?id=${encodeURIComponent(p.id)}">View Full Details ↗</a></div></div>`;
     if(message) wrap.querySelector('[data-shop-action-status]').textContent = message;
     if(!dialog.open) dialog.showModal();
+  }
+
+  function accordionItemHtml(title, bodyHtml){
+    return `<details class="shop-accordion-item"><summary>${esc(title)}<span class="shop-accordion-icon" aria-hidden="true"></span></summary><div class="shop-accordion-body">${bodyHtml}</div></details>`;
   }
 
   function renderProductDetail(){
@@ -357,9 +375,28 @@ export function initShopSystem(context){
     }
     wrap.dataset.productId = p.id;
     document.title = p.title + ' | The Unveiled Assembly';
-    const gallery = [p.image, ...p.images].filter(Boolean).filter((value, index, array) => array.indexOf(value) === index);
-    const included = p.included.length ? `<div class="shop-detail-block"><span class="shop-micro">What’s Included</span><ul>${p.included.map(item => `<li>${esc(item)}</li>`).join('')}</ul></div>` : '';
-    wrap.innerHTML = `<div class="shop-detail-breadcrumb"><a href="${base}shop/">Shop</a><span>/</span><span>${esc(categoryLabel(p.category))}</span></div><div class="shop-detail-grid"><div class="shop-gallery"><div class="shop-gallery-main" id="shopGalleryMain"${imageStyle(gallery[0])}></div>${gallery.length > 1 ? `<div class="shop-gallery-thumbs">${gallery.map((image, index) => `<button type="button" data-gallery-image="${esc(assetUrl(image))}" class="${index === 0 ? 'active' : ''}"${imageStyle(image)} aria-label="View image ${index + 1}"></button>`).join('')}</div>` : ''}</div><div class="shop-detail-copy"><span class="shop-micro">${esc(typeLabel(p.type))} · ${esc(p.availability)}</span><h1>${esc(p.title)}</h1>${p.subtitle ? `<p class="shop-detail-subtitle">${esc(p.subtitle)}</p>` : ''}<p class="shop-detail-price">${esc(money(p.priceCents))}</p><p class="shop-detail-description">${esc(p.description || 'Product details will be added by the ministry owner.')}</p>${productControlHtml(p, 'detail')}<div class="shop-detail-rule"></div>${included}<div class="shop-detail-block"><span class="shop-micro">Delivery</span><p>${esc(p.delivery || (p.type === 'digital' ? 'Secure delivery details will be provided when this resource is released.' : 'Shipping details will be provided when this item is released.'))}</p></div></div></div>`;
+    const description = p.description || 'Product details will be added by the ministry owner.';
+    const includedHtml = p.included.length ? `<ul>${p.included.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : `<p>Details will be added by the ministry owner.</p>`;
+    const deliveryText = p.delivery || (p.type === 'digital'
+      ? 'Secure delivery details will be provided when this resource is released.'
+      : 'Shipping details will be provided when this item is released.');
+    const accordion = p.type === 'digital'
+      ? accordionItemHtml('Description', `<p>${esc(description)}</p>`) +
+        accordionItemHtml('What’s Included', includedHtml) +
+        accordionItemHtml('Download & Access', `<p>${esc(deliveryText)}</p>`)
+      : accordionItemHtml('Description', `<p>${esc(description)}</p>`) +
+        accordionItemHtml('Product Details', includedHtml) +
+        accordionItemHtml('Shipping & Returns', `<p>${esc(deliveryText)}</p>`);
+    wrap.innerHTML = `<div class="shop-detail-breadcrumb"><a href="${base}shop/">Shop</a><span>/</span><span>${esc(categoryLabel(p.category))}</span></div>
+      <h1>${esc(p.title)}</h1>
+      <p class="shop-detail-priceline">${esc(money(p.priceCents))} <span>·</span> ${esc(formatLabel(p.type))}</p>
+      <div class="shop-detail-rule"></div>
+      <div class="shop-detail-image"${imageStyle(p.image)}>${p.image ? '' : coverCardHtml(p)}</div>
+      <p class="shop-detail-description">${esc(description)}</p>
+      <p class="shop-detail-access-line">${esc(accessLineLabel(p.type))}</p>
+      ${productControlHtml(p, 'detail')}
+      <div class="shop-detail-rule"></div>
+      <div class="shop-accordion">${accordion}</div>`;
   }
 
   function wirePublic(){
