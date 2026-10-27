@@ -3601,13 +3601,11 @@ body[data-page="teachings"] :is(a,button):focus-visible{outline:2px solid var(--
 .nav-group{position:relative;display:inline-flex;align-items:center}
 .nav-group[hidden]{display:none}
 .nav-group-toggle{
-  display:inline-flex;align-items:center;gap:6px;padding:0 0 3px;background:none;border:0;border-bottom:1px solid transparent;
+  display:inline-flex;align-items:center;padding:0 0 3px;background:none;border:0;border-bottom:1px solid transparent;
   color:var(--ivory);opacity:.8;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;white-space:nowrap;transition:.2s;
 }
-.nav-group-toggle svg{width:8px;height:6px;transition:transform .2s}
 .nav-group-toggle:hover,.nav-group-toggle.current,.nav-group.open .nav-group-toggle{opacity:1;border-color:currentColor}
 .nav-group-toggle:focus-visible{outline:2px solid var(--ivory);outline-offset:4px}
-.nav-group.open .nav-group-toggle svg{transform:rotate(180deg)}
 .nav-sub{
   position:absolute;top:calc(100% + 22px);left:50%;transform:translate(-50%,-4px);min-width:180px;padding:8px 0;
   display:flex;flex-direction:column;background:var(--black);border:1px solid var(--line-dark);
@@ -3628,4 +3626,4 @@ body[data-page="teachings"] :is(a,button):focus-visible{outline:2px solid var(--
   .nav.open .nav-group.open .nav-sub{display:flex;transform:none}
   .nav.open .links .nav-sub a{padding:13px 0;border-bottom:1px solid var(--line-dark)}
 }
-@media(prefers-reduced-motion:reduce){.nav-sub,.nav-group-toggle svg{transition:none}}
+@media(prefers-reduced-motion:reduce){.nav-sub{transition:none}}

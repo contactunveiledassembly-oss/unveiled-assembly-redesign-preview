@@ -636,8 +636,7 @@ function navHtml(){
     // Second-level menu: hover or click the parent to open it; the
     // parent's own page is the first item inside.
     return `<div class="nav-group" data-nav-group="${l.page}">` +
-      `<button class="nav-group-toggle" type="button" aria-expanded="false" aria-controls="navSub-${l.page}">${l.label}` +
-      `<svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>` +
+      `<button class="nav-group-toggle" type="button" aria-expanded="false" aria-controls="navSub-${l.page}">${l.label}</button>` +
       `<div class="nav-sub" id="navSub-${l.page}">${[l, ...children].map(linkHtml).join('')}</div></div>`;
   }).join('');
   return `
