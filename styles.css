@@ -3546,14 +3546,14 @@ body[data-page="give"] .gv-donate-panel{padding:78px 6vw}.gv-donate-image .give-
    library reuses .teaching-card. Only page-specific bits live here. */
 body[data-page="teachings"] [hidden]{display:none !important}
 .teachings-entry-media{
-  background-image:url('assets/teachings/hero-staircase-1600.webp');
-  background-image:image-set(url('assets/teachings/hero-staircase-1600.webp') 1x, url('assets/teachings/hero-staircase-2400.webp') 2x);
+  background-image:url('assets/teachings/hero-photography-1600.webp');
   background-position:center 50%;
+  background-color:#080706;
 }
 .teachings-entry .oo-hero-overlay{background:linear-gradient(180deg, rgba(10,10,10,.2) 0%, rgba(10,10,10,.32) 46%, rgba(10,10,10,.78) 82%, var(--black) 100%)}
 .teachings-entry .oo-hero-sub{line-height:1.9}
 @media(max-width:820px){
-  .teachings-entry-media{background-image:url('assets/teachings/hero-staircase-960.webp');background-position:72% 50%}
+  .teachings-entry-media{background-image:url('assets/teachings/hero-photography-960.webp');background-position:72% 50%}
 }
 body[data-page="teachings"] .teaching-hero-content h2.teaching-display{font-size:clamp(42px,5.4vw,92px);font-weight:400;margin-bottom:8px}
 .teaching-hero-pending{min-height:82vh}
