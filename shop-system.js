@@ -54,6 +54,22 @@ const DEMO_PRODUCTS = [
     included: ['Final product details will be added by the ministry owner.'],
     delivery: 'Sizing, inventory, and shipping details will appear after the collection is approved.',
     options: [], tags: ['development placeholder'], isPlaceholder: true
+  },
+  // Local-preview-only test item so the real Add to Cart / cart-drawer
+  // flow can actually be clicked through during design review. DEMO_MODE
+  // never runs on the production hostnames (see the DEMO_MODE check
+  // above), so this never reaches a real visitor — remove before any
+  // real content handoff.
+  {
+    id: 'preview-demo-discernment-guide',
+    title: 'Discernment Study Guide',
+    type: 'digital', category: 'digital', status: 'published', featured: true,
+    priceCents: 2400, availability: 'Available', collection: 'Digital Study Resources',
+    image: 'assets/one-on-one/hero-v4.jpg', images: [],
+    description: 'A guided study walking through Scripture’s teaching on testing every spirit and discerning truth from counterfeit in a noisy age.',
+    included: ['A 6-week guided study, delivered as a PDF', 'Daily reading plan with reflection questions', 'A printable scripture memory card set'],
+    delivery: 'Delivered as an instant digital download after purchase.',
+    options: [], tags: ['preview demo'], isPlaceholder: false
   }
 ];
 

@@ -1258,10 +1258,18 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
    nothing outside .shop-page/.shop-detail-page/the Owner Store panel is
    affected. The homepage hero is the one deliberate exception that stays
    dark/dramatic, per spec. */
+/* User feedback (2026-10-27): the all-white Shop felt disconnected
+   from "that dark vibe" the rest of the site has. The content itself
+   (product cards, detail copy, pricing) stays on the --shop-* white/
+   cream panel tokens below for readability, but the page CANVAS
+   behind those panels now uses the same dark gradient the Owner
+   Portal's .owner-content already uses, so the panels read as white
+   cards floating on the site's usual dark atmosphere instead of a
+   flat white page. */
 .shop-page,.shop-detail-page{
   --shop-bg:#FFFFFF; --shop-surface:#FAFAF8; --shop-text:#171717;
   --shop-text-muted:#777777; --shop-border:#E5E5E5; --shop-ink:#111111;
-  background:var(--shop-bg);color:var(--shop-text);min-height:100vh;
+  background:linear-gradient(145deg,#0b0b0b,#060606);color:var(--ivory);min-height:100vh;
 }
 .shop-micro{display:block;font:700 9px/1.4 var(--font-mono);letter-spacing:.22em;text-transform:uppercase;color:#aaa}
 .shop-hero{position:relative;min-height:clamp(380px,56vh,620px);padding:140px clamp(24px,6vw,96px) 56px;display:flex;align-items:flex-end;overflow:hidden}
@@ -1280,7 +1288,7 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 
 /* Collection: tabs + search/sort row + product grid, replacing the old
    boxed-card categories section and 3-col dense grid. */
-.shop-collection{padding:56px clamp(24px,6vw,96px) clamp(90px,10vw,140px);background:var(--shop-bg);color:var(--shop-text)}
+.shop-collection{margin:clamp(28px,5vw,56px) clamp(16px,4vw,40px) clamp(40px,6vw,72px);padding:56px clamp(24px,6vw,72px) clamp(70px,8vw,110px);background:var(--shop-bg);color:var(--shop-text);box-shadow:0 16px 50px rgba(0,0,0,.34)}
 .shop-category-tabs{display:flex;gap:clamp(18px,3vw,34px);flex-wrap:wrap;border-bottom:1px solid var(--shop-border);padding-bottom:16px;margin-bottom:28px}
 .shop-category-tab{background:none;border:0;padding:4px 0 8px;font:400 15px var(--serif);color:var(--shop-text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:.18s}
 .shop-category-tab:hover{color:var(--shop-text)}
@@ -1311,10 +1319,12 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .shop-collection-empty{grid-column:1/-1;padding:90px 20px;text-align:center;border:1px solid var(--shop-border)}
 .shop-collection-empty h3{font:400 clamp(26px,3.5vw,40px) var(--serif);margin:18px 0;color:var(--shop-ink)}
 .shop-collection-empty p{font-size:13px;color:var(--shop-text-muted)}
-.shop-closing{padding:clamp(70px,9vw,120px) clamp(24px,6vw,96px);display:grid;grid-template-columns:1.4fr .6fr;gap:60px;align-items:end;background:var(--shop-surface);border-top:1px solid var(--shop-border)}
-.shop-closing .shop-micro{margin-bottom:18px;color:var(--shop-text-muted)}
-.shop-closing h2{font:400 clamp(32px,4.4vw,56px)/1.05 var(--serif);letter-spacing:-.01em;margin:0;color:var(--shop-ink)}
-.shop-closing>p{font:400 14px/1.7 var(--sans);color:var(--shop-text-muted);max-width:420px;margin:0}
+/* Sits directly on .shop-page's dark canvas (no panel of its own),
+   matching how closing CTA sections read elsewhere on the site. */
+.shop-closing{padding:clamp(70px,9vw,120px) clamp(24px,6vw,96px);display:grid;grid-template-columns:1.4fr .6fr;gap:60px;align-items:end}
+.shop-closing .shop-micro{margin-bottom:18px;color:var(--stone)}
+.shop-closing h2{font:400 clamp(32px,4.4vw,56px)/1.05 var(--serif);letter-spacing:-.01em;margin:0;color:var(--ivory)}
+.shop-closing>p{font:400 14px/1.7 var(--sans);color:var(--stone);max-width:420px;margin:0}
 
 /* Quick View — light, matches the product detail page's own palette. */
 .shop-quick-view{width:min(900px,calc(100vw - 32px));max-width:none;padding:0;border:1px solid var(--shop-border,#e5e5e5);background:var(--shop-bg,#fff);color:var(--shop-text,#171717);box-shadow:0 30px 100px rgba(0,0,0,.25)}
@@ -1392,8 +1402,8 @@ body.shop-cart-open{overflow:hidden}
    would suggest; the prototype image is the more authoritative source
    here. Centered content column, generous whitespace, accordion sections
    with plus/minus icons instead of a sidebar of specs. */
-.shop-detail-page{padding-top:86px;background:var(--shop-bg,#fff)}
-#shopProductDetail{max-width:720px;margin:0 auto;min-height:calc(100vh - 86px);padding:44px 24px 120px}
+.shop-detail-page{padding-top:86px}
+#shopProductDetail{max-width:788px;margin:clamp(24px,4vw,48px) auto clamp(40px,6vw,72px);min-height:calc(100vh - 86px - 72px);padding:44px clamp(24px,5vw,56px) 80px;background:var(--shop-bg);box-shadow:0 16px 50px rgba(0,0,0,.34)}
 .shop-detail-breadcrumb{display:flex;gap:9px;align-items:center;padding:0 0 22px;font:700 9px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--shop-text-muted,#777)}
 .shop-detail-breadcrumb a{color:var(--shop-text-muted,#777)}
 #shopProductDetail h1{font:400 clamp(32px,4.2vw,46px)/1.1 var(--serif);letter-spacing:-.01em;margin:0 0 14px;color:var(--shop-ink,#111);overflow-wrap:anywhere}
