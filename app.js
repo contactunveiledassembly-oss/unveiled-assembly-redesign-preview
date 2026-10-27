@@ -1269,6 +1269,10 @@ function dialogsHtml(){
               <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 16l-5.5-5.5a1.5 1.5 0 0 0-2 0L4 20"/></svg>
               Media
             </button>
+            <button type="button" class="owner-sidebar-item" data-owner-nav="communication">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8A2.5 2.5 0 0 1 17.5 17H9l-5 4z"/><path d="M8 8.5h8M8 11.5h5"/></svg>
+              Communication
+            </button>
             <button type="button" class="owner-sidebar-item" data-owner-nav="settings">
               <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
               Settings
@@ -1781,18 +1785,61 @@ function dialogsHtml(){
             <div id="bookingsLookupResults"></div>
           </div>
         </article>
-        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
-          <span class="portal-label">Notification Center <span class="demo-badge" id="notifCenterBadge">Visual Demonstration — Not Yet Connected</span></span>
-          <p style="color:#656565;margin-bottom:14px">A preview of what admin alerts and outbound member notifications will look like once real email/SMS delivery is connected. These are sample/simulated entries, not live activity.</p>
+        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="communication">
+          <span class="portal-label">Communication &amp; Email Center <span class="demo-badge" id="notifCenterBadge">Visual Demonstration — Not Yet Connected</span></span>
+          <p style="color:#656565;margin-bottom:14px">A preview of what admin alerts and outbound member notifications will look like once a real email/SMS provider is connected. These are sample/simulated entries, not live activity.</p>
           <div class="admin-tabs" id="ownerNotifCenterTabs" style="margin-bottom:16px">
-            <button type="button" class="admin-tab active" data-notif-center-tab="alerts">Owner Alerts<span class="owner-nav-count" id="ownerNotifUnreadBadge" hidden>0</span></button>
+            <button type="button" class="admin-tab active" data-notif-center-tab="templates">Templates</button>
+            <button type="button" class="admin-tab" data-notif-center-tab="alerts">Owner Alerts<span class="owner-nav-count" id="ownerNotifUnreadBadge" hidden>0</span></button>
             <button type="button" class="admin-tab" data-notif-center-tab="history">Member Notification History</button>
+            <button type="button" class="admin-tab" data-notif-center-tab="settings">Settings</button>
           </div>
-          <div data-notif-center-panel="alerts">
+          <div data-notif-center-panel="templates">
+            <p class="admin-hint" style="margin-bottom:14px">A preview of the messages members would receive once a provider is connected — wording only, nothing here sends anything.</p>
+            <div class="owner-comms-template-grid">
+              <div class="owner-comms-template-card">
+                <span class="admin-status-pill draft">Not Connected</span>
+                <strong>Booking Confirmation</strong>
+                <p class="admin-hint">Sent the moment a one-on-one is confirmed — date, time, format, and a reschedule/cancel link.</p>
+              </div>
+              <div class="owner-comms-template-card">
+                <span class="admin-status-pill draft">Not Connected</span>
+                <strong>24-Hour Reminder</strong>
+                <p class="admin-hint">A reminder email/text the day before a confirmed appointment or class.</p>
+              </div>
+              <div class="owner-comms-template-card">
+                <span class="admin-status-pill draft">Not Connected</span>
+                <strong>Prayer Request Received</strong>
+                <p class="admin-hint">Confirms a submitted prayer request was received, without implying a personal reply is guaranteed.</p>
+              </div>
+              <div class="owner-comms-template-card">
+                <span class="admin-status-pill draft">Not Connected</span>
+                <strong>Testimony Published</strong>
+                <p class="admin-hint">Lets a member know their testimony is now live on the public Testimonials page.</p>
+              </div>
+              <div class="owner-comms-template-card">
+                <span class="admin-status-pill draft">Not Connected</span>
+                <strong>Class Registration Confirmation</strong>
+                <p class="admin-hint">Sent when a class registration is confirmed — class, date/time, and what to expect.</p>
+              </div>
+              <div class="owner-comms-template-card">
+                <span class="admin-status-pill draft">Not Connected</span>
+                <strong>Payment Receipt</strong>
+                <p class="admin-hint">A receipt for a completed payment, once a real payment processor is connected.</p>
+              </div>
+            </div>
+          </div>
+          <div data-notif-center-panel="alerts" hidden>
             <div id="ownerNotificationsList"></div>
           </div>
           <div data-notif-center-panel="history" hidden>
             <div id="ownerNotifHistoryList"></div>
+          </div>
+          <div data-notif-center-panel="settings" hidden>
+            <div class="admin-payments-empty">
+              <strong>No Provider Connected</strong>
+              <p>No email or SMS provider is connected to the website yet, so templates above are previews only and nothing here actually sends. When you're ready to turn this on, this is where a real provider (such as Resend for email and Twilio for SMS) would be connected — a separate setup step that needs your own account and API keys.</p>
+            </div>
           </div>
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="people">
@@ -8902,6 +8949,7 @@ const OWNER_SECTION_DESCRIPTIONS = {
   registrations: 'See who registered for every class, and manage attendance.',
   people: 'Everyone who has created an account.',
   media: 'Every image currently uploaded to the website.',
+  communication: 'A preview of outbound email/SMS, once a real provider is connected.',
   settings: 'Your sign-in email, phone, and password.',
   policies: 'The terms and agreements visitors see across ministry forms and checkout.'
 };

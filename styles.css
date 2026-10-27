@@ -2037,7 +2037,8 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 [data-owner-section="website"],
 [data-owner-section="settings"],
 [data-owner-section="policies"],
-[data-owner-section="media"]{--dept-accent:var(--dept-system)}
+[data-owner-section="media"],
+[data-owner-section="communication"]{--dept-accent:var(--dept-system)}
 .portal-view[data-portal-view="owner"] [data-owner-section] .portal-label{position:relative;padding-left:15px}
 .portal-view[data-portal-view="owner"] [data-owner-section] .portal-label::before{
   content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
@@ -2607,7 +2608,8 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 .owner-sidebar-item[data-owner-nav="website"],
 .owner-sidebar-item[data-owner-nav="settings"],
 .owner-sidebar-item[data-owner-nav="policies"],
-.owner-sidebar-item[data-owner-nav="media"]{--dept-accent:var(--dept-system)}
+.owner-sidebar-item[data-owner-nav="media"],
+.owner-sidebar-item[data-owner-nav="communication"]{--dept-accent:var(--dept-system)}
 .owner-sidebar-item svg{stroke:var(--dept-accent,currentColor);opacity:.75;transition:opacity .15s,stroke .15s}
 .owner-sidebar-item:hover svg,.owner-sidebar-item.active svg{opacity:1}
 /* Groups the 15 nav items into a few labeled clusters (Content,
@@ -2715,6 +2717,17 @@ dialog.member-ticket-dialog{background:var(--black); color:var(--ivory); border-
 }
 .admin-payments-empty strong{display:block;font-family:var(--serif);font-size:20px;color:var(--owner-text);margin-bottom:8px}
 .admin-payments-empty p{color:var(--owner-text-muted);font-size:13.5px;max-width:48ch;margin:0 auto}
+/* ---------- Communication & Email Center ---------- */
+.owner-comms-template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.owner-comms-template-card{
+  border:1px solid var(--owner-border);border-radius:var(--owner-radius);background:var(--owner-surface-sunken);
+  padding:16px 18px;display:flex;flex-direction:column;gap:8px;
+}
+.owner-comms-template-card .admin-status-pill{align-self:flex-start}
+.owner-comms-template-card strong{font-family:var(--serif);font-size:15px;color:var(--owner-text)}
+.owner-comms-template-card p{margin:0;color:var(--owner-text-muted);font-size:12.5px;line-height:1.5}
+@media(max-width:640px){.owner-comms-template-grid{grid-template-columns:1fr}}
+
 .tablewrap-scroll{overflow-x:auto;border:1px solid var(--owner-border);border-radius:var(--owner-radius)}
 .admin-payments-table{width:100%;border-collapse:collapse;font-size:13px}
 .admin-payments-table th{

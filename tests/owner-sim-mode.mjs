@@ -54,7 +54,12 @@ const reportsText = await page.locator('#bookingsReportsStats').innerText();
 const totalBookings = Number(reportsText.match(/Total Bookings\s*(\d+)/)[1]);
 assert.ok(totalBookings >= 15 && totalBookings <= 25, 'Busy Day should produce 15-25 total bookings, got ' + totalBookings);
 assert.ok(totalBookings >= atEnd, 'confirmed-only dashboard count should never exceed the total booking count');
-await page.locator('[data-owner-nav="dashboard"]').click();
+// Notification center now lives in its own Communication & Email Center
+// department (Master Redesign Stage 7), not embedded in the Dashboard —
+// "Owner Alerts" is its own tab there, alongside Templates/History/Settings.
+await page.locator('[data-owner-nav="communication"]').click();
+await page.waitForTimeout(200);
+await page.locator('[data-notif-center-tab="alerts"]').click();
 await page.waitForTimeout(200);
 
 // Notification center: real timestamps, accurate unread count, click-through.
