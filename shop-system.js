@@ -224,9 +224,13 @@ export function initShopSystem(context){
       document.body.insertAdjacentHTML('beforeend', `
         <div class="shop-cart-backdrop" id="shopCartBackdrop" hidden></div>
         <aside class="shop-cart" id="shopCartDialog" aria-labelledby="shopCartTitle" aria-hidden="true">
-          <div class="shop-cart-head"><div><span class="shop-micro">Your Selection</span><h2 id="shopCartTitle">Cart</h2></div><button type="button" class="shop-icon-close" id="shopCartClose" aria-label="Close cart">×</button></div>
+          <div class="shop-cart-head"><h2 id="shopCartTitle">Your Bag</h2><button type="button" class="shop-icon-close" id="shopCartClose" aria-label="Close cart">×</button></div>
           <div class="shop-cart-items" id="shopCartItems"></div>
           <div class="shop-cart-foot">
+            <label class="shop-discount-field" title="Discount codes will work once secure checkout is connected">
+              <input type="text" placeholder="Discount code" disabled />
+              <button type="button" disabled>Apply</button>
+            </label>
             <div class="shop-cart-total"><span>Subtotal</span><strong id="shopCartSubtotal" data-subtotal-cents="0">$0.00</strong></div>
             <p class="shop-cart-note">Taxes and delivery are not calculated. Checkout remains unavailable until secure payment processing is connected.</p>
             <button class="shop-primary-action" type="button" disabled title="Secure checkout has not been connected">Checkout Not Connected</button>

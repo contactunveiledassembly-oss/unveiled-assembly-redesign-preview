@@ -1344,37 +1344,46 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .shop-generated-cover span{font:700 9px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#bbb;margin-top:10px}
 .shop-generated-cover small{font:700 8px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:#888}
 
-/* Persistent cart */
+/* Persistent cart — white/black per spec §6. Lives outside .shop-page
+   (appended straight to <body> so the cart icon/drawer works site-wide,
+   not just on Shop pages), so this uses literal hex rather than the
+   --shop-* custom properties, which are scoped to .shop-page/
+   .shop-detail-page and wouldn't be inherited here. */
 body.shop-cart-open{overflow:hidden}
-.shop-cart-backdrop{position:fixed;z-index:1100;inset:0;background:rgba(0,0,0,.74);backdrop-filter:blur(3px)}
-.shop-cart{position:fixed;z-index:1101;top:0;right:0;width:min(470px,100vw);height:100dvh;background:#0d0d0d;color:#eee;border-left:1px solid #363636;display:flex;flex-direction:column;transform:translateX(102%);transition:transform .34s cubic-bezier(.2,.75,.25,1);box-shadow:-20px 0 70px rgba(0,0,0,.35)}
+.shop-cart-backdrop{position:fixed;z-index:1100;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
+.shop-cart{position:fixed;z-index:1101;top:0;right:0;width:min(440px,100vw);height:100dvh;background:#fff;color:#171717;border-left:1px solid #e5e5e5;display:flex;flex-direction:column;transform:translateX(102%);transition:transform .34s cubic-bezier(.2,.75,.25,1);box-shadow:-20px 0 70px rgba(0,0,0,.12)}
 .shop-cart.open{transform:translateX(0)}
-.shop-cart-head{display:flex;align-items:center;justify-content:space-between;padding:32px;border-bottom:1px solid #333}
-.shop-cart-head h2{font:300 35px var(--sans);letter-spacing:-.04em;margin:8px 0 0}
-.shop-cart-items{flex:1;overflow:auto;padding:0 32px}
-.shop-cart-line{display:grid;grid-template-columns:92px 1fr;gap:18px;padding:25px 0;border-bottom:1px solid #303030}
-.shop-cart-line-image{width:92px;aspect-ratio:4/5;background:#181818 center/cover no-repeat;filter:grayscale(.85)}
-.shop-cart-line-copy>span{font:700 8px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:#888}
-.shop-cart-line-copy h3{font:500 12px/1.4 var(--sans);letter-spacing:-.01em;margin:7px 0;color:#eee;overflow-wrap:anywhere}
-.shop-cart-line-copy p{font-size:10px;color:#aaa;margin:5px 0}
-.shop-cart-line-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px}
-.shop-cart-line-bottom>strong{font:400 11px var(--font-mono)}
-.shop-qty{display:inline-flex;border:1px solid #494949;height:29px}
-.shop-qty button,.shop-qty span{width:28px;border:0;background:transparent;color:#ddd;display:grid;place-items:center;font-size:12px}
-.shop-qty button{cursor:pointer}.shop-qty button:hover{background:#eee;color:#111}
+.shop-cart-head{display:flex;align-items:center;justify-content:space-between;padding:28px 28px 22px;border-bottom:1px solid #e5e5e5}
+.shop-cart-head h2{font:400 28px var(--serif);letter-spacing:-.01em;margin:0;color:#111}
+.shop-cart-items{flex:1;overflow:auto;padding:0 28px}
+.shop-cart-line{display:grid;grid-template-columns:84px 1fr;gap:16px;padding:22px 0;border-bottom:1px solid #e5e5e5}
+.shop-cart-line-image{width:84px;aspect-ratio:4/5;background:#fafaf8 center/cover no-repeat}
+.shop-cart-line-copy>span{font:700 8px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#777}
+.shop-cart-line-copy h3{font:500 12px/1.4 var(--sans);letter-spacing:-.01em;margin:6px 0;color:#111;overflow-wrap:anywhere}
+.shop-cart-line-copy p{font-size:10px;color:#777;margin:4px 0}
+.shop-cart-line-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px}
+.shop-cart-line-bottom>strong{font:400 11px var(--sans)}
+.shop-qty{display:inline-flex;border:1px solid #d8d8d8;height:28px}
+.shop-qty button,.shop-qty span{width:27px;border:0;background:transparent;color:#171717;display:grid;place-items:center;font-size:12px}
+.shop-qty button{cursor:pointer}.shop-qty button:hover{background:#111;color:#fff}
 .shop-digital-qty{font:400 8px var(--font-mono);letter-spacing:.08em;color:#999}
-.shop-remove{margin-top:12px;padding:0;border:0;border-bottom:1px solid #555;background:none;color:#999;font:500 8px var(--sans);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
-.shop-cart-foot{padding:24px 32px 30px;border-top:1px solid #333;background:#0a0a0a}
-.shop-cart-total{display:flex;justify-content:space-between;align-items:center;font-size:12px;text-transform:uppercase;letter-spacing:.1em}
-.shop-cart-total strong{font:400 18px var(--font-mono)}
-.shop-cart-note{font-size:9px;line-height:1.55;color:#777;margin:14px 0 17px}
+.shop-remove{margin-top:10px;padding:0;border:0;border-bottom:1px solid #d8d8d8;background:none;color:#999;font:500 8px var(--sans);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.shop-cart-foot{padding:20px 28px 26px;border-top:1px solid #e5e5e5;background:#fff}
+.shop-discount-field{display:flex;gap:0;border:1px solid #e5e5e5;margin-bottom:16px}
+.shop-discount-field input{flex:1;min-width:0;border:0;padding:0 14px;height:42px;font:400 12px var(--sans);color:#171717;background:#fff}
+.shop-discount-field input:disabled{color:#aaa;background:#fafaf8}
+.shop-discount-field input::placeholder{color:#999}
+.shop-discount-field button{flex:0 0 auto;border:0;border-left:1px solid #e5e5e5;padding:0 16px;background:#fafaf8;color:#999;font:600 9px var(--sans);letter-spacing:.08em;text-transform:uppercase;cursor:not-allowed}
+.shop-cart-total{display:flex;justify-content:space-between;align-items:center;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#171717}
+.shop-cart-total strong{font:400 17px var(--sans)}
+.shop-cart-note{font-size:10px;line-height:1.6;color:#999;margin:14px 0 17px}
 .shop-cart-foot>.shop-primary-action{width:100%}
-.shop-cart-secondary-actions{display:flex;justify-content:space-between;gap:14px;margin-top:17px}
-.shop-cart-secondary-actions a,.shop-cart-secondary-actions button{padding:0 0 4px;border:0;border-bottom:1px solid #555;background:none;color:#bbb;font:600 8px var(--sans);letter-spacing:.11em;text-transform:uppercase;cursor:pointer}
+.shop-cart-secondary-actions{display:flex;justify-content:space-between;gap:14px;margin-top:16px}
+.shop-cart-secondary-actions a,.shop-cart-secondary-actions button{padding:0 0 4px;border:0;border-bottom:1px solid #d8d8d8;background:none;color:#777;font:600 8px var(--sans);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
 .shop-cart-empty{text-align:center;padding:90px 12px}
-.shop-cart-empty h3{font:300 30px var(--sans);letter-spacing:-.04em;margin:20px 0 10px}
-.shop-cart-empty p{font-size:11px;color:#888;margin-bottom:26px}
-.shop-cart-empty a{font:600 9px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:#eee;border-bottom:1px solid #777;padding-bottom:6px}
+.shop-cart-empty h3{font:400 26px var(--serif);letter-spacing:-.01em;margin:18px 0 10px;color:#111}
+.shop-cart-empty p{font-size:11px;color:#777;margin-bottom:24px}
+.shop-cart-empty a{font:600 9px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:#111;border-bottom:1px solid #d8d8d8;padding-bottom:6px}
 .cart-btn{cursor:pointer}
 .cart-btn b{font:inherit;font-weight:600}
 
