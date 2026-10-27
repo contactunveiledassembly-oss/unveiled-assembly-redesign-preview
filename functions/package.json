@@ -4,15 +4,15 @@
   "description": "Trusted server for The Unveiled Assembly: Stripe Checkout sessions and the Stripe webhook.",
   "main": "index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
   },
   "dependencies": {
-    "firebase-admin": "^12.7.0",
-    "firebase-functions": "^6.1.0",
-    "stripe": "^17.4.0"
+    "firebase-admin": "^14.5.0",
+    "firebase-functions": "^7.4.0",
+    "stripe": "^23.0.1"
   }
 }

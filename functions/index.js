@@ -23,12 +23,12 @@ const crypto = require('crypto');
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const Stripe = require('stripe');
 
-admin.initializeApp();
-const db = admin.firestore();
-const { FieldValue } = admin.firestore;
+initializeApp();
+const db = getFirestore();
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
@@ -38,6 +38,9 @@ const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
 // never calls this function at all.
 const ALLOWED_RETURN_ORIGINS = ['https://theunveiledassembly.com', 'https://www.theunveiledassembly.com'];
 const MINISTRY_NAME = 'The Unveiled Assembly';
+// Stable label for comparing this Checkout flow in Stripe Workbench.
+// The eight-letter suffix keeps it distinct from future integrations.
+const STRIPE_INTEGRATION_IDENTIFIER = 'unveiled_checkout_qmvzptrk';
 // Stripe's own floor for a USD charge.
 const STRIPE_MIN_CENTS = 50;
 const DONATION_MAX_CENTS = 1000000;
@@ -252,6 +255,7 @@ exports.createCheckoutSession = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALL
   if(priced.code) metadata.discountCode = priced.code;
   const hasPhysical = priced.lines.some(l => l.type === 'physical');
   const session = await stripe().checkout.sessions.create({
+    integration_identifier: STRIPE_INTEGRATION_IDENTIFIER,
     mode: 'payment',
     submit_type: kind === 'donation' ? 'donate' : kind === 'shop' ? 'pay' : 'book',
     line_items: priced.lines.map(l => ({
