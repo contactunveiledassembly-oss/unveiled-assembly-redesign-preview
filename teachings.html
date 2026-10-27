@@ -6,53 +6,50 @@
   <meta name="description" content="Teachings, classes, and spiritual formation resources from The Unveiled Assembly of Christ Jesus." />
   <title>Teachings | The Unveiled Assembly</title>
   <link rel="icon" type="image/png" href="assets/ua-logo-tight.png" />
-  <meta name="theme-color" content="#111110" />
+  <meta name="theme-color" content="#0a0a0a" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital@1&family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="preload" as="image" type="image/webp" imagesrcset="assets/teachings/hero-staircase-960.webp 960w, assets/teachings/hero-staircase-1600.webp 1600w, assets/teachings/hero-staircase-2400.webp 2400w" imagesizes="100vw" />
-  <link rel="stylesheet" href="styles.css?v=sitewide-20261027-teachings" />
+  <link rel="stylesheet" href="styles.css?v=sitewide-20261027-teachings2" />
 </head>
 <body data-page="teachings">
   <div class="grain"></div>
 
-  <header class="tx-hero" id="teachingHero">
-    <img class="tx-hero-img" src="assets/teachings/hero-staircase-1600.webp"
-      srcset="assets/teachings/hero-staircase-960.webp 960w, assets/teachings/hero-staircase-1600.webp 1600w, assets/teachings/hero-staircase-2400.webp 2400w"
-      sizes="100vw" width="2400" height="1350" alt="" fetchpriority="high" />
-    <div class="tx-hero-shade" aria-hidden="true"></div>
-    <div class="tx-hero-inner">
-      <p class="tx-label">The Unveiled Assembly <span aria-hidden="true">/</span> Biblical Teachings</p>
-      <h1 class="tx-hero-title">Teachings.</h1>
-      <p class="tx-hero-statement">Christ Revealed. A People Unveiled.</p>
-      <span class="tx-rule" aria-hidden="true"></span>
-      <a class="btn tx-btn" id="teachingHeroCta" href="#featuredTeaching" hidden>View Featured Teaching <span aria-hidden="true">→</span></a>
+  <header class="oo-hero teachings-entry" id="teachingHero" aria-label="Teachings">
+    <div class="oo-hero-media teachings-entry-media" aria-hidden="true"></div>
+    <div class="oo-hero-overlay" aria-hidden="true"></div>
+    <div class="oo-hero-content reveal">
+      <div class="eyebrow">Biblical Teachings</div>
+      <h1 class="teaching-display oo-hero-title">Teachings.</h1>
+      <p class="oo-hero-sub">Christ Revealed.<br>A People Unveiled.</p>
+      <a class="btn fill" id="teachingHeroCta" href="#featuredTeaching" hidden>View Featured Teaching →</a>
+      <p class="oo-hero-desc">Truth for a deeper walk with Christ.</p>
     </div>
+    <div class="oo-hero-words" aria-hidden="true">Scripture<br>Discernment<br>Transformation<br>A People Unveiled</div>
   </header>
 
-  <section class="tx-featured" id="featuredTeaching" aria-label="Featured Teaching"></section>
+  <section class="teaching-hero" id="featuredTeaching" aria-label="Featured Teaching"></section>
 
-  <section class="tx-library" id="teachingLibrary" aria-labelledby="teachingLibraryTitle">
-    <div class="tx-inner">
-      <div class="tx-library-head">
-        <h2 class="tx-h2" id="teachingLibraryTitle">All Teachings</h2>
-        <button class="tx-text-link" id="openClassReviewFromTeachings" type="button">Leave A Class Review <span aria-hidden="true">→</span></button>
+  <section class="teaching-cards-section" id="teachingLibrary" aria-labelledby="teachingLibraryTitle">
+    <div class="section-inner">
+      <div class="eyebrow reveal" style="margin-bottom:6px">Thursday Teachings</div>
+      <div class="teaching-library-head reveal">
+        <h2 class="teaching-display teaching-section-title" id="teachingLibraryTitle">All Teachings.</h2>
+        <button class="text-link" id="openClassReviewFromTeachings" type="button">Leave A Class Review →</button>
       </div>
-      <div class="tx-library-grid" id="teachingLibraryList"></div>
+      <div class="teaching-cards-grid" id="teachingLibraryList"></div>
     </div>
   </section>
 
-  <section class="tx-member" id="teachingMemberSection" aria-labelledby="teachingMemberTitle">
-    <img class="tx-member-img" src="assets/teachings/member-stone-1280.webp" width="1280" height="720" alt="" loading="lazy" decoding="async" />
-    <div class="tx-member-shade" aria-hidden="true"></div>
-    <div class="tx-inner tx-member-inner">
-      <p class="tx-label">Continue In Your Account</p>
-      <h2 class="tx-h2" id="teachingMemberTitle">Continue Your Study.</h2>
-      <p class="tx-member-copy">Your teachings, classes, and resources in one place.</p>
-      <button class="btn tx-btn" id="teachingGoToAccount" type="button">Go To My Account <span aria-hidden="true">→</span></button>
+  <section class="teaching-member-section" id="teachingMemberSection" aria-labelledby="teachingMemberTitle">
+    <div class="section-inner reveal">
+      <div class="eyebrow" style="margin-bottom:16px">Continue In Your Account</div>
+      <h2 class="teaching-display teaching-section-title" id="teachingMemberTitle">Continue Your Study.</h2>
+      <p class="teaching-member-copy">Your teachings, classes, and resources in one place.</p>
+      <button class="btn" id="teachingGoToAccount" type="button">Go To My Account →</button>
     </div>
   </section>
 
-  <script type="module" src="app.js?v=sitewide-20261027-teachings"></script>
+  <script type="module" src="app.js?v=sitewide-20261027-teachings2"></script>
 </body>
 </html>

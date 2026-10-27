@@ -402,20 +402,27 @@ const DEMO_TEACHINGS = {
     fullDescription: 'A deep dive into spiritual discernment — what it is, how to recognize it, and how to sharpen it in a world full of confusion.',
     whatYouWillLearn: ['What spiritual discernment is', 'Types of discernment', 'How to recognize what you are perceiving', 'Biblical examples', 'Discernment vs. assumption', 'Practical exercises'],
     date: demoNextWeekdayStr(4, 0), startTime: '19:30', price: 25, capacity: 50, unlimitedCapacity: false,
-    status: 'registration-open', featured: true },
+    status: 'registration-open', featured: true,
+    // Scenery placeholder so the featured hero/card show real
+    // photography instead of the plain category gradient — reuses an
+    // already-approved site photo, not a new or stock image. Swap
+    // anytime from Teaching Manager -> this class -> Images.
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/hero-v4.jpg' } },
   'demo-prophetic': { id: 'demo-prophetic', ...demoTeachingDefaults(),
     title: 'The Prophetic', subtitle: 'Developing Prophetic Sensitivity', category: 'Prophetic',
     shortDescription: 'Understanding the prophetic gift and how to grow in spiritual sensitivity and maturity.',
     fullDescription: 'Understanding the prophetic gift and how to grow in spiritual sensitivity and maturity.',
     whatYouWillLearn: ['What the prophetic gift is', 'How prophetic sensitivity develops', 'Testing and confirming what you sense'],
     date: demoNextWeekdayStr(4, 1), startTime: '19:30', price: 25,
-    status: 'published' },
+    status: 'published',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/expect-v3.jpg' } },
   'demo-voice': { id: 'demo-voice', ...demoTeachingDefaults(),
     title: 'Hearing the Voice of God', subtitle: 'Recognizing How He Speaks', category: 'Hearing the Voice of God',
     shortDescription: 'Learning to recognize and respond to the voice of God in everyday life.',
     fullDescription: 'Learning to recognize and respond to the voice of God in everyday life.',
     date: demoNextWeekdayStr(4, 2), startTime: '19:30', price: 25,
-    status: 'draft' },
+    status: 'draft',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/hero.png' } },
   'demo-warfare': { id: 'demo-warfare', ...demoTeachingDefaults(),
     title: 'Spiritual Warfare', subtitle: 'Understanding The Invisible', category: 'Spiritual Warfare',
     shortDescription: 'A grounded look at spiritual warfare — what Scripture actually says, and how to stand without fear.',
@@ -428,13 +435,15 @@ const DEMO_TEACHINGS = {
     shortDescription: 'Rooting your sense of self in who God says you are, not in performance or circumstance.',
     fullDescription: 'Rooting your sense of self in who God says you are, not in performance or circumstance.',
     date: demoNextWeekdayStr(4, 4), startTime: '19:30', price: 25,
-    status: 'published' },
+    status: 'published',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/beliefs-hero-v3.jpg' } },
   'demo-foundations': { id: 'demo-foundations', ...demoTeachingDefaults(),
     title: 'Foundations of Faith', subtitle: 'Rooted Before You Rise', category: 'Foundations',
     shortDescription: 'A practical foundation for understanding grace, identity, prayer, and spiritual maturity.',
     fullDescription: 'A practical foundation for understanding grace, identity, prayer, and spiritual maturity.',
     date: new Date(Date.now() - 21 * 86400000).toISOString().slice(0, 10), startTime: '19:00', price: 20,
-    status: 'published' },
+    status: 'published',
+    artwork: { ...demoTeachingDefaults().artwork, hero: 'assets/one-on-one/booking.png' } },
 };
 let DEMO_TEACHING_ZOOM = {
   'demo-discernment': { zoomUrl: 'https://zoom.us/j/demo', meetingId: '000 000 0000', passcode: 'demo' },
@@ -13653,38 +13662,13 @@ function teachingHeroMediaHtml(t){
 
 /* ---------------------------------------------------------------
    Teachings page (Oct 2026 redesign): Hero → Featured Teaching →
-   All Teachings → Member account. The owner's own teaching artwork
-   always wins; these defaults only fill in for a class without one.
+   All Teachings → Member account. Featured keeps the original split
+   "teaching hero" look and All Teachings keeps the original poster
+   cards; what changed is which classes qualify (see featuredTeaching)
+   and the intentional empty states.
    --------------------------------------------------------------- */
-const TEACHING_DEFAULT_ART = [
-  { base: 'assets/teachings/default-archway', widths: [640, 1280] },
-  { base: 'assets/teachings/default-mountain-bw', widths: [640, 1280] },
-  { base: 'assets/teachings/default-concrete', widths: [640, 1280] },
-  { base: 'assets/teachings/default-fabric', widths: [640, 1280] },
-  { base: 'assets/teachings/default-stone-light', widths: [640, 1280] }
-];
-const TEACHING_FEATURED_DEFAULT_ART = { base: 'assets/teachings/featured-canyon', widths: [960, 1600] };
-const TEACHING_EMPTY_ART = { base: 'assets/teachings/empty-archway-bw', widths: [960, 1600] };
+const TEACHING_EMPTY_ART = 'assets/teachings/empty-archway-bw-1600.webp';
 
-// Defaults rotate by position in the library, so neighbouring classes
-// never share an image while the order stays put.
-function teachingDefaultArt(index){
-  return TEACHING_DEFAULT_ART[index % TEACHING_DEFAULT_ART.length];
-}
-function teachingImgHtml(ownerUrl, fallback, opts){
-  const { sizes, className, lazy, focal, mobileUrl } = opts;
-  const loading = lazy ? ' loading="lazy" decoding="async"' : '';
-  if(ownerUrl){
-    const style = focal ? ' style="object-position:' + focal.x + '% ' + focal.y + '%' +
-      (focal.zoom && focal.zoom !== 100 ? ';transform:scale(' + (focal.zoom / 100) + ');transform-origin:' + focal.x + '% ' + focal.y + '%' : '') + '"' : '';
-    const img = '<img class="' + className + '" src="' + escapeHtml(ownerUrl) + '" alt=""' + loading + style + ' />';
-    return mobileUrl ? '<picture><source media="(max-width:700px)" srcset="' + escapeHtml(mobileUrl) + '" />' + img + '</picture>' : img;
-  }
-  const srcset = fallback.widths.map(w => fallback.base + '-' + w + '.webp ' + w + 'w').join(', ');
-  const largest = fallback.widths[fallback.widths.length - 1];
-  return '<img class="' + className + '" src="' + fallback.base + '-' + fallback.widths[0] + '.webp" srcset="' + srcset + '" sizes="' + sizes + '"' +
-    ' width="' + largest + '" height="' + Math.round(largest * 9 / 16) + '" alt=""' + loading + ' />';
-}
 function teachingWhenLine(t){
   if(!t.date) return '';
   const date = formatTeachingDate(t.date);
@@ -13695,77 +13679,98 @@ function teachingWhenLine(t){
 function teachingDetailHref(t){
   return BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id);
 }
-// Upcoming classes go through the existing registration/waitlist dialog
-// (the .teaching-register-btn click handler); past ones open the
-// teaching's page, where enrolled members reach the classroom.
-function teachingActionHtml(t, className, labels){
-  if(teachingIsUpcoming(t) && !teachingStatusButtonDisabled(t)){
-    const full = t.status === 'sold-out' || classIsFull(t);
-    return '<button class="' + className + ' teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
-      ' aria-label="' + escapeHtml((full ? 'Join the waitlist for ' : 'Register for ') + (t.title || 'this class')) + '">' +
-      (full ? labels.waitlist : labels.register) + ' <span aria-hidden="true">→</span></button>';
-  }
-  return '<a class="' + className + '" href="' + teachingDetailHref(t) + '" aria-label="' + escapeHtml('Explore ' + (t.title || 'this teaching')) + '">' +
-    labels.explore + ' <span aria-hidden="true">→</span></a>';
+
+function teachingCardHtml(t){
+  const art = teachingCardArt(t);
+  const fallbackClass = art ? '' : ' ' + teachingArtClass(t.category);
+  const style = art ? ' style="background-image:linear-gradient(190deg,rgba(10,10,10,.1),rgba(10,10,10,.72)),url(\'' + escapeHtml(art) + '\')"' : '';
+  return '<a class="teaching-card teaching-card-reveal' + fallbackClass + '" href="' + teachingDetailHref(t) + '"' + style +
+    ' aria-label="' + escapeHtml((t.title || 'Teaching') + ' — read more') + '">' +
+    '<div class="teaching-card-art-text">' +
+    '<span class="teaching-card-eyebrow">' + escapeHtml(t.category || 'Teaching') + '</span>' +
+    '<h3>' + escapeHtml(t.title || '') + '</h3>' +
+    (t.subtitle ? '<p class="teaching-card-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    '</div>' +
+    '<div class="teaching-card-footer">' +
+    '<div><strong>' + escapeHtml(t.title || '') + '</strong><span>' + escapeHtml(teachingWhenLine(t)) + '</span></div>' +
+    '<span class="teaching-card-more">Read More <span class="teaching-card-arrow" aria-hidden="true">→</span></span>' +
+    '</div></a>';
 }
 
 function renderFeaturedTeaching(){
-  const section = document.getElementById('featuredTeaching');
-  if(!section) return;
+  const wrap = document.getElementById('featuredTeaching');
+  if(!wrap) return;
   const cta = document.getElementById('teachingHeroCta');
   const t = teachingsLoaded ? featuredTeaching() : null;
   if(cta) cta.hidden = !t;
-  section.hidden = TEACHING_PAGE_SETTINGS.showFeatured === false;
-  section.setAttribute('aria-busy', teachingsLoaded ? 'false' : 'true');
-  if(!teachingsLoaded){ section.innerHTML = '<div class="tx-inner tx-featured-pending"></div>'; return; }
+  wrap.hidden = TEACHING_PAGE_SETTINGS.showFeatured === false;
+  wrap.setAttribute('aria-busy', teachingsLoaded ? 'false' : 'true');
+  if(!teachingsLoaded){ wrap.className = 'teaching-hero teaching-hero-pending'; wrap.innerHTML = ''; return; }
   if(!t){
-    section.innerHTML = '<div class="tx-featured-empty">' +
-      teachingImgHtml('', TEACHING_EMPTY_ART, { sizes: '100vw', className: 'tx-featured-empty-img', lazy: true }) +
-      '<div class="tx-featured-empty-shade" aria-hidden="true"></div>' +
-      '<div class="tx-featured-empty-copy reveal">' +
-      '<p class="tx-label">Featured Teaching</p>' +
-      '<h2 class="tx-h2">Something Is Being Prepared.</h2>' +
-      '<span class="tx-rule" aria-hidden="true"></span>' +
-      '<p class="tx-featured-empty-sub">New teachings are coming soon.</p>' +
-      '</div></div>';
+    wrap.className = 'teaching-hero';
+    wrap.innerHTML = teachingHeroMediaHtml({ artwork: { hero: TEACHING_EMPTY_ART, overlayStrength: 30 } }) +
+      '<div class="teaching-hero-content reveal">' +
+      '<div class="eyebrow">Featured Teaching</div>' +
+      '<h2 class="teaching-display">Something Is Being Prepared.</h2>' +
+      '<p class="teaching-hero-desc">New teachings are coming soon.</p>' +
+      '</div>';
     return;
   }
-  const art = t.artwork || {};
-  const focal = { x: art.focalX != null ? art.focalX : 50, y: art.focalY != null ? art.focalY : 50, zoom: art.zoom != null ? art.zoom : 100 };
-  const when = teachingWhenLine(t);
-  const desc = t.shortDescription || t.subtitle || '';
-  section.innerHTML = '<div class="tx-inner tx-featured-grid">' +
-    '<a class="tx-featured-media" href="' + teachingDetailHref(t) + '" tabindex="-1" aria-hidden="true">' +
-    teachingImgHtml(art.hero || '', TEACHING_FEATURED_DEFAULT_ART, { sizes: '(max-width:900px) 100vw, 58vw', className: 'tx-featured-img', lazy: false, focal, mobileUrl: art.heroMobile || '' }) +
-    '</a>' +
-    '<div class="tx-featured-copy reveal">' +
-    '<p class="tx-label">Featured Teaching' + (teachingIsUpcoming(t) ? ' <span aria-hidden="true">/</span> Upcoming Class' : '') + '</p>' +
-    '<h2 class="tx-featured-title" id="featuredTeachingTitle"><a href="' + teachingDetailHref(t) + '">' + escapeHtml(t.title || '') + '</a></h2>' +
-    (when ? '<p class="tx-featured-when">' + escapeHtml(when) + '</p>' : '') +
-    '<span class="tx-rule" aria-hidden="true"></span>' +
-    (desc ? '<p class="tx-featured-desc">' + escapeHtml(desc) + '</p>' : '') +
-    '<div class="tx-featured-actions">' +
-    teachingActionHtml(t, 'btn tx-btn', { register: 'Register Now', waitlist: 'Join Waitlist', explore: 'Explore Teaching' }) +
-    (teachingIsUpcoming(t) ? '<a class="tx-text-link" href="' + teachingDetailHref(t) + '">View Details <span aria-hidden="true">→</span></a>' : '') +
-    '</div></div></div>';
+  const upcoming = teachingIsUpcoming(t);
+  wrap.className = 'teaching-hero';
+  wrap.innerHTML = teachingHeroMediaHtml(t) +
+    '<div class="teaching-hero-content reveal">' +
+    '<div class="eyebrow">' + (upcoming ? 'Featured Teaching · Upcoming Class' : 'Featured Teaching') + '</div>' +
+    '<h2 class="teaching-display" id="featuredTeachingTitle">' + escapeHtml(t.title || '') + '</h2>' +
+    (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    '<p class="teaching-hero-desc">' + escapeHtml(t.shortDescription || '') + '</p>' +
+    (upcoming
+      ? '<div class="teaching-meta-row">' +
+        teachingMetaItem('calendar', [formatTeachingDate(t.date || '').toUpperCase(), formatTeachingTime(t.startTime, t.timeZone)]) +
+        teachingFormatMeta(t) + teachingCapacityMeta(t) +
+        '</div>' +
+        '<div class="teaching-price-line">' + (t.price ? '$' + Number(t.price).toFixed(2) : 'FREE') + '</div>' +
+        '<div class="teaching-hero-actions">' +
+        '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
+          (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
+        '<a class="btn" href="' + teachingDetailHref(t) + '">View Details</a>' +
+        '</div>'
+      : (t.date ? '<div class="teaching-meta-row">' + teachingMetaItem('calendar', ['TAUGHT ' + formatTeachingDate(t.date).toUpperCase()]) + '</div>' : '') +
+        '<div class="teaching-hero-actions"><a class="btn fill" href="' + teachingDetailHref(t) + '">Explore Teaching →</a></div>') +
+    '</div>';
 }
 
-function teachingLibraryItemHtml(t, index){
-  const art = t.artwork || {};
-  const ownerArt = art.card || art.hero || '';
-  const focal = ownerArt === art.hero ? { x: art.focalX != null ? art.focalX : 50, y: art.focalY != null ? art.focalY : 50 } : null;
-  const when = teachingWhenLine(t);
-  const desc = t.subtitle || t.shortDescription || '';
-  return '<article class="tx-item reveal">' +
-    '<a class="tx-item-media" href="' + teachingDetailHref(t) + '" tabindex="-1" aria-hidden="true">' +
-    teachingImgHtml(ownerArt, teachingDefaultArt(index), { sizes: '(max-width:640px) 100vw, (max-width:1000px) 50vw, 33vw', className: 'tx-item-img', lazy: true, focal }) +
-    '</a>' +
-    '<p class="tx-item-index"><span>' + String(index + 1).padStart(2, '0') + '</span>' + (t.category ? ' <span aria-hidden="true">/</span> ' + escapeHtml(t.category) : '') + '</p>' +
-    '<h3 class="tx-item-title"><a href="' + teachingDetailHref(t) + '">' + escapeHtml(t.title || '') + '</a></h3>' +
-    (when ? '<p class="tx-item-when">' + escapeHtml(when) + '</p>' : '') +
-    (desc ? '<p class="tx-item-desc">' + escapeHtml(desc) + '</p>' : '') +
-    teachingActionHtml(t, 'tx-text-link tx-item-action', { register: 'Register', waitlist: 'Join Waitlist', explore: 'Explore' }) +
-    '</article>';
+let teachingCardObserver = null;
+function wireTeachingCardTransitions(wrap){
+  if(!wrap) return;
+  const cards = [...wrap.querySelectorAll('.teaching-card-reveal')];
+  if(teachingCardObserver) teachingCardObserver.disconnect();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reducedMotion){ cards.forEach(card => card.classList.add('is-visible')); return; }
+  teachingCardObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      teachingCardObserver.unobserve(entry.target);
+    });
+  }, { threshold: .16, rootMargin: '0px 0px -7% 0px' });
+  cards.forEach((card, index) => {
+    card.style.setProperty('--teaching-delay', Math.min(index, 5) * 90 + 'ms');
+    teachingCardObserver.observe(card);
+    if(window.matchMedia('(hover: hover) and (pointer: fine)').matches){
+      card.addEventListener('pointermove', event => {
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - .5;
+        const y = (event.clientY - rect.top) / rect.height - .5;
+        card.style.setProperty('--teaching-tilt-x', (-y * 3).toFixed(2) + 'deg');
+        card.style.setProperty('--teaching-tilt-y', (x * 3).toFixed(2) + 'deg');
+      });
+      card.addEventListener('pointerleave', () => {
+        card.style.setProperty('--teaching-tilt-x', '0deg');
+        card.style.setProperty('--teaching-tilt-y', '0deg');
+      });
+    }
+  });
 }
 
 function renderTeachingLibrary(){
@@ -13776,17 +13781,19 @@ function renderTeachingLibrary(){
   section.setAttribute('aria-busy', teachingsLoaded ? 'false' : 'true');
   if(!teachingsLoaded){ section.hidden = false; wrap.innerHTML = ''; return; }
   const featured = featuredTeaching();
+  // Upcoming (soonest first), then past (newest first).
   const all = [...upcomingTeachingsList().filter(teachingIsUpcoming), ...pastTeachingsList()];
   const items = all.filter(t => !featured || t.id !== featured.id).slice(0, TEACHING_PAGE_SETTINGS.upcomingCount || 6);
   if(!all.length){
     section.hidden = false;
-    wrap.innerHTML = '<div class="tx-library-empty reveal"><h3 class="tx-h3">New Teachings Coming Soon.</h3><p>We\'re preparing something meaningful.</p></div>';
+    wrap.innerHTML = '<div class="teaching-library-empty"><h3 class="teaching-display">New Teachings Coming Soon.</h3><p>We\'re preparing something meaningful.</p></div>';
     return;
   }
-  // The only public teaching is already featured above — no need for a
-  // second, empty-looking library under it.
+  // The only public teaching is already featured above — skip an
+  // empty-looking library under it.
   section.hidden = items.length === 0;
-  wrap.innerHTML = items.map(teachingLibraryItemHtml).join('');
+  wrap.innerHTML = items.map(teachingCardHtml).join('');
+  wireTeachingCardTransitions(wrap);
 }
 
 function renderTeachingDetailPage(){
