@@ -1327,19 +1327,26 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
 .shop-closing>p{font:400 14px/1.7 var(--sans);color:var(--stone);max-width:420px;margin:0}
 
 /* Quick View — light, matches the product detail page's own palette. */
-.shop-quick-view{width:min(900px,calc(100vw - 32px));max-width:none;padding:0;border:1px solid var(--shop-border,#e5e5e5);background:var(--shop-bg,#fff);color:var(--shop-text,#171717);box-shadow:0 30px 100px rgba(0,0,0,.25)}
-.shop-quick-view::backdrop{background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
-.shop-icon-close{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--shop-border,#e5e5e5);background:var(--shop-bg,#fff);color:var(--shop-text,#171717);font:300 22px var(--sans);cursor:pointer}
+/* Dark to match the cart/product detail page (2026-10-27 feedback) --
+   literal hex for the same reason as the cart block above: this
+   dialog is appended to <body>, outside any scope that redefines
+   --shop-* to dark. */
+.shop-quick-view{width:min(900px,calc(100vw - 32px));max-width:none;padding:0;border:1px solid #2a2a2a;background:linear-gradient(145deg,#171717,#101010);color:#f5f3ee;box-shadow:0 30px 100px rgba(0,0,0,.5)}
+.shop-quick-view::backdrop{background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+.shop-icon-close{width:36px;height:36px;display:grid;place-items:center;border:1px solid #2a2a2a;background:#171717;color:#f5f3ee;font:300 22px var(--sans);cursor:pointer}
 .shop-quick-close{position:absolute;z-index:2;right:16px;top:16px}
 .shop-quick-grid{display:grid;grid-template-columns:1fr 1fr;min-height:520px}
-.shop-quick-image{position:relative;background:var(--shop-surface,#fafaf8) center/cover no-repeat}
+.shop-quick-image{position:relative;background:#0d0d0d center/cover no-repeat}
 .shop-quick-copy{padding:56px clamp(28px,4vw,56px);display:flex;flex-direction:column;justify-content:center}
-.shop-quick-copy h2{font:400 clamp(26px,3vw,38px)/1.1 var(--serif);letter-spacing:-.01em;margin:14px 0 14px;overflow-wrap:anywhere;color:var(--shop-ink,#111)}
-.shop-quick-copy>p:not(.shop-quick-price){font:400 13px/1.7 var(--sans);color:var(--shop-text-muted,#777);margin:0 0 24px}
-.shop-quick-price{font:400 13px var(--sans);color:var(--shop-text,#171717);margin:0 0 4px}
-.shop-quick-price span{color:var(--shop-text-muted,#777)}
-.shop-option-label{display:flex;flex-direction:column;gap:8px;font:700 9px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--shop-text-muted,#777);margin-bottom:14px}
-.shop-option-label select{height:44px;background:var(--shop-bg,#fff);border:1px solid var(--shop-border,#e5e5e5);color:var(--shop-text,#171717);padding:0 12px}
+.shop-quick-copy h2{font:400 clamp(26px,3vw,38px)/1.1 var(--serif);letter-spacing:-.01em;margin:14px 0 14px;overflow-wrap:anywhere;color:#f5f3ee}
+.shop-quick-copy>p:not(.shop-quick-price){font:400 13px/1.7 var(--sans);color:#a7a7a7;margin:0 0 24px}
+.shop-quick-price{font:400 13px var(--sans);color:#f5f3ee;margin:0 0 4px}
+.shop-quick-price span{color:#a7a7a7}
+.shop-option-label{display:flex;flex-direction:column;gap:8px;font:700 9px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#a7a7a7;margin-bottom:14px}
+.shop-option-label select{height:44px;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f3ee;padding:0 12px}
+.shop-quick-copy .shop-primary-action{color:#0a0a0a;background:#f5f3ee;border-color:#f5f3ee}
+.shop-quick-copy .shop-outline-action{color:#f5f3ee;border-color:#f5f3ee}
+.shop-quick-copy .shop-outline-action:hover{background:#f5f3ee;color:#0a0a0a}
 .shop-outline-action{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;border:1px solid var(--shop-ink,#111);background:transparent;color:var(--shop-ink,#111);font:600 10px var(--sans);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin-bottom:10px;transition:.18s}
 .shop-outline-action:hover{background:var(--shop-ink,#111);color:#fff}
 .shop-quick-copy .shop-primary-action,.shop-quick-copy .shop-outline-action{width:100%}
@@ -1359,41 +1366,47 @@ dialog.classroom-dialog{background:var(--black); color:var(--ivory); border-colo
    not just on Shop pages), so this uses literal hex rather than the
    --shop-* custom properties, which are scoped to .shop-page/
    .shop-detail-page and wouldn't be inherited here. */
+/* User feedback (2026-10-27): "when you click your bag, it's white,
+   I want that dark" -- flipped to the same dark gradient + ivory/
+   stone text palette as the product detail page, since .shop-cart is
+   appended straight to <body> (outside .shop-page/.shop-detail-page)
+   and never had scoped tokens to redefine -- literal hex, same
+   technique already used here before the colors themselves changed. */
 body.shop-cart-open{overflow:hidden}
-.shop-cart-backdrop{position:fixed;z-index:1100;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
-.shop-cart{position:fixed;z-index:1101;top:0;right:0;width:min(440px,100vw);height:100dvh;background:#fff;color:#171717;border-left:1px solid #e5e5e5;display:flex;flex-direction:column;transform:translateX(102%);transition:transform .34s cubic-bezier(.2,.75,.25,1);box-shadow:-20px 0 70px rgba(0,0,0,.12)}
+.shop-cart-backdrop{position:fixed;z-index:1100;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+.shop-cart{position:fixed;z-index:1101;top:0;right:0;width:min(440px,100vw);height:100dvh;background:linear-gradient(145deg,#171717,#101010);color:#f5f3ee;border-left:1px solid #2a2a2a;display:flex;flex-direction:column;transform:translateX(102%);transition:transform .34s cubic-bezier(.2,.75,.25,1);box-shadow:-20px 0 70px rgba(0,0,0,.5)}
 .shop-cart.open{transform:translateX(0)}
-.shop-cart-head{display:flex;align-items:center;justify-content:space-between;padding:28px 28px 22px;border-bottom:1px solid #e5e5e5}
-.shop-cart-head h2{font:400 28px var(--serif);letter-spacing:-.01em;margin:0;color:#111}
+.shop-cart-head{display:flex;align-items:center;justify-content:space-between;padding:28px 28px 22px;border-bottom:1px solid #2a2a2a}
+.shop-cart-head h2{font:400 28px var(--serif);letter-spacing:-.01em;margin:0;color:#f5f3ee}
 .shop-cart-items{flex:1;overflow:auto;padding:0 28px}
-.shop-cart-line{display:grid;grid-template-columns:84px 1fr;gap:16px;padding:22px 0;border-bottom:1px solid #e5e5e5}
-.shop-cart-line-image{width:84px;aspect-ratio:4/5;background:#fafaf8 center/cover no-repeat}
-.shop-cart-line-copy>span{font:700 8px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#777}
-.shop-cart-line-copy h3{font:500 12px/1.4 var(--sans);letter-spacing:-.01em;margin:6px 0;color:#111;overflow-wrap:anywhere}
-.shop-cart-line-copy p{font-size:10px;color:#777;margin:4px 0}
+.shop-cart-line{display:grid;grid-template-columns:84px 1fr;gap:16px;padding:22px 0;border-bottom:1px solid #2a2a2a}
+.shop-cart-line-image{width:84px;aspect-ratio:4/5;background:#0d0d0d center/cover no-repeat}
+.shop-cart-line-copy>span{font:700 8px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#a7a7a7}
+.shop-cart-line-copy h3{font:500 12px/1.4 var(--sans);letter-spacing:-.01em;margin:6px 0;color:#f5f3ee;overflow-wrap:anywhere}
+.shop-cart-line-copy p{font-size:10px;color:#a7a7a7;margin:4px 0}
 .shop-cart-line-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px}
-.shop-cart-line-bottom>strong{font:400 11px var(--sans)}
-.shop-qty{display:inline-flex;border:1px solid #d8d8d8;height:28px}
-.shop-qty button,.shop-qty span{width:27px;border:0;background:transparent;color:#171717;display:grid;place-items:center;font-size:12px}
-.shop-qty button{cursor:pointer}.shop-qty button:hover{background:#111;color:#fff}
-.shop-digital-qty{font:400 8px var(--font-mono);letter-spacing:.08em;color:#999}
-.shop-remove{margin-top:10px;padding:0;border:0;border-bottom:1px solid #d8d8d8;background:none;color:#999;font:500 8px var(--sans);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
-.shop-cart-foot{padding:20px 28px 26px;border-top:1px solid #e5e5e5;background:#fff}
-.shop-discount-field{display:flex;gap:0;border:1px solid #e5e5e5;margin-bottom:16px}
-.shop-discount-field input{flex:1;min-width:0;border:0;padding:0 14px;height:42px;font:400 12px var(--sans);color:#171717;background:#fff}
-.shop-discount-field input:disabled{color:#aaa;background:#fafaf8}
-.shop-discount-field input::placeholder{color:#999}
-.shop-discount-field button{flex:0 0 auto;border:0;border-left:1px solid #e5e5e5;padding:0 16px;background:#fafaf8;color:#999;font:600 9px var(--sans);letter-spacing:.08em;text-transform:uppercase;cursor:not-allowed}
-.shop-cart-total{display:flex;justify-content:space-between;align-items:center;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#171717}
+.shop-cart-line-bottom>strong{font:400 11px var(--sans);color:#f5f3ee}
+.shop-qty{display:inline-flex;border:1px solid #3d3d3d;height:28px}
+.shop-qty button,.shop-qty span{width:27px;border:0;background:transparent;color:#f5f3ee;display:grid;place-items:center;font-size:12px}
+.shop-qty button{cursor:pointer}.shop-qty button:hover{background:#f5f3ee;color:#0a0a0a}
+.shop-digital-qty{font:400 8px var(--font-mono);letter-spacing:.08em;color:#8f8f8f}
+.shop-remove{margin-top:10px;padding:0;border:0;border-bottom:1px solid #3d3d3d;background:none;color:#8f8f8f;font:500 8px var(--sans);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.shop-cart-foot{padding:20px 28px 26px;border-top:1px solid #2a2a2a;background:transparent}
+.shop-discount-field{display:flex;gap:0;border:1px solid #2a2a2a;margin-bottom:16px}
+.shop-discount-field input{flex:1;min-width:0;border:0;padding:0 14px;height:42px;font:400 12px var(--sans);color:#f5f3ee;background:transparent}
+.shop-discount-field input:disabled{color:#666;background:#0d0d0d}
+.shop-discount-field input::placeholder{color:#666}
+.shop-discount-field button{flex:0 0 auto;border:0;border-left:1px solid #2a2a2a;padding:0 16px;background:#0d0d0d;color:#666;font:600 9px var(--sans);letter-spacing:.08em;text-transform:uppercase;cursor:not-allowed}
+.shop-cart-total{display:flex;justify-content:space-between;align-items:center;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#f5f3ee}
 .shop-cart-total strong{font:400 17px var(--sans)}
-.shop-cart-note{font-size:10px;line-height:1.6;color:#999;margin:14px 0 17px}
-.shop-cart-foot>.shop-primary-action{width:100%}
+.shop-cart-note{font-size:10px;line-height:1.6;color:#8f8f8f;margin:14px 0 17px}
+.shop-cart-foot>.shop-primary-action{width:100%;background:#f5f3ee;border-color:#f5f3ee;color:#0a0a0a}
 .shop-cart-secondary-actions{display:flex;justify-content:space-between;gap:14px;margin-top:16px}
-.shop-cart-secondary-actions a,.shop-cart-secondary-actions button{padding:0 0 4px;border:0;border-bottom:1px solid #d8d8d8;background:none;color:#777;font:600 8px var(--sans);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.shop-cart-secondary-actions a,.shop-cart-secondary-actions button{padding:0 0 4px;border:0;border-bottom:1px solid #3d3d3d;background:none;color:#a7a7a7;font:600 8px var(--sans);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
 .shop-cart-empty{text-align:center;padding:90px 12px}
-.shop-cart-empty h3{font:400 26px var(--serif);letter-spacing:-.01em;margin:18px 0 10px;color:#111}
-.shop-cart-empty p{font-size:11px;color:#777;margin-bottom:24px}
-.shop-cart-empty a{font:600 9px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:#111;border-bottom:1px solid #d8d8d8;padding-bottom:6px}
+.shop-cart-empty h3{font:400 26px var(--serif);letter-spacing:-.01em;margin:18px 0 10px;color:#f5f3ee}
+.shop-cart-empty p{font-size:11px;color:#a7a7a7;margin-bottom:24px}
+.shop-cart-empty a{font:600 9px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:#f5f3ee;border-bottom:1px solid #3d3d3d;padding-bottom:6px}
 .cart-btn{cursor:pointer}
 .cart-btn b{font:inherit;font-weight:600}
 
@@ -1402,8 +1415,30 @@ body.shop-cart-open{overflow:hidden}
    would suggest; the prototype image is the more authoritative source
    here. Centered content column, generous whitespace, accordion sections
    with plus/minus icons instead of a sidebar of specs. */
+/* User feedback (2026-10-27): the white-card-on-dark-canvas treatment
+   worked for the collection grid, but on the product detail page it
+   read as "just white blank" -- too much of the page itself still
+   white. Chosen fix (of three options offered): the whole product
+   detail page goes dark, not just the canvas behind it. Every
+   .shop-detail-*/.shop-accordion-* rule below already reads the
+   --shop-* tokens with a light fallback, so redefining them here
+   re-themes nearly everything at once (same trick already used for
+   the Owner Portal Store Management section) -- only the two buttons
+   that hardcode a text color instead of reading a var need an
+   explicit fix just below. */
 .shop-detail-page{padding-top:86px}
-#shopProductDetail{max-width:788px;margin:clamp(24px,4vw,48px) auto clamp(40px,6vw,72px);min-height:calc(100vh - 86px - 72px);padding:44px clamp(24px,5vw,56px) 80px;background:var(--shop-bg);box-shadow:0 16px 50px rgba(0,0,0,.34)}
+/* Equal-specificity tie against the light-default block above turned
+   out NOT to resolve by source order the way it should have (verified
+   via getComputedStyle -- the first declaration kept winning), so this
+   uses body's own data-shop-detail marker for unambiguous higher
+   specificity instead of relying on position in the file. */
+body[data-shop-detail="true"] .shop-detail-page{
+  --shop-bg:linear-gradient(145deg,#171717,#101010); --shop-surface:#0d0d0d;
+  --shop-text:#f5f3ee; --shop-text-muted:#a7a7a7; --shop-border:#2a2a2a; --shop-ink:#f5f3ee;
+}
+.shop-detail-page .shop-primary-action{color:#0a0a0a}
+.shop-detail-page .shop-outline-action:hover{color:#0a0a0a}
+#shopProductDetail{max-width:788px;margin:clamp(24px,4vw,48px) auto clamp(40px,6vw,72px);min-height:calc(100vh - 86px - 72px);padding:44px clamp(24px,5vw,56px) 80px;background:var(--shop-bg);box-shadow:0 16px 50px rgba(0,0,0,.4)}
 .shop-detail-breadcrumb{display:flex;gap:9px;align-items:center;padding:0 0 22px;font:700 9px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--shop-text-muted,#777)}
 .shop-detail-breadcrumb a{color:var(--shop-text-muted,#777)}
 #shopProductDetail h1{font:400 clamp(32px,4.2vw,46px)/1.1 var(--serif);letter-spacing:-.01em;margin:0 0 14px;color:var(--shop-ink,#111);overflow-wrap:anywhere}
