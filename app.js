@@ -3486,6 +3486,7 @@ let TEACHING_PAGE_SETTINGS = {
 // The live site never shows the sample teachings — an empty
 // collection renders the intentional "coming soon" states instead.
 let TEACHINGS = DEMO_MODE ? DEMO_TEACHINGS : {};
+const SAMPLE_TEACHING_IDS = new Set(Object.keys(DEMO_TEACHINGS));
 // False on the live site until the first Firestore load settles, so the
 // page doesn't flash a "coming soon" state before real classes arrive.
 let teachingsLoaded = DEMO_MODE;
@@ -3715,10 +3716,14 @@ async function loadTeachingPageConfig(){
     const snap = await getDocs(teachingsQuery);
     const map = {};
     snap.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
-    // Real data always wins, even when empty — the owner asked (Oct 2026
-    // Teachings redesign) for no sample teachings on the live site.
-    TEACHINGS = map;
-  } catch (err) { /* keep whatever we had */ }
+    // Real classes always win. Until the first one is published, the live
+    // site shows the sample classes so the owner can see the full design
+    // (owner request, Oct 27 2026); their Register buttons can't create
+    // real registrations (see SAMPLE_TEACHING_IDS).
+    TEACHINGS = Object.keys(map).length ? map : DEMO_TEACHINGS;
+  } catch (err) {
+    if(!Object.keys(TEACHINGS).length) TEACHINGS = DEMO_TEACHINGS;
+  }
 }
 let teachingPageConfigLoad = Promise.resolve();
 if(!DEMO_MODE){
@@ -11749,6 +11754,11 @@ window.openTeachingRegister = openTeachingRegister;
 document.addEventListener('click', event => {
   const trigger = event.target.closest('.teaching-register-btn');
   if(!trigger || !trigger.dataset.teachingId) return;
+  if(!DEMO_MODE && SAMPLE_TEACHING_IDS.has(trigger.dataset.teachingId)){
+    trigger.textContent = 'Sample Class · Registration Opens Soon';
+    trigger.disabled = true;
+    return;
+  }
   const t = TEACHINGS[trigger.dataset.teachingId];
   if(t && (t.status === 'sold-out' || classIsFull(t))) openWaitlistJoin(trigger.dataset.teachingId);
   else openTeachingRegister(trigger.dataset.teachingId);
