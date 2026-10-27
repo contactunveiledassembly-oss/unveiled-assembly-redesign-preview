@@ -1635,7 +1635,7 @@ function dialogsHtml(){
             <button type="button" class="admin-tab" data-bookings-tab="calendar">Calendar</button>
             <button type="button" class="admin-tab" data-bookings-tab="availability">Availability</button>
             <button type="button" class="admin-tab" data-bookings-tab="payments">Payments</button>
-            <button type="button" class="admin-tab" data-bookings-tab="types">Session Types</button>
+            <button type="button" class="admin-tab" data-bookings-tab="types">Event Types</button>
             <button type="button" class="admin-tab" data-bookings-tab="blocked">Blocked Dates</button>
             <button type="button" class="admin-tab" data-bookings-tab="policies">Policies</button>
             <button type="button" class="admin-tab" data-bookings-tab="notifications">Notifications</button>
@@ -1677,7 +1677,7 @@ function dialogsHtml(){
                   <button type="button" class="admin-btn-ghost" data-bookings-quick-action="preview-page" style="text-align:left">Preview Booking Page ↗</button>
                   <button type="button" class="admin-btn-ghost" data-bookings-quick-action="availability" style="text-align:left">Manage Availability</button>
                   <button type="button" class="admin-btn-ghost" data-bookings-quick-action="blocked" style="text-align:left">Block A Date</button>
-                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="types" style="text-align:left">Manage Session Types</button>
+                  <button type="button" class="admin-btn-ghost" data-bookings-quick-action="types" style="text-align:left">Manage Event Types</button>
                   <button type="button" class="admin-btn-ghost" data-bookings-quick-action="reminder" style="text-align:left" title="Coming Later">Send Scheduling Reminder</button>
                   <button type="button" class="admin-btn-ghost" data-bookings-quick-action="notifications" style="text-align:left">Manage Notifications</button>
                 </div>
@@ -1779,7 +1779,7 @@ function dialogsHtml(){
                 Pause all new booking requests
               </label>
             </div>
-            <p class="admin-hint" style="margin-bottom:20px">"Buffer Time" is set per Session Type (see the Session Types tab). Nothing on this screen takes effect until you click Save Changes above.</p>
+            <p class="admin-hint" style="margin-bottom:20px">"Buffer Time" is set per Event Type (see the Event Types tab). Nothing on this screen takes effect until you click Save Changes above.</p>
 
             <div class="admin-subsection-label">Available Days &amp; Hours</div>
             <p class="admin-hint" style="margin-bottom:12px">These are the weekly windows visitors can request a time in. Add as many as you'd like — each one applies every week until removed.</p>
@@ -1803,7 +1803,7 @@ function dialogsHtml(){
               <button class="admin-btn-ghost" type="submit">Add Window</button>
             </form>
             <div class="form-status" id="schedRuleStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
-            <p class="admin-hint" style="margin-top:8px">A new window applies to all session types, with the capacity you set (how many people can book the same exact time). Remove and re-add a window to change it.</p>
+            <p class="admin-hint" style="margin-top:8px">Uncheck a type above to keep this window from applying to it — leave all checked (the default) for a window every Event Type can use. Capacity is how many people can book the same exact time. Remove and re-add a window to change its scoping later.</p>
 
             <div class="admin-subsection-label">Night Of Prayer</div>
             <p class="admin-hint" style="margin-bottom:12px">Until a date is set here, the homepage shows a neutral "announced soon" message instead of a fake date — it never advertises an unscheduled event.</p>
@@ -1817,37 +1817,44 @@ function dialogsHtml(){
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="types" hidden>
-            <p class="admin-hint" style="margin-bottom:8px">The kinds of 1:1 appointments visitors can request. These are exactly what shows up on the public One-on-One Sessions page — nothing here is a separate list.</p>
-            <p class="admin-hint" style="margin-bottom:16px"><strong style="color:var(--owner-text)">Right now, only 15-Minute and 30-Minute One-on-One are active</strong> and shown publicly. You can add more below for later — a new one only appears on the public page once you mark it Active.</p>
-            <div id="schedTypesList" style="margin-bottom:14px"></div>
-            <div class="admin-subsection-label" style="border-top:0;padding-top:0">Add / Update A Session Type</div>
-            <form id="schedTypeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-              <div class="form-field" style="flex:1;min-width:130px"><label for="schedTypeId">ID</label><input id="schedTypeId" type="text" placeholder="e.g. 30-minute" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:1;min-width:170px"><label for="schedTypeName">Name</label><input id="schedTypeName" type="text" placeholder="e.g. 30-Minute One-on-One" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 100px"><label for="schedTypeDuration">Minutes</label><input id="schedTypeDuration" type="number" min="5" step="5" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 120px"><label for="schedTypePrice">Price</label><input id="schedTypePrice" type="number" min="0" step="0.01" placeholder="No charge" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 130px"><label for="schedTypeFormat">Format</label>
-                <select id="schedTypeFormat" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                  <option value="zoom">Zoom</option><option value="phone">Phone</option><option value="in-person">In Person</option>
-                </select>
-              </div>
-              <div class="form-field" style="flex:0 0 130px"><label for="schedTypeCapacity">Capacity <span class="admin-hint">(optional)</span></label><input id="schedTypeCapacity" type="number" min="1" placeholder="Unlimited" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferBefore">Buffer before</label><input id="schedTypeBufferBefore" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferAfter">Buffer after</label><input id="schedTypeBufferAfter" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:1;min-width:200px"><label for="schedTypeDescription">Description</label><input id="schedTypeDescription" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="admin-image-field" data-image-field="session-type" style="max-width:280px">
-                <span class="admin-microlabel">Session Image <span class="admin-hint">(optional — shown on the public One-on-One page)</span></span>
-                <div class="admin-image-preview" id="schedTypeImagePreview"></div>
-                <div class="admin-image-actions">
-                  <label class="admin-image-upload-btn"><span class="admin-image-upload-btn-text">Upload Image</span><input type="file" accept="image/*" id="schedTypeImageFile" hidden /></label>
-                  <button type="button" class="admin-image-remove-btn" id="schedTypeImageRemove">Remove Image</button>
+            <p class="admin-hint" style="margin-bottom:16px">Event Types — the kinds of 1:1 appointments visitors can request, Calendly-style. These are exactly what shows up on the public One-on-One Sessions page. Click one to edit it, including which weekly availability windows apply to it.</p>
+            <div class="store-products-head">
+              <div><h4>Event Types</h4><p>Duration, price, format, buffers, and availability scoping, per type.</p></div>
+              <button class="admin-btn-solid" type="button" id="schedTypeNewBtn">+ New Event Type</button>
+            </div>
+            <div id="schedTypesList" class="sched-type-grid" style="margin:14px 0"></div>
+            <div id="schedTypeEditorWrap" hidden>
+              <div class="admin-subsection-label" style="border-top:0;padding-top:0" id="schedTypeEditorHeading">New Event Type</div>
+              <form id="schedTypeForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                <div class="form-field" style="flex:1;min-width:130px"><label for="schedTypeId">ID</label><input id="schedTypeId" type="text" placeholder="e.g. 30-minute" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="form-field" style="flex:1;min-width:170px"><label for="schedTypeName">Name</label><input id="schedTypeName" type="text" placeholder="e.g. 30-Minute One-on-One" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="form-field" style="flex:0 0 100px"><label for="schedTypeDuration">Minutes</label><input id="schedTypeDuration" type="number" min="5" step="5" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="form-field" style="flex:0 0 120px"><label for="schedTypePrice">Price</label><input id="schedTypePrice" type="number" min="0" step="0.01" placeholder="No charge" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="form-field" style="flex:0 0 130px"><label for="schedTypeFormat">Format</label>
+                  <select id="schedTypeFormat" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                    <option value="zoom">Zoom</option><option value="phone">Phone</option><option value="in-person">In Person</option>
+                  </select>
                 </div>
-                <input type="hidden" id="schedTypeImage" />
-              </div>
-              <button class="admin-btn-solid" type="submit">Add / Update Type</button>
-            </form>
-            <div class="form-status" id="schedTypeStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
-            <p class="admin-hint" style="margin-top:8px">Using an existing ID updates that type instead of creating a new one. Prices and descriptions here are placeholders until a real payment processor is connected.</p>
+                <div class="form-field" style="flex:0 0 130px"><label for="schedTypeCapacity">Capacity <span class="admin-hint">(optional)</span></label><input id="schedTypeCapacity" type="number" min="1" placeholder="Unlimited" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferBefore">Buffer before</label><input id="schedTypeBufferBefore" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferAfter">Buffer after</label><input id="schedTypeBufferAfter" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="form-field" style="flex:1;min-width:200px"><label for="schedTypeDescription">Description</label><input id="schedTypeDescription" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="admin-image-field" data-image-field="session-type" style="max-width:280px">
+                  <span class="admin-microlabel">Session Image <span class="admin-hint">(optional — shown on the public One-on-One page)</span></span>
+                  <div class="admin-image-preview" id="schedTypeImagePreview"></div>
+                  <div class="admin-image-actions">
+                    <label class="admin-image-upload-btn"><span class="admin-image-upload-btn-text">Upload Image</span><input type="file" accept="image/*" id="schedTypeImageFile" hidden /></label>
+                    <button type="button" class="admin-image-remove-btn" id="schedTypeImageRemove">Remove Image</button>
+                  </div>
+                  <input type="hidden" id="schedTypeImage" />
+                </div>
+                <div class="admin-hint" id="schedTypeAvailabilityHint" style="flex-basis:100%"></div>
+                <button class="admin-btn-solid" type="submit">Save Event Type</button>
+                <button class="admin-btn-ghost" type="button" id="schedTypeCancelBtn">Cancel</button>
+              </form>
+              <div class="form-status" id="schedTypeStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+              <p class="admin-hint" style="margin-top:8px">Prices and descriptions here are placeholders until a real payment processor is connected. To change which weekly windows this type uses, open it on the Availability tab.</p>
+            </div>
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="blocked" hidden>
@@ -7826,11 +7833,28 @@ function renderNightOfPrayerCard(){
     '<p>A night to seek Him together through worship, prayer, and expectation.</p>';
 }
 
+// How many of this portal's existing weekly windows (SCHED_DRAFT.rules,
+// not the live AVAILABILITY_RULES — stays consistent with this draft so
+// an unsaved rule edit shows up here immediately too) this Event Type
+// currently has access to. A window with an empty/missing sessionTypeIds
+// applies to every type; a non-empty one restricts it to those ids —
+// same scoping rule enforced in resolveAvailabilityWindows() for real
+// bookings. Surfacing this per-card is the main point of Event Types:
+// the scoping already existed, it just had no visible summary before.
+function sessionTypeAvailabilitySummary(typeId){
+  if(SCHED_DRAFT.rules.length === 0) return 'No weekly availability configured yet';
+  const windows = SCHED_DRAFT.rules.filter(r => !r.sessionTypeIds || r.sessionTypeIds.length === 0 || r.sessionTypeIds.includes(typeId));
+  if(windows.length === 0) return 'Not included in any weekly window yet';
+  const label = windows.length + (windows.length === 1 ? ' window' : ' windows');
+  if(windows.length === SCHED_DRAFT.rules.length) return 'All weekly availability · ' + label;
+  const days = Array.from(new Set(windows.map(r => DAY_NAMES[r.dayOfWeek].slice(0, 3))));
+  return days.join(', ') + ' · ' + label;
+}
 function renderSchedTypesList(){
   if(!schedTypesList) return;
   const ids = Object.keys(SCHED_DRAFT.types);
   if(ids.length === 0){
-    schedTypesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No session types yet — add one below.</p>';
+    schedTypesList.innerHTML = '<p style="color:#8a8a8a;font-size:12px">No Event Types yet — add one above.</p>';
     return;
   }
   const formatLabel = f => f === 'phone' ? 'Phone' : f === 'in-person' ? 'In Person' : 'Zoom';
@@ -7839,20 +7863,24 @@ function renderSchedTypesList(){
     const buffer = (t.bufferBeforeMin || t.bufferAfterMin) ? ' · buffer ' + (t.bufferBeforeMin || 0) + '/' + (t.bufferAfterMin || 0) + ' min' : '';
     const capacity = t.capacity ? ' · capacity ' + t.capacity : '';
     const thumb = t.imageUrl
-      ? '<div class="admin-teaching-thumb" style="background-image:url(\'' + t.imageUrl.replace(/'/g, '%27') + '\')"></div>'
-      : '<div class="admin-teaching-thumb ' + teachingArtClass(t.name) + '"></div>';
-    return '<div class="admin-teaching-row" data-type-id="' + escapeHtml(id) + '">' +
+      ? '<div class="sched-type-card-thumb" style="background-image:url(\'' + t.imageUrl.replace(/'/g, '%27') + '\')"></div>'
+      : '<div class="sched-type-card-thumb ' + teachingArtClass(t.name) + '"></div>';
+    return '<article class="sched-type-card" data-type-id="' + escapeHtml(id) + '">' +
       thumb +
-      '<div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(t.name) + '</strong>' +
+      '<div class="sched-type-card-body">' +
+      '<div class="sched-type-card-title-row"><strong>' + escapeHtml(t.name) + '</strong>' +
       (t.active === false ? '<span class="admin-status-pill cancelled">Inactive</span>' : '<span class="admin-status-pill published">Active</span>') + '</div>' +
-      '<div class="admin-teaching-meta">' + t.durationMinutes + ' min · ' + formatLabel(t.format) +
-      (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · No Charge') + buffer + capacity + '</div></div>' +
-      '<div class="admin-teaching-actions">' +
+      '<div class="sched-type-card-meta">' + t.durationMinutes + ' min · ' + formatLabel(t.format) +
+      (t.price ? ' · $' + Number(t.price).toFixed(2) : ' · No Charge') + buffer + capacity + '</div>' +
+      '<div class="sched-type-card-availability">' + escapeHtml(sessionTypeAvailabilitySummary(id)) + '</div>' +
+      '</div>' +
+      '<div class="sched-type-card-actions">' +
+      '<button class="admin-btn-ghost sched-type-edit" type="button">Edit</button>' +
       '<button class="admin-btn-ghost sched-type-copy-link" type="button">Copy Link</button>' +
       '<button class="admin-btn-ghost sched-type-toggle" type="button">' +
         (t.active === false ? 'Activate' : 'Deactivate') + '</button>' +
       '<button class="admin-btn-ghost sched-type-delete" type="button">Delete</button>' +
-      '</div></div>';
+      '</div></article>';
   }).join('');
 }
 
@@ -7956,6 +7984,47 @@ if(schedTimezoneSelect){
     schedMarkDirty();
   });
 
+  // Calendly-style click-a-card-to-edit, replacing the old always-open
+  // shared form (editing used to mean manually retyping an existing ID
+  // into a blank form — easy to fat-finger into creating a duplicate).
+  const schedTypeEditorWrap = document.getElementById('schedTypeEditorWrap');
+  const schedTypeIdInput = document.getElementById('schedTypeId');
+  function openSchedTypeEditor(id){
+    const heading = document.getElementById('schedTypeEditorHeading');
+    const t = id ? SCHED_DRAFT.types[id] : null;
+    schedTypeForm.reset();
+    schedTypeIdInput.value = id || '';
+    schedTypeIdInput.readOnly = Boolean(id);
+    schedTypeIdInput.title = id ? 'The ID can\'t change once a type exists — delete and re-add it instead.' : '';
+    if(t){
+      heading.textContent = 'Edit "' + t.name + '"';
+      document.getElementById('schedTypeName').value = t.name || '';
+      document.getElementById('schedTypeDuration').value = t.durationMinutes || '';
+      document.getElementById('schedTypePrice').value = t.price ?? '';
+      document.getElementById('schedTypeFormat').value = t.format || 'zoom';
+      document.getElementById('schedTypeCapacity').value = t.capacity ?? '';
+      document.getElementById('schedTypeBufferBefore').value = t.bufferBeforeMin || '';
+      document.getElementById('schedTypeBufferAfter').value = t.bufferAfterMin || '';
+      document.getElementById('schedTypeDescription').value = t.description || '';
+      document.getElementById('schedTypeImage').value = t.imageUrl || '';
+      document.getElementById('schedTypeAvailabilityHint').textContent = sessionTypeAvailabilitySummary(id) + ' — change scoping from the Availability tab.';
+    } else {
+      heading.textContent = 'New Event Type';
+      document.getElementById('schedTypeAvailabilityHint').textContent = 'New types aren\'t in any weekly window until you add one on the Availability tab.';
+    }
+    adminImagePreviewRefreshers.forEach(fn => fn());
+    schedTypeStatus.textContent = '';
+    schedTypeEditorWrap.hidden = false;
+    schedTypeEditorWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function closeSchedTypeEditor(){
+    schedTypeEditorWrap.hidden = true;
+    schedTypeForm.reset();
+    schedTypeIdInput.readOnly = false;
+  }
+  document.getElementById('schedTypeNewBtn').addEventListener('click', () => openSchedTypeEditor(null));
+  document.getElementById('schedTypeCancelBtn').addEventListener('click', closeSchedTypeEditor);
+
   schedTypeForm.addEventListener('submit', event => {
     event.preventDefault();
     const id = document.getElementById('schedTypeId').value.trim();
@@ -7980,16 +8049,21 @@ if(schedTimezoneSelect){
       order: existing.order || (Object.keys(SCHED_DRAFT.types).length + 1)
     };
     renderSchedTypesList();
-    schedTypeForm.reset();
-    adminImagePreviewRefreshers.forEach(fn => fn());
-    schedTypeStatus.textContent = 'Added to this draft — click Save Changes above to publish.';
+    closeSchedTypeEditor();
+    schedTypeStatus.textContent = 'Saved to this draft — click Save Changes above to publish.';
     schedMarkDirty();
   });
 
   schedTypesList.addEventListener('click', event => {
+    const editBtn = event.target.closest('.sched-type-edit');
     const toggleBtn = event.target.closest('.sched-type-toggle');
     const deleteBtn = event.target.closest('.sched-type-delete');
     const copyBtn = event.target.closest('.sched-type-copy-link');
+    if(editBtn){
+      const row = event.target.closest('[data-type-id]');
+      openSchedTypeEditor(row.dataset.typeId);
+      return;
+    }
     if(!toggleBtn && !deleteBtn && !copyBtn) return;
     const row = event.target.closest('[data-type-id]');
     const id = row.dataset.typeId;
@@ -9351,7 +9425,7 @@ const OWNER_SETTINGS_CATALOG = [
   { title: 'Account Settings (Email & Password)', keywords: 'password email account security login', action: () => showOwnerSection('settings') },
   { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => { showOwnerSection('payments'); renderFinances(); } },
   { title: 'Store Products', keywords: 'shop store product collection price publish inventory', action: () => showOwnerSection('store') },
-  { title: 'Session Types', keywords: 'session types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
+  { title: 'Event Types', keywords: 'session types event types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
   { title: 'Blocked Dates', keywords: 'blocked dates vacation unavailable bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('blocked'); } },
   { title: 'Availability', keywords: 'availability hours schedule windows bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('availability'); } },
   { title: 'Booking Notifications', keywords: 'notifications reminders booking confirmation email', action: () => { showOwnerSection('bookings'); showBookingsTab('notifications'); } }

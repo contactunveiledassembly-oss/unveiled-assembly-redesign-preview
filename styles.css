@@ -2446,6 +2446,29 @@ body[data-page="teachings"] .teaching-card-reveal.is-visible:hover .teaching-car
 .admin-teaching-meta{font-family:var(--mono);font-size:11px;color:var(--owner-text-faint);margin-top:4px;letter-spacing:.01em}
 .admin-teaching-actions{display:flex;gap:6px;flex-wrap:wrap}
 .admin-teaching-actions .admin-btn-ghost{padding:7px 12px;font-size:10.5px}
+
+/* Event Types (Calendly-style card grid, replacing the old flat row
+   list) — one card per bookable session kind, click to edit in the
+   form below. Accent border-top reuses the Bookings department color
+   already mapped via --dept-accent, same restrained-accent convention
+   used everywhere else in the portal. */
+.sched-type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.sched-type-card{
+  display:flex;flex-direction:column;gap:10px;padding:16px 18px;
+  background:var(--owner-surface);border:1px solid var(--owner-border);border-top:2px solid var(--dept-accent,var(--owner-border));
+  border-radius:var(--owner-radius);box-shadow:var(--owner-shadow);transition:.15s;
+}
+.sched-type-card:hover{border-color:var(--owner-border-strong)}
+.sched-type-card-thumb{width:100%;height:84px;border-radius:var(--owner-radius-sm);background-color:#141414;background-size:cover;background-position:center;flex:0 0 auto}
+.sched-type-card-body{flex:1}
+.sched-type-card-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sched-type-card-title-row strong{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--owner-text)}
+.sched-type-card-meta{font-family:var(--mono);font-size:11px;color:var(--owner-text-faint);margin-top:4px;letter-spacing:.01em}
+.sched-type-card-availability{font-size:11.5px;color:var(--owner-text-muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--owner-border)}
+.sched-type-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.sched-type-card-actions .admin-btn-ghost{padding:7px 12px;font-size:10.5px}
+@media(max-width:640px){.sched-type-grid{grid-template-columns:1fr}}
+#schedTypeId[readonly]{opacity:.55;cursor:not-allowed}
 .ministry-inbox{min-height:240px}
 .ministry-inbox .admin-tabs{display:flex;gap:7px;flex-wrap:wrap}
 .ministry-inbox .admin-teaching-row{background:var(--owner-surface);}
