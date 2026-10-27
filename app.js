@@ -31,7 +31,7 @@ import {
 import { initSiteManagement } from "./site-management.js?v=5";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
-import { initShopSystem } from "./shop-system.js?v=1";
+import { initShopSystem } from "./shop-system.js?v=2";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
