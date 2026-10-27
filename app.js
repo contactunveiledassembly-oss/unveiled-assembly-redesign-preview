@@ -1558,7 +1558,7 @@ function dialogsHtml(){
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
           <span class="portal-label">Finances</span>
-          <p class="admin-panel-intro">A unified view across every payment category, once a real payment processor is connected. Today, per-booking and per-registration payment status already live under Bookings → Payments and Registrations → Payments — this page will pull all of it together automatically, with totals by month, year, and category.</p>
+          <p class="admin-panel-intro">Real One-on-One and Teaching payment status, combined here. Shop Orders and Donations will join once a real payment processor is connected — today those stay honestly empty rather than showing invented numbers.</p>
           <div class="admin-tabs" id="ownerPaymentsTabs" role="tablist" style="margin:16px 0">
             <button type="button" class="admin-tab active" data-payments-tab="all">Overview</button>
             <button type="button" class="admin-tab" data-payments-tab="teaching">Teaching Payments</button>
@@ -1567,9 +1567,33 @@ function dialogsHtml(){
             <button type="button" class="admin-tab" data-payments-tab="donation">Donations</button>
             <button type="button" class="admin-tab" data-payments-tab="refund">Refunds</button>
           </div>
-          <div class="admin-payments-empty">
-            <strong>Payments Not Connected</strong>
-            <p>There's no real payment processor connected to the website yet, so there's no unified transaction history to show here. Once one is connected, every teaching payment, one-on-one booking payment, shop order, donation, and refund will show up here automatically — with totals for this month, this year, and by category.</p>
+          <div data-payments-panel="all">
+            <p class="admin-hint" style="margin-bottom:14px">Combined totals across One-on-One and Teaching payments — the two categories with real payment status today. Shop Orders and Donations stay honestly empty below until a real payment processor is connected.</p>
+            <div class="admin-stat-row" id="financesOverviewStats"></div>
+          </div>
+          <div data-payments-panel="teaching" hidden>
+            <div class="admin-stat-row" id="financesTeachingStats"></div>
+            <div id="financesTeachingList"></div>
+          </div>
+          <div data-payments-panel="oneonone" hidden>
+            <div class="admin-stat-row" id="financesOneOnOneStats"></div>
+            <div id="financesOneOnOneList"></div>
+          </div>
+          <div data-payments-panel="shop" hidden>
+            <div class="admin-payments-empty">
+              <strong>Shop Not Connected</strong>
+              <p>The Shop isn't connected to a payment processor yet, so there are no orders to show here.</p>
+            </div>
+          </div>
+          <div data-payments-panel="donation" hidden>
+            <div class="admin-payments-empty">
+              <strong>Donations Not Connected</strong>
+              <p>Online giving isn't connected to a payment processor yet, so there's no donation history to show here.</p>
+            </div>
+          </div>
+          <div data-payments-panel="refund" hidden>
+            <div class="admin-stat-row" id="financesRefundsStats"></div>
+            <div id="financesRefundsList"></div>
           </div>
           <div class="discount-manager">
             <span class="portal-label">Discount Codes</span>
@@ -9322,7 +9346,7 @@ const OWNER_SETTINGS_CATALOG = [
   { title: 'Media Library', keywords: 'media images photos upload', action: () => showOwnerSection('media') },
   { title: 'Account Profile', keywords: 'profile name photo account', action: () => showOwnerSection('settings') },
   { title: 'Account Settings (Email & Password)', keywords: 'password email account security login', action: () => showOwnerSection('settings') },
-  { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => showOwnerSection('payments') },
+  { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => { showOwnerSection('payments'); renderFinances(); } },
   { title: 'Session Types', keywords: 'session types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
   { title: 'Blocked Dates', keywords: 'blocked dates vacation unavailable bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('blocked'); } },
   { title: 'Availability', keywords: 'availability hours schedule windows bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('availability'); } },
@@ -9403,6 +9427,7 @@ document.getElementById('ownerSidebar').addEventListener('click', event => {
   showOwnerSection(btn.dataset.ownerNav);
   if(btn.dataset.ownerNav === 'paths') renderOwnerLearningPaths();
   if(btn.dataset.ownerNav === 'dashboard'){ renderOwnerTodayView(); renderOwnerActionRequired(); renderOwnerUpcomingActivity(); }
+  if(btn.dataset.ownerNav === 'payments') renderFinances();
 });
 document.getElementById('ownerSidebarToggle').addEventListener('click', openOwnerSidebarDrawer);
 document.getElementById('ownerSidebarBackdrop').addEventListener('click', closeOwnerSidebarDrawer);
@@ -10090,17 +10115,92 @@ function renderOwnerWebsitePages(){
   wrap.innerHTML = '<p class="admin-hint">Loading page controls…</p>';
 }
 
-// No real payment processor is connected anywhere in this project yet
-// (one-on-one booking, Teaching registration, and Shop all remain
-// unpaid/placeholder) — so this section is honestly empty rather than
-// showing invented transactions. The category tabs still switch (so
-// the intended structure is visible), they just all show the same
-// honest "not connected" message underneath since there's nothing to
-// filter yet.
+// No real payment processor is connected anywhere in this project yet,
+// so there's no unified transaction ledger — but One-on-One and Teaching
+// payment status already exist as real fields on booking/registration
+// records (see bookingsPaymentsFilteredList/classRegPaymentsFilteredList),
+// so Finances reuses that real data for those two tabs + a combined
+// Overview + Refunds, instead of showing invented numbers. Shop Orders
+// and Donations stay honestly empty — those features don't exist yet.
 document.getElementById('ownerPaymentsTabs').addEventListener('click', event => {
   const btn = event.target.closest('.admin-tab');
   if(!btn) return;
   document.querySelectorAll('#ownerPaymentsTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('[data-payments-panel]').forEach(p => { p.hidden = p.dataset.paymentsPanel !== btn.dataset.paymentsTab; });
+});
+function renderFinancesOverview(){
+  const wrap = document.getElementById('financesOverviewStats');
+  if(!wrap) return;
+  const oneOnOne = bookingsPaymentsFilteredList();
+  const teaching = classRegPaymentsFilteredList();
+  const paidOneOnOne = oneOnOne.filter(b => bookingPaymentStatus(b) === 'paid');
+  const paidTeaching = teaching.filter(r => classRegPaymentStatus(r) === 'paid');
+  const pendingCount = oneOnOne.filter(b => bookingPaymentStatus(b) === 'unpaid').length + teaching.filter(r => classRegPaymentStatus(r) === 'unpaid').length;
+  const refundedCount = oneOnOne.filter(b => bookingPaymentStatus(b) === 'refunded').length + teaching.filter(r => classRegPaymentStatus(r) === 'refunded').length;
+  const revenue = paidOneOnOne.reduce((sum, b) => sum + (Number(b.amountPaid) || 0), 0) + paidTeaching.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
+  wrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Total Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Paid</span><strong>' + (paidOneOnOne.length + paidTeaching.length) + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Pending</span><strong>' + pendingCount + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Refunded</span><strong>' + refundedCount + '</strong></div>';
+}
+function renderFinancesOneOnOne(){
+  const statsWrap = document.getElementById('financesOneOnOneStats');
+  const listWrap = document.getElementById('financesOneOnOneList');
+  if(!listWrap) return;
+  const rows = bookingsPaymentsFilteredList();
+  const paid = rows.filter(b => bookingPaymentStatus(b) === 'paid');
+  const refunded = rows.filter(b => bookingPaymentStatus(b) === 'refunded');
+  const revenue = paid.reduce((sum, b) => sum + (Number(b.amountPaid) || 0), 0);
+  if(statsWrap) statsWrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Paid</span><strong>' + paid.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Refunded</span><strong>' + refunded.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
+  listWrap.innerHTML = rows.length === 0 ? '<p class="admin-hint">No one-on-one payment activity yet.</p>' : rows.map(bookingsPaymentRowHtml).join('');
+}
+function renderFinancesTeaching(){
+  const statsWrap = document.getElementById('financesTeachingStats');
+  const listWrap = document.getElementById('financesTeachingList');
+  if(!listWrap) return;
+  const rows = classRegPaymentsFilteredList();
+  const paid = rows.filter(r => classRegPaymentStatus(r) === 'paid');
+  const refunded = rows.filter(r => classRegPaymentStatus(r) === 'refunded');
+  const revenue = paid.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
+  if(statsWrap) statsWrap.innerHTML =
+    '<div class="admin-stat-tile"><span>Paid</span><strong>' + paid.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Refunded</span><strong>' + refunded.length + '</strong></div>' +
+    '<div class="admin-stat-tile"><span>Revenue</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
+  listWrap.innerHTML = rows.length === 0 ? '<p class="admin-hint">No class payment activity yet.</p>' : rows.map(classRegPaymentRowHtml).join('');
+}
+function renderFinancesRefunds(){
+  const statsWrap = document.getElementById('financesRefundsStats');
+  const listWrap = document.getElementById('financesRefundsList');
+  if(!listWrap) return;
+  const oneOnOne = bookingsPaymentsFilteredList().filter(b => bookingPaymentStatus(b) === 'refunded');
+  const teaching = classRegPaymentsFilteredList().filter(r => classRegPaymentStatus(r) === 'refunded');
+  if(statsWrap) statsWrap.innerHTML = '<div class="admin-stat-tile"><span>Total Refunded</span><strong>' + (oneOnOne.length + teaching.length) + '</strong></div>';
+  const rowsHtml = oneOnOne.map(bookingsPaymentRowHtml).concat(teaching.map(classRegPaymentRowHtml));
+  listWrap.innerHTML = rowsHtml.length === 0 ? '<p class="admin-hint">No refunds yet.</p>' : rowsHtml.join('');
+}
+function renderFinances(){
+  renderFinancesOverview();
+  renderFinancesOneOnOne();
+  renderFinancesTeaching();
+  renderFinancesRefunds();
+}
+document.getElementById('financesOneOnOneList')?.addEventListener('click', event => {
+  const row = event.target.closest('[data-booking-view]');
+  if(row) openBookingDetail(row.dataset.bookingView);
+});
+document.getElementById('financesTeachingList')?.addEventListener('click', event => {
+  const row = event.target.closest('[data-classreg-view], [data-classreg-row]');
+  if(row) openClassRegDetail(row.dataset.classregView || row.dataset.classregRow);
+});
+document.getElementById('financesRefundsList')?.addEventListener('click', event => {
+  const bookingRow = event.target.closest('[data-booking-view]');
+  if(bookingRow){ openBookingDetail(bookingRow.dataset.bookingView); return; }
+  const classRow = event.target.closest('[data-classreg-view], [data-classreg-row]');
+  if(classRow) openClassRegDetail(classRow.dataset.classregView || classRow.dataset.classregRow);
 });
 
 async function loadOwnerData(){
