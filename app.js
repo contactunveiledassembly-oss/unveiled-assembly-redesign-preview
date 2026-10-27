@@ -5837,7 +5837,9 @@ document.getElementById('ownerHeaderSignOutBtn').addEventListener('click', async
 });
 if(openMemberPortal) openMemberPortal.addEventListener('click', openPortal);
 navMemberPortal.addEventListener('click', openPortal);
-document.getElementById('teachingGoToAccount')?.addEventListener('click', openPortal);
+document.addEventListener('click', event => {
+  if(event.target.closest('[data-open-account]')) openPortal();
+});
 closeMemberPortal.addEventListener('click', () => memberPortalDialog.close());
 memberPortalDialog.addEventListener('click', event => {
   if(event.target === memberPortalDialog) memberPortalDialog.close();
@@ -13798,46 +13800,92 @@ function renderTeachingLibrary(){
   wireTeachingCardTransitions(wrap);
 }
 
+// Class page — same building blocks as the Teachings page: the
+// One-on-One style entry (with this class's own artwork), a dark details
+// section, a few more classes as poster cards, and the member invitation.
+function teachingMemberSectionHtml(){
+  return '<section class="teaching-member-section" aria-labelledby="teachingMemberTitle">' +
+    '<div class="section-inner reveal">' +
+    '<div class="eyebrow" style="margin-bottom:16px">Continue In Your Account</div>' +
+    '<h2 class="teaching-display teaching-section-title" id="teachingMemberTitle">Continue Your Study.</h2>' +
+    '<p class="teaching-member-copy">Your teachings, classes, and resources in one place.</p>' +
+    '<button class="btn" type="button" data-open-account>Go To My Account →</button>' +
+    '</div></section>';
+}
+function teachingDetailEntryHtml(t){
+  const art = t.artwork || {};
+  const heroArt = teachingArtworkUrl(t, 'hero');
+  const focalX = art.focalX != null ? art.focalX : 50;
+  const focalY = art.focalY != null ? art.focalY : 50;
+  const mediaStyle = heroArt ? ' style="background-image:url(\'' + escapeHtml(heroArt) + '\');background-position:' + focalX + '% ' + focalY + '%"' : '';
+  const upcoming = teachingIsUpcoming(t);
+  const words = [
+    t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? 'In Person' : t.format === 'hybrid' ? 'Hybrid' : '',
+    upcoming ? (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') : '',
+    t.instructor || ''
+  ].filter(Boolean);
+  return '<header class="oo-hero teaching-class-entry" aria-label="' + escapeHtml(t.title || 'Teaching') + '">' +
+    '<div class="oo-hero-media' + (heroArt ? '' : ' ' + teachingArtClass(t.category)) + '"' + mediaStyle + ' aria-hidden="true"></div>' +
+    '<div class="oo-hero-overlay" aria-hidden="true"></div>' +
+    '<div class="oo-hero-content reveal">' +
+    '<div class="eyebrow">Teachings' + (t.category ? ' · ' + escapeHtml(t.category) : '') + '</div>' +
+    '<h1 class="teaching-display oo-hero-title">' + escapeHtml(t.title || '') + '</h1>' +
+    (t.subtitle ? '<p class="oo-hero-sub">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    (upcoming && !teachingStatusButtonDisabled(t)
+      ? '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '">' + teachingStatusButtonLabel(t) + ' →</button>' : '') +
+    (t.date ? '<p class="oo-hero-desc">' + escapeHtml(teachingWhenLine(t)) + '</p>' : '') +
+    '</div>' +
+    (words.length ? '<div class="oo-hero-words" aria-hidden="true">' + words.map(escapeHtml).join('<br>') + '</div>' : '') +
+    '</header>';
+}
 function renderTeachingDetailPage(){
   const wrap = document.getElementById('teachingDetailRoot');
   if(!wrap) return;
   const id = new URLSearchParams(window.location.search).get('id');
   const t = id ? TEACHINGS[id] : null;
   const viewerIsAdmin = !!(currentProfile && currentProfile.role === 'admin');
-  if(!t || (t.status === 'draft' && !viewerIsAdmin)){
-    wrap.innerHTML = '<div class="section-inner reveal" style="padding-top:160px;text-align:center">' +
-      '<div class="eyebrow">Teachings</div><h1 class="teaching-display" style="margin-bottom:24px">Not Available</h1>' +
-      '<p style="color:var(--stone);margin-bottom:30px">This teaching isn\'t available right now.</p>' +
-      '<a class="btn" href="' + BASE + 'teachings.html">← Back To Teachings</a></div>';
+  const backLink = '<div class="teaching-class-back"><a class="text-link" href="' + BASE + 'teachings.html">← Back To All Teachings</a></div>';
+  if(!teachingsLoaded){ wrap.innerHTML = '<div class="teaching-hero-pending"></div>'; return; }
+  if(!t || (!teachingIsPublic(t) && !viewerIsAdmin)){
+    wrap.innerHTML = '<section class="teaching-class-missing"><div class="section-inner reveal">' +
+      '<div class="eyebrow">Teachings</div><h1 class="teaching-display">Not Available.</h1>' +
+      '<p>This teaching isn\'t available right now.</p>' +
+      '<a class="btn" href="' + BASE + 'teachings.html">← Back To All Teachings</a></div></section>' + teachingMemberSectionHtml();
     return;
   }
-  const draftNoticeHtml = (t.status === 'draft')
-    ? '<div class="admin-preview-flag">You\'re viewing this as a draft — it isn\'t visible to the public yet.</div>' : '';
+  const draftNoticeHtml = !teachingIsPublic(t)
+    ? '<div class="admin-preview-flag">You\'re viewing this as ' + (t.status === 'draft' ? 'a draft' : t.status === 'cancelled' ? 'a cancelled class' : 'an archived class') + ' — it isn\'t visible to the public.</div>' : '';
+  const upcoming = teachingIsUpcoming(t);
   const learnHtml = (t.whatYouWillLearn || []).map(li => '<li>' + escapeHtml(li) + '</li>').join('');
-  wrap.innerHTML = draftNoticeHtml +
-    '<header class="teaching-hero teaching-detail-hero">' + teachingHeroMediaHtml(t) +
-    '<div class="teaching-hero-content reveal">' +
-    '<div class="eyebrow">' + escapeHtml(t.category || 'Teaching') + '</div>' +
-    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
-    (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
-    '</div></header>' +
-    '<section class="on-light-section">' +
-    '<div class="teaching-detail-grid reveal">' +
+  const format = t.format === 'zoom' ? 'Live on Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + escapeHtml(t.location) : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Other';
+  const action = upcoming
+    ? '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' + (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>'
+    : '<p class="teaching-class-past-note">This class has already taken place. Registered members can revisit it from their account.</p>' +
+      '<button class="btn" type="button" data-open-account>Go To My Account →</button>';
+  const more = [...upcomingTeachingsList().filter(teachingIsUpcoming), ...pastTeachingsList()].filter(x => x.id !== t.id).slice(0, 3);
+  wrap.innerHTML = draftNoticeHtml + teachingDetailEntryHtml(t) +
+    '<section class="teaching-class-body"><div class="section-inner teaching-detail-grid reveal">' +
     '<div class="teaching-detail-facts">' +
-    '<div><span>Date</span><strong>' + escapeHtml(formatTeachingDate(t.date || '')) + '</strong></div>' +
-    '<div><span>Time</span><strong>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</strong></div>' +
-    '<div><span>Format</span><strong>' + (t.format === 'zoom' ? 'Live on Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + escapeHtml(t.location) : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Other') + '</strong></div>' +
-    '<div><span>Price</span><strong>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</strong></div>' +
+    (t.date ? '<div><span>' + (upcoming ? 'Date' : 'Taught') + '</span><strong>' + escapeHtml(formatTeachingDate(t.date)) + '</strong></div>' : '') +
+    (upcoming && t.startTime ? '<div><span>Time</span><strong>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</strong></div>' : '') +
+    '<div><span>Format</span><strong>' + format + '</strong></div>' +
+    (upcoming ? '<div><span>Price</span><strong>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</strong></div>' : '') +
     '<div><span>Instructor</span><strong>' + escapeHtml(t.instructor || 'The Unveiled Assembly') + '</strong></div>' +
-    '<button class="btn on-light fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
-      (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
-    '<button class="text-link" type="button" data-open-class-review-form data-review-class-title="' + escapeHtml(t.title || '') + '" style="border-color:var(--line-light);color:var(--ink-muted)">Leave A Class Review →</button>' +
+    action +
+    '<button class="text-link" type="button" data-open-class-review-form data-review-class-title="' + escapeHtml(t.title || '') + '">Leave A Class Review →</button>' +
     '</div>' +
     '<div class="teaching-detail-copy">' +
-    '<h2 class="teaching-subtitle-heading">About This Teaching</h2>' +
-    '<p>' + escapeHtml(t.fullDescription || t.shortDescription || '') + '</p>' +
-    (learnHtml ? '<h2 class="teaching-subtitle-heading" style="margin-top:36px">What You Will Learn</h2><ul class="teaching-learn-list">' + learnHtml + '</ul>' : '') +
-    '</div></div></section>';
+    '<div class="eyebrow" style="margin-bottom:14px">About This Teaching</div>' +
+    '<p class="teaching-class-lead">' + escapeHtml(t.fullDescription || t.shortDescription || '') + '</p>' +
+    (learnHtml ? '<div class="eyebrow" style="margin:44px 0 18px">What You Will Learn</div><ul class="teaching-learn-list">' + learnHtml + '</ul>' : '') +
+    '</div></div></section>' +
+    (more.length ? '<section class="teaching-cards-section teaching-class-more"><div class="section-inner">' +
+      '<div class="eyebrow reveal" style="margin-bottom:6px">Thursday Teachings</div>' +
+      '<div class="teaching-library-head reveal"><h2 class="teaching-display teaching-section-title">More Teachings.</h2>' +
+      '<a class="text-link" href="' + BASE + 'teachings.html">View All Teachings →</a></div>' +
+      '<div class="teaching-cards-grid" id="teachingMoreList">' + more.map(teachingCardHtml).join('') + '</div></div></section>' : '') +
+    teachingMemberSectionHtml() + backLink;
+  if(more.length) wireTeachingCardTransitions(document.getElementById('teachingMoreList'));
 }
 
 function renderPublicTeachingPages(){
