@@ -657,6 +657,20 @@ dialog.detail-drawer .booking-body{padding:20px 22px 28px}
 .form-field input,.form-field select,.form-field textarea{width:100%;border:1px solid var(--line-dark);border-radius:0;background:var(--charcoal);color:var(--ivory);padding:13px 14px;font:inherit;font-size:15px}
 .form-field textarea{min-height:100px;resize:vertical;line-height:1.55}
 .form-field input[type="file"]{font-size:12px;color:var(--stone)}
+.star-rating-field{border:0;margin:0;padding:0;min-width:0}
+.star-rating-field legend{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--stone);padding:0;margin:0 0 8px}
+.star-rating-row{min-height:48px;display:flex;align-items:center;gap:14px;padding:7px 13px;border:1px solid var(--line-dark);background:var(--charcoal)}
+.star-rating{display:flex;flex-direction:row-reverse;justify-content:flex-end;align-items:center;gap:3px}
+.star-rating input{position:absolute;opacity:0;width:1px;height:1px;margin:0;padding:0;pointer-events:none}
+.star-rating label{display:grid;place-items:center;width:34px;height:34px;color:#585858;font-size:28px;line-height:1;letter-spacing:0;text-transform:none;cursor:pointer;transition:color .15s ease,transform .15s ease,text-shadow .15s ease}
+.star-rating input:checked ~ label{color:var(--ivory);text-shadow:0 0 18px rgba(255,255,255,.18)}
+.star-rating label:hover,.star-rating label:hover ~ label{color:var(--ivory);transform:translateY(-1px)}
+.star-rating:hover input:checked ~ label{color:#585858;text-shadow:none}
+.star-rating:hover label:hover,.star-rating:hover label:hover ~ label{color:var(--ivory);text-shadow:0 0 18px rgba(255,255,255,.18)}
+.star-rating input:focus-visible + label{outline:1px solid var(--ivory);outline-offset:2px}
+.star-rating-clear{margin-left:auto;border:0;border-bottom:1px solid currentColor;background:transparent;color:var(--stone);padding:2px 0;font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.star-rating-clear:hover,.star-rating-clear:focus-visible{color:var(--ivory)}
+.star-rating-hint{color:var(--stone-dim);font-size:11px;line-height:1.4}
 .permission-label{display:flex;align-items:flex-start;gap:10px;line-height:1.6;text-transform:none;letter-spacing:.03em;font-size:12px;width:100%;max-width:100%}
 /* Overrides the generic ".form-field input{width:100%}" rule above,
    which otherwise leaks onto this checkbox too (it's nested inside a
