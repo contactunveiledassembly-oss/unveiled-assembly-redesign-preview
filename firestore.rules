@@ -396,12 +396,24 @@ service cloud.firestore {
     // A signed-in booker may update their OWN booking, but only to flip its
     // status to 'cancelled' — no other field, and not to any other status.
     // Admin can update anything (confirm/decline/reschedule).
+    // Payment fields are written only by the Stripe webhook (Cloud
+    // Functions, Admin SDK — not subject to these rules) or an admin.
+    // The Owner Portal treats amountPaid > 0 as "paid", so a member's own
+    // create must never be able to set any of them.
+    function hasNoPaymentFields(d) {
+      return !d.keys().hasAny(['paymentIntentId','transactionId','chargeId','stripeSessionId','paidAt','paymentRefunded','amountRefunded']) &&
+        d.get('amountPaid', 0) == 0 &&
+        d.get('paymentStatus', 'pending') == 'pending' &&
+        d.get('accessGranted', false) == false;
+    }
+
     match /bookings/{bookingId} {
       allow create: if request.resource.data.keys().hasAll(
                         ['name','email','sessionType','date','time','status','uid']) &&
                       (
                         (isSignedIn() && request.resource.data.uid == request.auth.uid &&
-                         request.resource.data.status == 'pending')
+                         request.resource.data.status == 'pending' &&
+                         hasNoPaymentFields(request.resource.data))
                         || isAdmin()
                       );
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
@@ -659,7 +671,8 @@ service cloud.firestore {
                         ['teachingId','firstName','lastName','email','status','uid']) &&
                       (
                         (isSignedIn() && request.resource.data.uid == request.auth.uid &&
-                         request.resource.data.status == 'pending_payment')
+                         request.resource.data.status == 'pending_payment' &&
+                         hasNoPaymentFields(request.resource.data))
                         || isAdmin()
                       );
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
@@ -697,13 +710,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Integration boundaries for later phases. Digital files are never
-    // public. Orders cannot be created or marked paid by a visitor; a
-    // future trusted checkout/webhook (Admin SDK) will create them.
+    // Digital files are never public. Orders and donations cannot be
+    // created or marked paid by a visitor: createCheckoutSession and
+    // stripeWebhook (functions/index.js, Admin SDK) are the only writers
+    // besides an admin.
     match /shopDigitalFiles/{fileId} {
       allow read, write: if isAdmin();
     }
     match /shopOrders/{orderId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+    match /donations/{donationId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow write: if isAdmin();
     }

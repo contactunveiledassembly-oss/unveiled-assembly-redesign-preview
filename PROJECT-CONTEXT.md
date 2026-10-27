@@ -191,7 +191,7 @@ These are the filenames referenced by the integrated `gathering-entrance.html` `
 
 ## 14. Stripe / Payment Status
 
-**PLANNED / NOT YET IMPLEMENTED.** No Stripe SDK, keys, or checkout code found anywhere in this repository. All booking flows are currently free / admin-managed (pending → confirmed), with no online payment step.
+**BUILT (2026-10-27, branch `stripe-payments`) — NOT YET DEPLOYED.** Stripe Checkout for One-on-One bookings, Teaching registrations, Shop orders, and one-time card Donations. See Section 32 for how it works and the go-live checklist.
 
 ---
 
@@ -697,5 +697,27 @@ The approved private Our Story prototype has been integrated into the main websi
 - Reused the existing approved ministry imagery already stored in `assets/give/`; no new stock or generated imagery was introduced.
 - Revised the opening after owner review: the former split-layout hero is now a Revelation Church-inspired, full-screen black typographic entrance with generous negative space, thin architectural rules, layered monochrome imagery, and an original CSS 3D scene. Pointer movement and scroll create restrained depth on capable devices; `prefers-reduced-motion` disables the live movement while preserving the complete composition and content.
 - Verified the repository's existing automated browser tests, JavaScript syntax, all Story asset loads, reveal-on-scroll behavior, shared navigation/footer injection, Inter font use, and responsive desktop/mobile layouts. Both audited viewports had no horizontal overflow or page errors.
+
+## 32. Session Log — 2026-10-27: Stripe payments (branch `stripe-payments`, not yet deployed)
+
+**How it works**
+- `functions/` is a new Firebase Cloud Functions backend (Node 20) in the existing `unveiledassembly` project:
+  - `createCheckoutSession` (callable): the browser sends only *what* is being paid for (`booking` id, `teaching` registration id, Shop cart ids/options/quantities, or a gift amount). The server **recomputes every price from Firestore** (`sessionTypes` — falling back to the same $30/$50 defaults as `app.js` when that collection is empty — `teachings`, `shopProducts`) and honors a discount only if a *confirmed* `discountRedemptions` doc ties that code to that exact record and uid. Returns a Stripe-hosted Checkout URL (30-minute expiry). Return URLs are locked to `theunveiledassembly.com` / `www.`.
+  - `stripeWebhook` (HTTPS): verifies the Stripe signature, then: **paid** → booking `confirmed` / registration `confirmed` + `accessGranted` + `classEnrollments/{teachingId}_{uid}` (same shape as the owner's manual confirm, `accessSource: 'stripe-payment'`) / Shop order `paid` (stock decremented, shipping address saved) / donation `paid`, plus a `memberNotifications` doc. **Expired/failed** → booking or registration `cancelled` (`cancelReason: 'payment-not-completed'`), the `slots` seat freed, and the discount use given back. **`charge.refunded`** → `paymentStatus: 'refunded'` (`paymentRefunded` on bookings; class access removed). All handlers are idempotent.
+- Payment fields use the names the Owner Portal already reads: `amountPaid` (dollars), `paymentStatus`, `paymentIntentId`, `transactionId`, `paidAt`.
+- **Browser (`app.js`)**: on the production host only (`LIVE_PAYMENTS = !DEMO_MODE`), the booking and class dialogs create the pending record exactly as before, await the discount-claim confirmation, then redirect to Stripe. The fake card-entry previews are swapped for a "you'll pay on Stripe" note. `?checkout=success|cancelled` returns open a notice dialog; cancelled bookings/classes offer **Resume Payment**, which reuses the same open Stripe session. Shop cart drawer gets a working **Checkout** button (`shop-system.js`, `context.checkout`). Give page's "Card Payment" tab becomes a real **Give $X by Card** button (wired from `app.js` `wireGiveCardPayment()`; Cash App unchanged). Owner Portal → Finances → Shop Orders / Donations now list real paid records.
+- **Preview / localhost (DEMO_MODE) behave exactly as before** — no function calls, simulated checkout unchanged.
+- **`firestore.rules`**: new `hasNoPaymentFields()` blocks a member's own booking/registration create from setting `amountPaid`, `paymentStatus` ≠ pending, `accessGranted`, or any Stripe id (previously a member could self-create a booking with `amountPaid > 0`, which the Owner Portal counts as paid). New `donations` collection: owner/own-uid read, admin-only write.
+
+**Verification done**: `node --check` on `functions/index.js`; JavaScriptCore module-syntax check on `app.js`/`shop-system.js`; full `tests/` browser suite against a local server — 12/14 pass. The 2 failures (`discount-claim-lifecycle`, `owner-editor-discounts`) can't find `#ownerDiscountCode` / the "One-on-One Page" row; both tests were last updated 2026-10-07, before the 2026-10-26 Owner Portal sidebar restructure moved those controls, and this change doesn't touch either element — they need updating separately. `finances-consolidation` was updated for the new Shop/Donations preview copy. **Not verified**: a real end-to-end Stripe payment — that requires the deployed functions and the production domain (see below).
+
+**Go-live checklist (needs the owner — not done)**
+1. Upgrade the `unveiledassembly` Firebase project to the **Blaze** plan (Cloud Functions + Secret Manager require it; this traffic level should stay within free quotas).
+2. Install Node 20+ and the Firebase CLI on this Mac (`npm i -g firebase-tools`, `firebase login`), then `cd functions && npm install`.
+3. Secrets (use Stripe **test** keys first): `firebase functions:secrets:set STRIPE_SECRET_KEY` (sk_test_…).
+4. `firebase deploy --only functions,firestore:rules`.
+5. Stripe Dashboard → Developers → Webhooks → add endpoint `https://us-central1-unveiledassembly.cloudfunctions.net/stripeWebhook` with events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`. Copy its signing secret → `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET` → redeploy functions.
+6. Payments only run on `theunveiledassembly.com`, which still points at the older repo (Section 19.2) — the domain switch is required before anyone can actually pay. Test with card 4242 4242 4242 4242, then swap both secrets for live keys.
+7. Known gaps: Shop has no shipping charge or sales tax yet (Stripe collects a US address only); Shop discount codes aren't supported; monthly giving is still "Coming Soon"; digital Shop delivery is still a later phase. Refunds are issued from the Stripe Dashboard and sync back automatically.
 
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

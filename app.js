@@ -28,10 +28,11 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
 import { initSiteManagement } from "./site-management.js?v=5";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
-import { initShopSystem } from "./shop-system.js?v=2";
+import { initShopSystem } from "./shop-system.js?v=3";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -1557,7 +1558,7 @@ function dialogsHtml(){
         </article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
           <span class="portal-label">Finances</span>
-          <p class="admin-panel-intro">Real One-on-One and Teaching payment status, combined here. Shop Orders and Donations will join once a real payment processor is connected — today those stay honestly empty rather than showing invented numbers.</p>
+          <p class="admin-panel-intro">Every payment taken through Stripe: One-on-One sessions, Teachings, Shop orders, and card Donations. Refunds are issued from the Stripe Dashboard and show up here automatically.</p>
           <div class="admin-tabs" id="ownerPaymentsTabs" role="tablist" style="margin:16px 0">
             <button type="button" class="admin-tab active" data-payments-tab="all">Overview</button>
             <button type="button" class="admin-tab" data-payments-tab="teaching">Teaching Payments</button>
@@ -1567,7 +1568,7 @@ function dialogsHtml(){
             <button type="button" class="admin-tab" data-payments-tab="refund">Refunds</button>
           </div>
           <div data-payments-panel="all">
-            <p class="admin-hint" style="margin-bottom:14px">Combined totals across One-on-One and Teaching payments — the two categories with real payment status today. Shop Orders and Donations stay honestly empty below until a real payment processor is connected.</p>
+            <p class="admin-hint" style="margin-bottom:14px">Combined totals across One-on-One and Teaching payments. Shop Orders and card Donations have their own tabs.</p>
             <div class="admin-stat-row" id="financesOverviewStats"></div>
           </div>
           <div data-payments-panel="teaching" hidden>
@@ -1579,16 +1580,12 @@ function dialogsHtml(){
             <div id="financesOneOnOneList"></div>
           </div>
           <div data-payments-panel="shop" hidden>
-            <div class="admin-payments-empty">
-              <strong>Shop Not Connected</strong>
-              <p>The Shop isn't connected to a payment processor yet, so there are no orders to show here.</p>
-            </div>
+            <div class="admin-stat-row" id="financesShopStats"></div>
+            <div id="financesShopList"></div>
           </div>
           <div data-payments-panel="donation" hidden>
-            <div class="admin-payments-empty">
-              <strong>Donations Not Connected</strong>
-              <p>Online giving isn't connected to a payment processor yet, so there's no donation history to show here.</p>
-            </div>
+            <div class="admin-stat-row" id="financesDonationStats"></div>
+            <div id="financesDonationList"></div>
           </div>
           <div data-payments-panel="refund" hidden>
             <div class="admin-stat-row" id="financesRefundsStats"></div>
@@ -3357,6 +3354,178 @@ const ADMIN_EMAIL = 'contactunveiledassembly@gmail.com';
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
+
+/* ---------------------------------------------------------------
+   Stripe Checkout. The browser never sees a price it can change or a
+   card number: it names what is being paid for, the createCheckoutSession
+   Cloud Function (functions/index.js) recomputes the total from
+   Firestore and returns a Stripe-hosted checkout URL, and the
+   stripeWebhook function marks the record paid once Stripe confirms.
+   DEMO_MODE (every host but the real domain) never calls it — preview
+   checkouts keep their existing simulated behavior.
+   --------------------------------------------------------------- */
+const LIVE_PAYMENTS = !DEMO_MODE;
+const createCheckoutSessionFn = LIVE_PAYMENTS ? httpsCallable(getFunctions(fbApp), 'createCheckoutSession') : null;
+
+// Resolves { url } (caller should redirect) or { free: true } (a
+// discount brought the total to $0 — the record stays pending for the
+// owner, as before payments existed). Throws with a visitor-safe message.
+async function startStripeCheckout(payload){
+  if(!createCheckoutSessionFn) throw new Error('Online payment is not available in the preview build.');
+  const returnUrl = window.location.origin + window.location.pathname + window.location.search;
+  try {
+    const result = await createCheckoutSessionFn({ ...payload, returnUrl });
+    return result.data || {};
+  } catch (err) {
+    console.error('[checkout] createCheckoutSession failed', err);
+    // HttpsError messages from our own function are written for visitors;
+    // anything else (network, internal) gets a generic one.
+    const known = err && err.code && !/internal|unavailable|unknown/.test(err.code);
+    throw new Error(known && err.message ? err.message : 'We could not open secure checkout. Please check your connection and try again.');
+  }
+}
+async function redirectToStripeCheckout(payload){
+  const result = await startStripeCheckout(payload);
+  if(result.url){ window.location.assign(result.url); return 'redirecting'; }
+  return result.free ? 'free' : 'none';
+}
+window.startStripeCheckout = startStripeCheckout; // for page-level scripts; app.js itself uses redirectToStripeCheckout
+
+// Shown when Stripe sends the visitor back (?checkout=success|cancelled),
+// or when a checkout can't be started. A cancelled booking/class keeps
+// its time or seat until the 30-minute Stripe session expires, so it
+// offers to resume rather than start over.
+const CHECKOUT_RETURN_COPY = {
+  booking: { thing: 'session', success: 'Your payment was received and your session is confirmed. Your confirmation will appear in My Assembly → Sessions within a minute.' },
+  teaching: { thing: 'class seat', success: 'Your payment was received and your seat is confirmed. Classroom access will appear in My Assembly → Classes within a minute.' },
+  shop: { thing: 'order', success: 'Your order is paid. A receipt from Stripe is on its way to your email.' },
+  donation: { thing: 'gift', success: 'Your gift was received. A receipt from Stripe is on its way to your email. Thank you for your generosity.' }
+};
+function showCheckoutNotice({ title, message, resume }){
+  let dialog = document.getElementById('checkoutNoticeDialog');
+  if(!dialog){
+    dialog = document.createElement('dialog');
+    dialog.id = 'checkoutNoticeDialog';
+    dialog.className = 'checkout-notice-dialog';
+    dialog.setAttribute('aria-labelledby', 'checkoutNoticeTitle');
+    dialog.innerHTML =
+      '<div class="admin-microlabel">Secure Checkout</div>' +
+      '<h2 id="checkoutNoticeTitle"></h2>' +
+      '<p id="checkoutNoticeMessage"></p>' +
+      '<p class="checkout-notice-status" id="checkoutNoticeStatus" role="status" aria-live="polite"></p>' +
+      '<div class="checkout-notice-actions">' +
+        '<button type="button" class="btn fill" id="checkoutNoticeResume" hidden>Resume Payment</button>' +
+        '<button type="button" class="admin-btn-ghost" id="checkoutNoticeClose">Close</button>' +
+      '</div>';
+    document.body.appendChild(dialog);
+    dialog.querySelector('#checkoutNoticeClose').addEventListener('click', () => dialog.close());
+  }
+  dialog.querySelector('#checkoutNoticeTitle').textContent = title;
+  dialog.querySelector('#checkoutNoticeMessage').textContent = message;
+  const status = dialog.querySelector('#checkoutNoticeStatus');
+  status.textContent = '';
+  const resumeBtn = dialog.querySelector('#checkoutNoticeResume');
+  resumeBtn.hidden = !resume;
+  resumeBtn.onclick = resume ? async () => {
+    resumeBtn.disabled = true;
+    status.textContent = 'Opening secure checkout…';
+    try {
+      const outcome = await redirectToStripeCheckout(resume);
+      if(outcome !== 'redirecting') status.textContent = 'Nothing is due — the ministry will confirm your request.';
+    } catch (err) {
+      status.textContent = err.message;
+    } finally {
+      resumeBtn.disabled = false;
+    }
+  } : null;
+  if(!dialog.open) dialog.showModal();
+}
+function handleCheckoutReturn(){
+  const params = new URLSearchParams(window.location.search);
+  const outcome = params.get('checkout');
+  if(!outcome) return;
+  const kind = params.get('kind');
+  const ref = params.get('ref');
+  ['checkout', 'kind', 'ref', 'session_id'].forEach(key => params.delete(key));
+  const clean = window.location.pathname + (params.toString() ? '?' + params : '') + window.location.hash;
+  window.history.replaceState(null, '', clean);
+  const copy = CHECKOUT_RETURN_COPY[kind];
+  if(!copy) return;
+  if(outcome === 'success'){
+    if(kind === 'shop' && shopSystem && shopSystem.clearCart) shopSystem.clearCart();
+    showCheckoutNotice({ title: 'Thank You', message: copy.success });
+  } else if(outcome === 'cancelled'){
+    const resumable = (kind === 'booking' || kind === 'teaching') && ref;
+    showCheckoutNotice({
+      title: 'Payment Not Completed',
+      message: resumable
+        ? 'No payment was taken. Your ' + copy.thing + ' is held for a short time — resume payment to keep it. If you leave it, the hold is released automatically.'
+        : 'No payment was taken. You can try again whenever you are ready.',
+      resume: resumable ? { kind, id: ref } : null
+    });
+  }
+}
+// Rewrites the "not yet connected" preview copy in the booking and class
+// checkout dialogs once real payments are live on this host.
+function applyLivePaymentCopy(){
+  if(!LIVE_PAYMENTS) return;
+  document.querySelectorAll('#bookingDialog .checkout-payment-demo, #teachingRegisterDialog .checkout-payment-demo, #teachingRegisterDialog .checkout-payment-note').forEach(node => node.remove());
+  document.querySelectorAll('#bookingDialog .checkout-payment-methods, #teachingRegisterDialog .checkout-payment-methods').forEach(node => {
+    const note = document.createElement('p');
+    note.className = 'payment-demo-note checkout-payment-note';
+    note.textContent = "You'll pay on Stripe's secure checkout page next. Card, Apple Pay, and Google Pay are accepted, and card details never touch this website.";
+    node.after(note);
+  });
+  const bookingLabel = document.querySelector('#bookingSubmitBtn span');
+  if(bookingLabel) bookingLabel.textContent = 'Continue To Payment';
+  const bookingNote = document.querySelector('#bookingDialog .checkout-note');
+  if(bookingNote) bookingNote.textContent = 'Your time is held while you pay, and confirmed the moment payment goes through.';
+  const teachingNote = document.querySelector('#teachingRegisterDialog .checkout-note');
+  if(teachingNote) teachingNote.textContent = 'Your seat is held while you pay, and confirmed the moment payment goes through. Private class access details are never posted publicly — only sent to confirmed registrants.';
+  wireGiveCardPayment();
+}
+// Give page: replaces the "Card Payment — Soon" preview panel with a
+// real Stripe button. Reads the amount from give.html's own amount
+// picker so Cash App and card always agree on the selected gift.
+function wireGiveCardPayment(){
+  const panel = document.getElementById('giveMethodPanel-card');
+  if(!panel) return;
+  const tab = document.querySelector('.gv-payment-method[data-method="card"] .coming-soon');
+  if(tab) tab.remove();
+  panel.innerHTML =
+    '<button type="button" class="btn fill" id="giveCardBtn" style="width:100%;margin-top:18px">Give $50 by Card</button>' +
+    '<p class="admin-hint">Opens Stripe\'s secure checkout. Card, Apple Pay, and Google Pay are accepted.</p>' +
+    '<p class="checkout-discount-status" id="giveCardStatus" role="status" aria-live="polite"></p>';
+  const btn = document.getElementById('giveCardBtn');
+  const status = document.getElementById('giveCardStatus');
+  const selectedAmount = () => {
+    const custom = document.getElementById('giveCustomAmount');
+    const active = document.querySelector('.give-amount-btn.active');
+    const value = custom && custom.value ? custom.value : active ? active.dataset.amount : 0;
+    return Math.round(Number(value) || 0);
+  };
+  const syncLabel = () => { btn.textContent = 'Give $' + Math.max(1, selectedAmount()) + ' by Card'; };
+  document.querySelectorAll('.give-amount-btn').forEach(b => b.addEventListener('click', () => setTimeout(syncLabel)));
+  document.getElementById('giveCustomAmount')?.addEventListener('input', syncLabel);
+  syncLabel();
+  btn.addEventListener('click', async () => {
+    if(!document.getElementById('giveAgreeTerms').checked){
+      status.textContent = 'Please agree to the Giving Terms to continue.';
+      return;
+    }
+    const dollars = selectedAmount();
+    if(dollars < 1 || dollars > 10000){ status.textContent = 'Choose a gift between $1 and $10,000.'; return; }
+    btn.disabled = true;
+    status.textContent = 'Opening secure checkout…';
+    try {
+      await redirectToStripeCheckout({ kind: 'donation', amountCents: dollars * 100 });
+    } catch (err) {
+      status.textContent = err.message;
+      btn.disabled = false;
+    }
+  });
+}
+
 // Keep a signed-in member/owner signed in across visits (real Firebase
 // auth already defaults to this, but it's made explicit here on purpose).
 setPersistence(auth, browserLocalPersistence).catch(() => {});
@@ -5310,7 +5479,8 @@ function generateConfirmationId(prefix){
 // record (classRegPaymentStatus/bookingPaymentStatus), so the public
 // ticket and the admin view never contradict each other.
 function previewPaymentStatusLabel(price){
-  return Number(price) > 0 ? 'Pending — Payment Not Yet Connected' : 'No Payment Required';
+  if(!(Number(price) > 0)) return 'No Payment Required';
+  return LIVE_PAYMENTS ? 'Pending — Awaiting Payment' : 'Pending — Payment Not Yet Connected';
 }
 // Small "Copy Confirmation ID" affordance shared by both ticket
 // screens and the registrant/booking detail drawers.
@@ -7603,7 +7773,23 @@ bookingForm.addEventListener('submit', async event => {
       status: 'pending', uid: currentUser.uid, clientTimeZone, smsConsent, discount
     });
     markThrottled('lastBookingSubmit');
-    if(siteManagement && discountClaim) siteManagement.confirmDiscountClaim(discountClaim.claimId, { collection: 'bookings', id: record.id, uid: currentUser.uid });
+    // Awaited: the payment server only honors a discount whose claim is
+    // already confirmed against this booking.
+    if(siteManagement && discountClaim) await siteManagement.confirmDiscountClaim(discountClaim.claimId, { collection: 'bookings', id: record.id, uid: currentUser.uid });
+    if(LIVE_PAYMENTS && !ownerSim.isActive() && discount.totalAfterDiscount > 0){
+      bookingStatus.textContent = 'Opening secure checkout…';
+      try {
+        if(await redirectToStripeCheckout({ kind: 'booking', id: record.id }) === 'redirecting') return;
+      } catch (checkoutErr) {
+        bookingDialog.close();
+        showCheckoutNotice({
+          title: 'Your Time Is Held',
+          message: checkoutErr.message + ' Your time stays held for a short while — try payment again below.',
+          resume: { kind: 'booking', id: record.id }
+        });
+        return;
+      }
+    }
     document.getElementById('bookingConfirmTitle').textContent = sessionTypeName(service);
     document.getElementById('bookingConfirmName').textContent = name;
     document.getElementById('bookingConfirmWhen').textContent = formatLocalDateTime(dateStr, time, clientTimeZone);
@@ -10218,7 +10404,74 @@ document.getElementById('ownerPaymentsTabs').addEventListener('click', event => 
   if(!btn) return;
   document.querySelectorAll('#ownerPaymentsTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
   document.querySelectorAll('[data-payments-panel]').forEach(p => { p.hidden = p.dataset.paymentsPanel !== btn.dataset.paymentsTab; });
+  if(btn.dataset.paymentsTab === 'shop') renderFinancesStripeCollection('shopOrders');
+  if(btn.dataset.paymentsTab === 'donation') renderFinancesStripeCollection('donations');
 });
+// Shop orders and card donations exist only on the real domain — the
+// createCheckoutSession/stripeWebhook Cloud Functions write them. Read
+// fresh each time the tab opens, since the webhook can land any moment.
+const STRIPE_FINANCE_VIEWS = {
+  shopOrders: { stats: 'financesShopStats', list: 'financesShopList', noun: 'order', empty: 'No Shop orders yet. Orders paid through Stripe checkout appear here automatically.' },
+  donations: { stats: 'financesDonationStats', list: 'financesDonationList', noun: 'gift', empty: 'No card gifts yet. Gifts given by card on the Give page appear here automatically. Cash App gifts are only visible in Cash App.' }
+};
+function stripeRecordStatusLabel(r){
+  if(r.paymentStatus === 'refunded') return ['Refunded', 'refunded'];
+  if(r.paymentStatus === 'partially_refunded') return ['Partly Refunded', 'refunded'];
+  if(r.paymentStatus === 'paid') return ['Paid', 'paid'];
+  if(r.status === 'expired') return ['Not Completed', 'cancelled'];
+  return ['Awaiting Payment', 'pending'];
+}
+function stripeFinanceRowHtml(collectionName, r){
+  const [label, pill] = stripeRecordStatusLabel(r);
+  const cents = collectionName === 'donations' ? r.amountCents : r.totalCents;
+  const amount = r.amountPaid ? Number(r.amountPaid) : (Number(cents) || 0) / 100;
+  const who = r.customerName || r.donorName || r.email || 'Guest';
+  const detail = collectionName === 'shopOrders'
+    ? (r.items || []).map(i => (i.quantity > 1 ? i.quantity + ' × ' : '') + i.title + (i.option ? ' (' + i.option + ')' : '')).join(', ')
+    : 'One-time gift';
+  const when = memberRecordTime(r.paidAt || r.createdAt);
+  const shipTo = r.shipping && r.shipping.address
+    ? '<small>Ship to: ' + escapeHtml([r.shipping.name, r.shipping.address.line1, r.shipping.address.line2, r.shipping.address.city, r.shipping.address.state, r.shipping.address.postal_code].filter(Boolean).join(', ')) + '</small>'
+    : '';
+  return '<div class="admin-teaching-row">' +
+    '<div class="admin-teaching-title-row"><strong>$' + amount.toFixed(2) + '</strong>' +
+    '<span class="admin-status-pill ' + escapeHtml(pill) + '">' + escapeHtml(label) + '</span></div>' +
+    '<small>' + escapeHtml(who) + (when ? ' · ' + escapeHtml(new Date(when).toLocaleString()) : '') + '</small>' +
+    '<small>' + escapeHtml(detail) + '</small>' + shipTo +
+    (r.paymentIntentId ? '<small>Stripe reference: ' + escapeHtml(r.paymentIntentId) + '</small>' : '') +
+    '</div>';
+}
+async function renderFinancesStripeCollection(collectionName){
+  const view = STRIPE_FINANCE_VIEWS[collectionName];
+  const statsWrap = document.getElementById(view.stats);
+  const listWrap = document.getElementById(view.list);
+  if(!listWrap) return;
+  if(DEMO_MODE || (ownerSim && ownerSim.isActive())){
+    if(statsWrap) statsWrap.innerHTML = '';
+    listWrap.innerHTML = '<div class="admin-payments-empty"><strong>Live Site Only</strong><p>Real ' + view.noun + 's are paid through Stripe on the ministry\'s own domain, so the preview build has none to show.</p></div>';
+    return;
+  }
+  listWrap.innerHTML = '<p class="admin-hint">Loading…</p>';
+  try {
+    const snap = await getDocs(collection(db, collectionName));
+    const rows = [];
+    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+    rows.sort((a, b) => memberRecordTime(b.paidAt || b.createdAt) - memberRecordTime(a.paidAt || a.createdAt));
+    const paid = rows.filter(r => r.paymentStatus === 'paid');
+    const revenue = paid.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
+    if(statsWrap) statsWrap.innerHTML =
+      '<div class="admin-stat-tile"><span>Paid</span><strong>' + paid.length + '</strong></div>' +
+      '<div class="admin-stat-tile"><span>Refunded</span><strong>' + rows.filter(r => /refunded/.test(r.paymentStatus || '')).length + '</strong></div>' +
+      '<div class="admin-stat-tile"><span>Total</span><strong>$' + revenue.toFixed(2) + '</strong></div>';
+    // Abandoned checkouts are noise for the owner; only show records a
+    // customer actually paid (or that were later refunded).
+    const shown = rows.filter(r => r.paymentStatus && r.paymentStatus !== 'pending' && r.paymentStatus !== 'unpaid');
+    listWrap.innerHTML = shown.length ? shown.map(r => stripeFinanceRowHtml(collectionName, r)).join('') : '<p class="admin-hint">' + escapeHtml(view.empty) + '</p>';
+  } catch (err) {
+    console.error('[finances] could not load ' + collectionName, err);
+    listWrap.innerHTML = '<p class="admin-hint">Could not load ' + view.noun + 's. Refresh and try again.</p>';
+  }
+}
 function renderFinancesOverview(){
   const wrap = document.getElementById('financesOverviewStats');
   if(!wrap) return;
@@ -11861,12 +12114,27 @@ teachingRegisterForm.addEventListener('submit', async event => {
   try {
     const record = await createTeachingRegistration({ teachingId, firstName, lastName, email, phone, uid: currentUser.uid, smsConsent, discount });
     markThrottled('lastTeachingRegisterSubmit');
-    if(siteManagement && discountClaim) siteManagement.confirmDiscountClaim(discountClaim.claimId, { collection: 'teachingRegistrations', id: record.id, uid: currentUser.uid });
+    // Awaited: the payment server only honors a confirmed discount claim.
+    if(siteManagement && discountClaim) await siteManagement.confirmDiscountClaim(discountClaim.claimId, { collection: 'teachingRegistrations', id: record.id, uid: currentUser.uid });
     // If this registration fulfills an active waitlist offer, close
     // that loop out — the seat is now taken, so the offer is done.
     const claimedOffer = CLASS_WAITLIST.find(w => w.teachingId === teachingId && liveWaitlistStatus(w) === 'offer-sent' &&
       (w.uid === currentUser.uid || (w.email && w.email.toLowerCase() === email.toLowerCase())));
     if(claimedOffer){ claimedOffer.status = 'registered'; saveClassWaitlist(); }
+    if(LIVE_PAYMENTS && discount.totalAfterDiscount > 0){
+      teachingRegisterStatus.textContent = 'Opening secure checkout…';
+      try {
+        if(await redirectToStripeCheckout({ kind: 'teaching', id: record.id }) === 'redirecting') return;
+      } catch (checkoutErr) {
+        teachingRegisterDialog.close();
+        showCheckoutNotice({
+          title: 'Your Seat Is Held',
+          message: checkoutErr.message + ' Your seat stays held for a short while — try payment again below.',
+          resume: { kind: 'teaching', id: record.id }
+        });
+        return;
+      }
+    }
     teachingRegisterStatus.textContent = '';
     const formatLabel = t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + t.location : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Class';
     document.getElementById('teachingRegisterConfirmTitle').textContent = t.title || 'Class';
@@ -14112,8 +14380,11 @@ shopSystem = initShopSystem({
   firestore: { doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp },
   escapeHtml,
   resizeImage: resizeImageToDataUrl,
-  base: BASE
+  base: BASE,
+  checkout: LIVE_PAYMENTS ? redirectToStripeCheckout : null
 });
+applyLivePaymentCopy();
+handleCheckoutReturn();
 // Event data is only needed on the Events page (or when the owner opens
 // its editor). Do not make every unrelated page perform these requests.
 eventsSystem.renderPublic();

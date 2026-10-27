@@ -1,9 +1,10 @@
 /* ============================================================
    The Unveiled Assembly — Shop
    Public collection, product details, persistent cart, and the
-   owner-only product editor. Checkout, payment verification, order
-   creation, and digital delivery deliberately remain unavailable
-   until a trusted server/webhook is connected.
+   owner-only product editor. On the real domain, Checkout hands the
+   cart to the createCheckoutSession Cloud Function, which reprices
+   every line from Firestore and creates the order; the Stripe webhook
+   marks it paid. Digital delivery is still a later phase.
    ============================================================ */
 
 export const SHOP_CART_KEY = 'ua_shop_cart_v1';
@@ -193,7 +194,7 @@ function statusLabel(value){
 function money(cents){ return cents === null || cents === undefined ? 'Price to be announced' : '$' + (cents / 100).toFixed(2); }
 
 export function initShopSystem(context){
-  const { DEMO_MODE, db, firestore, escapeHtml, resizeImage, base = '' } = context;
+  const { DEMO_MODE, db, firestore, escapeHtml, resizeImage, base = '', checkout = null } = context;
   const esc = escapeHtml;
   let products = [];
   let settings = { ...DEFAULT_SETTINGS };
@@ -243,13 +244,14 @@ export function initShopSystem(context){
           <div class="shop-cart-head"><h2 id="shopCartTitle">Your Bag</h2><button type="button" class="shop-icon-close" id="shopCartClose" aria-label="Close cart">×</button></div>
           <div class="shop-cart-items" id="shopCartItems"></div>
           <div class="shop-cart-foot">
-            <label class="shop-discount-field" title="Discount codes will work once secure checkout is connected">
+            <label class="shop-discount-field" title="Discount codes are not available for Shop orders yet">
               <input type="text" placeholder="Discount code" disabled />
               <button type="button" disabled>Apply</button>
             </label>
             <div class="shop-cart-total"><span>Subtotal</span><strong id="shopCartSubtotal" data-subtotal-cents="0">$0.00</strong></div>
-            <p class="shop-cart-note">Taxes and delivery are not calculated. Checkout remains unavailable until secure payment processing is connected.</p>
-            <button class="shop-primary-action" type="button" disabled title="Secure checkout has not been connected">Checkout Not Connected</button>
+            <p class="shop-cart-note">${checkout ? "You'll pay on Stripe's secure checkout page. A shipping address is collected there for physical items." : 'Taxes and delivery are not calculated. Checkout remains unavailable until secure payment processing is connected.'}</p>
+            <button class="shop-primary-action" type="button" id="shopCheckoutBtn" disabled${checkout ? '' : ' title="Secure checkout has not been connected"'}>${checkout ? 'Checkout' : 'Checkout Not Connected'}</button>
+            <p class="shop-action-status" id="shopCheckoutStatus" role="status" aria-live="polite"></p>
             <div class="shop-cart-secondary-actions"><a href="${base}shop/" id="shopContinueShopping">Continue Shopping</a><button type="button" id="shopEmptyCart">Empty Cart</button></div>
           </div>
         </aside>`);
@@ -294,6 +296,24 @@ export function initShopSystem(context){
     subtotalNode.textContent = money(subtotal);
     subtotalNode.dataset.subtotalCents = String(subtotal);
     document.getElementById('shopEmptyCart').hidden = cart.length === 0;
+    const checkoutBtn = document.getElementById('shopCheckoutBtn');
+    if(checkoutBtn) checkoutBtn.disabled = !checkout || cart.length === 0;
+  }
+
+  async function startCheckout(){
+    const btn = document.getElementById('shopCheckoutBtn');
+    const status = document.getElementById('shopCheckoutStatus');
+    if(!checkout || !cart.length) return;
+    btn.disabled = true;
+    status.textContent = 'Opening secure checkout…';
+    try {
+      // Only ids, options, and quantities leave the browser — the server
+      // reprices every line, so a stale or edited cart price is harmless.
+      await checkout({ kind: 'shop', items: cart.map(line => ({ productId: line.productId, option: line.option, quantity: line.quantity })) });
+    } catch (err) {
+      status.textContent = err.message;
+      btn.disabled = false;
+    }
   }
 
   function addProduct(id, option, announceNode){
@@ -446,6 +466,7 @@ export function initShopSystem(context){
     document.getElementById('shopCartBackdrop')?.addEventListener('click', () => setCartOpen(false));
     document.getElementById('shopContinueShopping')?.addEventListener('click', () => setCartOpen(false));
     document.getElementById('shopEmptyCart')?.addEventListener('click', () => { cart = []; saveCart(); });
+    document.getElementById('shopCheckoutBtn')?.addEventListener('click', startCheckout);
     document.getElementById('shopQuickViewClose')?.addEventListener('click', () => document.getElementById('shopQuickViewDialog')?.close());
     document.getElementById('shopQuickViewDialog')?.addEventListener('click', event => { if(event.target === event.currentTarget) event.currentTarget.close(); });
     document.addEventListener('keydown', event => { if(event.key === 'Escape') setCartOpen(false); });
@@ -731,5 +752,5 @@ export function initShopSystem(context){
   wireShared();
   renderPublic();
 
-  return { loadPublic, renderPublic, loadAdmin, renderAdmin, openCart: () => setCartOpen(true), isAdminLoaded: () => adminLoaded };
+  return { loadPublic, renderPublic, loadAdmin, renderAdmin, openCart: () => setCartOpen(true), clearCart: () => { cart = []; saveCart(); }, isAdminLoaded: () => adminLoaded };
 }
