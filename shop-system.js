@@ -184,6 +184,7 @@ export function initShopSystem(context){
   let editingProductId = null;
   let publicFilter = 'all';
   let publicSort = 'featured';
+  let publicSearch = '';
 
   function storageGet(key, fallback){
     try { const parsed = JSON.parse(localStorage.getItem(key)); return parsed ?? fallback; }
@@ -293,14 +294,16 @@ export function initShopSystem(context){
     const p = normalizeProduct(product);
     const purchasable = productIsPurchasable(p);
     return `<article class="shop-product-card" data-product-id="${esc(p.id)}" data-product-type="${esc(p.type)}" data-product-category="${esc(p.category)}" data-price-cents="${p.priceCents === null ? '' : p.priceCents}">
-      <a class="shop-product-image" data-product-link href="${base}shop/product.html?id=${encodeURIComponent(p.id)}" aria-label="View ${esc(p.title)}"${imageStyle(p.image)}><span>${p.isPlaceholder ? 'Development Preview' : esc(p.availability)}</span></a>
-      <div class="shop-product-card-copy"><div class="shop-product-meta"><span>${esc(typeLabel(p.type))}</span><span>${esc(p.availability)}</span></div><a data-product-link href="${base}shop/product.html?id=${encodeURIComponent(p.id)}"><h3>${esc(p.title)}</h3></a><p class="shop-product-price">${esc(money(p.priceCents))}</p></div>
-      <div class="shop-product-actions"><button type="button" data-quick-view="${esc(p.id)}">Quick View</button><button type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : 'Coming Soon'}</button></div>
+      <a class="shop-product-image" data-product-link href="${base}shop/product.html?id=${encodeURIComponent(p.id)}" aria-label="View ${esc(p.title)}"${imageStyle(p.image)}></a>
+      <div class="shop-product-card-hover"><button type="button" data-quick-view="${esc(p.id)}">Quick View</button><button type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : 'Coming Soon'}</button></div>
+      <div class="shop-product-card-copy"><a data-product-link href="${base}shop/product.html?id=${encodeURIComponent(p.id)}"><h3>${esc(p.title)}</h3></a><span class="shop-product-type">${esc(p.isPlaceholder ? 'Development Preview' : typeLabel(p.type))}</span><p class="shop-product-price">${esc(money(p.priceCents))}</p></div>
     </article>`;
   }
 
   function sortedFilteredProducts(){
-    const filtered = publicProducts().filter(p => publicFilter === 'all' || p.category === publicFilter);
+    const q = publicSearch.trim().toLowerCase();
+    const filtered = publicProducts().filter(p => (publicFilter === 'all' || p.category === publicFilter) &&
+      (!q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)));
     return filtered.sort((a, b) => {
       if(publicSort === 'title') return a.title.localeCompare(b.title);
       if(publicSort === 'price-asc') return (a.priceCents ?? Number.MAX_SAFE_INTEGER) - (b.priceCents ?? Number.MAX_SAFE_INTEGER);
@@ -321,7 +324,7 @@ export function initShopSystem(context){
     const visible = sortedFilteredProducts();
     grid.innerHTML = visible.length ? visible.map(productCardHtml).join('') : `<div class="shop-collection-empty"><span class="shop-micro">Collection Update</span><h3>${publicFilter === 'all' ? 'The collection is being prepared.' : 'Nothing has been released in this category yet.'}</h3><p>Return soon for new study resources and ministry goods.</p></div>`;
     const count = document.getElementById('shopResultCount');
-    if(count) count.textContent = visible.length + ' ' + (visible.length === 1 ? 'item' : 'items');
+    if(count) count.textContent = visible.length + ' ' + (visible.length === 1 ? 'product' : 'products');
   }
 
   function productControlHtml(p, location){
@@ -362,15 +365,16 @@ export function initShopSystem(context){
   function wirePublic(){
     const filter = document.getElementById('shopCategoryFilter');
     const sort = document.getElementById('shopSort');
+    const search = document.getElementById('shopSearch');
     filter?.addEventListener('change', () => { publicFilter = filter.value; renderCollection(); });
     sort?.addEventListener('change', () => { publicSort = sort.value; renderCollection(); });
+    search?.addEventListener('input', () => { publicSearch = search.value; renderCollection(); });
     document.getElementById('shopCategoryButtons')?.addEventListener('click', event => {
       const btn = event.target.closest('[data-shop-category]'); if(!btn) return;
       publicFilter = btn.dataset.shopCategory;
       document.querySelectorAll('[data-shop-category]').forEach(node => node.classList.toggle('active', node === btn));
       if(filter) filter.value = publicFilter;
       renderCollection();
-      document.getElementById('shopCollection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     document.getElementById('shopHeroButton')?.addEventListener('click', event => {
       event.preventDefault(); document.getElementById('shopCollection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

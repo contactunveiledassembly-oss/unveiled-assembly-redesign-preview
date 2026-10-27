@@ -28,29 +28,21 @@
       <div class="shop-hero-index" aria-hidden="true"><span>COLLECTION 001</span><span>STUDY · FORMATION · PRACTICE</span></div>
     </header>
 
-    <section class="shop-categories" aria-labelledby="shopCategoriesTitle">
-      <div class="shop-section-intro reveal">
-        <span class="shop-micro">Three Expressions</span>
-        <h2 id="shopCategoriesTitle">Made to be lived with.</h2>
-        <p>Thoughtful resources for study, daily formation, and the life built around what Scripture reveals.</p>
-      </div>
-      <div class="shop-category-grid reveal" id="shopCategoryButtons">
-        <button type="button" class="shop-category-card active" data-shop-category="all"><span>00</span><strong>All Resources</strong><small>View the full collection</small></button>
-        <button type="button" class="shop-category-card" data-shop-category="digital"><span>01</span><strong>Digital Study Resources</strong><small>Initial collection focus</small></button>
-        <button type="button" class="shop-category-card" data-shop-category="books"><span>02</span><strong>Physical Study Books</strong><small>Coming soon</small></button>
-        <button type="button" class="shop-category-card" data-shop-category="apparel"><span>03</span><strong>Apparel &amp; Accessories</strong><small>Coming soon</small></button>
-      </div>
-    </section>
-
     <section class="shop-collection" id="shopCollection" aria-labelledby="shopCollectionTitle">
-      <div class="shop-collection-head reveal">
-        <div><span class="shop-micro">The Collection</span><h2 id="shopCollectionTitle">Study deeper. Live unveiled.</h2></div>
+      <nav class="shop-category-tabs" id="shopCategoryButtons" aria-label="Shop categories">
+        <button type="button" class="shop-category-tab active" data-shop-category="all">All Products</button>
+        <button type="button" class="shop-category-tab" data-shop-category="digital">Digital Study Resources</button>
+        <button type="button" class="shop-category-tab" data-shop-category="books">Physical Study Books</button>
+        <button type="button" class="shop-category-tab" data-shop-category="apparel">Apparel &amp; Accessories</button>
+      </nav>
+      <div class="shop-collection-head">
+        <span class="shop-result-count" id="shopResultCount">0 products</span>
         <div class="shop-controls">
-          <label>Category<select id="shopCategoryFilter"><option value="all">All Resources</option><option value="digital">Digital Study Resources</option><option value="books">Physical Study Books</option><option value="apparel">Apparel &amp; Accessories</option></select></label>
-          <label>Sort<select id="shopSort"><option value="featured">Featured</option><option value="title">Title A–Z</option><option value="price-asc">Price: Low to High</option><option value="price-desc">Price: High to Low</option></select></label>
+          <label class="shop-search-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" id="shopSearch" placeholder="Search the collection…" /></label>
+          <select id="shopSort" aria-label="Sort"><option value="featured">Sort: Featured</option><option value="title">Title A–Z</option><option value="price-asc">Price: Low to High</option><option value="price-desc">Price: High to Low</option></select>
+          <select id="shopCategoryFilter" hidden><option value="all">All Resources</option><option value="digital">Digital Study Resources</option><option value="books">Physical Study Books</option><option value="apparel">Apparel &amp; Accessories</option></select>
         </div>
       </div>
-      <div class="shop-result-line"><span id="shopResultCount">0 items</span><span>Checkout is not active</span></div>
       <div class="shop-product-grid" id="shopProductGrid" aria-live="polite"><div class="shop-collection-empty"><span class="shop-micro">Collection Update</span><h3>Loading the collection…</h3></div></div>
     </section>
 
