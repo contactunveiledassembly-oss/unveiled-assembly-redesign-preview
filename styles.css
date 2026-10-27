@@ -3563,6 +3563,6 @@ body[data-page="teachings"] .teaching-hero-content h2.teaching-display{font-size
 .teaching-library-empty{grid-column:1/-1;text-align:center;padding:60px 0 20px}
 .teaching-library-empty .teaching-display{font-size:clamp(28px,3.4vw,44px);margin-bottom:12px}
 .teaching-library-empty p{color:var(--stone)}
-.teaching-member-section{padding:110px 0 120px;border-top:1px solid var(--line-dark);background:var(--black)}
+.teaching-member-section{padding:110px 5vw 120px;border-top:1px solid var(--line-dark);background:var(--black)}
 .teaching-member-copy{color:var(--stone);margin:14px 0 30px;max-width:44ch}
 body[data-page="teachings"] :is(a,button):focus-visible{outline:2px solid var(--ivory);outline-offset:4px}

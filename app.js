@@ -4036,7 +4036,9 @@ const DEFAULT_CLASS_REVIEWS = [
 // real published ones exist, which then always replace them for good.
 let PRAYER_REQUESTS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.prayerRequests, DEFAULT_PRAYER_REQUESTS) : [];
 let TESTIMONIALS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.testimonials, DEFAULT_TESTIMONIALS) : [...DEFAULT_TESTIMONIALS];
-let CLASS_REVIEWS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.classReviews, DEFAULT_CLASS_REVIEWS) : [...DEFAULT_CLASS_REVIEWS];
+// The live site only ever shows real, owner-published class reviews —
+// the sample cards stay in the preview build (Oct 2026 owner brief).
+let CLASS_REVIEWS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.classReviews, DEFAULT_CLASS_REVIEWS) : [];
 let MINISTRY_POLICIES = loadStoredJson(MINISTRY_STORAGE_KEYS.policies, DEFAULT_MINISTRY_POLICIES);
 
 function loadStoredJson(key, fallback){
