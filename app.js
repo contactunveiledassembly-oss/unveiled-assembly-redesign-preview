@@ -5148,7 +5148,7 @@ function addMinistryDialogs(){
       </div>
     </dialog>
 
-    <dialog class="booking-dialog" id="prayerDetailDialog" aria-labelledby="prayerDetailTitle" style="max-width:640px">
+    <dialog class="booking-dialog ministry-detail-dialog" id="prayerDetailDialog" aria-labelledby="prayerDetailTitle" style="max-width:640px">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Prayer Request</div><h3 id="prayerDetailTitle">View Request</h3></div><button class="dialog-close" id="closePrayerDetailDialog" type="button" aria-label="Close prayer detail">×</button></div>
       <div class="dialog-body">
         <div class="story-form-grid" id="prayerDetailFields"></div>
@@ -5157,12 +5157,12 @@ function addMinistryDialogs(){
       </div>
     </dialog>
 
-    <dialog class="booking-dialog" id="testimonyDetailDialog" aria-labelledby="testimonyDetailTitle" style="max-width:640px">
+    <dialog class="booking-dialog ministry-detail-dialog" id="testimonyDetailDialog" aria-labelledby="testimonyDetailTitle" style="max-width:640px">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Testimony</div><h3 id="testimonyDetailTitle">Review Submission</h3></div><button class="dialog-close" id="closeTestimonyDetailDialog" type="button" aria-label="Close testimony detail">×</button></div>
       <div class="dialog-body"><div class="story-form-grid" id="testimonyDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-testimony-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-testimony-status="published" data-force-anonymous="1">Publish Anonymously</button><button class="admin-btn-ghost" type="button" data-testimony-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-testimony-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-testimony-status="pending">Set Pending</button></div><div class="form-status" id="testimonyStatusMessage"></div></div>
     </dialog>
 
-    <dialog class="booking-dialog" id="reviewDetailDialog" aria-labelledby="reviewDetailTitle" style="max-width:640px">
+    <dialog class="booking-dialog ministry-detail-dialog" id="reviewDetailDialog" aria-labelledby="reviewDetailTitle" style="max-width:640px">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Class Review</div><h3 id="reviewDetailTitle">Review Submission</h3></div><button class="dialog-close" id="closeReviewDetailDialog" type="button" aria-label="Close review detail">×</button></div>
       <div class="dialog-body"><div class="story-form-grid" id="reviewDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-review-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-review-status="published" data-force-anonymous="1">Publish Anonymously</button><button class="admin-btn-ghost" type="button" data-review-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-review-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-review-status="pending">Set Pending</button></div><div class="form-status" id="reviewStatusMessage"></div></div>
     </dialog>
