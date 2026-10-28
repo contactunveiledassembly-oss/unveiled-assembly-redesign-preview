@@ -754,6 +754,74 @@ dialog.detail-drawer .booking-body{padding:20px 22px 28px}
 .payment-demo .booking-field input{opacity:.6;cursor:not-allowed}
 .payment-demo-note{margin-top:10px;color:var(--ink-dim);font-size:11px;line-height:1.6}
 
+/* ---------- Ministry inbox detail dialogs ----------
+   Prayer, testimony, and class-review records open from the dark Owner
+   Portal. Their old light booking shell created a harsh white flash and
+   looked unrelated to the rest of the ministry system. Keep the existing
+   fields and actions, but present them as a quieter editorial workspace. */
+dialog.ministry-detail-dialog{
+  color-scheme:dark;
+  width:min(680px,calc(100% - 28px));max-height:90vh;overflow-y:auto;overflow-x:hidden;
+  background:
+    radial-gradient(circle at 88% -8%,rgba(255,255,255,.065),transparent 35%),
+    #0b0b0b;
+  color:var(--ivory);border:1px solid #2a2a2a;border-radius:16px;
+  box-shadow:0 34px 110px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.025);
+}
+dialog.ministry-detail-dialog::backdrop{background:rgba(3,3,3,.9);backdrop-filter:blur(10px)}
+.ministry-detail-dialog .dialog-head{
+  position:sticky;top:0;z-index:2;padding:25px 28px 22px;
+  background:linear-gradient(180deg,rgba(20,20,20,.98),rgba(12,12,12,.98));
+  border-bottom:1px solid #282828;
+}
+.ministry-detail-dialog .dialog-head h3{font-family:var(--sans);font-size:32px;font-weight:400;letter-spacing:-.035em;color:var(--ivory)}
+.ministry-detail-dialog .kicker{font-family:var(--mono);color:#8d8d8d;letter-spacing:.22em}
+.ministry-detail-dialog .dialog-close{
+  width:40px;height:40px;border-color:#353535;background:#151515;color:#d8d6d0;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.ministry-detail-dialog .dialog-close:hover{background:#202020;border-color:#666;transform:rotate(3deg)}
+.ministry-detail-dialog .dialog-body{padding:26px 28px 30px;background:transparent}
+.ministry-detail-dialog .story-form-grid{gap:17px 14px}
+.ministry-detail-dialog .form-field{gap:7px}
+.ministry-detail-dialog .form-field label{
+  font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:#777;
+}
+.ministry-detail-dialog .form-field input,
+.ministry-detail-dialog .form-field select,
+.ministry-detail-dialog .form-field textarea{
+  border:1px solid #2c2c2c;border-radius:9px;background:#141414;color:#efede8;
+  padding:12px 13px;box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+.ministry-detail-dialog .form-field input[readonly],
+.ministry-detail-dialog .form-field textarea[readonly]{background:#101010;color:#c8c6c1}
+.ministry-detail-dialog .form-field input:focus,
+.ministry-detail-dialog .form-field select:focus,
+.ministry-detail-dialog .form-field textarea:focus{
+  outline:none;border-color:#686868;background:#171717;box-shadow:0 0 0 3px rgba(255,255,255,.045);
+}
+.ministry-detail-dialog .form-field textarea{min-height:96px;line-height:1.6}
+.ministry-detail-dialog .admin-hint{color:#8f8f8f}
+.ministry-detail-dialog .form-actions{
+  justify-content:flex-start;gap:9px;margin-top:22px;padding-top:20px;border-top:1px solid #262626;
+}
+.ministry-detail-dialog .admin-btn-solid,
+.ministry-detail-dialog .admin-btn-ghost{min-height:38px;padding:9px 15px;border-radius:999px;font-size:11px}
+.ministry-detail-dialog .admin-btn-solid{background:#f1efe9;border-color:#f1efe9;color:#0b0b0b}
+.ministry-detail-dialog .admin-btn-solid:hover{background:#fff;border-color:#fff;opacity:1}
+.ministry-detail-dialog .admin-btn-ghost{background:#151515;border-color:#323232;color:#c9c7c2}
+.ministry-detail-dialog .admin-btn-ghost:hover{background:#202020;border-color:#666;color:#fff}
+.ministry-detail-dialog .form-status{margin-top:14px;color:#aaa}
+@media(max-width:640px){
+  dialog.ministry-detail-dialog{width:calc(100% - 18px);border-radius:12px}
+  .ministry-detail-dialog .dialog-head{padding:21px 20px 18px}
+  .ministry-detail-dialog .dialog-head h3{font-size:27px}
+  .ministry-detail-dialog .dialog-body{padding:22px 20px 26px}
+  .ministry-detail-dialog .form-actions{align-items:stretch}
+  .ministry-detail-dialog .form-actions button{width:100%}
+}
+
 .portal-dialog{width:min(1120px,calc(100% - 28px));max-height:92vh;background:var(--ivory);color:var(--black)}
 .portal-bar{background:var(--black);color:var(--ivory);padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
 .portal-brand{display:flex;align-items:center;gap:12px}
