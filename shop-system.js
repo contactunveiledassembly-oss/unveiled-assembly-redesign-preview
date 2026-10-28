@@ -4,7 +4,8 @@
    owner-only product editor. On the real domain, Checkout hands the
    cart to the createCheckoutSession Cloud Function, which reprices
    every line from Firestore and creates the order; the Stripe webhook
-   marks it paid. Digital delivery is still a later phase.
+   marks it paid. Digital products are delivered privately through
+   digital-library.js once the webhook has verified the payment.
    ============================================================ */
 
 export const SHOP_CART_KEY = 'ua_shop_cart_v1';
@@ -304,12 +305,24 @@ export function initShopSystem(context){
     const btn = document.getElementById('shopCheckoutBtn');
     const status = document.getElementById('shopCheckoutStatus');
     if(!checkout || !cart.length) return;
+    const hasDigital = cart.some(line => productById(line.productId)?.type === 'digital');
+    // Digital resources are delivered to a My Assembly account, so the
+    // buyer signs in first (the server enforces this too).
+    if(hasDigital && context.isSignedIn && !context.isSignedIn()){
+      status.textContent = 'Please sign in or create your My Assembly account first — your PDF is delivered to your account library.';
+      if(context.openAccount) context.openAccount();
+      return;
+    }
     btn.disabled = true;
     status.textContent = 'Opening secure checkout…';
     try {
       // Only ids, options, and quantities leave the browser — the server
       // reprices every line, so a stale or edited cart price is harmless.
-      await checkout({ kind: 'shop', items: cart.map(line => ({ productId: line.productId, option: line.option, quantity: line.quantity })) });
+      await checkout({
+        kind: 'shop',
+        items: cart.map(line => ({ productId: line.productId, option: line.option, quantity: line.quantity })),
+        ...(hasDigital ? { returnUrl: new URL(base + 'shop/confirmation.html', window.location.href).href } : {})
+      });
     } catch (err) {
       status.textContent = err.message;
       btn.disabled = false;
@@ -384,7 +397,9 @@ export function initShopSystem(context){
     // decorative-looking-functional control this project avoids elsewhere.
     const preview = (location === 'detail' && p.type === 'digital' && p.previewUrl)
       ? `<a class="shop-outline-action" href="${esc(assetUrl(p.previewUrl))}" target="_blank" rel="noopener">Preview Sample Pages</a>` : '';
-    return `${optionSelect}${preview}<button class="shop-primary-action" type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : p.status === 'coming_soon' ? 'Coming Soon' : 'Unavailable'}</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${location === 'detail' && !purchasable ? 'Purchasing is not active for this item.' : ''}</div>`;
+    const digitalNote = p.type === 'digital' && purchasable
+      ? '<p class="shop-digital-note">Private PDF · Delivered to My Assembly → Purchases &amp; Downloads after payment. Account sign-in required.</p>' : '';
+    return `${optionSelect}${preview}${digitalNote}<button class="shop-primary-action" type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : p.status === 'coming_soon' ? 'Coming Soon' : 'Unavailable'}</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${location === 'detail' && !purchasable ? 'Purchasing is not active for this item.' : ''}</div>`;
   }
 
   function openQuickView(id, message = ''){
@@ -528,8 +543,8 @@ export function initShopSystem(context){
       </div>
       <div data-store-panel="overview"><div id="ownerStoreOverview"></div></div>
       <div data-store-panel="products" hidden><div class="store-products-head"><div><h4>Products</h4><p>Create, edit, preview, and control what appears publicly.</p></div><button class="admin-btn-solid" type="button" id="ownerStoreNewProduct">Create Product</button></div><div id="ownerStoreProductsList"></div><div id="ownerStoreProductEditor"></div></div>
-      <div data-store-panel="files" hidden>${ownerTabEmpty('Digital Files', 'Secure delivery is not connected yet.')}</div>
-      <div data-store-panel="orders" hidden>${ownerTabEmpty('Orders', 'No order system is active.')}</div>
+      <div data-store-panel="files" hidden><div id="ownerDigitalFiles"></div></div>
+      <div data-store-panel="orders" hidden><div id="ownerDigitalOrders"></div></div>
       <div data-store-panel="inventory" hidden><div id="ownerStoreInventory"></div></div>
       <div data-store-panel="appearance" hidden><div id="ownerStoreAppearance"></div></div>
       <div data-store-panel="discounts" hidden>${ownerTabEmpty('Discounts', 'Shop discounts will follow verified checkout.')}</div>
@@ -622,6 +637,7 @@ export function initShopSystem(context){
     const root = document.getElementById('ownerStoreRoot'); if(!root) return;
     if(!root.dataset.ready){ root.innerHTML = ownerShellHtml(); root.dataset.ready = 'true'; wireAdmin(); }
     renderOwnerOverview(); renderOwnerProducts(); renderOwnerInventory(); renderOwnerAppearance();
+    if(context.onOwnerRender) context.onOwnerRender();
   }
 
   function slugId(title){
@@ -752,5 +768,5 @@ export function initShopSystem(context){
   wireShared();
   renderPublic();
 
-  return { loadPublic, renderPublic, loadAdmin, renderAdmin, openCart: () => setCartOpen(true), clearCart: () => { cart = []; saveCart(); }, isAdminLoaded: () => adminLoaded };
+  return { loadPublic, renderPublic, loadAdmin, renderAdmin, getProducts: () => products, openCart: () => setCartOpen(true), clearCart: () => { cart = []; saveCart(); }, isAdminLoaded: () => adminLoaded };
 }

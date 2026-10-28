@@ -13,6 +13,11 @@
      succeeds, fails, expires, or is refunded. The signature is
      verified before anything is read, and only then is the matching
      record marked paid/cancelled/refunded with the Admin SDK.
+   - Digital downloads (Shop PDFs): the webhook is also the only thing
+     that grants a member a digitalAccess record, and PDFs only leave
+     private Cloud Storage through a short-lived, single-use link that
+     createDigitalDownloadLink mints after re-checking the member, the
+     order, the payment, and the access status.
 
    Secrets live in Google Secret Manager, never in this repo:
      firebase functions:secrets:set STRIPE_SECRET_KEY
@@ -24,7 +29,8 @@ const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const { initializeApp } = require('firebase-admin/app');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
+const { getStorage } = require('firebase-admin/storage');
 const Stripe = require('stripe');
 
 initializeApp();
@@ -180,6 +186,7 @@ async function priceShop(items, uid, email){
   if(!Array.isArray(items) || items.length === 0) throw new HttpsError('invalid-argument', 'Your bag is empty.');
   if(items.length > SHOP_MAX_LINES) throw new HttpsError('invalid-argument', 'Too many items in one order.');
   const lines = [];
+  const seenDigital = new Set();
   for(const item of items){
     const productId = String(item && item.productId || '');
     if(!productId) throw new HttpsError('invalid-argument', 'An item in your bag is missing.');
@@ -190,7 +197,12 @@ async function priceShop(items, uid, email){
     const options = Array.isArray(p.options) ? p.options.map(String) : [];
     if(options.length && !options.includes(option)) throw new HttpsError('invalid-argument', 'Choose an option for ' + p.title + '.');
     let quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
-    if(p.type === 'digital') quantity = 1;
+    if(p.type === 'digital'){
+      quantity = 1;
+      if(seenDigital.has(productId)) continue;
+      seenDigital.add(productId);
+      await assertDigitalPurchasable(productId, p.title, uid);
+    }
     if(p.type === 'physical' && p.trackInventory && quantity > p.stock) throw new HttpsError('failed-precondition', 'Only ' + p.stock + ' of ' + p.title + ' left.');
     lines.push({ productId, name: p.title, description: option || p.subtitle || '', option, type: p.type, trackInventory: !!p.trackInventory, unitCents: p.priceCents, quantity });
   }
@@ -323,6 +335,8 @@ async function markPaid(session){
       ? (record.items || []).filter(i => i.type === 'physical' && i.trackInventory).map(i => ({ item: i, ref: db.doc('shopProducts/' + i.productId) }))
       : [];
     const stockSnaps = await Promise.all(stockRefs.map(s => tx.get(s.ref)));
+    const digitalItems = kind === 'shop' ? (record.items || []).filter(i => i.type === 'digital') : [];
+    const digitalFileSnaps = await Promise.all(digitalItems.map(i => tx.get(db.doc('shopDigitalFiles/' + i.productId))));
 
     if(kind === 'booking'){
       // A member could cancel in another tab while Stripe was charging.
@@ -350,17 +364,25 @@ async function markPaid(session){
         stillOpen ? 'classes' : 'receipts');
     } else if(kind === 'shop'){
       const shipping = session.shipping_details || (session.collected_information && session.collected_information.shipping_details) || null;
+      const email = (session.customer_details && session.customer_details.email) || record.email || null;
+      const digitalAccessIds = digitalItems.map((item, i) => {
+        const accessId = id + '_' + item.productId;
+        tx.set(db.doc('digitalAccess/' + accessId), digitalAccessRecord({ orderId: id, record, item, email, session, paid, file: digitalFileSnaps[i].exists ? digitalFileSnaps[i].data() : null }));
+        return accessId;
+      });
       tx.update(ref, {
         ...paid, status: 'paid', fulfillmentStatus: record.hasPhysical ? 'unfulfilled' : 'digital',
-        email: (session.customer_details && session.customer_details.email) || record.email || null,
+        email,
         customerName: (session.customer_details && session.customer_details.name) || null,
-        shipping: shipping ? { name: shipping.name || null, address: shipping.address || null } : null
+        shipping: shipping ? { name: shipping.name || null, address: shipping.address || null } : null,
+        ...(digitalAccessIds.length ? { digitalAccessIds } : {})
       });
       stockRefs.forEach((s, i) => {
         const current = stockSnaps[i].exists ? Number(stockSnaps[i].data().stock) || 0 : 0;
         tx.update(s.ref, { stock: Math.max(0, current - s.item.quantity), updatedAt: FieldValue.serverTimestamp() });
       });
-      memberNotice(tx, record.uid, 'order-paid', 'Order Received', 'Thank you — your Shop order is paid.', 'receipts');
+      memberNotice(tx, record.uid, 'order-paid', 'Order Received',
+        digitalItems.length ? 'Thank you — your payment is verified. Your download is in Purchases & Downloads.' : 'Thank you — your Shop order is paid.', 'receipts');
     } else if(kind === 'donation'){
       tx.update(ref, {
         ...paid, status: 'paid',
@@ -458,6 +480,7 @@ async function markRefunded(charge){
       tx.update(ref, { ...refundFields, ...(full ? { status: 'refunded' } : {}) });
     }
   });
+  if(kind === 'shop') await applyDigitalRefund(id, full);
   logger.info('refund recorded', kind, id, full ? 'full' : 'partial');
 }
 
@@ -500,3 +523,232 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
     res.status(500).send('Handler failed');
   }
 });
+
+/* ---------------------------------------------------------------
+   Digital downloads (Shop PDFs)
+
+   Data, all written only by these functions (firestore.rules):
+   - shopDigitalFiles/{productId}  owner-only: private storagePath,
+     file name/size, autoDelivery. Never in public product data.
+   - digitalAccess/{orderId}_{productId}  the member's entitlement and
+     receipt facts; the member can read their own, nobody can write.
+   - digitalDownloadTokens/{token}  short-lived, single-use links.
+   - digitalDownloadEvents/{id}  download activity for the owner.
+
+   No transactional email provider is connected yet (PROJECT-CONTEXT
+   §19.7), so "email the link" records the request honestly as
+   not_connected instead of pretending to send.
+   --------------------------------------------------------------- */
+const DOWNLOAD_LINK_MINUTES = 5;
+const EMAIL_PROVIDER_CONNECTED = false;
+
+function downloadBaseUrl(){
+  const project = process.env.GCLOUD_PROJECT || 'unveiledassembly';
+  return process.env.FUNCTIONS_EMULATOR === 'true'
+    ? 'http://127.0.0.1:5001/' + project + '/us-central1/digitalDownload'
+    : 'https://us-central1-' + project + '.cloudfunctions.net/digitalDownload';
+}
+
+async function assertDigitalPurchasable(productId, title, uid){
+  if(!uid) throw new HttpsError('unauthenticated', 'Please sign in to your My Assembly account to purchase digital resources.');
+  const file = await db.doc('shopDigitalFiles/' + productId).get();
+  if(!file.exists || !file.data().storagePath) throw new HttpsError('failed-precondition', (title || 'This resource') + ' is not ready for download yet. Please check back soon.');
+  const owned = await db.collection('digitalAccess').where('uid', '==', uid).where('productId', '==', productId).get();
+  if(owned.docs.some(d => ['active', 'pending_delivery'].includes(d.data().accessStatus))){
+    throw new HttpsError('already-exists', 'You already own ' + (title || 'this resource') + '. Find it in My Assembly → Purchases & Downloads.');
+  }
+}
+
+function digitalAccessRecord({ orderId, record, item, email, session, paid, file }){
+  const deliverable = !!(file && file.storagePath);
+  const auto = deliverable && file.autoDelivery !== false;
+  return {
+    orderId, uid: record.uid || null, email,
+    productId: item.productId, productTitle: item.title || '',
+    amountPaidCents: (item.unitPriceCents || 0) * (item.quantity || 1),
+    currency: session.currency || 'usd',
+    stripeSessionId: session.id, paymentIntentId: paid.paymentIntentId,
+    paymentStatus: 'paid',
+    accessStatus: auto ? 'active' : 'pending_delivery',
+    accessSource: 'stripe-payment',
+    refundStatus: 'none',
+    emailStatus: EMAIL_PROVIDER_CONNECTED ? 'queued' : 'not_connected',
+    downloadCount: 0, lastDownloadAt: null,
+    purchasedAt: FieldValue.serverTimestamp(),
+    grantedAt: auto ? FieldValue.serverTimestamp() : null,
+    updatedAt: FieldValue.serverTimestamp()
+  };
+}
+
+async function applyDigitalRefund(orderId, full){
+  const snaps = await db.collection('digitalAccess').where('orderId', '==', orderId).get();
+  if(snaps.empty) return;
+  const batch = db.batch();
+  snaps.forEach(d => batch.update(d.ref, full
+    ? { accessStatus: 'refunded', refundStatus: 'refunded', paymentStatus: 'refunded', updatedAt: FieldValue.serverTimestamp() }
+    : { refundStatus: 'partially_refunded', updatedAt: FieldValue.serverTimestamp() }));
+  await batch.commit();
+}
+
+async function callerIsOwner(uid){
+  if(!uid) return false;
+  const snap = await db.doc('users/' + uid).get();
+  return snap.exists && snap.data().role === 'admin';
+}
+
+// Records an email request. Sends nothing until a provider is connected;
+// the email will carry an account link, never a file URL.
+async function requestAccessEmail(ref, by){
+  await ref.update({
+    emailStatus: EMAIL_PROVIDER_CONNECTED ? 'queued' : 'not_connected',
+    lastEmailRequestAt: FieldValue.serverTimestamp(), lastEmailRequestBy: by,
+    updatedAt: FieldValue.serverTimestamp()
+  });
+  return { sent: false, emailStatus: EMAIL_PROVIDER_CONNECTED ? 'queued' : 'not_connected' };
+}
+
+exports.createDigitalDownloadLink = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async request => {
+  const uid = request.auth ? request.auth.uid : null;
+  if(!uid) throw new HttpsError('unauthenticated', 'Please sign in to download your purchase.');
+  const accessId = String((request.data || {}).accessId || '');
+  const snap = accessId ? await db.doc('digitalAccess/' + accessId).get() : null;
+  // Someone else's purchase looks exactly like a missing one.
+  if(!snap || !snap.exists || snap.data().uid !== uid) throw new HttpsError('not-found', 'We could not find that purchase on your account.');
+  const access = snap.data();
+  if(access.paymentStatus !== 'paid' && access.accessSource !== 'owner-grant') throw new HttpsError('failed-precondition', 'This purchase has not been verified as paid.');
+  if(access.accessStatus === 'refunded') throw new HttpsError('failed-precondition', 'This purchase was refunded, so the download is no longer available.');
+  if(access.accessStatus === 'revoked') throw new HttpsError('permission-denied', 'Access to this download has been turned off. Please contact the ministry.');
+  if(access.accessStatus !== 'active') throw new HttpsError('failed-precondition', 'Your download is being prepared by the ministry. It will appear here as soon as it is ready.');
+  const file = await db.doc('shopDigitalFiles/' + access.productId).get();
+  if(!file.exists || !file.data().storagePath) throw new HttpsError('failed-precondition', 'This file is being updated. Please try again shortly.');
+  const token = crypto.randomBytes(32).toString('hex');
+  await db.doc('digitalDownloadTokens/' + token).set({
+    accessId, uid, productId: access.productId, used: false,
+    expiresAt: Timestamp.fromMillis(Date.now() + DOWNLOAD_LINK_MINUTES * 60 * 1000),
+    createdAt: FieldValue.serverTimestamp()
+  });
+  return { url: downloadBaseUrl() + '?t=' + token, expiresInMinutes: DOWNLOAD_LINK_MINUTES };
+});
+
+function downloadErrorPage(res, status, message){
+  res.status(status).set('Cache-Control', 'no-store').type('html').send(
+    '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Download unavailable</title>' +
+    '<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0a;color:#f5f3ee;font:15px/1.6 Inter,Arial,sans-serif;text-align:center;padding:24px">' +
+    '<div><p style="letter-spacing:.24em;text-transform:uppercase;font-size:11px;color:#a7a7a7">The Unveiled Assembly</p><h1 style="font-weight:600;font-size:28px;margin:12px 0">Download link unavailable.</h1>' +
+    '<p style="color:#a7a7a7;max-width:42ch;margin:0 auto 24px">' + message + '</p>' +
+    '<a href="https://theunveiledassembly.com/" style="color:#f5f3ee">Return to My Assembly → Purchases &amp; Downloads</a></div></body>');
+}
+
+exports.digitalDownload = onRequest(async (req, res) => {
+  if(req.method !== 'GET'){ res.status(405).send('Method Not Allowed'); return; }
+  const token = String(req.query.t || '');
+  if(!/^[a-f0-9]{64}$/.test(token)){ downloadErrorPage(res, 404, 'This link is not valid. Open your library and choose Download again.'); return; }
+  const tokenRef = db.doc('digitalDownloadTokens/' + token);
+  let grant;
+  try {
+    grant = await db.runTransaction(async tx => {
+      const t = await tx.get(tokenRef);
+      if(!t.exists) return { error: 'This link is not valid. Open your library and choose Download again.' };
+      const data = t.data();
+      if(data.used) return { error: 'Each download link works once. Open your library and choose Download again for a fresh link.' };
+      if(data.expiresAt.toMillis() < Date.now()) return { error: 'This link expired. Download links last ' + DOWNLOAD_LINK_MINUTES + ' minutes — choose Download again in your library.' };
+      const accessRef = db.doc('digitalAccess/' + data.accessId);
+      const a = await tx.get(accessRef);
+      if(!a.exists || a.data().uid !== data.uid || a.data().accessStatus !== 'active') return { error: 'This download is no longer available on your account.' };
+      const f = await tx.get(db.doc('shopDigitalFiles/' + data.productId));
+      if(!f.exists || !f.data().storagePath) return { error: 'This file is being updated. Please try again shortly.' };
+      tx.update(tokenRef, { used: true, usedAt: FieldValue.serverTimestamp() });
+      tx.update(accessRef, { downloadCount: FieldValue.increment(1), lastDownloadAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      tx.set(db.collection('digitalDownloadEvents').doc(), {
+        accessId: data.accessId, uid: data.uid, productId: data.productId, orderId: a.data().orderId || null,
+        productTitle: a.data().productTitle || '', at: FieldValue.serverTimestamp()
+      });
+      return { file: f.data(), title: a.data().productTitle || 'download' };
+    });
+  } catch (err) {
+    logger.error('download transaction failed', err);
+    downloadErrorPage(res, 500, 'Something went wrong preparing your download. Please try again.');
+    return;
+  }
+  if(grant.error){ downloadErrorPage(res, 410, grant.error); return; }
+  const safeName = (grant.file.fileName || grant.title).replace(/[^\w .()-]+/g, '').trim().replace(/\.pdf$/i, '') + '.pdf';
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': 'attachment; filename="' + safeName + '"',
+    'Cache-Control': 'private, no-store',
+    'X-Content-Type-Options': 'nosniff'
+  });
+  getStorage().bucket().file(grant.file.storagePath).createReadStream()
+    .on('error', err => {
+      logger.error('download stream failed', err.message);
+      if(!res.headersSent) downloadErrorPage(res, 500, 'The file could not be read. Please try again.'); else res.end();
+    })
+    .pipe(res);
+});
+
+exports.requestDigitalAccessEmail = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async request => {
+  const uid = request.auth ? request.auth.uid : null;
+  if(!uid) throw new HttpsError('unauthenticated', 'Please sign in first.');
+  const accessId = String((request.data || {}).accessId || '');
+  const ref = db.doc('digitalAccess/' + accessId);
+  const snap = accessId ? await ref.get() : null;
+  if(!snap || !snap.exists || snap.data().uid !== uid) throw new HttpsError('not-found', 'We could not find that purchase on your account.');
+  return requestAccessEmail(ref, 'member');
+});
+
+// Owner-only actions from Owner Portal → Store → Orders. The owner role
+// is re-checked here on every call; the browser's role is never trusted.
+exports.manageDigitalAccess = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async request => {
+  const uid = request.auth ? request.auth.uid : null;
+  if(!(await callerIsOwner(uid))) throw new HttpsError('permission-denied', 'Only the ministry owner can do this.');
+  const data = request.data || {};
+  const action = String(data.action || '');
+  const note = String(data.note || '').slice(0, 300);
+  const log = { action, by: uid, at: new Date().toISOString(), ...(note ? { note } : {}) };
+
+  if(action === 'grant-new'){
+    const productId = String(data.productId || '');
+    const email = String(data.email || '').trim().toLowerCase();
+    const product = productId ? await db.doc('shopProducts/' + productId).get() : null;
+    if(!product || !product.exists || product.data().type !== 'digital') throw new HttpsError('not-found', 'Choose a digital product.');
+    const members = await db.collection('users').where('email', '==', email).limit(1).get();
+    if(members.empty) throw new HttpsError('not-found', 'No My Assembly account uses that email yet. Ask them to create one first.');
+    const memberUid = members.docs[0].id;
+    const accessId = 'gift-' + productId + '_' + memberUid;
+    await db.doc('digitalAccess/' + accessId).set({
+      orderId: null, uid: memberUid, email, productId, productTitle: product.data().title || '',
+      amountPaidCents: 0, currency: 'usd', stripeSessionId: null, paymentIntentId: null,
+      paymentStatus: 'complimentary', accessStatus: 'active', accessSource: 'owner-grant',
+      refundStatus: 'none', emailStatus: EMAIL_PROVIDER_CONNECTED ? 'queued' : 'not_connected',
+      downloadCount: 0, lastDownloadAt: null,
+      purchasedAt: FieldValue.serverTimestamp(), grantedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+      ownerActions: FieldValue.arrayUnion(log)
+    }, { merge: true });
+    return { ok: true, accessId };
+  }
+
+  const accessId = String(data.accessId || '');
+  const ref = db.doc('digitalAccess/' + accessId);
+  const snap = accessId ? await ref.get() : null;
+  if(!snap || !snap.exists) throw new HttpsError('not-found', 'That order could not be found.');
+  const access = snap.data();
+  const stamp = { updatedAt: FieldValue.serverTimestamp(), ownerActions: FieldValue.arrayUnion(log) };
+  if(action === 'grant'){
+    if(access.paymentStatus !== 'paid' && access.paymentStatus !== 'complimentary') throw new HttpsError('failed-precondition', 'This order has no verified payment. Use "Give access to a member" for a complimentary copy.');
+    await ref.update({ ...stamp, accessStatus: 'active', grantedAt: FieldValue.serverTimestamp() });
+  } else if(action === 'revoke'){
+    await ref.update({ ...stamp, accessStatus: 'revoked' });
+  } else if(action === 'refunded'){
+    // Records the refund on the website and removes access. The money
+    // itself is returned from the Stripe Dashboard (which also reports
+    // back here automatically through charge.refunded).
+    await ref.update({ ...stamp, accessStatus: 'refunded', refundStatus: 'refunded' });
+  } else if(action === 'resend'){
+    await ref.update(stamp);
+    return requestAccessEmail(ref, 'owner');
+  } else {
+    throw new HttpsError('invalid-argument', 'Unknown action.');
+  }
+  return { ok: true };
+});
+

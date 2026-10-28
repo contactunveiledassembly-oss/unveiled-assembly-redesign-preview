@@ -32,7 +32,8 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { initSiteManagement } from "./site-management.js?v=5";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
-import { initShopSystem } from "./shop-system.js?v=3";
+import { initShopSystem } from "./shop-system.js?v=4";
+import { initDigitalLibrary } from "./digital-library.js?v=1";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -61,6 +62,8 @@ const DEMO_MODE = !PRODUCTION_HOSTS.includes(window.location.hostname) && !IS_SA
 // the real object once initOwnerSimulation() runs; until then it's null,
 // which is also the correct answer for "is Demo Mode active" that early.
 let ownerSim = null;
+// Paid-PDF library (digital-library.js); set up beside the Shop below.
+let digitalLibrary = null;
 // Used by generateConfirmationId() further down. Declared here (rather
 // than beside that function) because the preview-data backfill runs
 // very early during module load and needs this constant already
@@ -1107,7 +1110,7 @@ function dialogsHtml(){
           <button type="button" class="member-nav-link active" data-member-tab="dashboard">Home</button>
           <button type="button" class="member-nav-link" data-member-tab="classes">My Learning</button>
           <button type="button" class="member-nav-link" data-member-tab="sessions">My Schedule</button>
-          <button type="button" class="member-nav-link" data-member-tab="receipts">Purchases &amp; Receipts</button>
+          <button type="button" class="member-nav-link" data-member-tab="receipts">Purchases &amp; Downloads</button>
           <button type="button" class="member-nav-link" data-member-tab="submissions">My Submissions</button>
           <button type="button" class="member-nav-link" data-member-tab="notifications">Notifications<span class="owner-nav-count" id="memberNotifCount" hidden>0</span></button>
           <button type="button" class="member-nav-link" data-member-tab="account">My Account</button>
@@ -1123,7 +1126,7 @@ function dialogsHtml(){
           <option value="dashboard">Home</option>
           <option value="classes">My Learning</option>
           <option value="sessions">My Schedule / Appointments</option>
-          <option value="receipts">Purchases &amp; Receipts</option>
+          <option value="receipts">Purchases &amp; Downloads</option>
           <option value="submissions">My Submissions</option>
           <option value="notifications">Notifications</option>
           <option value="account">My Account</option>
@@ -1216,7 +1219,8 @@ function dialogsHtml(){
       </div>
 
       <div data-member-panel="receipts" hidden>
-        <div class="member-page-intro"><div><span class="member-page-kicker">Account History</span><h2>Purchases &amp; Receipts</h2><p>See every class registration and appointment in one place. A paid receipt only appears when a payment is verified.</p></div><div class="member-page-stat"><strong id="memberPurchasesCount">00</strong><span>Records</span></div></div>
+        <div class="member-page-intro"><div><span class="member-page-kicker">Account History</span><h2>Purchases &amp; Downloads</h2><p>Your digital library, class registrations, appointments, and receipts in one place. A paid receipt only appears when a payment is verified.</p></div><div class="member-page-stat"><strong id="memberPurchasesCount">00</strong><span>Records</span></div></div>
+        <div id="memberDigitalLibrary" class="dl-library"></div>
         <article class="member-panel member-ledger-panel">
           <div class="member-panel-head"><span class="member-panel-label">Transactions &amp; Confirmations</span><span class="member-ledger-note">Verified records only</span></div>
           <div id="memberPurchasesList"></div>
@@ -3383,7 +3387,8 @@ async function startStripeCheckout(payload){
   if(!createCheckoutSessionFn) throw new Error('Online payment is not available in the preview build.');
   const returnUrl = window.location.origin + window.location.pathname + window.location.search;
   try {
-    const result = await createCheckoutSessionFn({ ...payload, returnUrl });
+    // The Shop sends digital orders to shop/confirmation.html instead.
+    const result = await createCheckoutSessionFn({ returnUrl, ...payload });
     return result.data || {};
   } catch (err) {
     console.error('[checkout] createCheckoutSession failed', err);
@@ -3451,6 +3456,11 @@ function showCheckoutNotice({ title, message, resume }){
 }
 function handleCheckoutReturn(){
   const params = new URLSearchParams(window.location.search);
+  // The confirmation page shows its own verified-payment state.
+  if(document.body.dataset.page === 'shop-confirmation'){
+    if(params.get('checkout') === 'success' && shopSystem) shopSystem.clearCart();
+    return;
+  }
   const outcome = params.get('checkout');
   if(!outcome) return;
   const kind = params.get('kind');
@@ -9008,6 +9018,7 @@ function renderMemberPurchases(){
     : '<div class="member-empty-state"><strong>No purchases or confirmations yet.</strong><span>Class registrations and one-on-one bookings will appear here.</span></div>';
   const count = document.getElementById('memberPurchasesCount');
   if(count) count.textContent = String(purchases.length).padStart(2, '0');
+  if(digitalLibrary) digitalLibrary.renderMember();
 }
 
 function memberSubmissionsForCurrent(){
@@ -14282,6 +14293,10 @@ function openOneOnOneInline(service){
    --------------------------------------------------------------- */
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
+  if(digitalLibrary){
+    digitalLibrary.resetMember();
+    if(document.body.dataset.page === 'shop-confirmation') void digitalLibrary.renderConfirmation();
+  }
   if(user){
     if(DEMO_MODE){
       // Never touch real Firestore in demo mode — the profile is built
@@ -14383,6 +14398,27 @@ eventsSystem = initEventsSystem({
   resizeImage: resizeImageToDataUrl,
   base: BASE
 });
+digitalLibrary = initDigitalLibrary({
+  DEMO_MODE,
+  db,
+  firestore: { doc, getDoc, setDoc, collection, query, where, getDocs, serverTimestamp },
+  call: name => httpsCallable(getFunctions(fbApp), name),
+  getUser: () => currentUser,
+  escapeHtml,
+  base: BASE,
+  openAccount: tab => { openPortal(); if(tab && currentUser) showMemberTab(tab); },
+  getProducts: () => (shopSystem && shopSystem.getProducts ? shopSystem.getProducts() : []),
+  // Storage is only needed when the owner uploads a PDF, so it isn't
+  // part of any normal page load.
+  loadStorage: async () => {
+    const m = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js');
+    return { storage: m.getStorage(fbApp), ref: m.ref, uploadBytes: m.uploadBytes };
+  }
+});
+// On the live site the auth listener (above) renders the confirmation
+// page once sign-in resolves; the preview build's sample auth answers
+// before this module exists, so render it here.
+if(DEMO_MODE && document.body.dataset.page === 'shop-confirmation') void digitalLibrary.renderConfirmation();
 shopSystem = initShopSystem({
   DEMO_MODE,
   db,
@@ -14390,7 +14426,10 @@ shopSystem = initShopSystem({
   escapeHtml,
   resizeImage: resizeImageToDataUrl,
   base: BASE,
-  checkout: LIVE_PAYMENTS ? redirectToStripeCheckout : null
+  checkout: LIVE_PAYMENTS ? redirectToStripeCheckout : null,
+  isSignedIn: () => !!currentUser,
+  openAccount: () => openPortal(),
+  onOwnerRender: () => { if(digitalLibrary) void digitalLibrary.renderOwner(); }
 });
 applyLivePaymentCopy();
 handleCheckoutReturn();
