@@ -10,52 +10,46 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital@1&family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=sitewide-20261027-digital1" />
+  <link rel="stylesheet" href="styles.css?v=launch-20261028" />
 </head>
 <body data-page="teachings">
   <div class="grain"></div>
 
-  <header class="teaching-hero" id="teachingHero">
-    <div class="teaching-hero-content reveal"><div class="eyebrow">Teachings</div><h1 class="teaching-display">Teachings.</h1></div>
+  <header class="oo-hero teachings-entry" id="teachingHero" aria-label="Teachings">
+    <div class="oo-hero-media teachings-entry-media" aria-hidden="true"></div>
+    <div class="oo-hero-overlay" aria-hidden="true"></div>
+    <div class="oo-hero-content reveal">
+      <div class="eyebrow">Biblical Teachings</div>
+      <h1 class="teaching-display oo-hero-title">Teachings.</h1>
+      <p class="oo-hero-sub">Christ Revealed.<br>A People Unveiled.</p>
+      <a class="btn fill" id="teachingHeroCta" href="#featuredTeaching" hidden>View Featured Teaching →</a>
+      <p class="oo-hero-desc">Truth for a deeper walk with Christ.</p>
+    </div>
+    <div class="oo-hero-words" aria-hidden="true">Scripture<br>Discernment<br>Transformation<br>A People Unveiled</div>
   </header>
 
-  <section class="teaching-cards-section" id="teachingCardsSection">
+  <section class="teaching-hero" id="featuredTeaching" aria-label="Featured Teaching"></section>
+
+  <section class="teaching-cards-section" id="teachingLibrary" aria-labelledby="teachingLibraryTitle">
     <div class="section-inner">
       <div class="eyebrow reveal" style="margin-bottom:6px">Thursday Teachings</div>
-      <h2 class="teaching-display reveal teaching-section-title">Upcoming Teachings.</h2>
-      <p class="reveal teaching-cards-subhead" id="teachingCardsSubhead" style="color:var(--stone);margin-bottom:44px">Every Thursday</p>
-      <div class="teaching-cards-grid reveal" id="teachingCardsList"></div>
-    </div>
-  </section>
-
-  <section class="teaching-library-section" id="teachingLibrarySection" hidden>
-    <div class="section-inner">
-      <div class="eyebrow reveal" style="margin-bottom:24px">Teaching Library</div>
-      <h2 class="teaching-display reveal teaching-section-title">Watch &amp; Revisit.</h2>
-      <div class="teaching-cards-grid reveal" id="teachingLibraryList"></div>
-    </div>
-  </section>
-
-  <section class="teaching-scripture-section" id="teachingScriptureSection">
-    <div class="teaching-scripture-grid reveal">
-      <div class="teaching-scripture-art"></div>
-      <div class="teaching-scripture-copy">
-        <div class="eyebrow on-light" style="margin-bottom:20px">The Foundation</div>
-        <p class="teaching-scripture-verse" id="teachingScriptureVerse"></p>
-        <span class="teaching-scripture-ref" id="teachingScriptureRef"></span>
+      <div class="teaching-library-head reveal">
+        <h2 class="teaching-display teaching-section-title" id="teachingLibraryTitle">All Teachings.</h2>
+        <button class="text-link" id="openClassReviewFromTeachings" type="button">Leave A Class Review →</button>
       </div>
+      <div class="teaching-cards-grid" id="teachingLibraryList"></div>
     </div>
   </section>
 
-  <section class="on-light-section teaching-newsletter-section" id="teachingNewsletterSection">
-    <div class="section-inner reveal" style="text-align:center;max-width:640px">
-      <div class="eyebrow on-light" style="margin-bottom:20px">Stay Connected</div>
-      <h2 class="teaching-subtitle-heading" style="font-size:clamp(28px,3.6vw,42px);margin-bottom:20px">Never miss a Thursday teaching.</h2>
-      <p style="margin-bottom:30px">New teachings are announced first on Instagram and by email — reach out on Connect to be added.</p>
-      <a class="btn on-light fill" href="connect.html">Get Notified →</a>
+  <section class="teaching-member-section" id="teachingMemberSection" aria-labelledby="teachingMemberTitle">
+    <div class="section-inner reveal">
+      <div class="eyebrow" style="margin-bottom:16px">Continue In Your Account</div>
+      <h2 class="teaching-display teaching-section-title" id="teachingMemberTitle">Continue Your Study.</h2>
+      <p class="teaching-member-copy">Your teachings, classes, and resources in one place.</p>
+      <button class="btn" id="teachingGoToAccount" type="button" data-open-account>Go To My Account →</button>
     </div>
   </section>
 
-  <script type="module" src="app.js?v=sitewide-20261027-digital1"></script>
+  <script type="module" src="app.js?v=launch-20261028"></script>
 </body>
 </html>

@@ -537,7 +537,9 @@ const NAV_LINKS = [
   { page: 'events', href: 'events.html', label: 'Events' },
   { page: 'teachings', href: 'teachings.html', label: 'Teachings' },
   { page: 'one-on-one', href: 'one-on-one.html', label: 'One-on-One' },
-  { page: 'prayer', href: 'prayer.html', label: 'Prayer' },
+  // Prayer lives in Connect's dropdown rather than the top row; it stays
+  // in this list so page visibility and current-page marking still see it.
+  { page: 'prayer', href: 'prayer.html', label: 'Prayer', parent: 'connect' },
   { page: 'connect', href: 'connect.html', label: 'Connect' },
   { page: 'give', href: 'give.html', label: 'Give' },
   { page: 'shop', href: 'shop/', label: 'Shop' },
@@ -585,6 +587,9 @@ function applyPageVisibility(){
       if(hidden){ a.hidden = true; a.dataset.hiddenByPageVisibility = '1'; }
       else if(a.dataset.hiddenByPageVisibility){ a.hidden = false; delete a.dataset.hiddenByPageVisibility; }
     });
+  });
+  document.querySelectorAll('.nav-group').forEach(group => {
+    group.hidden = [...group.querySelectorAll('.nav-sub a')].every(a => a.hidden);
   });
   const currentPage = document.body.dataset.page;
   const isNavPage = NAV_LINKS.some(l => l.page === currentPage);
@@ -634,7 +639,16 @@ function socialIconsHtml(extraClass){
 }
 
 function navHtml(){
-  const links = NAV_LINKS.map(l => `<a href="${BASE}${l.href}" data-page="${l.page}"${l.page === 'events' ? ' data-events-nav-link' : ''}>${l.label}</a>`).join('');
+  const linkHtml = l => `<a href="${BASE}${l.href}" data-page="${l.page}"${l.page === 'events' ? ' data-events-nav-link' : ''}>${l.label}</a>`;
+  const links = NAV_LINKS.filter(l => !l.parent).map(l => {
+    const children = NAV_LINKS.filter(c => c.parent === l.page);
+    if(!children.length) return linkHtml(l);
+    // Second-level menu: hover or click the parent to open it; the
+    // parent's own page is the first item inside.
+    return `<div class="nav-group" data-nav-group="${l.page}">` +
+      `<button class="nav-group-toggle" type="button" aria-expanded="false" aria-controls="navSub-${l.page}">${l.label}</button>` +
+      `<div class="nav-sub" id="navSub-${l.page}">${[l, ...children].map(linkHtml).join('')}</div></div>`;
+  }).join('');
   return `
   <nav class="nav" id="nav">
     <a href="${BASE}index.html" class="brand" aria-label="The Unveiled Assembly home">
@@ -2211,7 +2225,8 @@ function dialogsHtml(){
             <p class="admin-panel-intro" style="margin-bottom:10px">Controls what visitors see on the public Teaching page.</p>
 
             <div class="admin-subsection-label" style="border-top:0;padding-top:0">Featured Teaching</div>
-            <p class="admin-hint" style="margin-bottom:12px">Choose which class appears in the large section at the top of the Teaching page.</p>
+            <p class="admin-hint" style="margin-bottom:12px">The large section right below the Teachings page banner. Pick a class, or leave it on Automatic to show the next upcoming class (or, if none is scheduled, the most recent one). Drafts, cancelled, and archived classes are never shown.</p>
+            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:12px"><input id="teachingSettingsShowFeatured" type="checkbox" /> Show Featured Teaching Section</label>
             <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-bottom:18px">
               <div class="form-field" style="min-width:240px">
                 <label for="teachingSettingsFeatured">Select Teaching</label>
@@ -2220,13 +2235,13 @@ function dialogsHtml(){
               <div class="admin-teaching-row" id="teachingSettingsFeaturedPreview" style="flex:1;min-width:220px;margin-bottom:0"></div>
             </div>
 
-            <div class="admin-subsection-label">Upcoming Classes</div>
+            <div class="admin-subsection-label">All Teachings</div>
             <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
-              <label class="admin-checkbox-field" style="padding-top:0"><input id="teachingSettingsShowUpcoming" type="checkbox" /> Show Upcoming Classes</label>
+              <label class="admin-checkbox-field" style="padding-top:0"><input id="teachingSettingsShowUpcoming" type="checkbox" /> Show All Teachings</label>
               <div class="form-field" style="flex:0 0 220px">
-                <label for="teachingSettingsUpcomingCount">Number Of Upcoming Classes To Show</label>
+                <label for="teachingSettingsUpcomingCount">Number Of Teachings To Show</label>
                 <select id="teachingSettingsUpcomingCount" style="background:var(--owner-surface);color:var(--owner-text);border-color:var(--owner-border-strong);border-radius:var(--owner-radius-sm)">
-                  <option value="3">3</option><option value="6">6</option><option value="9">9</option>
+                  <option value="3">3</option><option value="6">6</option><option value="9">9</option><option value="12">12</option>
                 </select>
               </div>
               <div class="form-field" style="flex:0 0 170px">
@@ -2234,32 +2249,7 @@ function dialogsHtml(){
                 <input id="teachingSettingsDefaultTime" type="time" style="background:var(--owner-surface);color:var(--owner-text);border-color:var(--owner-border-strong);border-radius:var(--owner-radius-sm)" />
               </div>
             </div>
-            <p class="admin-hint" style="margin-bottom:20px">Turn this off to hide future classes from the public page. Choose 6 to show the next six scheduled classes. Times are scheduled in Eastern Time.</p>
-
-            <div class="admin-subsection-label">Scripture Section</div>
-            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:8px"><input id="teachingSettingsShowScripture" type="checkbox" /> Show Scripture Section</label>
-            <p class="admin-hint" style="margin-bottom:14px">Show or hide the Scripture/Foundation section near the bottom of the Teaching page.</p>
-            <div class="booking-grid" style="margin-bottom:14px">
-              <div class="booking-field full"><label for="teachingSettingsScriptureText">Scripture Text</label><textarea id="teachingSettingsScriptureText" rows="2"></textarea></div>
-              <div class="booking-field"><label for="teachingSettingsScriptureRef">Scripture Reference</label><input id="teachingSettingsScriptureRef" type="text" placeholder="e.g. 1 Corinthians 2:14" /></div>
-            </div>
-            <div class="admin-image-field" data-image-field="scripture" style="max-width:340px;margin-bottom:20px">
-              <span class="admin-microlabel">Scripture Image <span class="admin-hint">(optional)</span></span>
-              <div class="admin-image-preview" id="teachingSettingsScriptureImagePreview"></div>
-              <div class="admin-image-actions">
-                <label class="admin-image-upload-btn"><span class="admin-image-upload-btn-text">Upload Image</span><input type="file" accept="image/*" id="teachingSettingsScriptureImageFile" hidden /></label>
-                <button type="button" class="admin-image-remove-btn" id="teachingSettingsScriptureImageRemove">Remove Image</button>
-              </div>
-              <details class="admin-image-advanced"><summary>Advanced: paste an image URL instead</summary><input id="teachingSettingsScriptureImage" type="url" /></details>
-            </div>
-
-            <div class="admin-subsection-label">Stay Connected</div>
-            <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:20px"><input id="teachingSettingsShowNewsletter" type="checkbox" /> Show Stay Connected</label>
-            <p class="admin-hint" style="margin-top:-14px;margin-bottom:20px">Show or hide the email signup section at the bottom of the Teaching page.</p>
-
-            <div class="admin-subsection-label">Teaching Library</div>
-            <label class="admin-checkbox-field" style="padding-top:0"><input id="teachingSettingsShowLibrary" type="checkbox" /> Show Teaching Library</label>
-            <p class="admin-hint" style="margin-bottom:8px">Keep this off until you have class videos to show — the page stays completely hidden from visitors while it's off, not shown as "coming soon."</p>
+            <p class="admin-hint" style="margin-bottom:20px">The library under the Featured Teaching. Upcoming classes come first (soonest first), then past classes (newest first). Turn this off to hide the library. Times are scheduled in Eastern Time.</p>
             <label class="admin-checkbox-field" style="padding-top:0;margin-bottom:20px"><input id="teachingSettingsAutoArchive" type="checkbox" /> Automatically Archive Completed Classes</label>
 
             <button class="admin-btn-solid" type="button" id="teachingSettingsSaveBtn">Save Changes</button>
@@ -3345,8 +3335,21 @@ document.querySelectorAll('.brand-logo, .portal-brand img, .member-topnav-brand 
 const currentPage = document.body.dataset.page;
 if(currentPage){
   const match = document.querySelector('#navMobilePanel [data-page="' + currentPage + '"]');
-  if(match) match.classList.add('current');
+  if(match){
+    match.classList.add('current');
+    match.closest('.nav-group')?.querySelector('.nav-group-toggle')?.classList.add('current');
+  }
 }
+document.querySelectorAll('.nav-group').forEach(group => {
+  const toggle = group.querySelector('.nav-group-toggle');
+  const setOpen = open => { group.classList.toggle('open', open); toggle.setAttribute('aria-expanded', String(open)); };
+  toggle.addEventListener('click', () => setOpen(!group.classList.contains('open')));
+  group.addEventListener('keydown', event => {
+    if(event.key === 'Escape' && group.classList.contains('open')){ setOpen(false); toggle.focus(); }
+  });
+  group.addEventListener('focusout', event => { if(!group.contains(event.relatedTarget)) setOpen(false); });
+  document.addEventListener('click', event => { if(!group.contains(event.target)) setOpen(false); });
+});
 
 /* ---------------------------------------------------------------
    Firebase
@@ -3685,7 +3688,7 @@ if(!DEMO_MODE){
    it (see wireTeachingManager below).
    --------------------------------------------------------------- */
 let TEACHING_PAGE_SETTINGS = {
-  featuredTeachingId: 'demo-discernment', showUpcoming: true, upcomingCount: 6,
+  featuredTeachingId: 'demo-discernment', showFeatured: true, showUpcoming: true, upcomingCount: 6,
   showLibrary: false, showScripture: true, showNewsletter: true,
   defaultThursdayTime: '19:30', defaultTimeZone: 'America/New_York', autoArchiveCompleted: true,
   scriptureText: 'But the natural man receiveth not the things of the Spirit of God: for they are foolishness unto him: neither can he know them, because they are spiritually discerned.',
@@ -3695,7 +3698,13 @@ let TEACHING_PAGE_SETTINGS = {
   // Page Settings -> Scripture Image.
   scriptureReference: '1 Corinthians 2:14', scriptureImage: 'assets/one-on-one/booking-v2.jpg'
 };
-let TEACHINGS = DEMO_TEACHINGS;
+// The live site never shows the sample teachings — an empty
+// collection renders the intentional "coming soon" states instead.
+let TEACHINGS = DEMO_MODE ? DEMO_TEACHINGS : {};
+const SAMPLE_TEACHING_IDS = new Set(Object.keys(DEMO_TEACHINGS));
+// False on the live site until the first Firestore load settles, so the
+// page doesn't flash a "coming soon" state before real classes arrive.
+let teachingsLoaded = DEMO_MODE;
 // Seeded so the Media Library doesn't read as empty/fake on a fresh
 // preview session — reuses real site photography, not placeholder
 // art, same reasoning as the Teachings/Testimonials demo seeds.
@@ -3887,7 +3896,7 @@ function backfillPreviewConfirmationFields(){
 // used for app.js/styles.css (see every page's `?v=` query string),
 // applied to localStorage. Bump this again any time the DEMO_*
 // content changes in a way visitors should actually see.
-const PREVIEW_DATA_VERSION = '2026-10-25-media-library-seed';
+const PREVIEW_DATA_VERSION = '2026-10-27-teachings-redesign';
 const PREVIEW_DATA_VERSION_KEY = 'ua_preview_data_version_v1';
 if(DEMO_MODE){
   try {
@@ -3922,18 +3931,21 @@ async function loadTeachingPageConfig(){
     const snap = await getDocs(teachingsQuery);
     const map = {};
     snap.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
-    // Once a real class exists, it always replaces the placeholders. Until
-    // then, keep showing the example teachings (the DEMO_TEACHINGS this
-    // started as) so the page gives a sense of the finished layout instead
-    // of an empty "Coming Soon" state — ministry decision, owner's call.
-    if(Object.keys(map).length) TEACHINGS = map;
-  } catch (err) { /* keep whatever we had */ }
+    // Real classes always win. Until the first one is published, the live
+    // site shows the sample classes so the owner can see the full design
+    // (owner request, Oct 27 2026); their Register buttons can't create
+    // real registrations (see SAMPLE_TEACHING_IDS).
+    TEACHINGS = Object.keys(map).length ? map : DEMO_TEACHINGS;
+  } catch (err) {
+    if(!Object.keys(TEACHINGS).length) TEACHINGS = DEMO_TEACHINGS;
+  }
 }
 let teachingPageConfigLoad = Promise.resolve();
 if(!DEMO_MODE){
   // Paint the approved fallback content immediately. Live teaching
   // settings/classes hydrate in the background and then refresh the page.
   teachingPageConfigLoad = loadTeachingPageConfig()
+    .finally(() => { teachingsLoaded = true; })
     .then(() => {
       renderPublicTeachingPages();
       requestAnimationFrame(observeRevealTargets);
@@ -3963,14 +3975,29 @@ function teachingIsPast(t){
 function visibleTeachingsList(){
   // Drafts never render publicly even in demo mode, so the preview
   // behaves the same as production would for a non-admin visitor.
-  return Object.values(TEACHINGS).filter(t => t.status !== 'draft' && t.status !== 'cancelled');
+  return Object.values(TEACHINGS).filter(teachingIsPublic);
+}
+function teachingIsPublic(t){
+  return !!t && t.status !== 'draft' && t.status !== 'cancelled' && !t.archived;
+}
+function teachingIsUpcoming(t){
+  return !teachingIsPast(t) && t.status !== 'completed';
 }
 function upcomingTeachingsList(){
   return visibleTeachingsList().filter(t => !teachingIsPast(t)).sort((a, b) => (a.date + (a.startTime || '')).localeCompare(b.date + (b.startTime || '')));
 }
+function pastTeachingsList(){
+  return visibleTeachingsList().filter(t => !teachingIsUpcoming(t)).sort((a, b) => (b.date + (b.startTime || '')).localeCompare(a.date + (a.startTime || '')));
+}
+// Automatic pick when the owner hasn't chosen one (or their choice is
+// no longer public): next upcoming class, then the most recent past one.
+function automaticFeaturedTeaching(){
+  return upcomingTeachingsList().filter(teachingIsUpcoming)[0] || pastTeachingsList()[0] || null;
+}
 function featuredTeaching(){
+  if(TEACHING_PAGE_SETTINGS.showFeatured === false) return null;
   const id = TEACHING_PAGE_SETTINGS.featuredTeachingId;
-  return (id && TEACHINGS[id] && TEACHINGS[id].status !== 'draft') ? TEACHINGS[id] : upcomingTeachingsList()[0] || null;
+  return (id && teachingIsPublic(TEACHINGS[id])) ? TEACHINGS[id] : automaticFeaturedTeaching();
 }
 function teachingStatusButtonLabel(t){
   if(t.status === 'completed') return 'CLASS COMPLETED';
@@ -4229,7 +4256,9 @@ const DEFAULT_CLASS_REVIEWS = [
 // real published ones exist, which then always replace them for good.
 let PRAYER_REQUESTS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.prayerRequests, DEFAULT_PRAYER_REQUESTS) : [];
 let TESTIMONIALS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.testimonials, DEFAULT_TESTIMONIALS) : [...DEFAULT_TESTIMONIALS];
-let CLASS_REVIEWS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.classReviews, DEFAULT_CLASS_REVIEWS) : [...DEFAULT_CLASS_REVIEWS];
+// The live site only ever shows real, owner-published class reviews —
+// the sample cards stay in the preview build (Oct 2026 owner brief).
+let CLASS_REVIEWS = DEMO_MODE ? loadStoredJson(MINISTRY_STORAGE_KEYS.classReviews, DEFAULT_CLASS_REVIEWS) : [];
 let MINISTRY_POLICIES = loadStoredJson(MINISTRY_STORAGE_KEYS.policies, DEFAULT_MINISTRY_POLICIES);
 
 function loadStoredJson(key, fallback){
@@ -4945,14 +4974,9 @@ function ensurePublicMinistrySections(){
   }
   const reviewSection = document.getElementById('publishedClassReviewsSection');
   if(!reviewSection && document.body.dataset.page === 'teachings'){
-    const target = document.getElementById('teachingCardsSection');
-    const html = '<section class="class-reviews-section" id="publishedClassReviewsSection"><div class="section-inner"><div class="eyebrow reveal" style="margin-bottom:24px">Class Reviews</div><div class="preview-cards reveal" id="publishedClassReviewsList"></div><div style="margin-top:24px;text-align:center" id="publishedClassReviewsMore"></div></div></section>';
+    const target = document.getElementById('teachingLibrary');
+    const html = '<section class="class-reviews-section tx-reviews" id="publishedClassReviewsSection"><div class="section-inner"><div class="eyebrow reveal" style="margin-bottom:24px">Class Reviews</div><div class="preview-cards reveal" id="publishedClassReviewsList"></div><div style="margin-top:24px;text-align:center" id="publishedClassReviewsMore"></div></div></section>';
     if(target) target.insertAdjacentHTML('afterend', html); else document.body.insertAdjacentHTML('beforeend', html);
-  }
-  const reviewButtonArea = document.getElementById('classReviewButtonArea');
-  if(!reviewButtonArea && document.body.dataset.page === 'teachings'){
-    const before = document.getElementById('teachingCardsSection');
-    if(before){ before.insertAdjacentHTML('beforeend', '<div class="reveal" style="margin-top:24px;display:flex;justify-content:flex-end"><button class="btn fill" id="openClassReviewFromTeachings" type="button">Leave A Class Review</button></div>'); }
   }
   if(!document.getElementById('openClassReviewFromTestimonial')){
     const testimonialArea = document.querySelector('section.on-light-section:last-of-type .reveal');
@@ -4983,6 +5007,33 @@ function bindMinistryFormDialogEvents(){
     storyMediaInput.disabled = true;
     storyMediaInput.value = '';
     if(storyMediaHint) storyMediaHint.textContent = 'Photo and video attachments are coming soon — not available yet. Use the video link field below, or mention it in your testimony.';
+  }
+
+  const reviewRatingGroup = document.getElementById('reviewRatingGroup');
+  const reviewRatingHint = document.getElementById('reviewRatingHint');
+  const clearReviewRating = document.getElementById('clearReviewRating');
+  const updateReviewRatingState = () => {
+    if(!reviewRatingGroup) return;
+    const selected = reviewRatingGroup.querySelector('input[name="rating"]:checked');
+    if(reviewRatingHint){
+      reviewRatingHint.textContent = selected
+        ? selected.value + ' out of 5 stars selected'
+        : 'Optional — select a star rating';
+    }
+    if(clearReviewRating) clearReviewRating.hidden = !selected;
+  };
+  if(reviewRatingGroup){
+    reviewRatingGroup.addEventListener('change', updateReviewRatingState);
+    clearReviewRating?.addEventListener('click', () => {
+      const selected = reviewRatingGroup.querySelector('input[name="rating"]:checked');
+      if(selected) selected.checked = false;
+      updateReviewRatingState();
+      reviewRatingGroup.querySelector('input[name="rating"][value="1"]')?.focus();
+    });
+    document.getElementById('classReviewForm')?.addEventListener('reset', () => {
+      setTimeout(updateReviewRatingState, 0);
+    });
+    updateReviewRatingState();
   }
   if(document.getElementById('prayerRequestForm')) {
     document.getElementById('prayerRequestForm').addEventListener('submit', async event => {
@@ -5242,7 +5293,20 @@ function addMinistryDialogs(){
             <div class="form-field"><label for="reviewLastName">Reviewer Last Name</label><input id="reviewLastName" name="lastName" type="text" placeholder="Last name" required /></div>
             <div class="form-field"><label for="reviewEmail">Email</label><input id="reviewEmail" name="email" type="email" placeholder="Email address" required /></div>
             <div class="form-field"><label for="reviewPhone">Phone</label><input id="reviewPhone" name="phone" type="tel" placeholder="Phone optional" /></div>
-            <div class="form-field"><label for="reviewRating">Rating</label><select id="reviewRating" name="rating"><option value="">Optional</option><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div>
+            <fieldset class="form-field star-rating-field">
+              <legend>Rating</legend>
+              <div class="star-rating-row">
+                <div class="star-rating" id="reviewRatingGroup" aria-describedby="reviewRatingHint">
+                  <input id="reviewRating5" name="rating" type="radio" value="5" /><label for="reviewRating5" aria-label="5 stars"><span aria-hidden="true">★</span></label>
+                  <input id="reviewRating4" name="rating" type="radio" value="4" /><label for="reviewRating4" aria-label="4 stars"><span aria-hidden="true">★</span></label>
+                  <input id="reviewRating3" name="rating" type="radio" value="3" /><label for="reviewRating3" aria-label="3 stars"><span aria-hidden="true">★</span></label>
+                  <input id="reviewRating2" name="rating" type="radio" value="2" /><label for="reviewRating2" aria-label="2 stars"><span aria-hidden="true">★</span></label>
+                  <input id="reviewRating1" name="rating" type="radio" value="1" /><label for="reviewRating1" aria-label="1 star"><span aria-hidden="true">★</span></label>
+                </div>
+                <button class="star-rating-clear" id="clearReviewRating" type="button" hidden>Clear</button>
+              </div>
+              <span class="star-rating-hint" id="reviewRatingHint" aria-live="polite">Optional — select a star rating</span>
+            </fieldset>
             <div class="form-field"><label for="reviewRecommendation">Would You Recommend?</label><select id="reviewRecommendation" name="recommendation"><option value="">Optional</option><option>Yes</option><option>No</option><option>Maybe</option></select></div>
             <div class="form-field full"><label for="reviewMessage">Review Message</label><textarea id="reviewMessage" name="message" rows="6" placeholder="What changed for you?" required></textarea></div>
             <div class="form-field full">
@@ -5272,7 +5336,7 @@ function addMinistryDialogs(){
       </div>
     </dialog>
 
-    <dialog class="booking-dialog" id="prayerDetailDialog" aria-labelledby="prayerDetailTitle" style="max-width:640px">
+    <dialog class="booking-dialog ministry-detail-dialog" id="prayerDetailDialog" aria-labelledby="prayerDetailTitle" style="max-width:640px">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Prayer Request</div><h3 id="prayerDetailTitle">View Request</h3></div><button class="dialog-close" id="closePrayerDetailDialog" type="button" aria-label="Close prayer detail">×</button></div>
       <div class="dialog-body">
         <div class="story-form-grid" id="prayerDetailFields"></div>
@@ -5281,12 +5345,12 @@ function addMinistryDialogs(){
       </div>
     </dialog>
 
-    <dialog class="booking-dialog" id="testimonyDetailDialog" aria-labelledby="testimonyDetailTitle" style="max-width:640px">
+    <dialog class="booking-dialog ministry-detail-dialog" id="testimonyDetailDialog" aria-labelledby="testimonyDetailTitle" style="max-width:640px">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Testimony</div><h3 id="testimonyDetailTitle">Review Submission</h3></div><button class="dialog-close" id="closeTestimonyDetailDialog" type="button" aria-label="Close testimony detail">×</button></div>
       <div class="dialog-body"><div class="story-form-grid" id="testimonyDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-testimony-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-testimony-status="published" data-force-anonymous="1">Publish Anonymously</button><button class="admin-btn-ghost" type="button" data-testimony-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-testimony-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-testimony-status="pending">Set Pending</button></div><div class="form-status" id="testimonyStatusMessage"></div></div>
     </dialog>
 
-    <dialog class="booking-dialog" id="reviewDetailDialog" aria-labelledby="reviewDetailTitle" style="max-width:640px">
+    <dialog class="booking-dialog ministry-detail-dialog" id="reviewDetailDialog" aria-labelledby="reviewDetailTitle" style="max-width:640px">
       <div class="dialog-head"><div><div class="kicker" style="margin-bottom:0">Class Review</div><h3 id="reviewDetailTitle">Review Submission</h3></div><button class="dialog-close" id="closeReviewDetailDialog" type="button" aria-label="Close review detail">×</button></div>
       <div class="dialog-body"><div class="story-form-grid" id="reviewDetailFields"></div><div class="form-actions" style="margin-top:16px"><button class="admin-btn-solid" type="button" data-review-status="published">Publish to Website</button><button class="admin-btn-ghost" type="button" data-review-status="published" data-force-anonymous="1">Publish Anonymously</button><button class="admin-btn-ghost" type="button" data-review-status="private">Keep Private</button><button class="admin-btn-ghost" type="button" data-review-status="archived">Archive</button><button class="admin-btn-ghost" type="button" data-review-status="pending">Set Pending</button></div><div class="form-status" id="reviewStatusMessage"></div></div>
     </dialog>
@@ -6034,6 +6098,9 @@ document.getElementById('ownerHeaderSignOutBtn').addEventListener('click', async
 });
 if(openMemberPortal) openMemberPortal.addEventListener('click', openPortal);
 navMemberPortal.addEventListener('click', openPortal);
+document.addEventListener('click', event => {
+  if(event.target.closest('[data-open-account]')) openPortal();
+});
 closeMemberPortal.addEventListener('click', () => memberPortalDialog.close());
 memberPortalDialog.addEventListener('click', event => {
   if(event.target === memberPortalDialog) memberPortalDialog.close();
@@ -12029,6 +12096,11 @@ window.openTeachingRegister = openTeachingRegister;
 document.addEventListener('click', event => {
   const trigger = event.target.closest('.teaching-register-btn');
   if(!trigger || !trigger.dataset.teachingId) return;
+  if(!DEMO_MODE && SAMPLE_TEACHING_IDS.has(trigger.dataset.teachingId)){
+    trigger.textContent = 'Sample Class · Registration Opens Soon';
+    trigger.disabled = true;
+    return;
+  }
   const t = TEACHINGS[trigger.dataset.teachingId];
   if(t && (t.status === 'sold-out' || classIsFull(t))) openWaitlistJoin(trigger.dataset.teachingId);
   else openTeachingRegister(trigger.dataset.teachingId);
@@ -13753,8 +13825,8 @@ function populateFeaturedTeachingSelect(){
   const select = document.getElementById('teachingSettingsFeatured');
   if(!select) return;
   const current = TEACHING_PAGE_SETTINGS.featuredTeachingId;
-  const items = Object.values(TEACHINGS).filter(t => t.status !== 'cancelled');
-  select.innerHTML = '<option value="">None (defaults to next upcoming)</option>' +
+  const items = Object.values(TEACHINGS).filter(t => t.status !== 'cancelled' && !t.archived);
+  select.innerHTML = '<option value="">Automatic (next upcoming, then most recent)</option>' +
     items.map(t => '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.title || t.id) + ' — ' + escapeHtml(formatTeachingDateShort(t.date || '')) + '</option>').join('');
   select.value = current && items.some(t => t.id === current) ? current : '';
   renderFeaturedTeachingPreview();
@@ -13762,7 +13834,7 @@ function populateFeaturedTeachingSelect(){
 document.getElementById('teachingSettingsFeatured').addEventListener('change', () => {
   const wrap = document.getElementById('teachingSettingsFeaturedPreview');
   const id = document.getElementById('teachingSettingsFeatured').value;
-  const t = id ? TEACHINGS[id] : upcomingTeachingsList()[0];
+  const t = id ? TEACHINGS[id] : automaticFeaturedTeaching();
   wrap.innerHTML = t ? teachingMgrRowHtml(t).replace('<div class="admin-teaching-actions">', '<div class="admin-teaching-actions" style="display:none">')
     : '<div class="admin-hint">No teaching is featured yet.</div>';
 });
@@ -13784,13 +13856,8 @@ function renderTeachingManager(){
   document.getElementById('teachingSettingsUpcomingCount').value = String(TEACHING_PAGE_SETTINGS.upcomingCount || 6);
   document.getElementById('teachingSettingsDefaultTime').value = TEACHING_PAGE_SETTINGS.defaultThursdayTime || '19:30';
   document.getElementById('teachingSettingsShowUpcoming').checked = TEACHING_PAGE_SETTINGS.showUpcoming !== false;
-  document.getElementById('teachingSettingsShowLibrary').checked = !!TEACHING_PAGE_SETTINGS.showLibrary;
-  document.getElementById('teachingSettingsShowScripture').checked = TEACHING_PAGE_SETTINGS.showScripture !== false;
-  document.getElementById('teachingSettingsShowNewsletter').checked = TEACHING_PAGE_SETTINGS.showNewsletter !== false;
+  document.getElementById('teachingSettingsShowFeatured').checked = TEACHING_PAGE_SETTINGS.showFeatured !== false;
   document.getElementById('teachingSettingsAutoArchive').checked = TEACHING_PAGE_SETTINGS.autoArchiveCompleted !== false;
-  document.getElementById('teachingSettingsScriptureText').value = TEACHING_PAGE_SETTINGS.scriptureText || '';
-  document.getElementById('teachingSettingsScriptureRef').value = TEACHING_PAGE_SETTINGS.scriptureReference || '';
-  document.getElementById('teachingSettingsScriptureImage').value = TEACHING_PAGE_SETTINGS.scriptureImage || '';
   adminImagePreviewRefreshers.forEach(fn => fn());
   renderPolicyCardInto('teachingPolicyNoRefundEmbed', 'noRefund');
 }
@@ -13878,13 +13945,8 @@ document.getElementById('teachingSettingsSaveBtn').addEventListener('click', asy
     upcomingCount: Number(document.getElementById('teachingSettingsUpcomingCount').value) || 6,
     defaultThursdayTime: document.getElementById('teachingSettingsDefaultTime').value || '19:30',
     showUpcoming: document.getElementById('teachingSettingsShowUpcoming').checked,
-    showLibrary: document.getElementById('teachingSettingsShowLibrary').checked,
-    showScripture: document.getElementById('teachingSettingsShowScripture').checked,
-    showNewsletter: document.getElementById('teachingSettingsShowNewsletter').checked,
-    autoArchiveCompleted: document.getElementById('teachingSettingsAutoArchive').checked,
-    scriptureText: document.getElementById('teachingSettingsScriptureText').value.trim(),
-    scriptureReference: document.getElementById('teachingSettingsScriptureRef').value.trim(),
-    scriptureImage: document.getElementById('teachingSettingsScriptureImage').value.trim()
+    showFeatured: document.getElementById('teachingSettingsShowFeatured').checked,
+    autoArchiveCompleted: document.getElementById('teachingSettingsAutoArchive').checked
   };
   status.textContent = 'Saving…';
   if(DEMO_MODE){
@@ -13969,48 +14031,84 @@ function teachingHeroMediaHtml(t){
     '<div class="teaching-hero-overlay" style="opacity:' + (overlayStrength / 100) + '"></div></div>';
 }
 
+/* ---------------------------------------------------------------
+   Teachings page (Oct 2026 redesign): Hero → Featured Teaching →
+   All Teachings → Member account. Featured keeps the original split
+   "teaching hero" look and All Teachings keeps the original poster
+   cards; what changed is which classes qualify (see featuredTeaching)
+   and the intentional empty states.
+   --------------------------------------------------------------- */
+const TEACHING_EMPTY_ART = 'assets/teachings/empty-archway-bw-1600.webp';
+
+function teachingWhenLine(t){
+  if(!t.date) return '';
+  const date = formatTeachingDate(t.date);
+  if(!teachingIsUpcoming(t)) return 'Taught ' + date;
+  const time = formatTeachingTime(t.startTime, t.timeZone);
+  return date + (time ? ' · ' + time : '');
+}
+function teachingDetailHref(t){
+  return BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id);
+}
+
 function teachingCardHtml(t){
   const art = teachingCardArt(t);
   const fallbackClass = art ? '' : ' ' + teachingArtClass(t.category);
   const style = art ? ' style="background-image:linear-gradient(190deg,rgba(10,10,10,.1),rgba(10,10,10,.72)),url(\'' + escapeHtml(art) + '\')"' : '';
-  return '<a class="teaching-card teaching-card-reveal' + fallbackClass + '" href="' + BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id) + '"' + style + '>' +
+  return '<a class="teaching-card teaching-card-reveal' + fallbackClass + '" href="' + teachingDetailHref(t) + '"' + style +
+    ' aria-label="' + escapeHtml((t.title || 'Teaching') + ' — read more') + '">' +
     '<div class="teaching-card-art-text">' +
     '<span class="teaching-card-eyebrow">' + escapeHtml(t.category || 'Teaching') + '</span>' +
     '<h3>' + escapeHtml(t.title || '') + '</h3>' +
     (t.subtitle ? '<p class="teaching-card-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '</div>' +
     '<div class="teaching-card-footer">' +
-    '<div><strong>' + escapeHtml(t.title || '') + '</strong><span>' + escapeHtml(formatTeachingDate(t.date || '')) + ' · ' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</span></div>' +
-    '<span class="teaching-card-arrow" aria-hidden="true">→</span>' +
+    '<div><strong>' + escapeHtml(t.title || '') + '</strong><span>' + escapeHtml(teachingWhenLine(t)) + '</span></div>' +
+    '<span class="teaching-card-more">Read More <span class="teaching-card-arrow" aria-hidden="true">→</span></span>' +
     '</div></a>';
 }
 
-function renderTeachingHero(){
-  const wrap = document.getElementById('teachingHero');
+function renderFeaturedTeaching(){
+  const wrap = document.getElementById('featuredTeaching');
   if(!wrap) return;
-  const t = featuredTeaching();
+  const cta = document.getElementById('teachingHeroCta');
+  const t = teachingsLoaded ? featuredTeaching() : null;
+  if(cta) cta.hidden = !t;
+  wrap.hidden = TEACHING_PAGE_SETTINGS.showFeatured === false;
+  wrap.setAttribute('aria-busy', teachingsLoaded ? 'false' : 'true');
+  if(!teachingsLoaded){ wrap.className = 'teaching-hero teaching-hero-pending'; wrap.innerHTML = ''; return; }
   if(!t){
-    wrap.className = 'teaching-hero teaching-hero-empty';
-    wrap.innerHTML = '<div class="teaching-hero-content reveal"><div class="eyebrow">Teachings</div><h1 class="teaching-display">New Teachings<br>Coming Soon.</h1></div>';
+    wrap.className = 'teaching-hero';
+    wrap.innerHTML = teachingHeroMediaHtml({ artwork: { hero: TEACHING_EMPTY_ART, overlayStrength: 30 } }) +
+      '<div class="teaching-hero-content reveal">' +
+      '<div class="eyebrow">Featured Teaching</div>' +
+      '<h2 class="teaching-display">Something Is Being Prepared.</h2>' +
+      '<p class="teaching-hero-desc">New teachings are coming soon.</p>' +
+      '</div>';
     return;
   }
+  const upcoming = teachingIsUpcoming(t);
   wrap.className = 'teaching-hero';
   wrap.innerHTML = teachingHeroMediaHtml(t) +
     '<div class="teaching-hero-content reveal">' +
-    '<div class="eyebrow">Upcoming Class</div>' +
-    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
+    '<div class="eyebrow">' + (upcoming ? 'Featured Teaching · Upcoming Class' : 'Featured Teaching') + '</div>' +
+    '<h2 class="teaching-display" id="featuredTeachingTitle">' + escapeHtml(t.title || '') + '</h2>' +
     (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
     '<p class="teaching-hero-desc">' + escapeHtml(t.shortDescription || '') + '</p>' +
-    '<div class="teaching-meta-row">' +
-    teachingMetaItem('calendar', [formatTeachingDate(t.date || '').toUpperCase(), formatTeachingTime(t.startTime, t.timeZone)]) +
-    teachingFormatMeta(t) + teachingCapacityMeta(t) +
-    '</div>' +
-    '<div class="teaching-price-line">' + (t.price ? '$' + Number(t.price).toFixed(2) : 'FREE') + '</div>' +
-    '<div class="teaching-hero-actions">' +
-    '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
-      (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
-    '<a class="btn" href="' + BASE + 'teaching-detail.html?id=' + encodeURIComponent(t.id) + '">View Details</a>' +
-    '</div></div>';
+    (upcoming
+      ? '<div class="teaching-meta-row">' +
+        teachingMetaItem('calendar', [formatTeachingDate(t.date || '').toUpperCase(), formatTeachingTime(t.startTime, t.timeZone)]) +
+        teachingFormatMeta(t) + teachingCapacityMeta(t) +
+        '</div>' +
+        '<div class="teaching-price-line">' + (t.price ? '$' + Number(t.price).toFixed(2) : 'FREE') + '</div>' +
+        '<div class="teaching-hero-actions">' +
+        '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
+          (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
+        '<a class="btn" href="' + teachingDetailHref(t) + '">View Details</a>' +
+        '</div>'
+      : (t.date ? '<div class="teaching-meta-row">' + teachingMetaItem('calendar', ['TAUGHT ' + formatTeachingDate(t.date).toUpperCase()]) + '</div>' : '') +
+        '<div class="teaching-hero-actions"><a class="btn fill" href="' + teachingDetailHref(t) + '">Explore Teaching →</a></div>') +
+    '</div>';
 }
 
 let teachingCardObserver = null;
@@ -14046,96 +14144,123 @@ function wireTeachingCardTransitions(wrap){
   });
 }
 
-function renderTeachingCards(){
-  const wrap = document.getElementById('teachingCardsList');
-  const section = document.getElementById('teachingCardsSection');
-  if(!wrap || !section) return;
-  if(!TEACHING_PAGE_SETTINGS.showUpcoming){ section.hidden = true; return; }
-  const subhead = document.getElementById('teachingCardsSubhead');
-  if(subhead) subhead.textContent = 'Every Thursday · ' + formatTeachingTime(TEACHING_PAGE_SETTINGS.defaultThursdayTime, TEACHING_PAGE_SETTINGS.defaultTimeZone);
-  const featuredId = featuredTeaching() ? featuredTeaching().id : null;
-  const items = upcomingTeachingsList().filter(t => t.id !== featuredId).slice(0, TEACHING_PAGE_SETTINGS.upcomingCount || 6);
+function renderTeachingLibrary(){
+  const section = document.getElementById('teachingLibrary');
+  const wrap = document.getElementById('teachingLibraryList');
+  if(!section || !wrap) return;
+  if(TEACHING_PAGE_SETTINGS.showUpcoming === false){ section.hidden = true; return; }
+  section.setAttribute('aria-busy', teachingsLoaded ? 'false' : 'true');
+  if(!teachingsLoaded){ section.hidden = false; wrap.innerHTML = ''; return; }
+  const featured = featuredTeaching();
+  // Upcoming (soonest first), then past (newest first).
+  const all = [...upcomingTeachingsList().filter(teachingIsUpcoming), ...pastTeachingsList()];
+  const items = all.filter(t => !featured || t.id !== featured.id).slice(0, TEACHING_PAGE_SETTINGS.upcomingCount || 6);
+  if(!all.length){
+    section.hidden = false;
+    wrap.innerHTML = '<div class="teaching-library-empty"><h3 class="teaching-display">New Teachings Coming Soon.</h3><p>We\'re preparing something meaningful.</p></div>';
+    return;
+  }
+  // The only public teaching is already featured above — skip an
+  // empty-looking library under it.
   section.hidden = items.length === 0;
   wrap.innerHTML = items.map(teachingCardHtml).join('');
   wireTeachingCardTransitions(wrap);
 }
 
-function renderTeachingLibrarySection(){
-  const section = document.getElementById('teachingLibrarySection');
-  if(!section) return;
-  section.hidden = !TEACHING_PAGE_SETTINGS.showLibrary;
+// Class page — same building blocks as the Teachings page: the
+// One-on-One style entry (with this class's own artwork), a dark details
+// section, a few more classes as poster cards, and the member invitation.
+function teachingMemberSectionHtml(){
+  return '<section class="teaching-member-section" aria-labelledby="teachingMemberTitle">' +
+    '<div class="section-inner reveal">' +
+    '<div class="eyebrow" style="margin-bottom:16px">Continue In Your Account</div>' +
+    '<h2 class="teaching-display teaching-section-title" id="teachingMemberTitle">Continue Your Study.</h2>' +
+    '<p class="teaching-member-copy">Your teachings, classes, and resources in one place.</p>' +
+    '<button class="btn" type="button" data-open-account>Go To My Account →</button>' +
+    '</div></section>';
 }
-function renderTeachingScriptureSection(){
-  const section = document.getElementById('teachingScriptureSection');
-  if(!section) return;
-  section.hidden = !TEACHING_PAGE_SETTINGS.showScripture;
-  const verseEl = document.getElementById('teachingScriptureVerse');
-  const refEl = document.getElementById('teachingScriptureRef');
-  const artEl = section.querySelector('.teaching-scripture-art');
-  if(verseEl) verseEl.textContent = '"' + (TEACHING_PAGE_SETTINGS.scriptureText || '') + '"';
-  if(refEl) refEl.textContent = TEACHING_PAGE_SETTINGS.scriptureReference || '';
-  if(artEl){
-    const img = TEACHING_PAGE_SETTINGS.scriptureImage;
-    const t = featuredTeaching();
-    artEl.className = 'teaching-scripture-art' + (img ? '' : ' ' + teachingArtClass(t && t.category));
-    artEl.style.backgroundImage = img ? "url('" + img + "')" : '';
-  }
+function teachingDetailEntryHtml(t){
+  const art = t.artwork || {};
+  const heroArt = teachingArtworkUrl(t, 'hero');
+  const focalX = art.focalX != null ? art.focalX : 50;
+  const focalY = art.focalY != null ? art.focalY : 50;
+  const mediaStyle = heroArt ? ' style="background-image:url(\'' + escapeHtml(heroArt) + '\');background-position:' + focalX + '% ' + focalY + '%"' : '';
+  const upcoming = teachingIsUpcoming(t);
+  const words = [
+    t.format === 'zoom' ? 'Live On Zoom' : t.format === 'in-person' ? 'In Person' : t.format === 'hybrid' ? 'Hybrid' : '',
+    upcoming ? (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') : '',
+    t.instructor || ''
+  ].filter(Boolean);
+  return '<header class="oo-hero teaching-class-entry" aria-label="' + escapeHtml(t.title || 'Teaching') + '">' +
+    '<div class="oo-hero-media' + (heroArt ? '' : ' ' + teachingArtClass(t.category)) + '"' + mediaStyle + ' aria-hidden="true"></div>' +
+    '<div class="oo-hero-overlay" aria-hidden="true"></div>' +
+    '<div class="oo-hero-content reveal">' +
+    '<div class="eyebrow">Teachings' + (t.category ? ' · ' + escapeHtml(t.category) : '') + '</div>' +
+    '<h1 class="teaching-display oo-hero-title">' + escapeHtml(t.title || '') + '</h1>' +
+    (t.subtitle ? '<p class="oo-hero-sub">' + escapeHtml(t.subtitle) + '</p>' : '') +
+    (upcoming && !teachingStatusButtonDisabled(t)
+      ? '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '">' + teachingStatusButtonLabel(t) + ' →</button>' : '') +
+    (t.date ? '<p class="oo-hero-desc">' + escapeHtml(teachingWhenLine(t)) + '</p>' : '') +
+    '</div>' +
+    (words.length ? '<div class="oo-hero-words" aria-hidden="true">' + words.map(escapeHtml).join('<br>') + '</div>' : '') +
+    '</header>';
 }
-function renderTeachingNewsletterSection(){
-  const section = document.getElementById('teachingNewsletterSection');
-  if(section) section.hidden = !TEACHING_PAGE_SETTINGS.showNewsletter;
-}
-
 function renderTeachingDetailPage(){
   const wrap = document.getElementById('teachingDetailRoot');
   if(!wrap) return;
   const id = new URLSearchParams(window.location.search).get('id');
   const t = id ? TEACHINGS[id] : null;
   const viewerIsAdmin = !!(currentProfile && currentProfile.role === 'admin');
-  if(!t || (t.status === 'draft' && !viewerIsAdmin)){
-    wrap.innerHTML = '<div class="section-inner reveal" style="padding-top:160px;text-align:center">' +
-      '<div class="eyebrow">Teachings</div><h1 class="teaching-display" style="margin-bottom:24px">Not Available</h1>' +
-      '<p style="color:var(--stone);margin-bottom:30px">This teaching isn\'t available right now.</p>' +
-      '<a class="btn" href="' + BASE + 'teachings.html">← Back To Teachings</a></div>';
+  const backLink = '<div class="teaching-class-back"><a class="text-link" href="' + BASE + 'teachings.html">← Back To All Teachings</a></div>';
+  if(!teachingsLoaded){ wrap.innerHTML = '<div class="teaching-hero-pending"></div>'; return; }
+  if(!t || (!teachingIsPublic(t) && !viewerIsAdmin)){
+    wrap.innerHTML = '<section class="teaching-class-missing"><div class="section-inner reveal">' +
+      '<div class="eyebrow">Teachings</div><h1 class="teaching-display">Not Available.</h1>' +
+      '<p>This teaching isn\'t available right now.</p>' +
+      '<a class="btn" href="' + BASE + 'teachings.html">← Back To All Teachings</a></div></section>' + teachingMemberSectionHtml();
     return;
   }
-  const draftNoticeHtml = (t.status === 'draft')
-    ? '<div class="admin-preview-flag">You\'re viewing this as a draft — it isn\'t visible to the public yet.</div>' : '';
+  const draftNoticeHtml = !teachingIsPublic(t)
+    ? '<div class="admin-preview-flag">You\'re viewing this as ' + (t.status === 'draft' ? 'a draft' : t.status === 'cancelled' ? 'a cancelled class' : 'an archived class') + ' — it isn\'t visible to the public.</div>' : '';
+  const upcoming = teachingIsUpcoming(t);
   const learnHtml = (t.whatYouWillLearn || []).map(li => '<li>' + escapeHtml(li) + '</li>').join('');
-  wrap.innerHTML = draftNoticeHtml +
-    '<header class="teaching-hero teaching-detail-hero">' + teachingHeroMediaHtml(t) +
-    '<div class="teaching-hero-content reveal">' +
-    '<div class="eyebrow">' + escapeHtml(t.category || 'Teaching') + '</div>' +
-    '<h1 class="teaching-display">' + escapeHtml(t.title || '') + '</h1>' +
-    (t.subtitle ? '<p class="teaching-subtitle">' + escapeHtml(t.subtitle) + '</p>' : '') +
-    '</div></header>' +
-    '<section class="on-light-section">' +
-    '<div class="teaching-detail-grid reveal">' +
+  const format = t.format === 'zoom' ? 'Live on Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + escapeHtml(t.location) : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Other';
+  const action = upcoming
+    ? '<button class="btn fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' + (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>'
+    : '<p class="teaching-class-past-note">This class has already taken place. Registered members can revisit it from their account.</p>' +
+      '<button class="btn" type="button" data-open-account>Go To My Account →</button>';
+  const more = [...upcomingTeachingsList().filter(teachingIsUpcoming), ...pastTeachingsList()].filter(x => x.id !== t.id).slice(0, 3);
+  wrap.innerHTML = draftNoticeHtml + teachingDetailEntryHtml(t) +
+    '<section class="teaching-class-body"><div class="section-inner teaching-detail-grid reveal">' +
     '<div class="teaching-detail-facts">' +
-    '<div><span>Date</span><strong>' + escapeHtml(formatTeachingDate(t.date || '')) + '</strong></div>' +
-    '<div><span>Time</span><strong>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</strong></div>' +
-    '<div><span>Format</span><strong>' + (t.format === 'zoom' ? 'Live on Zoom' : t.format === 'in-person' ? ('In Person' + (t.location ? ' — ' + escapeHtml(t.location) : '')) : t.format === 'hybrid' ? 'Hybrid' : 'Other') + '</strong></div>' +
-    '<div><span>Price</span><strong>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</strong></div>' +
+    (t.date ? '<div><span>' + (upcoming ? 'Date' : 'Taught') + '</span><strong>' + escapeHtml(formatTeachingDate(t.date)) + '</strong></div>' : '') +
+    (upcoming && t.startTime ? '<div><span>Time</span><strong>' + escapeHtml(formatTeachingTime(t.startTime, t.timeZone)) + '</strong></div>' : '') +
+    '<div><span>Format</span><strong>' + format + '</strong></div>' +
+    (upcoming ? '<div><span>Price</span><strong>' + (t.price ? '$' + Number(t.price).toFixed(2) : 'Free') + '</strong></div>' : '') +
     '<div><span>Instructor</span><strong>' + escapeHtml(t.instructor || 'The Unveiled Assembly') + '</strong></div>' +
-    '<button class="btn on-light fill teaching-register-btn" type="button" data-teaching-id="' + escapeHtml(t.id) + '"' +
-      (teachingStatusButtonDisabled(t) ? ' disabled' : '') + '>' + teachingStatusButtonLabel(t) + '</button>' +
-    '<button class="text-link" type="button" data-open-class-review-form data-review-class-title="' + escapeHtml(t.title || '') + '" style="border-color:var(--line-light);color:var(--ink-muted)">Leave A Class Review →</button>' +
+    action +
+    '<button class="text-link" type="button" data-open-class-review-form data-review-class-title="' + escapeHtml(t.title || '') + '">Leave A Class Review →</button>' +
     '</div>' +
     '<div class="teaching-detail-copy">' +
-    '<h2 class="teaching-subtitle-heading">About This Teaching</h2>' +
-    '<p>' + escapeHtml(t.fullDescription || t.shortDescription || '') + '</p>' +
-    (learnHtml ? '<h2 class="teaching-subtitle-heading" style="margin-top:36px">What You Will Learn</h2><ul class="teaching-learn-list">' + learnHtml + '</ul>' : '') +
-    '</div></div></section>';
+    '<div class="eyebrow" style="margin-bottom:14px">About This Teaching</div>' +
+    '<p class="teaching-class-lead">' + escapeHtml(t.fullDescription || t.shortDescription || '') + '</p>' +
+    (learnHtml ? '<div class="eyebrow" style="margin:44px 0 18px">What You Will Learn</div><ul class="teaching-learn-list">' + learnHtml + '</ul>' : '') +
+    '</div></div></section>' +
+    (more.length ? '<section class="teaching-cards-section teaching-class-more"><div class="section-inner">' +
+      '<div class="eyebrow reveal" style="margin-bottom:6px">Thursday Teachings</div>' +
+      '<div class="teaching-library-head reveal"><h2 class="teaching-display teaching-section-title">More Teachings.</h2>' +
+      '<a class="text-link" href="' + BASE + 'teachings.html">View All Teachings →</a></div>' +
+      '<div class="teaching-cards-grid" id="teachingMoreList">' + more.map(teachingCardHtml).join('') + '</div></div></section>' : '') +
+    teachingMemberSectionHtml() + backLink;
+  if(more.length) wireTeachingCardTransitions(document.getElementById('teachingMoreList'));
 }
 
 function renderPublicTeachingPages(){
   const page = document.body.dataset.page;
   if(page === 'teachings'){
-    renderTeachingHero();
-    renderTeachingCards();
-    renderTeachingLibrarySection();
-    renderTeachingScriptureSection();
-    renderTeachingNewsletterSection();
+    renderFeaturedTeaching();
+    renderTeachingLibrary();
+    if(typeof observeRevealTargets === 'function') requestAnimationFrame(() => { try { observeRevealTargets(); } catch (err) {} });
   } else if(page === 'teaching-detail'){
     renderTeachingDetailPage();
   } else if(page === 'one-on-one'){
