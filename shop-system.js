@@ -12,6 +12,10 @@ export const SHOP_CART_KEY = 'ua_shop_cart_v1';
 const DEMO_PRODUCTS_KEY = 'ua_preview_store_products_v1';
 const DEMO_SETTINGS_KEY = 'ua_preview_store_settings_v1';
 const PUBLIC_STATUSES = new Set(['published', 'coming_soon']);
+// Sandbox test products the owner hasn't archived yet. Kept out of the
+// public collection and product pages; their records are untouched and
+// they still show in Owner Portal → Store. Remove an id once archived.
+const RETIRED_TEST_PRODUCT_IDS = new Set(['testing-mvquvmo1', 'testing-2-mvrl7vrr']);
 const PRODUCT_TYPES = new Set(['digital', 'physical']);
 const PRODUCT_CATEGORIES = new Set(['digital', 'books', 'apparel']);
 
@@ -531,7 +535,7 @@ export function initShopSystem(context){
       const found = [];
       publishedSnap.forEach(snapshot => found.push(normalizeProduct({ id: snapshot.id, ...snapshot.data() })));
       comingSnap.forEach(snapshot => found.push(normalizeProduct({ id: snapshot.id, ...snapshot.data() })));
-      products = found;
+      products = found.filter(p => !RETIRED_TEST_PRODUCT_IDS.has(p.id));
       if(settingsSnap.exists()) settings = { ...DEFAULT_SETTINGS, ...settingsSnap.data() };
     }
     renderPublic();

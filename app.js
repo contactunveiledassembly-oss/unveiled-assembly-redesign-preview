@@ -32,7 +32,7 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { initSiteManagement } from "./site-management.js?v=5";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
-import { initShopSystem } from "./shop-system.js?v=4";
+import { initShopSystem } from "./shop-system.js?v=5";
 import { initDigitalLibrary } from "./digital-library.js?v=1";
 
 /* ---------------------------------------------------------------
