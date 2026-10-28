@@ -740,6 +740,27 @@ service cloud.firestore {
     match /digitalFileUploads/{uploadId} {
       allow read, write: if false;
     }
+    // Owner Reports & Backups (functions/reports.js). The owner can read
+    // the report list, activity log, and backup list; only Cloud
+    // Functions write them. Links and file tokens are server-only.
+    match /ownerReports/{reportId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /ownerReportEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /ownerBackups/{backupId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /reportLinks/{key} {
+      allow read, write: if false;
+    }
+    match /reportFileTokens/{token} {
+      allow read, write: if false;
+    }
     match /shopOrders/{orderId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow write: if isAdmin();
