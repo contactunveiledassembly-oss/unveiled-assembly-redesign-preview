@@ -9717,6 +9717,7 @@ const OWNER_SETTINGS_CATALOG = [
   { title: 'Account Profile', keywords: 'profile name photo account', action: () => showOwnerSection('settings') },
   { title: 'Account Settings (Email & Password)', keywords: 'password email account security login', action: () => showOwnerSection('settings') },
   { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => { showOwnerSection('payments'); renderFinances(); } },
+  { title: 'Reports & Backups', keywords: 'reports report monthly quarterly rollup custom date range pdf backup backups encrypted export finances income summary', action: () => { showOwnerSection('reports'); if(ownerReports) void ownerReports.render(); } },
   { title: 'Store Products', keywords: 'shop store product collection price publish inventory', action: () => showOwnerSection('store') },
   { title: 'Event Types', keywords: 'session types event types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
   { title: 'Blocked Dates', keywords: 'blocked dates vacation unavailable bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('blocked'); } },
