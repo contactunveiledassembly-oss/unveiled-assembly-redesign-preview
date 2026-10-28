@@ -65,6 +65,11 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
     await page.locator('.dl-receipt summary').click();
     assert.match(await page.locator('.dl-receipt').innerText(), /ORDER NUMBER/i);
   });
+  await test(label + ': records counter matches ledger rows (library card not double-counted)', async () => {
+    const rows = await page.locator('#memberPurchasesList .member-transaction-row').count();
+    const counter = Number((await page.locator('#memberPurchasesCount').innerText()).trim());
+    assert.equal(counter, rows);
+  });
   await test(label + ': no horizontal overflow', async () => {
     assert.equal(await page.evaluate(() => [...document.querySelectorAll('.dl-item')].every(el => el.scrollWidth <= el.clientWidth + 1)), true);
   });
