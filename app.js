@@ -8982,11 +8982,12 @@ function verifiedPaymentRecord(record){
 }
 function memberPurchaseRowHtml(item){
   const record = item.record;
-  const paid = verifiedPaymentRecord(record);
+  const refunded = record.paymentStatus === 'refunded';
+  const paid = !refunded && verifiedPaymentRecord(record);
   const complimentary = record.status === 'complimentary' || record.paymentStatus === 'not_required';
   const amount = Number(record.amountPaid) || 0;
-  const state = paid ? 'Paid' : complimentary ? 'No payment required' : record.status === 'cancelled' ? 'Cancelled' : 'Pending';
-  const stateClass = paid || complimentary ? 'confirmed' : record.status === 'cancelled' ? 'cancelled' : 'pending';
+  const state = refunded ? 'Refunded' : paid ? 'Paid' : complimentary ? 'No payment required' : record.status === 'cancelled' ? 'Cancelled' : 'Pending';
+  const stateClass = paid || complimentary ? 'confirmed' : refunded || record.status === 'cancelled' ? 'cancelled' : 'pending';
   const reference = record.transactionId || record.paymentIntentId || record.confirmationId || record.id || '—';
   return '<article class="member-transaction-row">' +
     '<div><span class="member-transaction-kind">' + escapeHtml(item.kind) + '</span><strong>' + escapeHtml(item.title) + '</strong><small>' + escapeHtml(item.dateLabel || 'Date not set') + '</small></div>' +
@@ -9012,10 +9013,11 @@ function renderMemberPurchases(){
     record: b,
     time: memberRecordTime(b.createdAt || b.bookedAt)
   }));
+  if(digitalLibrary) purchases.push(...digitalLibrary.shopOrderPurchases());
   purchases.sort((a, b) => b.time - a.time);
   wrap.innerHTML = purchases.length
     ? purchases.map(memberPurchaseRowHtml).join('')
-    : '<div class="member-empty-state"><strong>No purchases or confirmations yet.</strong><span>Class registrations and one-on-one bookings will appear here.</span></div>';
+    : '<div class="member-empty-state"><strong>No purchases or confirmations yet.</strong><span>Class registrations, one-on-one bookings, and Shop orders will appear here.</span></div>';
   const count = document.getElementById('memberPurchasesCount');
   if(count) count.textContent = String(purchases.length).padStart(2, '0');
   if(digitalLibrary) digitalLibrary.renderMember();
@@ -14408,12 +14410,8 @@ digitalLibrary = initDigitalLibrary({
   base: BASE,
   openAccount: tab => { openPortal(); if(tab && currentUser) showMemberTab(tab); },
   getProducts: () => (shopSystem && shopSystem.getProducts ? shopSystem.getProducts() : []),
-  // Storage is only needed when the owner uploads a PDF, so it isn't
-  // part of any normal page load.
-  loadStorage: async () => {
-    const m = await import('https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js');
-    return { storage: m.getStorage(fbApp), ref: m.ref, uploadBytes: m.uploadBytes };
-  }
+  // Shop orders join Transactions & Confirmations once they've loaded.
+  onMemberLoaded: () => renderMemberPurchases()
 });
 // On the live site the auth listener (above) renders the confirmation
 // page once sign-in resolves; the preview build's sample auth answers

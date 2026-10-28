@@ -3591,12 +3591,6 @@ body[data-page="give"] .gv-donate-panel{padding:78px 6vw}.gv-donate-image .give-
 .dl-receipt dd{margin:0;color:var(--ivory);font-family:var(--mono);font-size:12px;text-align:right}
 .dl-receipt p{color:var(--stone-dim);font-size:12px;margin:0}
 .dl-private{color:var(--stone-dim);font-size:12px;line-height:1.6;margin:16px 0 0;max-width:68ch}
-.dl-orders{margin-top:26px;display:flex;flex-direction:column}
-.dl-order-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--line-dark)}
-.dl-order-row strong{display:block;color:var(--ivory);font-size:14px;font-weight:500}
-.dl-order-row span{color:var(--stone);font-size:12px}
-.dl-order-row > div:last-child{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-.dl-order-row small{font-family:var(--mono);color:var(--ivory)}
 .dl-preview-flag{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--stone-dim);border:1px dashed var(--line-dark);padding:10px 12px;margin:16px 0}
 @media(max-width:640px){
   .dl-item{grid-template-columns:1fr;gap:18px;padding:18px}

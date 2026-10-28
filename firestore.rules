@@ -736,6 +736,10 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+    // Owner PDF uploads in progress — server only.
+    match /digitalFileUploads/{uploadId} {
+      allow read, write: if false;
+    }
     match /shopOrders/{orderId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow write: if isAdmin();

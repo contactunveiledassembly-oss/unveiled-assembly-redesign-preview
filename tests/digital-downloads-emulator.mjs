@@ -179,8 +179,7 @@ const filePath = encodeURIComponent('private/digital-products/concealed/1-concea
 await test('member cannot read the PDF from storage directly', async () => assert.equal((await fetch(`${ST}/v0/b/${BUCKET}/o/${filePath}?alt=media`, { headers: { Authorization: 'Firebase ' + memberA.token } })).status, 403));
 await test('signed-out visitor cannot read the PDF', async () => assert.equal((await fetch(`${ST}/v0/b/${BUCKET}/o/${filePath}?alt=media`)).status, 403));
 await test('member cannot upload a PDF', async () => assert.equal((await fetch(`${ST}/v0/b/${BUCKET}/o?name=${encodeURIComponent('private/digital-products/concealed/evil.pdf')}`, { method: 'POST', headers: { Authorization: 'Firebase ' + memberA.token, 'Content-Type': 'application/pdf' }, body: PDF })).status, 403));
-await test('owner can upload a PDF', async () => assert.equal((await fetch(`${ST}/v0/b/${BUCKET}/o?name=${encodeURIComponent('private/digital-products/concealed/2-new.pdf')}`, { method: 'POST', headers: { Authorization: 'Firebase ' + owner.token, 'Content-Type': 'application/pdf' }, body: PDF })).status, 200));
-await test('owner cannot upload a non-PDF there', async () => assert.equal((await fetch(`${ST}/v0/b/${BUCKET}/o?name=${encodeURIComponent('private/digital-products/concealed/x.html')}`, { method: 'POST', headers: { Authorization: 'Firebase ' + owner.token, 'Content-Type': 'text/html' }, body: '<b>x</b>' })).status, 403));
+await test('storage stays closed to the owner too (uploads go through the server)', async () => assert.equal((await fetch(`${ST}/v0/b/${BUCKET}/o?name=${encodeURIComponent('private/digital-products/concealed/2-new.pdf')}`, { method: 'POST', headers: { Authorization: 'Firebase ' + owner.token, 'Content-Type': 'application/pdf' }, body: PDF })).status, 403));
 await test('even the owner cannot read files publicly (downloads only via the server)', async () => assert.equal((await fetch(`${ST}/v0/b/${BUCKET}/o/${filePath}?alt=media`, { headers: { Authorization: 'Firebase ' + owner.token } })).status, 403));
 
 // ---- owner actions ----
@@ -218,6 +217,47 @@ await test('owner gives a complimentary copy to a member by email', async () => 
   assert.equal((await fetch(link.url)).status, 200);
 });
 
+// ---- owner upload + replacement (server-side session) ----
+const PDF_V2 = Buffer.from('%PDF-1.7\n% Concealed second edition\n%%EOF\n');
+async function ownerUpload(token, productId, bytes, name){
+  const started = await callFn('startDigitalFileUpload', { productId, fileName: name, sizeBytes: bytes.length }, token);
+  if(started.error) return started;
+  const put = await fetch(started.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf' }, body: bytes });
+  if(!put.ok) return { error: 'PUT ' + put.status };
+  return { started, finished: await callFn('finishDigitalFileUpload', { uploadId: started.uploadId }, token) };
+}
+await test('a member cannot start an upload', async () => {
+  assert.equal((await callFn('startDigitalFileUpload', { productId: 'concealed', fileName: 'x.pdf', sizeBytes: 10 }, memberA.token)).error, 'PERMISSION_DENIED');
+});
+await test('owner replaces the PDF; the path is chosen by the server and never returned', async () => {
+  const before = (await db.doc('shopDigitalFiles/concealed').get()).data();
+  const r = await ownerUpload(owner.token, 'concealed', PDF_V2, 'Concealed.pdf');
+  assert.ok(r.finished && r.finished.file, JSON.stringify(r));
+  assert.equal(JSON.stringify(r.finished).includes('private/'), false);
+  const after = (await db.doc('shopDigitalFiles/concealed').get()).data();
+  assert.notEqual(after.storagePath, before.storagePath);
+  assert.equal(after.previousStoragePath, before.storagePath, 'replaced file kept for rollback');
+  assert.equal(after.sizeBytes, PDF_V2.length); assert.equal(after.uploadedBy, owner.uid);
+});
+await test('after replacement, customers download the new edition', async () => {
+  const link = await callFn('createDigitalDownloadLink', { accessId: accessA }, memberA.token);
+  // accessA was refunded above; use the complimentary copy instead
+  const gift = (await db.collection('digitalAccess').where('uid', '==', memberB.uid).where('productId', '==', 'concealed').get()).docs[0].id;
+  const l2 = await callFn('createDigitalDownloadLink', { accessId: gift }, memberB.token);
+  assert.equal(link.error, 'FAILED_PRECONDITION');
+  assert.deepEqual(Buffer.from(await (await fetch(l2.url)).arrayBuffer()), PDF_V2);
+});
+await test('a non-PDF upload is rejected and deleted', async () => {
+  const r = await ownerUpload(owner.token, 'concealed', Buffer.from('<html>not a pdf</html>'), 'fake.pdf');
+  assert.equal(r.finished.error, 'INVALID_ARGUMENT');
+  const [files] = await bucket.getFiles({ prefix: 'private/digital-products/concealed/' });
+  assert.equal(files.length, 2, 'only the original and the replacement remain');
+});
+await test('an upload id cannot be reused or finished by a member', async () => {
+  const started = await callFn('startDigitalFileUpload', { productId: 'concealed', fileName: 'x.pdf', sizeBytes: 10 }, owner.token);
+  assert.equal((await callFn('finishDigitalFileUpload', { uploadId: started.uploadId }, memberA.token)).error, 'PERMISSION_DENIED');
+});
+
 // ---- automatic delivery off ----
 const orderM = await pendingOrder(memberA, 'manual-study', 'Manual Study');
 await test('with automatic delivery off, a paid order waits for the owner', async () => {
@@ -240,6 +280,44 @@ await test('an expired checkout grants nothing and closes the order', async () =
   assert.equal(await webhook('checkout.session.expired', session(orderX, { payment_status: 'unpaid' })), 200);
   assert.equal((await db.doc('digitalAccess/' + orderX + '_manual-study').get()).exists, false);
   assert.equal((await db.doc('shopOrders/' + orderX).get()).data().status, 'expired');
+});
+
+// ---- delayed (async) payments ----
+const orderAsync = await pendingOrder(memberB, 'manual-study', 'Manual Study');
+await test('a delayed payment that later succeeds grants access then', async () => {
+  assert.equal(await webhook('checkout.session.completed', session(orderAsync, { payment_status: 'unpaid' })), 200);
+  assert.equal((await db.doc('digitalAccess/' + orderAsync + '_manual-study').get()).exists, false);
+  assert.equal(await webhook('checkout.session.async_payment_succeeded', session(orderAsync)), 200);
+  assert.equal((await db.doc('digitalAccess/' + orderAsync + '_manual-study').get()).data().paymentStatus, 'paid');
+});
+const orderFail = await pendingOrder(memberA, 'concealed', 'Concealed');
+await test('a delayed payment that fails grants nothing', async () => {
+  assert.equal(await webhook('checkout.session.async_payment_failed', session(orderFail, { payment_status: 'unpaid' })), 200);
+  assert.equal((await db.doc('digitalAccess/' + orderFail + '_concealed').get()).exists, false);
+  assert.equal((await db.doc('shopOrders/' + orderFail).get()).data().status, 'expired');
+});
+
+// ---- archived products, later sign-in, unverified accounts ----
+await test('an archived product cannot be bought, but past buyers keep their download', async () => {
+  await db.doc('shopProducts/manual-study').update({ status: 'archived' });
+  const memberC = await user('c@example.com', 'member');
+  assert.equal((await callFn('createCheckoutSession', { kind: 'shop', items: [{ productId: 'manual-study', quantity: 1 }], returnUrl: RETURN }, memberC.token)).error, 'FAILED_PRECONDITION');
+  const link = await callFn('createDigitalDownloadLink', { accessId: orderM + '_manual-study' }, memberA.token);
+  assert.equal((await fetch(link.url)).status, 200);
+});
+await test('access survives signing out and back in (fresh session token)', async () => {
+  const r = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'a@example.com', password: 'Password123', returnSecureToken: true }) });
+  const fresh = (await r.json()).idToken;
+  assert.notEqual(fresh, memberA.token);
+  assert.equal(await fsReq('GET', 'digitalAccess/' + orderM + '_manual-study', fresh), 200);
+  const link = await callFn('createDigitalDownloadLink', { accessId: orderM + '_manual-study' }, fresh);
+  assert.equal((await fetch(link.url)).status, 200);
+});
+await test('unverified-email accounts can buy and download their own purchase (intentional, same as classes/bookings)', async () => {
+  const lookup = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:lookup?key=fake`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: memberA.token }) });
+  assert.equal((await lookup.json()).users[0].emailVerified, false);
+  const link = await callFn('createDigitalDownloadLink', { accessId: orderM + '_manual-study' }, memberA.token);
+  assert.ok(link.url);
 });
 
 console.log(results.join('\n'));

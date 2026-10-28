@@ -30,7 +30,7 @@ const PAYMENT_LABELS = { paid: 'Paid', complimentary: 'Complimentary', refunded:
 const DEMO_FILES_KEY = 'ua_preview_digital_files_v1';
 
 export function initDigitalLibrary(context){
-  const { DEMO_MODE, db, firestore, call, getUser, escapeHtml: esc, base, openAccount, getProducts, loadStorage } = context;
+  const { DEMO_MODE, db, firestore, call, getUser, escapeHtml: esc, base, openAccount, getProducts, onMemberLoaded } = context;
   const productCache = new Map();
   let memberState = { uid: null, loading: false, access: [], orders: [], error: '' };
   let ownerState = { loaded: false, files: {}, access: [], events: [], message: '' };
@@ -114,6 +114,7 @@ export function initDigitalLibrary(context){
     }
     memberState.loading = false;
     renderMember();
+    if(onMemberLoaded) onMemberLoaded();
   }
 
   function libraryItemHtml(a){
@@ -153,10 +154,21 @@ export function initDigitalLibrary(context){
     </article>`;
   }
 
-  function shopOrderRowHtml(o){
-    const items = (o.items || []).map(i => i.title + (i.quantity > 1 ? ' × ' + i.quantity : '')).join(', ');
-    const label = o.paymentStatus === 'paid' ? (o.fulfillmentStatus === 'unfulfilled' ? 'Paid · Preparing To Ship' : 'Paid') : o.paymentStatus === 'refunded' ? 'Refunded' : 'Payment Pending';
-    return `<div class="dl-order-row"><div><strong>${esc(items || 'Shop Order')}</strong><span>${esc(orderNumber(o.id))} · ${esc(shortDate(o.paidAt || o.createdAt))}</span></div><div><span class="admin-status-pill ${o.paymentStatus === 'paid' ? 'confirmed' : 'pending'}">${esc(label)}</span><small>${esc(o.amountPaid ? '$' + Number(o.amountPaid).toFixed(2) : money(o.totalCents))}</small></div></div>`;
+  // Paid and refunded Shop orders for the member's Transactions &
+  // Confirmations ledger — one row per order, so a digital purchase is
+  // counted once there and shown (not counted) in the library above.
+  function shopOrderPurchases(){
+    const uid = getUser() ? getUser().uid : null;
+    if(!uid || memberState.uid !== uid) return [];
+    return memberState.orders
+      .filter(o => ['paid', 'refunded', 'partially_refunded'].includes(o.paymentStatus))
+      .map(o => ({
+        kind: 'Shop',
+        title: (o.items || []).map(i => i.title + (i.quantity > 1 ? ' × ' + i.quantity : '')).join(', ') || 'Shop Order',
+        dateLabel: orderNumber(o.id) + ' · ' + shortDate(o.paidAt || o.createdAt),
+        record: o,
+        time: (toDate(o.paidAt || o.createdAt) || new Date(0)).getTime()
+      }));
   }
 
   function renderMember(){
@@ -166,12 +178,10 @@ export function initDigitalLibrary(context){
     if(!memberState.uid){ wrap.innerHTML = ''; return; }
     if(memberState.loading){ wrap.innerHTML = head + '<div class="dl-loading" role="status">Loading your library…</div>'; return; }
     if(memberState.error){ wrap.innerHTML = head + `<div class="member-empty-state"><strong>${esc(memberState.error)}</strong><span><button type="button" class="link-btn" data-dl-refresh>Try again</button></span></div>`; return; }
-    const paidPhysical = memberState.orders.filter(o => o.paymentStatus === 'paid' || o.paymentStatus === 'refunded').filter(o => (o.items || []).some(i => i.type !== 'digital'));
     wrap.innerHTML = head +
       (memberState.access.length
         ? `<div class="dl-list">${memberState.access.map(libraryItemHtml).join('')}</div><p class="dl-private">Your files are private to your account. Each download uses a secure link that works once and expires after a few minutes, so it can't be shared or reused.</p>`
         : `<div class="member-empty-state"><strong>No digital resources yet.</strong><span>PDF studies you purchase from the <a href="${esc(base)}shop/">Shop</a> will appear here after payment is verified.</span></div>`) +
-      (paidPhysical.length ? `<div class="dl-orders"><span class="member-page-kicker">Shop Orders</span>${paidPhysical.map(shopOrderRowHtml).join('')}</div>` : '') +
       (DEMO_MODE ? '<p class="dl-preview-flag">Preview: this sample shows how a verified purchase appears. Real downloads only work on the live site.</p>' : '');
   }
 
@@ -377,20 +387,18 @@ export function initDigitalLibrary(context){
     }
     msg.textContent = 'Uploading privately…';
     try {
-      const { storage, ref, uploadBytes } = await loadStorage();
-      const safe = file.name.replace(/[^\w.-]+/g, '-').slice(-80);
-      const storagePath = 'private/digital-products/' + productId + '/' + Date.now() + '-' + safe;
-      await uploadBytes(ref(storage, storagePath), file, { contentType: 'application/pdf' });
-      const record = { productId, storagePath, fileName: file.name, sizeBytes: file.size, contentType: 'application/pdf', autoDelivery: existing.autoDelivery !== false, uploadedAt: firestore.serverTimestamp() };
-      await firestore.setDoc(firestore.doc(db, 'shopDigitalFiles', productId), record);
-      ownerState.files[productId] = { ...record, uploadedAt: new Date().toISOString() };
+      // The server checks the owner role and opens a one-file upload
+      // slot; Cloud Storage itself stays closed to every browser.
+      const started = await call('startDigitalFileUpload')({ productId, fileName: file.name, sizeBytes: file.size });
+      const put = await fetch(started.data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf' }, body: file });
+      if(!put.ok) throw new Error('The PDF could not be uploaded. Please try again.');
+      msg.textContent = 'Checking the file…';
+      const finished = await call('finishDigitalFileUpload')({ uploadId: started.data.uploadId });
+      ownerState.files[productId] = { ...existing, ...finished.data.file, storagePath: true, uploadedAt: new Date().toISOString() };
       renderOwnerFiles();
     } catch (err) {
       console.error('[library] upload failed', err);
-      const code = err && err.code ? String(err.code) : '';
-      msg.textContent = /bucket|not-found|unknown|no-default-bucket/.test(code)
-        ? 'Private file storage isn’t turned on for this website yet. See “Required setup” in the project notes.'
-        : code === 'storage/unauthorized' ? 'Only the ministry owner can upload files.' : 'The PDF could not be uploaded. Please try again.';
+      msg.textContent = friendlyError(err);
     }
   }
 
@@ -503,6 +511,7 @@ export function initDigitalLibrary(context){
     renderConfirmation,
     renderOwner,
     renderOwnerFiles,
-    renderOwnerOrders
+    renderOwnerOrders,
+    shopOrderPurchases
   };
 }

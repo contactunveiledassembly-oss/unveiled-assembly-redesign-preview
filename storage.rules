@@ -1,27 +1,12 @@
 rules_version = '2';
 
-// Cloud Storage for The Unveiled Assembly. Paid PDFs live under
-// private/ and are NEVER readable from a browser: members download
-// them only through the digitalDownload Cloud Function, which streams
-// the file after checking a short-lived, single-use link. The owner
-// (users/{uid}.role == 'admin', same check as firestore.rules) may
-// upload or replace PDFs; nobody can list or read them directly.
+// Cloud Storage for The Unveiled Assembly is closed to every browser —
+// members, visitors, and the owner alike. Paid PDFs under private/ are
+// written only by Cloud Functions (startDigitalFileUpload opens a
+// one-object upload session after checking the owner role) and leave
+// only through the digitalDownload function's single-use links.
 service firebase.storage {
   match /b/{bucket}/o {
-    function isOwner() {
-      return request.auth != null &&
-        firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    match /private/digital-products/{productId}/{fileName} {
-      allow read: if false;
-      allow create, update: if isOwner() &&
-        request.resource.contentType == 'application/pdf' &&
-        request.resource.size < 200 * 1024 * 1024;
-      allow delete: if isOwner();
-    }
-
     match /{allPaths=**} {
       allow read, write: if false;
     }

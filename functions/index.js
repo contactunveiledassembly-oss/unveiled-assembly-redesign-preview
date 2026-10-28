@@ -534,12 +534,21 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
      receipt facts; the member can read their own, nobody can write.
    - digitalDownloadTokens/{token}  short-lived, single-use links.
    - digitalDownloadEvents/{id}  download activity for the owner.
+   - digitalFileUploads/{id}  an owner upload in progress (server only).
+
+   Cloud Storage stays closed to every browser (storage.rules), the
+   owner included. The owner's PDF goes up through a one-object
+   resumable upload session opened by startDigitalFileUpload after the
+   owner role is checked here; finishDigitalFileUpload then checks the
+   object really is a PDF before attaching it to the product.
 
    No transactional email provider is connected yet (PROJECT-CONTEXT
    §19.7), so "email the link" records the request honestly as
    not_connected instead of pretending to send.
    --------------------------------------------------------------- */
 const DOWNLOAD_LINK_MINUTES = 5;
+const MAX_PDF_BYTES = 200 * 1024 * 1024;
+const UPLOAD_SESSION_HOURS = 6;
 const EMAIL_PROVIDER_CONNECTED = false;
 
 function downloadBaseUrl(){
@@ -750,5 +759,67 @@ exports.manageDigitalAccess = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async req
     throw new HttpsError('invalid-argument', 'Unknown action.');
   }
   return { ok: true };
+});
+
+exports.startDigitalFileUpload = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async request => {
+  const uid = request.auth ? request.auth.uid : null;
+  if(!(await callerIsOwner(uid))) throw new HttpsError('permission-denied', 'Only the ministry owner can upload files.');
+  const data = request.data || {};
+  const productId = String(data.productId || '');
+  const product = productId ? await db.doc('shopProducts/' + productId).get() : null;
+  if(!product || !product.exists || product.data().type !== 'digital') throw new HttpsError('not-found', 'Choose a digital product first.');
+  const sizeBytes = Math.floor(Number(data.sizeBytes) || 0);
+  if(sizeBytes <= 0 || sizeBytes > MAX_PDF_BYTES) throw new HttpsError('invalid-argument', 'PDFs must be smaller than 200 MB.');
+  const fileName = String(data.fileName || 'download.pdf').replace(/[^\w .()-]+/g, '').slice(0, 120) || 'download.pdf';
+  // The object name is chosen here, never by the browser.
+  const storagePath = 'private/digital-products/' + productId + '/' + Date.now() + '-' + crypto.randomBytes(6).toString('hex') + '.pdf';
+  const origin = request.rawRequest && request.rawRequest.headers ? request.rawRequest.headers.origin : undefined;
+  const [uploadUrl] = await getStorage().bucket().file(storagePath).createResumableUpload({
+    ...(origin && originAllowed(origin) ? { origin } : {}),
+    metadata: { contentType: 'application/pdf' }
+  });
+  const ref = db.collection('digitalFileUploads').doc();
+  await ref.set({
+    productId, storagePath, fileName, sizeBytes, uid,
+    createdAt: FieldValue.serverTimestamp(),
+    expiresAt: Timestamp.fromMillis(Date.now() + UPLOAD_SESSION_HOURS * 3600 * 1000)
+  });
+  return { uploadId: ref.id, uploadUrl };
+});
+
+exports.finishDigitalFileUpload = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async request => {
+  const uid = request.auth ? request.auth.uid : null;
+  if(!(await callerIsOwner(uid))) throw new HttpsError('permission-denied', 'Only the ministry owner can upload files.');
+  const uploadId = String((request.data || {}).uploadId || '');
+  const ref = uploadId ? db.doc('digitalFileUploads/' + uploadId) : null;
+  const snap = ref ? await ref.get() : null;
+  if(!snap || !snap.exists) throw new HttpsError('not-found', 'That upload could not be found. Please upload the PDF again.');
+  const upload = snap.data();
+  if(upload.expiresAt.toMillis() < Date.now()) throw new HttpsError('deadline-exceeded', 'That upload expired. Please upload the PDF again.');
+  const file = getStorage().bucket().file(upload.storagePath);
+  const [exists] = await file.exists();
+  if(!exists) throw new HttpsError('failed-precondition', 'The PDF did not finish uploading. Please try again.');
+  const [meta] = await file.getMetadata();
+  const size = Number(meta.size) || 0;
+  const [head] = await file.download({ start: 0, end: 4 });
+  if(size <= 0 || size > MAX_PDF_BYTES || head.toString('latin1') !== '%PDF-'){
+    await file.delete().catch(() => {});
+    await ref.delete();
+    throw new HttpsError('invalid-argument', 'That file is not a PDF. Please choose a PDF file.');
+  }
+  const fileRef = db.doc('shopDigitalFiles/' + upload.productId);
+  const previous = await fileRef.get();
+  const prior = previous.exists ? previous.data() : {};
+  const record = {
+    productId: upload.productId, storagePath: upload.storagePath, fileName: upload.fileName,
+    sizeBytes: size, contentType: 'application/pdf', autoDelivery: prior.autoDelivery !== false,
+    // The replaced file is kept so a bad upload can be rolled back.
+    previousStoragePath: prior.storagePath || null,
+    uploadedAt: FieldValue.serverTimestamp(), uploadedBy: uid
+  };
+  await fileRef.set(record);
+  await ref.delete();
+  logger.info('digital file attached', upload.productId);
+  return { file: { fileName: record.fileName, sizeBytes: size, autoDelivery: record.autoDelivery } };
 });
 
