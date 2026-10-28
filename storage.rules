@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// Cloud Storage for The Unveiled Assembly is closed to every browser —
+// members, visitors, and the owner alike. Paid PDFs under private/ are
+// written only by Cloud Functions (startDigitalFileUpload opens a
+// one-object upload session after checking the owner role) and leave
+// only through the digitalDownload function's single-use links.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

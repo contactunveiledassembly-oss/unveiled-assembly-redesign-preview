@@ -396,12 +396,24 @@ service cloud.firestore {
     // A signed-in booker may update their OWN booking, but only to flip its
     // status to 'cancelled' — no other field, and not to any other status.
     // Admin can update anything (confirm/decline/reschedule).
+    // Payment fields are written only by the Stripe webhook (Cloud
+    // Functions, Admin SDK — not subject to these rules) or an admin.
+    // The Owner Portal treats amountPaid > 0 as "paid", so a member's own
+    // create must never be able to set any of them.
+    function hasNoPaymentFields(d) {
+      return !d.keys().hasAny(['paymentIntentId','transactionId','chargeId','stripeSessionId','paidAt','paymentRefunded','amountRefunded']) &&
+        d.get('amountPaid', 0) == 0 &&
+        d.get('paymentStatus', 'pending') == 'pending' &&
+        d.get('accessGranted', false) == false;
+    }
+
     match /bookings/{bookingId} {
       allow create: if request.resource.data.keys().hasAll(
                         ['name','email','sessionType','date','time','status','uid']) &&
                       (
                         (isSignedIn() && request.resource.data.uid == request.auth.uid &&
-                         request.resource.data.status == 'pending')
+                         request.resource.data.status == 'pending' &&
+                         hasNoPaymentFields(request.resource.data))
                         || isAdmin()
                       );
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
@@ -659,7 +671,8 @@ service cloud.firestore {
                         ['teachingId','firstName','lastName','email','status','uid']) &&
                       (
                         (isSignedIn() && request.resource.data.uid == request.auth.uid &&
-                         request.resource.data.status == 'pending_payment')
+                         request.resource.data.status == 'pending_payment' &&
+                         hasNoPaymentFields(request.resource.data))
                         || isAdmin()
                       );
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
@@ -697,13 +710,41 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Integration boundaries for later phases. Digital files are never
-    // public. Orders cannot be created or marked paid by a visitor; a
-    // future trusted checkout/webhook (Admin SDK) will create them.
+    // Digital files are never public. Orders and donations cannot be
+    // created or marked paid by a visitor: createCheckoutSession and
+    // stripeWebhook (functions/index.js, Admin SDK) are the only writers
+    // besides an admin.
+    // Private file settings for a digital product: the Storage path,
+    // file name/size, and automatic delivery. Owner-only; the path is
+    // never copied into public shopProducts data.
     match /shopDigitalFiles/{fileId} {
       allow read, write: if isAdmin();
     }
+    // A member's right to download a purchased PDF. Created and changed
+    // only by Cloud Functions (verified Stripe webhook / owner actions),
+    // so no browser can create a paid entitlement or grant itself access.
+    match /digitalAccess/{accessId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+    // Short-lived, single-use download links — server only.
+    match /digitalDownloadTokens/{token} {
+      allow read, write: if false;
+    }
+    // Download activity for the owner (no file locations stored here).
+    match /digitalDownloadEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    // Owner PDF uploads in progress — server only.
+    match /digitalFileUploads/{uploadId} {
+      allow read, write: if false;
+    }
     match /shopOrders/{orderId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+    match /donations/{donationId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
       allow write: if isAdmin();
     }

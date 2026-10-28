@@ -1,0 +1,17 @@
+# GitHub Pages (Jekyll) build settings for theunveiledassembly.com.
+# The site is plain static files; this only keeps internal project files
+# out of the published site. Nothing here is a secret — secrets live in
+# Google Secret Manager — but there is no reason to serve them.
+exclude:
+  - PROJECT-CONTEXT.md
+  - CLAUDE-TIMESLOT-FIX-PROMPT.md
+  - README.md
+  - functions
+  - tests
+  - firestore.rules
+  - storage.rules
+  - firebase.json
+  - "*.zip"
+  - "app(6).js"
+  - "styles 3.css"
+  - "styles(5).css"

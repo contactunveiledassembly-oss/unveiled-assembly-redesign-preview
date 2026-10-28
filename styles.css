@@ -3621,6 +3621,121 @@ body[data-page="give"] .gv-donate-panel{padding:78px 6vw}.gv-donate-image .give-
   .member-transaction-ref{border-top:1px dashed var(--line-dark);padding-top:12px}
 }
 
+/* ---------- Stripe checkout return notice (app.js showCheckoutNotice) ---------- */
+.checkout-notice-dialog{
+  width:min(460px,calc(100vw - 32px));padding:32px 28px 26px;border:1px solid var(--line-dark);border-radius:4px;
+  background:var(--charcoal);color:var(--ivory);
+}
+.checkout-notice-dialog::backdrop{background:rgba(0,0,0,.72)}
+.checkout-notice-dialog h2{font-family:var(--serif);font-weight:400;font-size:28px;line-height:1.15;margin:10px 0 12px;color:var(--white)}
+.checkout-notice-dialog p{color:var(--stone);font-size:14.5px;line-height:1.6;margin:0}
+.checkout-notice-dialog .checkout-notice-status{margin-top:12px;color:var(--ivory);min-height:1em}
+.checkout-notice-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.checkout-notice-actions .btn,.checkout-notice-actions .admin-btn-ghost{flex:1 1 160px}
+
+/* ---------- Digital library: paid PDF delivery (digital-library.js) ----------
+   Member "Your Digital Library", shop/confirmation.html, and the owner's
+   Store → Digital Files / Orders. Site tokens only: dark surfaces, ivory
+   type, restrained borders. */
+.dl-library{margin-bottom:34px}
+.dl-library:empty{display:none}
+.dl-library-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding-bottom:18px;margin-bottom:20px;border-bottom:1px solid var(--line-dark)}
+.dl-library-head h3{font-family:var(--display);font-weight:600;font-size:clamp(22px,2.4vw,30px);text-transform:uppercase;letter-spacing:.01em;color:var(--ivory);margin:0 0 6px}
+.dl-library-head p{color:var(--stone);font-size:14px;margin:0;max-width:52ch}
+.dl-loading{color:var(--stone);font-size:13px;padding:18px 0}
+.dl-list{display:flex;flex-direction:column;gap:18px}
+.dl-item{display:grid;grid-template-columns:150px 1fr;gap:26px;padding:22px;border:1px solid var(--line-dark);background:rgba(245,243,238,.02)}
+.dl-cover{aspect-ratio:3/4;background:var(--charcoal) center/cover no-repeat;border:1px solid var(--line-dark);display:flex;align-items:flex-end;padding:12px}
+.dl-cover span{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ivory);line-height:1.3}
+.dl-cover-small{width:84px;flex:0 0 84px}
+.dl-body{min-width:0}
+.dl-status{display:inline-flex;align-items:center;gap:8px;font-size:9.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--stone)}
+.dl-status::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--stone-dim)}
+.dl-status-active{color:var(--ivory)}
+.dl-status-active::before{background:var(--ivory)}
+.dl-item h4{font-family:var(--display);font-weight:600;font-size:clamp(20px,2vw,26px);text-transform:uppercase;color:var(--ivory);margin:10px 0 4px}
+.dl-meta{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--stone);margin:0 0 14px}
+.dl-note{color:var(--stone);font-size:13.5px;line-height:1.6;margin:0 0 14px;max-width:56ch}
+.dl-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.dl-actions button:disabled{opacity:.42;cursor:not-allowed}
+.dl-not-connected{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--stone-dim)}
+.dl-message{min-height:1em;color:var(--stone);font-size:12.5px;margin:10px 0 0}
+.dl-message:empty{display:none}
+.dl-receipt{margin-top:16px;border-top:1px solid var(--line-dark);padding-top:12px}
+.dl-receipt summary{cursor:pointer;font-size:10.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ivory);list-style:none}
+.dl-receipt summary::-webkit-details-marker{display:none}
+.dl-receipt summary::after{content:" +";color:var(--stone)}
+.dl-receipt[open] summary::after{content:" –"}
+.dl-receipt summary:focus-visible{outline:2px solid var(--ivory);outline-offset:3px}
+.dl-receipt dl{margin:14px 0 10px;display:grid;gap:8px}
+.dl-receipt dl div{display:flex;justify-content:space-between;gap:16px;font-size:13px;border-bottom:1px solid rgba(245,243,238,.06);padding-bottom:7px}
+.dl-receipt dt{color:var(--stone)}
+.dl-receipt dd{margin:0;color:var(--ivory);font-family:var(--mono);font-size:12px;text-align:right}
+.dl-receipt p{color:var(--stone-dim);font-size:12px;margin:0}
+.dl-private{color:var(--stone-dim);font-size:12px;line-height:1.6;margin:16px 0 0;max-width:68ch}
+.dl-preview-flag{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--stone-dim);border:1px dashed var(--line-dark);padding:10px 12px;margin:16px 0}
+@media(max-width:640px){
+  .dl-item{grid-template-columns:1fr;gap:18px;padding:18px}
+  .dl-item .dl-cover{max-width:160px}
+  .dl-library-head{flex-direction:column;align-items:flex-start}
+  .dl-actions .portal-primary,.dl-actions .portal-secondary{flex:1 1 100%}
+}
+
+/* Order confirmation page */
+.dl-confirm{min-height:78vh;display:flex;align-items:center;justify-content:center;padding:150px 5vw 90px;background:var(--black)}
+.dl-confirm-inner{width:min(720px,100%)}
+.dl-confirm h1{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-spacing:.01em;font-size:clamp(40px,7vw,84px);line-height:.98;color:var(--ivory);margin:14px 0 18px}
+.dl-confirm-lead{color:var(--stone);font-size:16px;line-height:1.7;max-width:52ch;margin:0 0 30px}
+.dl-confirm-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:0 0 30px;border-top:1px solid var(--line-dark);border-bottom:1px solid var(--line-dark)}
+.dl-confirm-facts div{padding:16px 0}
+.dl-confirm-facts div + div{padding-left:20px;border-left:1px solid var(--line-dark)}
+.dl-confirm-facts dt{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--stone-dim);margin-bottom:6px}
+.dl-confirm-facts dd{margin:0;font-family:var(--mono);font-size:14px;color:var(--ivory)}
+.dl-confirm-items{display:flex;flex-direction:column;gap:14px;margin-bottom:26px}
+.dl-confirm-item{display:flex;gap:20px;padding:18px;border:1px solid var(--line-dark)}
+.dl-confirm-item strong{display:block;font-size:17px;font-weight:600;text-transform:uppercase;color:var(--ivory)}
+.dl-confirm-item > div:last-child > span{display:block;color:var(--stone);font-size:12.5px;margin:4px 0 14px}
+.dl-confirm-links{display:flex;flex-wrap:wrap;align-items:center;gap:14px 24px;margin-top:28px}
+.dl-confirm-spinner{width:28px;height:28px;border:1px solid var(--line-dark);border-top-color:var(--ivory);border-radius:50%;animation:dl-spin 1s linear infinite}
+@keyframes dl-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.dl-confirm-spinner{animation:none}}
+@media(max-width:640px){
+  .dl-confirm{padding:120px 16px 70px}
+  .dl-confirm-facts{grid-template-columns:1fr}
+  .dl-confirm-facts div + div{padding-left:0;border-left:0;border-top:1px solid var(--line-dark)}
+  .dl-confirm-item{flex-direction:column}
+}
+.shop-digital-note{font-size:11.5px;line-height:1.55;color:var(--stone);margin:0 0 12px}
+
+/* Owner Portal → Store → Digital Files / Orders */
+.dl-owner-file,.dl-owner-order{display:grid;gap:18px;padding:18px 0;border-bottom:1px solid var(--owner-border, var(--line-dark))}
+.dl-owner-file{grid-template-columns:84px 1fr auto;align-items:start}
+.dl-owner-file-main strong,.dl-owner-order-main strong{display:block;font-size:15px}
+.dl-owner-file-main > span,.dl-owner-order-main span{font-size:12px;opacity:.75}
+.dl-file-state{font-size:13px;margin:8px 0 6px}
+.dl-file-state.is-missing{opacity:.8;font-style:italic}
+.dl-owner-file-actions{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.dl-upload{cursor:pointer;text-align:center}
+.dl-upload:focus-within{outline:2px solid currentColor;outline-offset:2px}
+.dl-owner-facts{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:0}
+.dl-owner-facts dt{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.65;margin-bottom:4px}
+.dl-owner-facts dd{margin:0;font-size:13px}
+.dl-owner-order-actions{display:flex;flex-wrap:wrap;gap:8px}
+.dl-owner-order-actions button:disabled{opacity:.45;cursor:not-allowed}
+.dl-grant-form{margin-top:28px;padding-top:20px;border-top:1px solid var(--owner-border, var(--line-dark))}
+.dl-activity{margin-top:28px}
+.dl-activity-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;padding:9px 0;font-size:13px;border-bottom:1px solid var(--owner-border, var(--line-dark))}
+@media(max-width:820px){
+  .dl-owner-file{grid-template-columns:64px 1fr}
+  .dl-owner-file-actions{grid-column:1/-1}
+  .dl-owner-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* Shop's outline/text links default to dark ink; this page is dark. */
+.dl-confirm .shop-outline-action{color:var(--ivory);border-color:var(--ivory);margin-bottom:0}
+.dl-confirm .shop-outline-action:hover{background:var(--ivory);color:var(--black)}
+.dl-confirm .shop-text-link{color:var(--ivory);border-color:var(--line-dark);margin-top:0;align-self:center}
+.dl-cover-small span{display:none}
+
 /* ---------- Teachings page redesign (Oct 2026) ----------
    Hero → Featured Teaching → All Teachings → Member account. Uses the
    site's own type and color tokens throughout: the entry reuses the

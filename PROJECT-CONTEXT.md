@@ -191,7 +191,7 @@ These are the filenames referenced by the integrated `gathering-entrance.html` `
 
 ## 14. Stripe / Payment Status
 
-**PLANNED / NOT YET IMPLEMENTED.** No Stripe SDK, keys, or checkout code found anywhere in this repository. All booking flows are currently free / admin-managed (pending → confirmed), with no online payment step.
+**BUILT (2026-10-27, branch `stripe-payments`) — NOT YET DEPLOYED.** Stripe Checkout for One-on-One bookings, Teaching registrations, Shop orders, and one-time card Donations. See Section 32 for how it works and the go-live checklist.
 
 ---
 
@@ -698,6 +698,105 @@ The approved private Our Story prototype has been integrated into the main websi
 - Revised the opening after owner review: the former split-layout hero is now a Revelation Church-inspired, full-screen black typographic entrance with generous negative space, thin architectural rules, layered monochrome imagery, and an original CSS 3D scene. Pointer movement and scroll create restrained depth on capable devices; `prefers-reduced-motion` disables the live movement while preserving the complete composition and content.
 - Verified the repository's existing automated browser tests, JavaScript syntax, all Story asset loads, reveal-on-scroll behavior, shared navigation/footer injection, Inter font use, and responsive desktop/mobile layouts. Both audited viewports had no horizontal overflow or page errors.
 
+## 32. Session Log — 2026-10-27: Stripe payments (branch `stripe-payments`, test backend deployed)
+
+**How it works**
+- `functions/` is a new Firebase Cloud Functions backend (Node 22) in the existing `unveiledassembly` project:
+  - `createCheckoutSession` (callable): the browser sends only *what* is being paid for (`booking` id, `teaching` registration id, Shop cart ids/options/quantities, or a gift amount). The server **recomputes every price from Firestore** (`sessionTypes` — falling back to the same $30/$50 defaults as `app.js` when that collection is empty — `teachings`, `shopProducts`) and honors a discount only if a *confirmed* `discountRedemptions` doc ties that code to that exact record and uid. Returns a Stripe-hosted Checkout URL (30-minute expiry). Return URLs are locked to `theunveiledassembly.com` / `www.`.
+  - `stripeWebhook` (HTTPS): verifies the Stripe signature, then: **paid** → booking `confirmed` / registration `confirmed` + `accessGranted` + `classEnrollments/{teachingId}_{uid}` (same shape as the owner's manual confirm, `accessSource: 'stripe-payment'`) / Shop order `paid` (stock decremented, shipping address saved) / donation `paid`, plus a `memberNotifications` doc. **Expired/failed** → booking or registration `cancelled` (`cancelReason: 'payment-not-completed'`), the `slots` seat freed, and the discount use given back. **`charge.refunded`** → `paymentStatus: 'refunded'` (`paymentRefunded` on bookings; class access removed). All handlers are idempotent.
+- Payment fields use the names the Owner Portal already reads: `amountPaid` (dollars), `paymentStatus`, `paymentIntentId`, `transactionId`, `paidAt`.
+- **Browser (`app.js`)**: on the production host only (`LIVE_PAYMENTS = !DEMO_MODE`), the booking and class dialogs create the pending record exactly as before, await the discount-claim confirmation, then redirect to Stripe. The fake card-entry previews are swapped for a "you'll pay on Stripe" note. `?checkout=success|cancelled` returns open a notice dialog; cancelled bookings/classes offer **Resume Payment**, which reuses the same open Stripe session. Shop cart drawer gets a working **Checkout** button (`shop-system.js`, `context.checkout`). Give page's "Card Payment" tab becomes a real **Give $X by Card** button (wired from `app.js` `wireGiveCardPayment()`; Cash App unchanged). Owner Portal → Finances → Shop Orders / Donations now list real paid records.
+- **Preview / localhost (DEMO_MODE) behave exactly as before** — no function calls, simulated checkout unchanged.
+- **`firestore.rules`**: new `hasNoPaymentFields()` blocks a member's own booking/registration create from setting `amountPaid`, `paymentStatus` ≠ pending, `accessGranted`, or any Stripe id (previously a member could self-create a booking with `amountPaid > 0`, which the Owner Portal counts as paid). New `donations` collection: owner/own-uid read, admin-only write.
+
+**Verification done**: `node --check` and a full module-load check on `functions/index.js`; production dependency audit reports 0 vulnerabilities; JavaScriptCore module-syntax check on `app.js`/`shop-system.js`; full `tests/` browser suite against a local server — 12/14 pass. The 2 failures (`discount-claim-lifecycle`, `owner-editor-discounts`) can't find `#ownerDiscountCode` / the "One-on-One Page" row; both tests were last updated 2026-10-07, before the 2026-10-26 Owner Portal sidebar restructure moved those controls, and this change doesn't touch either element — they need updating separately. `finances-consolidation` was updated for the new Shop/Donations preview copy.
+
+**Test deployment completed (2026-10-27)**
+1. Firebase project `unveiledassembly` is on Blaze; Cloud Functions, Cloud Run, Cloud Build, Artifact Registry, Eventarc, Extensions, Pub/Sub, Storage, Firestore, and Secret Manager APIs are enabled.
+2. `createCheckoutSession` and `stripeWebhook` are active as Node 22 second-generation functions in `us-central1`; the tightened Firestore rules are released.
+3. `STRIPE_SECRET_KEY` and the rotated `STRIPE_WEBHOOK_SECRET` are stored in Secret Manager and bound to only the functions that use them. No secret value is committed.
+4. Stripe sandbox destination `Unveiled Assembly Firebase Test` points to `https://us-central1-unveiledassembly.cloudfunctions.net/stripeWebhook` and listens to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, and `charge.refunded`.
+5. Verification: unsigned webhook POST rejected with HTTP 400; Stripe-signed `checkout.session.completed` delivered with HTTP 200 and `{ received: true }`; callable created a Stripe-hosted $1 sandbox donation Checkout Session, confirming the stored test API key works. No live charge was made.
+
+**Production launch is deliberately not done**
+1. Payments only run on `theunveiledassembly.com`, which still points at the older repo (Section 19.2). No production-domain switch was made.
+2. Stripe remains in sandbox mode. Do not replace the test secrets with live credentials or activate live payments without explicit owner approval and a full end-to-end test using the production-domain build.
+3. Artifact Registry still needs an owner-approved cleanup policy; without one, old function container images can accumulate a small storage charge.
+4. Known gaps: Shop has no shipping charge or sales tax yet (Stripe collects a US address only); Shop discount codes aren't supported; monthly giving is still "Coming Soon"; digital Shop delivery is still a later phase. Refunds are issued from the Stripe Dashboard and sync back automatically.
+
+---
+
+## 34. Session Log — 2026-10-27: Stripe sandbox preview + end-to-end tests (branch `stripe-payments`)
+
+**Preview host (temporary, sandbox only):** https://unveiledassembly--stripe-sandbox-05balkts.web.app — Firebase Hosting preview channel `stripe-sandbox`, expires 2026-11-03. It runs the real site against the real database (not DEMO_MODE) and shows a red "Stripe sandbox preview — test cards only" bar. The live Hosting channel and theunveiledassembly.com were not touched.
+- `app.js`: `SANDBOX_PREVIEW_HOST` (`/^unveiledassembly--stripe-sandbox-[a-z0-9]+\.web\.app$/`) turns off DEMO_MODE only on that channel.
+- `functions/index.js`: the same origin added to `ALLOWED_RETURN_ORIGINS` (CORS + return URL) via `originAllowed()`. Functions redeployed. **Remove both before switching to live keys.**
+- `firebase.json`: `hosting` block (public `.`; ignores functions, tests, docs, zips, prototypes) so preview channels can be deployed. No live Hosting release was made.
+
+**Results (Stripe test card 4242…, Oct 27 2026):**
+| Test | Result |
+|---|---|
+| One-time donation $5 | PASS — Checkout opened (Sandbox), webhook marked `donations/{id}` `status: paid`, `paymentStatus: paid`, `amountPaid: 5`, `transactionId`, `donorName` (~13 s) |
+| Shop order (owner's digital "TESTING" product, $20) | PASS — `shopOrders/{id}` paid, `fulfillmentStatus: digital`, bag cleared on return |
+| One-on-One booking payment ($30, 15-minute default) | PASS — booking `confirmed`, `paymentStatus: paid`, `amountPaid: 30`, `paymentRefunded: false`, transaction stored |
+| Abandoned/expired checkout | PASS — 3 donations + 2 shop orders → `expired`/`unpaid`; booking → `cancelled` (`payment-not-completed`) ~30 min after opening |
+| Forged price (shop item sent with `priceCents: 1`) | PASS — Checkout still charged $20.00 |
+| Browser forgery via Firestore rules (booking created paid / with amountPaid / with paymentIntentId / as confirmed; registration with accessGranted; classEnrollments write; donations write; shopOrders write; member setting own booking confirmed) | PASS — all PERMISSION_DENIED |
+| Checkout from a foreign origin; booking checkout signed out; donation <$1 or >$10k; unknown product | PASS — all rejected by the function |
+| Unsigned fake webhook | PASS — HTTP 400 |
+| Browser suite against this branch | 12 pass; `owner-editor-discounts` fails (known stale); `discount-claim-lifecycle` skipped (known stale, hangs) |
+
+**Not tested yet (needs the owner's admin login — nothing was created on the owner's behalf):**
+1. **Paid class registration + classroom access** — no public class exists in production. Create a test class (e.g. dated in the past or archived afterwards), register on the preview with a test card, then confirm the registration is `confirmed`/`accessGranted` and the classroom opens.
+2. **Physical Shop order** (shipping address + stock decrement) — needs a physical product with "track inventory" on.
+3. **Booking calendar/slot handling** — production has no availability rules or scheduling settings, so no times are bookable. The test booking above was created directly (no `slotId`), so slots were untouched.
+4. **Refund sync** — refund the $30 test booking in the Stripe sandbox Dashboard; the booking should then show `paymentStatus: refunded`, `paymentRefunded: true`.
+5. **Owner Portal finance views** — sign in as owner on the preview and check Payments → Shop Orders / Donations / bookings show the test records.
+
+**Test data created in the production database (all from the test account):** Auth user + `users/LcJrthh9wlVGwX4t3vNlfqaFkZj2` ("Stripe Sandbox Test", `stripe.sandbox.test.20261027@example.com`); `donations` ×4 (1 paid, 3 expired); `shopOrders` ×3 (1 paid, 2 expired); `bookings/sbx-booking-paid` (confirmed, paid) and `bookings/sbx-booking-expire` (cancelled), both dated 2026-12-31 with "Stripe sandbox test record — safe to delete"; related `memberNotifications`. All are Stripe test-mode records — safe to delete once the owner has reviewed them.
+
+**Owner action items before launch:**
+- Stripe → Settings → Public details: the Checkout page currently shows the business name **"Myauna Lurry"** rather than the ministry name.
+- Artifact Registry still has **no cleanup policy** (Firebase warns on every deploy). Not enabled on purpose: automatic deletion reduces rollback history; it's the owner's call.
+- Launch = finish the 5 items above, remove the sandbox origin from `app.js`/`functions/index.js`, swap in live keys + live webhook, then merge to `main` with owner approval. Live mode was not activated and `main` was not given the checkout code.
+
+---
+
+## 35. Session Log — 2026-10-27: Secure paid-PDF delivery (branch `digital-downloads`, based on `stripe-payments`; NOT deployed)
+
+**What it does.** A member buys a digital Shop product (e.g. "Concealed") through the existing Stripe Checkout; only the verified Stripe webhook grants access; the PDF then appears in **My Assembly → Purchases & Downloads → Your Digital Library**, downloadable any time through a short-lived, single-use link.
+
+**Customer flow**
+- Product page notes "Private PDF · Delivered to My Assembly → Purchases & Downloads after payment. Account sign-in required."
+- Checkout with a digital item requires sign-in (client prompt + server `unauthenticated`). Digital orders return to **`shop/confirmation.html`**, which polls the member's own `shopOrders/{id}` and only shows **Payment Verified** once the webhook has marked it paid ("Verifying Payment…" → "Still Confirming" after 90 s). Shows order number, amount, date, product, Download PDF, View Receipt, and a link to Purchases & Downloads. Cancelled checkouts show "Payment Not Completed".
+- The member tab "Purchases & Receipts" is renamed **"Purchases & Downloads"**; "Your Digital Library" sits above the existing ledger: cover, status (Payment Verified / Being Prepared / Refunded / Access Turned Off), Download PDF, Email Link Again (disabled — *Email: Not Connected Yet*), Receipt Details (order number, date, amount, payment, Stripe reference), private-access note. Paid physical Shop orders are listed under it. Data loads only when that tab opens.
+
+**Owner flow (Owner Portal → Store)** — products are still created/edited/photographed/published/archived in **Products** (unchanged). The two placeholder tabs are now real:
+- **Digital Files**: per digital product — upload/replace the private PDF (≤200 MB), see file name/size/date (never the storage location), *Deliver automatically after payment* on/off, *Preview Customer View* (`shop/confirmation.html?preview={id}`).
+- **Orders**: every digital order with amount, payment, access, refund, email status, download count + last download; actions **Give Access**, **Turn Off Access**, **Record Refund** (closes the download; money is refunded in the Stripe Dashboard), **Resend Access Email** (disabled until email is connected); **Give Access To A Member** (complimentary copy by member email); **Recent Download Activity**.
+
+**Security design**
+- PDFs live in Cloud Storage under `private/digital-products/{productId}/…`. `storage.rules`: no browser can read anything; only the owner (users/{uid}.role == 'admin') can upload, PDFs only.
+- `shopDigitalFiles/{productId}` (owner-only, existing rule) holds `storagePath`, `fileName`, `sizeBytes`, `autoDelivery`. Public `shopProducts` never contains the path.
+- `digitalAccess/{orderId}_{productId}` — member can read their own; **no browser can write** (rules `allow write: if false`). Fields: orderId, uid, email, productId, productTitle, amountPaidCents, currency, stripeSessionId, paymentIntentId, paymentStatus, accessStatus (active/pending_delivery/revoked/refunded), accessSource, refundStatus, emailStatus, downloadCount, lastDownloadAt, purchasedAt, grantedAt, ownerActions[].
+- `digitalDownloadTokens/{token}` (server only) — 64-hex random, 5-minute expiry, single use. `digitalDownloadEvents` (owner read) — activity without file locations.
+- Functions (`functions/index.js`): `priceShop` refuses digital items when signed out, when no PDF is uploaded, or when the member already owns it; `markPaid` creates `digitalAccess` in the same transaction as marking the order paid (idempotent); `markRefunded` → `applyDigitalRefund` closes access on full refund. New: `createDigitalDownloadLink` (re-checks member, ownership, payment, access, file), `digitalDownload` (consumes the token, re-checks access, streams the PDF with `Content-Disposition: attachment`, `Cache-Control: private, no-store`, records count/activity), `requestDigitalAccessEmail`, `manageDigitalAccess` (owner role re-checked server-side).
+
+**Verification**
+- `tests/digital-downloads-emulator.mjs` — **39/39 pass** against the Firebase emulators (`demo-` project; nothing real touched): signed-out purchase blocked; no-PDF product blocked; bad webhook signature rejected; verified payment grants access with all receipt fields; duplicate webhook is a no-op; duplicate purchase refused; own download works (correct bytes/headers); link single-use; expired link refused; other member → not found; signed-out link refused; access counts + activity recorded without file paths; Firestore rules (own read only, no self-grant/edit, no forged paid order, private settings/tokens/events protected); Storage rules (no direct reads for anyone, member upload denied, owner PDF upload allowed, non-PDF denied); owner revoke/grant/refund/resend/complimentary; revoking kills an already-issued link; auto-delivery off → waits for owner; unpaid/expired checkouts grant nothing.
+  Run: `JAVA_HOME=… firebase emulators:exec --project demo-unveiledassembly --only auth,firestore,storage,functions "node tests/digital-downloads-emulator.mjs"` (needs Java 21 and `functions/.secret.local` with the local-only dummy values in the test header).
+- `tests/digital-library-ui.mjs` — **20/20** in the preview build (desktop + 390px): library, disabled email + "Not Connected Yet", preview download explains itself, receipt details, no overflow, confirmation page, product-page note, owner Digital Files (simulated upload, no path shown), owner Orders, simulated owner actions, no page errors.
+- `tests/member-portal-phase1.mjs` updated for the renamed tab label only.
+- **Not verified end-to-end:** a real Stripe test-mode purchase on a deployed build (deploying needs owner approval), the Stripe API refund lookup inside `markRefunded` (the digital part is covered via the shared helper / owner action), and a real upload into Cloud Storage (no bucket exists yet).
+
+**Required external setup before this can work (owner approval needed)**
+1. **Turn on Cloud Storage**: Firebase Console → Storage → Get started (creates the default bucket `unveiledassembly.firebasestorage.app`, which currently returns "Not Found").
+2. Deploy: `firebase deploy --only functions,firestore:rules,storage`.
+3. Optional email delivery: connect a provider (e.g. Resend/SendGrid) as a Secret, then flip `EMAIL_PROVIDER_CONNECTED` / `EMAIL_CONNECTED` and implement the send in `requestAccessEmail` (account link only, never a file URL).
+4. Upload each product's PDF in Owner Portal → Store → Digital Files, then publish.
+
+Classroom resources (Owner Portal → Teachings → Edit Class → Classroom → Notes & Resources) are untouched — separate collections and purpose.
+
 ---
 
 ## 33. Session Log — 2026-10-27: Teachings page redesign (published to `main` on owner request; the Stripe checkout code is NOT included)
@@ -714,5 +813,47 @@ Owner brief: dark, cinematic, editorial Teachings page in the order **Hero → F
 - Demo teachings no longer carry borrowed One-on-One photos as artwork (except Spiritual Warfare, kept to show the owner-image override). `PREVIEW_DATA_VERSION` was bumped so preview browsers reload the samples. Cache version: `sitewide-20261027-teachings`.
 - **Verified** (local preview, Playwright): 22 checks — manual/automatic/fallback featured selection, upcoming vs. past actions, draft/cancelled/archived hidden, empty states, section toggle, owner-image override, register and account buttons, no console errors, no horizontal overflow at 390px.
 - **Owner revision, same day:** the owner wanted the site's own fonts/colors (no gold, no new type styles), an entry banner like One-on-One's, the original split Featured layout and Discernment photo, and the original theme-heading class cards with a clear "Read More." So: the entry now reuses `.oo-hero` (`teachings-entry`), Featured reuses `.teaching-hero` (+ `teachingHeroMediaHtml`), and All Teachings reuses `.teaching-card` with a "Read More →" footer and "Taught {date}" for past classes. Demo artwork restored; the library default photos and member background were dropped (classes without artwork use the original category art). Only `hero-staircase-*` and `empty-archway-bw-*` remain in `assets/teachings/`. Cache version `sitewide-20261027-teachings2`. 24 Playwright checks pass.
+
+---
+
+## 36. Pre-launch report — paid digital PDFs (branch `launch-prep`, 2026-10-28) — NOT LAUNCHED
+
+**State found:** PR #26 was already merged into `stripe-payments` (ee97bf1); all six functions (incl. download functions) were already deployed with Stripe **test** keys; Storage bucket exists and denies public access. **theunveiledassembly.com is served by GitHub Pages from `main`** (DNS A 185.199.108–111.153 + `CNAME`), not Firebase Hosting; the Firebase live channel (`unveiledassembly.web.app`) was last released 2026-09-02 and is unused — never run `firebase deploy` without `--only`. The sandbox and production share ONE Firebase project (same functions, rules, database, bucket).
+
+**Fixes on `launch-prep`** (= `stripe-payments` + fixes + current `main` merged in):
+1. Owner upload ("Only the ministry owner can upload files"): the Storage rule depended on a cross-service Firestore lookup. Replaced with `startDigitalFileUpload` / `finishDigitalFileUpload`: owner role checked in the function, server-chosen object path, one-object resumable upload session, then the server verifies size ≤200 MB and the `%PDF-` header (deletes anything else) and attaches it to `shopDigitalFiles` (previous file kept as `previousStoragePath` for rollback). `storage.rules` is now deny-all for every browser, owner included. New server-only `digitalFileUploads` collection.
+2. Records counter `00` / empty ledger: paid & refunded Shop orders now appear once in Transactions & Confirmations (counted once; the library card is not counted); refunded rows read "Refunded".
+3. Main merged in (Teachings, nav, PRs #23–#25); one cache version `launch-20261028`.
+
+**Tests (launch-prep):** emulator 48/48 (adds owner upload/replace, non-PDF rejection, member can't start/finish uploads, async success/failure, archived product, sign-out/in, unverified accounts); UI 22/22 (adds counter-matches-ledger); full suite 13 pass + known-stale `owner-editor-discounts` fail + `discount-claim-lifecycle` skipped (hangs).
+
+**Reviewed, no change needed:** no `payment_method_types` (dynamic payment methods); no `automatic_tax`; webhook signature verified; `completed` grants only when `payment_status === 'paid'`, `async_payment_succeeded` grants, `async_payment_failed`/`expired` close the order; fulfillment idempotent (transaction + deterministic ids); logs carry record ids only (no secrets, tokens, or emails). **No CSP exists** on the site (GitHub Pages cannot send headers); Checkout is a top-level redirect to checkout.stripe.com, so no CSP entries are required for Stripe today — add a CSP as separate work. **Unverified accounts:** intentionally allowed to buy (same as classes/bookings; the card is the payment check, access is bound to the account UID); requiring `email_verified` would lock out grandfathered members.
+
+**Deploy plan**
+- Phase 1 — sandbox verification (needs approval; shared backend, public site unaffected): `firebase deploy --only functions,firestore:rules,storage`; `firebase hosting:channel:deploy stripe-sandbox --expires 7d` from `launch-prep`. Owner uploads a PDF in the portal; test purchase with 4242; sign out/in; refund in Stripe sandbox; check owner Orders.
+- Phase 2 — production (needs final approval): owner archives "TESTING" and prepares the real product as a draft with its PDF; remove `SANDBOX_PREVIEW_HOST` (app.js) and `SANDBOX_PREVIEW_ORIGIN` (functions); owner creates a **restricted live key** (Checkout Sessions: Write, Payment Intents: Read — verify in sandbox first; Checkout's inline `price_data`/`product_data` may also need Products/Prices write) and a **live webhook endpoint** (same URL, five events), and sets both with `firebase functions:secrets:set …` (values typed by the owner, never shown); `firebase deploy --only functions,firestore:rules,storage`; merge `launch-prep` → `main` by PR; publish the product; low-value live smoke test (owner's card, then refund) verifying webhook 200, order paid, library, ledger, owner Orders, private download.
+
+**Stripe live settings:** public business name (currently "Myauna Lurry"), statement descriptor, successful-payment receipt emails ON (the site says Stripe emails a receipt), payment-method configuration reviewed, Stripe Tax OFF until registrations/product tax codes exist.
+
+**Rollback:** site — revert the merge on `main` (`git revert -m 1 <merge>`), Pages republishes in ~1 min; sales — archive the product and/or disable the live webhook endpoint; functions — redeploy the previous commit's `functions/`; rules — redeploy previous `firestore.rules`/`storage.rules`; keys — roll the live key in Stripe.
+
+**Remaining risks / manual items:** email delivery not connected; no CSP; single shared Firebase project (retire the sandbox channel after launch); Artifact Registry cleanup policy undecided; the Stripe-API refund path in `markRefunded` is only verifiable in the sandbox; test records to review before any deletion (none deleted).
+
+---
+
+## 37. Revised launch scope (2026-10-28): payments stay OFF; management + library go live first
+
+The owner is not taking real payments yet. Phases:
+- **Phase 1 (done):** shared-backend fixes on the one Firebase project. Deployed: `startDigitalFileUpload`, `finishDigitalFileUpload` (new), `createCheckoutSession` (test-mode gate), `digitalDownload` (file-name fix), Storage rules (deny-all), Firestore rules (launch-prep). The sandbox channel serves `launch-prep`. Rollback snapshot: the functions/rules from `ee97bf1`; Firestore/Storage rules history in the Firebase console.
+- **Phase 2A (prepared, not merged):** merge `launch-prep` → `main` so GitHub Pages publishes the Owner Portal Digital Files/Orders, the member library, the corrected counter, and `shop/confirmation.html` with **checkout disabled on the public hostname**. No backend deploy is part of 2A.
+- **Phase 2B (not started; needs separate approval):** live Stripe keys/webhook, `PUBLIC_PAYMENTS_ENABLED = true`, real products, real-payment smoke test.
+
+**How public checkout is off (two independent locks)**
+1. Browser: `app.js` `PUBLIC_PAYMENTS_ENABLED = false` → `LIVE_PAYMENTS` is true only on the sandbox host; on the public site the Shop renders a disabled **"Purchases Coming Soon"** button (product page, quick view, cart), no delivery promise, and the booking/class/Give flows behave exactly as today (no card checkout).
+2. Server: `assertCheckoutAllowed` — while the functions hold Stripe **test** keys, `createCheckoutSession` only accepts the sandbox origin AND the owner or a UID in `functions/.env` `SANDBOX_TESTER_UIDS`; everything else gets "Purchases are coming soon." With **live** keys it only accepts the public domains (the sandbox is refused).
+
+Sandbox purchases share the real database: records whose `stripeSessionId` starts with `cs_test_` are excluded from Owner Portal revenue/paid totals (with a note) and labeled "Test payment" in Store → Orders.
+
+`_config.yml` keeps internal files (this doc, functions/, tests/, rules, firebase.json, zips) out of the GitHub Pages build.
 
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

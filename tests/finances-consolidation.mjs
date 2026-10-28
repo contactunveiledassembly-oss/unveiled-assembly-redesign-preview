@@ -2,7 +2,7 @@
 // Stage 3): Overview combines real One-on-One + Teaching payment data
 // (not invented numbers), the 1:1 Payments and Teaching Payments tabs
 // show real rows with working click-through to the real detail dialogs,
-// Shop Orders/Donations stay honestly empty, and Finances reflects Demo
+// Shop Orders/Donations show the "Live Site Only" preview note, and Finances reflects Demo
 // Mode simulation data while it's active, then reverts to the original
 // figures when turned off.
 import { chromium } from '/Users/yaunahlove/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
@@ -59,10 +59,10 @@ assert.equal(Math.round((oneOnOneRevenue + teachingRevenue) * 100), Math.round(l
 
 await page.locator('[data-payments-tab="shop"]').click();
 await page.waitForTimeout(150);
-assert.match(await page.locator('[data-payments-panel="shop"]').innerText(), /not connected/i);
+assert.match(await page.locator('[data-payments-panel="shop"]').innerText(), /live site only/i);
 await page.locator('[data-payments-tab="donation"]').click();
 await page.waitForTimeout(150);
-assert.match(await page.locator('[data-payments-panel="donation"]').innerText(), /not connected/i);
+assert.match(await page.locator('[data-payments-panel="donation"]').innerText(), /live site only/i);
 
 // Demo Mode simulation flows through, then reverts cleanly when turned off.
 await page.locator('[data-owner-nav="dashboard"]').click();

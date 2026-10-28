@@ -1,15 +1,21 @@
 /* ============================================================
    The Unveiled Assembly — Shop
    Public collection, product details, persistent cart, and the
-   owner-only product editor. Checkout, payment verification, order
-   creation, and digital delivery deliberately remain unavailable
-   until a trusted server/webhook is connected.
+   owner-only product editor. On the real domain, Checkout hands the
+   cart to the createCheckoutSession Cloud Function, which reprices
+   every line from Firestore and creates the order; the Stripe webhook
+   marks it paid. Digital products are delivered privately through
+   digital-library.js once the webhook has verified the payment.
    ============================================================ */
 
 export const SHOP_CART_KEY = 'ua_shop_cart_v1';
 const DEMO_PRODUCTS_KEY = 'ua_preview_store_products_v1';
 const DEMO_SETTINGS_KEY = 'ua_preview_store_settings_v1';
 const PUBLIC_STATUSES = new Set(['published', 'coming_soon']);
+// Sandbox test products the owner hasn't archived yet. Kept out of the
+// public collection and product pages; their records are untouched and
+// they still show in Owner Portal → Store. Remove an id once archived.
+const RETIRED_TEST_PRODUCT_IDS = new Set(['testing-mvquvmo1', 'testing-2-mvrl7vrr']);
 const PRODUCT_TYPES = new Set(['digital', 'physical']);
 const PRODUCT_CATEGORIES = new Set(['digital', 'books', 'apparel']);
 
@@ -193,7 +199,7 @@ function statusLabel(value){
 function money(cents){ return cents === null || cents === undefined ? 'Price to be announced' : '$' + (cents / 100).toFixed(2); }
 
 export function initShopSystem(context){
-  const { DEMO_MODE, db, firestore, escapeHtml, resizeImage, base = '' } = context;
+  const { DEMO_MODE, db, firestore, escapeHtml, resizeImage, base = '', checkout = null, purchasesComingSoon = false } = context;
   const esc = escapeHtml;
   let products = [];
   let settings = { ...DEFAULT_SETTINGS };
@@ -243,13 +249,14 @@ export function initShopSystem(context){
           <div class="shop-cart-head"><h2 id="shopCartTitle">Your Bag</h2><button type="button" class="shop-icon-close" id="shopCartClose" aria-label="Close cart">×</button></div>
           <div class="shop-cart-items" id="shopCartItems"></div>
           <div class="shop-cart-foot">
-            <label class="shop-discount-field" title="Discount codes will work once secure checkout is connected">
+            <label class="shop-discount-field" title="Discount codes are not available for Shop orders yet">
               <input type="text" placeholder="Discount code" disabled />
               <button type="button" disabled>Apply</button>
             </label>
             <div class="shop-cart-total"><span>Subtotal</span><strong id="shopCartSubtotal" data-subtotal-cents="0">$0.00</strong></div>
-            <p class="shop-cart-note">Taxes and delivery are not calculated. Checkout remains unavailable until secure payment processing is connected.</p>
-            <button class="shop-primary-action" type="button" disabled title="Secure checkout has not been connected">Checkout Not Connected</button>
+            <p class="shop-cart-note">${checkout ? "You'll pay on Stripe's secure checkout page. A shipping address is collected there for physical items." : 'Taxes and delivery are not calculated. Checkout remains unavailable until secure payment processing is connected.'}</p>
+            <button class="shop-primary-action" type="button" id="shopCheckoutBtn" disabled${checkout ? '' : ' title="Secure checkout has not been connected"'}>${checkout ? 'Checkout' : purchasesComingSoon ? 'Purchases Coming Soon' : 'Checkout Not Connected'}</button>
+            <p class="shop-action-status" id="shopCheckoutStatus" role="status" aria-live="polite"></p>
             <div class="shop-cart-secondary-actions"><a href="${base}shop/" id="shopContinueShopping">Continue Shopping</a><button type="button" id="shopEmptyCart">Empty Cart</button></div>
           </div>
         </aside>`);
@@ -294,6 +301,36 @@ export function initShopSystem(context){
     subtotalNode.textContent = money(subtotal);
     subtotalNode.dataset.subtotalCents = String(subtotal);
     document.getElementById('shopEmptyCart').hidden = cart.length === 0;
+    const checkoutBtn = document.getElementById('shopCheckoutBtn');
+    if(checkoutBtn) checkoutBtn.disabled = !checkout || cart.length === 0;
+  }
+
+  async function startCheckout(){
+    const btn = document.getElementById('shopCheckoutBtn');
+    const status = document.getElementById('shopCheckoutStatus');
+    if(!checkout || !cart.length) return;
+    const hasDigital = cart.some(line => productById(line.productId)?.type === 'digital');
+    // Digital resources are delivered to a My Assembly account, so the
+    // buyer signs in first (the server enforces this too).
+    if(hasDigital && context.isSignedIn && !context.isSignedIn()){
+      status.textContent = 'Please sign in or create your My Assembly account first — your PDF is delivered to your account library.';
+      if(context.openAccount) context.openAccount();
+      return;
+    }
+    btn.disabled = true;
+    status.textContent = 'Opening secure checkout…';
+    try {
+      // Only ids, options, and quantities leave the browser — the server
+      // reprices every line, so a stale or edited cart price is harmless.
+      await checkout({
+        kind: 'shop',
+        items: cart.map(line => ({ productId: line.productId, option: line.option, quantity: line.quantity })),
+        ...(hasDigital ? { returnUrl: new URL(base + 'shop/confirmation.html', window.location.href).href } : {})
+      });
+    } catch (err) {
+      status.textContent = err.message;
+      btn.disabled = false;
+    }
   }
 
   function addProduct(id, option, announceNode){
@@ -364,7 +401,14 @@ export function initShopSystem(context){
     // decorative-looking-functional control this project avoids elsewhere.
     const preview = (location === 'detail' && p.type === 'digital' && p.previewUrl)
       ? `<a class="shop-outline-action" href="${esc(assetUrl(p.previewUrl))}" target="_blank" rel="noopener">Preview Sample Pages</a>` : '';
-    return `${optionSelect}${preview}<button class="shop-primary-action" type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : p.status === 'coming_soon' ? 'Coming Soon' : 'Unavailable'}</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${location === 'detail' && !purchasable ? 'Purchasing is not active for this item.' : ''}</div>`;
+    // On the public site before payments launch, nothing can be added
+    // to the bag — the button says so plainly.
+    if(purchasesComingSoon && purchasable){
+      return `${optionSelect}${preview}<button class="shop-primary-action" type="button" disabled>Purchases Coming Soon</button><div class="shop-action-status" data-shop-action-status aria-live="polite"></div>`;
+    }
+    const digitalNote = p.type === 'digital' && purchasable
+      ? '<p class="shop-digital-note">Private PDF · Delivered to My Assembly → Purchases &amp; Downloads after payment. Account sign-in required.</p>' : '';
+    return `${optionSelect}${preview}${digitalNote}<button class="shop-primary-action" type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : p.status === 'coming_soon' ? 'Coming Soon' : 'Unavailable'}</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${location === 'detail' && !purchasable ? 'Purchasing is not active for this item.' : ''}</div>`;
   }
 
   function openQuickView(id, message = ''){
@@ -446,6 +490,7 @@ export function initShopSystem(context){
     document.getElementById('shopCartBackdrop')?.addEventListener('click', () => setCartOpen(false));
     document.getElementById('shopContinueShopping')?.addEventListener('click', () => setCartOpen(false));
     document.getElementById('shopEmptyCart')?.addEventListener('click', () => { cart = []; saveCart(); });
+    document.getElementById('shopCheckoutBtn')?.addEventListener('click', startCheckout);
     document.getElementById('shopQuickViewClose')?.addEventListener('click', () => document.getElementById('shopQuickViewDialog')?.close());
     document.getElementById('shopQuickViewDialog')?.addEventListener('click', event => { if(event.target === event.currentTarget) event.currentTarget.close(); });
     document.addEventListener('keydown', event => { if(event.key === 'Escape') setCartOpen(false); });
@@ -490,7 +535,7 @@ export function initShopSystem(context){
       const found = [];
       publishedSnap.forEach(snapshot => found.push(normalizeProduct({ id: snapshot.id, ...snapshot.data() })));
       comingSnap.forEach(snapshot => found.push(normalizeProduct({ id: snapshot.id, ...snapshot.data() })));
-      products = found;
+      products = found.filter(p => !RETIRED_TEST_PRODUCT_IDS.has(p.id));
       if(settingsSnap.exists()) settings = { ...DEFAULT_SETTINGS, ...settingsSnap.data() };
     }
     renderPublic();
@@ -507,8 +552,8 @@ export function initShopSystem(context){
       </div>
       <div data-store-panel="overview"><div id="ownerStoreOverview"></div></div>
       <div data-store-panel="products" hidden><div class="store-products-head"><div><h4>Products</h4><p>Create, edit, preview, and control what appears publicly.</p></div><button class="admin-btn-solid" type="button" id="ownerStoreNewProduct">Create Product</button></div><div id="ownerStoreProductsList"></div><div id="ownerStoreProductEditor"></div></div>
-      <div data-store-panel="files" hidden>${ownerTabEmpty('Digital Files', 'Secure delivery is not connected yet.')}</div>
-      <div data-store-panel="orders" hidden>${ownerTabEmpty('Orders', 'No order system is active.')}</div>
+      <div data-store-panel="files" hidden><div id="ownerDigitalFiles"></div></div>
+      <div data-store-panel="orders" hidden><div id="ownerDigitalOrders"></div></div>
       <div data-store-panel="inventory" hidden><div id="ownerStoreInventory"></div></div>
       <div data-store-panel="appearance" hidden><div id="ownerStoreAppearance"></div></div>
       <div data-store-panel="discounts" hidden>${ownerTabEmpty('Discounts', 'Shop discounts will follow verified checkout.')}</div>
@@ -601,6 +646,7 @@ export function initShopSystem(context){
     const root = document.getElementById('ownerStoreRoot'); if(!root) return;
     if(!root.dataset.ready){ root.innerHTML = ownerShellHtml(); root.dataset.ready = 'true'; wireAdmin(); }
     renderOwnerOverview(); renderOwnerProducts(); renderOwnerInventory(); renderOwnerAppearance();
+    if(context.onOwnerRender) context.onOwnerRender();
   }
 
   function slugId(title){
@@ -731,5 +777,5 @@ export function initShopSystem(context){
   wireShared();
   renderPublic();
 
-  return { loadPublic, renderPublic, loadAdmin, renderAdmin, openCart: () => setCartOpen(true), isAdminLoaded: () => adminLoaded };
+  return { loadPublic, renderPublic, loadAdmin, renderAdmin, getProducts: () => products, openCart: () => setCartOpen(true), clearCart: () => { cart = []; saveCart(); }, isAdminLoaded: () => adminLoaded };
 }
