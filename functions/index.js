@@ -700,7 +700,7 @@ exports.digitalDownload = onRequest(async (req, res) => {
     return;
   }
   if(grant.error){ downloadErrorPage(res, 410, grant.error); return; }
-  const safeName = (grant.file.fileName || grant.title).replace(/[^\w .()-]+/g, '').trim().replace(/\.pdf$/i, '') + '.pdf';
+  const safeName = (grant.file.fileName || grant.title).replace(/[^\w .()-]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/\.pdf$/i, '') + '.pdf';
   res.set({
     'Content-Type': 'application/pdf',
     'Content-Disposition': 'attachment; filename="' + safeName + '"',
@@ -790,7 +790,7 @@ exports.startDigitalFileUpload = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async 
   if(!product || !product.exists || product.data().type !== 'digital') throw new HttpsError('not-found', 'Choose a digital product first.');
   const sizeBytes = Math.floor(Number(data.sizeBytes) || 0);
   if(sizeBytes <= 0 || sizeBytes > MAX_PDF_BYTES) throw new HttpsError('invalid-argument', 'PDFs must be smaller than 200 MB.');
-  const fileName = String(data.fileName || 'download.pdf').replace(/[^\w .()-]+/g, '').slice(0, 120) || 'download.pdf';
+  const fileName = String(data.fileName || 'download.pdf').replace(/[^\w .()-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'download.pdf';
   // The object name is chosen here, never by the browser.
   const storagePath = 'private/digital-products/' + productId + '/' + Date.now() + '-' + crypto.randomBytes(6).toString('hex') + '.pdf';
   const origin = request.rawRequest && request.rawRequest.headers ? request.rawRequest.headers.origin : undefined;
