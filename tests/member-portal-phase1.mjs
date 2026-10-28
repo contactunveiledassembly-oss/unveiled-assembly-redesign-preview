@@ -26,7 +26,7 @@ try {
   const memberNavLabels = (await page.locator('#memberTabs [data-member-tab]').allInnerTexts())
     .map(label => label.replace(/\d+$/, '').trim());
   assert.deepEqual(memberNavLabels,
-    ['Home', 'My Learning', 'My Schedule', 'Purchases & Receipts', 'My Submissions', 'Notifications', 'My Account']);
+    ['Home', 'My Learning', 'My Schedule', 'Purchases & Downloads', 'My Submissions', 'Notifications', 'My Account']);
   assert.equal(await page.locator('#memberMobileNavSelect option').count(), 7);
   assert.match(await page.locator('[data-member-panel="dashboard"]').innerText(), /Continue Learning/i);
   assert.match(await page.locator('[data-member-panel="dashboard"]').innerText(), /Your Space/i);

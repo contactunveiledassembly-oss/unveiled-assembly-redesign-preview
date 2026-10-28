@@ -714,8 +714,27 @@ service cloud.firestore {
     // created or marked paid by a visitor: createCheckoutSession and
     // stripeWebhook (functions/index.js, Admin SDK) are the only writers
     // besides an admin.
+    // Private file settings for a digital product: the Storage path,
+    // file name/size, and automatic delivery. Owner-only; the path is
+    // never copied into public shopProducts data.
     match /shopDigitalFiles/{fileId} {
       allow read, write: if isAdmin();
+    }
+    // A member's right to download a purchased PDF. Created and changed
+    // only by Cloud Functions (verified Stripe webhook / owner actions),
+    // so no browser can create a paid entitlement or grant itself access.
+    match /digitalAccess/{accessId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+    // Short-lived, single-use download links — server only.
+    match /digitalDownloadTokens/{token} {
+      allow read, write: if false;
+    }
+    // Download activity for the owner (no file locations stored here).
+    match /digitalDownloadEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
     match /shopOrders/{orderId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);

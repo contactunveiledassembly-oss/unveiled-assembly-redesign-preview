@@ -760,4 +760,41 @@ The approved private Our Story prototype has been integrated into the main websi
 - Artifact Registry still has **no cleanup policy** (Firebase warns on every deploy). Not enabled on purpose: automatic deletion reduces rollback history; it's the owner's call.
 - Launch = finish the 5 items above, remove the sandbox origin from `app.js`/`functions/index.js`, swap in live keys + live webhook, then merge to `main` with owner approval. Live mode was not activated and `main` was not given the checkout code.
 
+---
+
+## 35. Session Log — 2026-10-27: Secure paid-PDF delivery (branch `digital-downloads`, based on `stripe-payments`; NOT deployed)
+
+**What it does.** A member buys a digital Shop product (e.g. "Concealed") through the existing Stripe Checkout; only the verified Stripe webhook grants access; the PDF then appears in **My Assembly → Purchases & Downloads → Your Digital Library**, downloadable any time through a short-lived, single-use link.
+
+**Customer flow**
+- Product page notes "Private PDF · Delivered to My Assembly → Purchases & Downloads after payment. Account sign-in required."
+- Checkout with a digital item requires sign-in (client prompt + server `unauthenticated`). Digital orders return to **`shop/confirmation.html`**, which polls the member's own `shopOrders/{id}` and only shows **Payment Verified** once the webhook has marked it paid ("Verifying Payment…" → "Still Confirming" after 90 s). Shows order number, amount, date, product, Download PDF, View Receipt, and a link to Purchases & Downloads. Cancelled checkouts show "Payment Not Completed".
+- The member tab "Purchases & Receipts" is renamed **"Purchases & Downloads"**; "Your Digital Library" sits above the existing ledger: cover, status (Payment Verified / Being Prepared / Refunded / Access Turned Off), Download PDF, Email Link Again (disabled — *Email: Not Connected Yet*), Receipt Details (order number, date, amount, payment, Stripe reference), private-access note. Paid physical Shop orders are listed under it. Data loads only when that tab opens.
+
+**Owner flow (Owner Portal → Store)** — products are still created/edited/photographed/published/archived in **Products** (unchanged). The two placeholder tabs are now real:
+- **Digital Files**: per digital product — upload/replace the private PDF (≤200 MB), see file name/size/date (never the storage location), *Deliver automatically after payment* on/off, *Preview Customer View* (`shop/confirmation.html?preview={id}`).
+- **Orders**: every digital order with amount, payment, access, refund, email status, download count + last download; actions **Give Access**, **Turn Off Access**, **Record Refund** (closes the download; money is refunded in the Stripe Dashboard), **Resend Access Email** (disabled until email is connected); **Give Access To A Member** (complimentary copy by member email); **Recent Download Activity**.
+
+**Security design**
+- PDFs live in Cloud Storage under `private/digital-products/{productId}/…`. `storage.rules`: no browser can read anything; only the owner (users/{uid}.role == 'admin') can upload, PDFs only.
+- `shopDigitalFiles/{productId}` (owner-only, existing rule) holds `storagePath`, `fileName`, `sizeBytes`, `autoDelivery`. Public `shopProducts` never contains the path.
+- `digitalAccess/{orderId}_{productId}` — member can read their own; **no browser can write** (rules `allow write: if false`). Fields: orderId, uid, email, productId, productTitle, amountPaidCents, currency, stripeSessionId, paymentIntentId, paymentStatus, accessStatus (active/pending_delivery/revoked/refunded), accessSource, refundStatus, emailStatus, downloadCount, lastDownloadAt, purchasedAt, grantedAt, ownerActions[].
+- `digitalDownloadTokens/{token}` (server only) — 64-hex random, 5-minute expiry, single use. `digitalDownloadEvents` (owner read) — activity without file locations.
+- Functions (`functions/index.js`): `priceShop` refuses digital items when signed out, when no PDF is uploaded, or when the member already owns it; `markPaid` creates `digitalAccess` in the same transaction as marking the order paid (idempotent); `markRefunded` → `applyDigitalRefund` closes access on full refund. New: `createDigitalDownloadLink` (re-checks member, ownership, payment, access, file), `digitalDownload` (consumes the token, re-checks access, streams the PDF with `Content-Disposition: attachment`, `Cache-Control: private, no-store`, records count/activity), `requestDigitalAccessEmail`, `manageDigitalAccess` (owner role re-checked server-side).
+
+**Verification**
+- `tests/digital-downloads-emulator.mjs` — **39/39 pass** against the Firebase emulators (`demo-` project; nothing real touched): signed-out purchase blocked; no-PDF product blocked; bad webhook signature rejected; verified payment grants access with all receipt fields; duplicate webhook is a no-op; duplicate purchase refused; own download works (correct bytes/headers); link single-use; expired link refused; other member → not found; signed-out link refused; access counts + activity recorded without file paths; Firestore rules (own read only, no self-grant/edit, no forged paid order, private settings/tokens/events protected); Storage rules (no direct reads for anyone, member upload denied, owner PDF upload allowed, non-PDF denied); owner revoke/grant/refund/resend/complimentary; revoking kills an already-issued link; auto-delivery off → waits for owner; unpaid/expired checkouts grant nothing.
+  Run: `JAVA_HOME=… firebase emulators:exec --project demo-unveiledassembly --only auth,firestore,storage,functions "node tests/digital-downloads-emulator.mjs"` (needs Java 21 and `functions/.secret.local` with the local-only dummy values in the test header).
+- `tests/digital-library-ui.mjs` — **20/20** in the preview build (desktop + 390px): library, disabled email + "Not Connected Yet", preview download explains itself, receipt details, no overflow, confirmation page, product-page note, owner Digital Files (simulated upload, no path shown), owner Orders, simulated owner actions, no page errors.
+- `tests/member-portal-phase1.mjs` updated for the renamed tab label only.
+- **Not verified end-to-end:** a real Stripe test-mode purchase on a deployed build (deploying needs owner approval), the Stripe API refund lookup inside `markRefunded` (the digital part is covered via the shared helper / owner action), and a real upload into Cloud Storage (no bucket exists yet).
+
+**Required external setup before this can work (owner approval needed)**
+1. **Turn on Cloud Storage**: Firebase Console → Storage → Get started (creates the default bucket `unveiledassembly.firebasestorage.app`, which currently returns "Not Found").
+2. Deploy: `firebase deploy --only functions,firestore:rules,storage`.
+3. Optional email delivery: connect a provider (e.g. Resend/SendGrid) as a Secret, then flip `EMAIL_PROVIDER_CONNECTED` / `EMAIL_CONNECTED` and implement the send in `requestAccessEmail` (account link only, never a file URL).
+4. Upload each product's PDF in Owner Portal → Store → Digital Files, then publish.
+
+Classroom resources (Owner Portal → Teachings → Edit Class → Classroom → Notes & Resources) are untouched — separate collections and purpose.
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*
