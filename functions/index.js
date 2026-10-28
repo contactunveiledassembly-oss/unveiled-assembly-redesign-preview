@@ -51,6 +51,25 @@ const ALLOWED_RETURN_ORIGINS = ['https://theunveiledassembly.com', 'https://www.
 function originAllowed(origin){
   return ALLOWED_RETURN_ORIGINS.some(allowed => typeof allowed === 'string' ? allowed === origin : allowed.test(origin));
 }
+
+// Which site may open Stripe Checkout follows the key that is loaded.
+// Test keys: only the private sandbox, and only for the owner and the
+// test accounts in SANDBOX_TESTER_UIDS (functions/.env) — so nobody can
+// use a public test card to unlock real products from the shared
+// database. Live keys: only the public domains; the sandbox is refused.
+const PRODUCTION_ORIGINS = ['https://theunveiledassembly.com', 'https://www.theunveiledassembly.com'];
+function stripeLiveMode(){
+  return /^(sk|rk)_live_/.test(STRIPE_SECRET_KEY.value());
+}
+async function assertCheckoutAllowed(origin, uid){
+  if(stripeLiveMode()){
+    if(!PRODUCTION_ORIGINS.includes(origin)) throw new HttpsError('failed-precondition', 'Checkout is only available on the ministry website.');
+    return;
+  }
+  const testers = String(process.env.SANDBOX_TESTER_UIDS || '').split(',').map(v => v.trim()).filter(Boolean);
+  const tester = !!uid && (testers.includes(uid) || await callerIsOwner(uid));
+  if(!SANDBOX_PREVIEW_ORIGIN.test(origin) || !tester) throw new HttpsError('failed-precondition', 'Purchases are coming soon.');
+}
 const MINISTRY_NAME = 'The Unveiled Assembly';
 // Stable label for comparing this Checkout flow in Stripe Workbench.
 // The eight-letter suffix keeps it distinct from future integrations.
@@ -242,6 +261,7 @@ exports.createCheckoutSession = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALL
   const uid = request.auth ? request.auth.uid : null;
   const authEmail = request.auth && request.auth.token ? request.auth.token.email || null : null;
   const returnBase = safeReturnUrl(data.returnUrl);
+  await assertCheckoutAllowed(returnBase.origin, uid);
 
   if((kind === 'booking' || kind === 'teaching') && !uid) throw new HttpsError('unauthenticated', 'Please sign in to continue.');
 

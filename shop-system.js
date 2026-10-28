@@ -195,7 +195,7 @@ function statusLabel(value){
 function money(cents){ return cents === null || cents === undefined ? 'Price to be announced' : '$' + (cents / 100).toFixed(2); }
 
 export function initShopSystem(context){
-  const { DEMO_MODE, db, firestore, escapeHtml, resizeImage, base = '', checkout = null } = context;
+  const { DEMO_MODE, db, firestore, escapeHtml, resizeImage, base = '', checkout = null, purchasesComingSoon = false } = context;
   const esc = escapeHtml;
   let products = [];
   let settings = { ...DEFAULT_SETTINGS };
@@ -251,7 +251,7 @@ export function initShopSystem(context){
             </label>
             <div class="shop-cart-total"><span>Subtotal</span><strong id="shopCartSubtotal" data-subtotal-cents="0">$0.00</strong></div>
             <p class="shop-cart-note">${checkout ? "You'll pay on Stripe's secure checkout page. A shipping address is collected there for physical items." : 'Taxes and delivery are not calculated. Checkout remains unavailable until secure payment processing is connected.'}</p>
-            <button class="shop-primary-action" type="button" id="shopCheckoutBtn" disabled${checkout ? '' : ' title="Secure checkout has not been connected"'}>${checkout ? 'Checkout' : 'Checkout Not Connected'}</button>
+            <button class="shop-primary-action" type="button" id="shopCheckoutBtn" disabled${checkout ? '' : ' title="Secure checkout has not been connected"'}>${checkout ? 'Checkout' : purchasesComingSoon ? 'Purchases Coming Soon' : 'Checkout Not Connected'}</button>
             <p class="shop-action-status" id="shopCheckoutStatus" role="status" aria-live="polite"></p>
             <div class="shop-cart-secondary-actions"><a href="${base}shop/" id="shopContinueShopping">Continue Shopping</a><button type="button" id="shopEmptyCart">Empty Cart</button></div>
           </div>
@@ -397,6 +397,11 @@ export function initShopSystem(context){
     // decorative-looking-functional control this project avoids elsewhere.
     const preview = (location === 'detail' && p.type === 'digital' && p.previewUrl)
       ? `<a class="shop-outline-action" href="${esc(assetUrl(p.previewUrl))}" target="_blank" rel="noopener">Preview Sample Pages</a>` : '';
+    // On the public site before payments launch, nothing can be added
+    // to the bag — the button says so plainly.
+    if(purchasesComingSoon && purchasable){
+      return `${optionSelect}${preview}<button class="shop-primary-action" type="button" disabled>Purchases Coming Soon</button><div class="shop-action-status" data-shop-action-status aria-live="polite"></div>`;
+    }
     const digitalNote = p.type === 'digital' && purchasable
       ? '<p class="shop-digital-note">Private PDF · Delivered to My Assembly → Purchases &amp; Downloads after payment. Account sign-in required.</p>' : '';
     return `${optionSelect}${preview}${digitalNote}<button class="shop-primary-action" type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : p.status === 'coming_soon' ? 'Coming Soon' : 'Unavailable'}</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${location === 'detail' && !purchasable ? 'Purchasing is not active for this item.' : ''}</div>`;

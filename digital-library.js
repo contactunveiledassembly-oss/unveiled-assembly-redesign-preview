@@ -28,6 +28,8 @@ const ACCESS_LABELS = {
 const OWNER_ACCESS_LABELS = { active: 'Active', pending_delivery: 'Waiting For Owner', revoked: 'Turned Off', refunded: 'Refunded' };
 const PAYMENT_LABELS = { paid: 'Paid', complimentary: 'Complimentary', refunded: 'Refunded', partially_refunded: 'Partly Refunded' };
 const DEMO_FILES_KEY = 'ua_preview_digital_files_v1';
+// Sandbox (Stripe test mode) purchases share the real database.
+const isTestPurchase = a => /^cs_test_/.test((a && a.stripeSessionId) || '');
 
 export function initDigitalLibrary(context){
   const { DEMO_MODE, db, firestore, call, getUser, escapeHtml: esc, base, openAccount, getProducts, onMemberLoaded } = context;
@@ -423,7 +425,7 @@ export function initDigitalLibrary(context){
     ].join('');
     return `<article class="dl-owner-order" data-dl-order="${esc(a.id)}">
       <div class="dl-owner-order-main">
-        <strong>${esc(a.productTitle || 'Digital Resource')}</strong>
+        <strong>${esc(a.productTitle || 'Digital Resource')}${isTestPurchase(a) ? ' <span class="admin-status-pill pending">Test payment</span>' : ''}</strong>
         <span>${esc(a.email || 'No email')} · ${esc(orderNumber(a.orderId))} · ${esc(shortDate(a.purchasedAt))}</span>
       </div>
       <dl class="dl-owner-facts">
@@ -443,11 +445,13 @@ export function initDigitalLibrary(context){
     const wrap = document.getElementById('ownerDigitalOrders');
     if(!wrap) return;
     const products = digitalProducts();
-    const waiting = ownerState.access.filter(a => a.accessStatus === 'pending_delivery').length;
+    const real = ownerState.access.filter(a => !isTestPurchase(a));
+    const waiting = real.filter(a => a.accessStatus === 'pending_delivery').length;
     wrap.innerHTML = `<div class="store-products-head"><div><h4>Digital Orders</h4><p>Every digital purchase, its payment, and whether the customer can download it. Payments are confirmed by Stripe — nothing here can mark an order paid.</p></div></div>
       ${DEMO_MODE ? '<p class="dl-preview-flag">Preview: sample order. Actions here are simulated and change nothing.</p>' : ''}
       ${ownerState.message ? `<p class="admin-hint">${esc(ownerState.message)}</p>` : ''}
-      <div class="admin-stat-row store-stat-row"><div class="admin-stat-tile"><span>Digital Orders</span><strong>${ownerState.access.filter(a => a.orderId).length}</strong></div><div class="admin-stat-tile"><span>Waiting For You</span><strong>${waiting}</strong></div><div class="admin-stat-tile"><span>Downloads</span><strong>${ownerState.access.reduce((n, a) => n + (Number(a.downloadCount) || 0), 0)}</strong></div></div>
+      <div class="admin-stat-row store-stat-row"><div class="admin-stat-tile"><span>Digital Orders</span><strong>${real.filter(a => a.orderId).length}</strong></div><div class="admin-stat-tile"><span>Waiting For You</span><strong>${waiting}</strong></div><div class="admin-stat-tile"><span>Downloads</span><strong>${real.reduce((n, a) => n + (Number(a.downloadCount) || 0), 0)}</strong></div></div>
+      ${real.length !== ownerState.access.length ? '<p class="admin-hint">Orders marked “Test payment” came from the private Stripe sandbox. They are not counted above.</p>' : ''}
       ${ownerState.access.length ? ownerState.access.map(ownerOrderRowHtml).join('') : '<p class="admin-hint">No digital orders yet. They appear here as soon as Stripe confirms a payment.</p>'}
       <form class="dl-grant-form" id="ownerDigitalGrantForm">
         <span class="portal-label">Give Access To A Member</span>

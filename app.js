@@ -3377,7 +3377,16 @@ const db = getFirestore(fbApp);
    DEMO_MODE (every host but the real domain) never calls it — preview
    checkouts keep their existing simulated behavior.
    --------------------------------------------------------------- */
-const LIVE_PAYMENTS = !DEMO_MODE;
+// Stripe Checkout only runs where the loaded Stripe keys allow it. While
+// the functions hold TEST keys that is the private sandbox alone; the
+// public domain shows "Purchases Coming Soon" instead. Phase 2B flips
+// PUBLIC_PAYMENTS_ENABLED together with live keys — and the server
+// (assertCheckoutAllowed in functions/index.js) enforces the same rule.
+const PUBLIC_PAYMENTS_ENABLED = false;
+const LIVE_PAYMENTS = IS_SANDBOX_PREVIEW || (!DEMO_MODE && PUBLIC_PAYMENTS_ENABLED);
+// Sandbox purchases share the real database; Stripe test-mode session ids
+// start with cs_test_, so they are labeled and kept out of revenue.
+function isStripeTestRecord(r){ return /^cs_test_/.test((r && r.stripeSessionId) || ''); }
 if(IS_SANDBOX_PREVIEW){
   document.body.insertAdjacentHTML('afterbegin', '<div role="note" style="position:fixed;left:0;right:0;bottom:0;z-index:2000;padding:8px 16px;background:#5a1d1d;color:#fff;font:600 11px/1.4 Inter,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-align:center">Stripe sandbox preview — test cards only. Not the public website.</div>');
 }
@@ -10543,8 +10552,10 @@ async function renderFinancesStripeCollection(collectionName){
   listWrap.innerHTML = '<p class="admin-hint">Loading…</p>';
   try {
     const snap = await getDocs(collection(db, collectionName));
-    const rows = [];
-    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+    const all = [];
+    snap.forEach(d => all.push({ id: d.id, ...d.data() }));
+    const rows = all.filter(r => !isStripeTestRecord(r));
+    const testCount = all.length - rows.length;
     rows.sort((a, b) => memberRecordTime(b.paidAt || b.createdAt) - memberRecordTime(a.paidAt || a.createdAt));
     const paid = rows.filter(r => r.paymentStatus === 'paid');
     const revenue = paid.reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0);
@@ -10555,7 +10566,8 @@ async function renderFinancesStripeCollection(collectionName){
     // Abandoned checkouts are noise for the owner; only show records a
     // customer actually paid (or that were later refunded).
     const shown = rows.filter(r => r.paymentStatus && r.paymentStatus !== 'pending' && r.paymentStatus !== 'unpaid');
-    listWrap.innerHTML = shown.length ? shown.map(r => stripeFinanceRowHtml(collectionName, r)).join('') : '<p class="admin-hint">' + escapeHtml(view.empty) + '</p>';
+    listWrap.innerHTML = (shown.length ? shown.map(r => stripeFinanceRowHtml(collectionName, r)).join('') : '<p class="admin-hint">' + escapeHtml(view.empty) + '</p>') +
+      (testCount ? '<p class="admin-hint">' + testCount + ' Stripe test-mode ' + view.noun + (testCount === 1 ? '' : 's') + ' from the private sandbox ' + (testCount === 1 ? 'is' : 'are') + ' not shown or counted.</p>' : '');
   } catch (err) {
     console.error('[finances] could not load ' + collectionName, err);
     listWrap.innerHTML = '<p class="admin-hint">Could not load ' + view.noun + 's. Refresh and try again.</p>';
@@ -11136,7 +11148,7 @@ function bookingsPaymentsFilteredList(){
   // DEMO_BOOKINGS seed array — same reasoning as renderOwnerTodayView().
   const useSeedArrays = DEMO_MODE || ownerSim.isActive();
   const source = useSeedArrays ? DEMO_BOOKINGS : OWNER_ALL_BOOKINGS_CACHE;
-  return source.filter(b => Number(b.amountPaid) > 0 || b.status === 'pending')
+  return source.filter(b => (Number(b.amountPaid) > 0 || b.status === 'pending') && !isStripeTestRecord(b))
     .sort((a, b) => new Date(b.bookedAt || 0) - new Date(a.bookedAt || 0));
 }
 function renderBookingsPayments(){
@@ -13273,7 +13285,7 @@ function classRegPaymentRowHtml(item){
     '</div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-classreg-view="' + escapeHtml(item.id) + '">View</button></div></div>';
 }
 function classRegPaymentsFilteredList(){
-  return classRegistrationSource().filter(r => Number(r.amountPaid) > 0 || r.status === 'pending_payment')
+  return classRegistrationSource().filter(r => (Number(r.amountPaid) > 0 || r.status === 'pending_payment') && !isStripeTestRecord(r))
     .sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
 }
 function renderClassRegPayments(){
@@ -14550,6 +14562,7 @@ shopSystem = initShopSystem({
   resizeImage: resizeImageToDataUrl,
   base: BASE,
   checkout: LIVE_PAYMENTS ? redirectToStripeCheckout : null,
+  purchasesComingSoon: !DEMO_MODE && !LIVE_PAYMENTS,
   isSignedIn: () => !!currentUser,
   openAccount: () => openPortal(),
   onOwnerRender: () => { if(digitalLibrary) void digitalLibrary.renderOwner(); }

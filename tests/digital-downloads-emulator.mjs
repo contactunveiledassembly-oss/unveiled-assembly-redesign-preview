@@ -7,12 +7,15 @@
 // Needs functions/.secret.local with local-only values (never real keys):
 //   STRIPE_SECRET_KEY=sk_test_local_emulator_dummy_not_real
 //   STRIPE_WEBHOOK_SECRET=whsec_local_emulator_test_only
+// and functions/.env.local (gitignored) naming the sandbox test accounts:
+//   SANDBOX_TESTER_UIDS=member-a,member-b
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 const require = createRequire(new URL('../functions/package.json', import.meta.url));
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
+const { getAuth } = require('firebase-admin/auth');
 const Stripe = require('stripe');
 
 const PROJECT = process.env.GCLOUD_PROJECT || 'demo-unveiledassembly';
@@ -22,7 +25,9 @@ const FS = `http://127.0.0.1:8180/v1/projects/${PROJECT}/databases/(default)/doc
 const ST = 'http://127.0.0.1:9199';
 const FN = `http://127.0.0.1:5001/${PROJECT}/us-central1`;
 const WEBHOOK_SECRET = 'whsec_local_emulator_test_only';
-const RETURN = 'https://theunveiledassembly.com/shop/confirmation.html';
+// Test keys are loaded, so checkout is only allowed from the sandbox.
+const RETURN = 'https://unveiledassembly--stripe-sandbox-abc123.web.app/shop/confirmation.html';
+const PUBLIC_RETURN = 'https://theunveiledassembly.com/shop/confirmation.html';
 
 initializeApp({ projectId: PROJECT, storageBucket: BUCKET });
 const db = getFirestore();
@@ -35,11 +40,12 @@ async function test(name, fn){
   catch (err) { results.push('FAIL ' + name + ' — ' + (err && err.message ? err.message.split('\n')[0] : err)); }
 }
 
-async function user(email, role){
-  const r = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: 'Password123', returnSecureToken: true }) });
+async function user(email, role, uid){
+  await getAuth().createUser({ uid, email, password: 'Password123' });
+  const r = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: 'Password123', returnSecureToken: true }) });
   const j = await r.json();
-  await db.doc('users/' + j.localId).set({ email, role, name: email.split('@')[0] });
-  return { uid: j.localId, token: j.idToken, email };
+  await db.doc('users/' + uid).set({ email, role, name: email.split('@')[0] });
+  return { uid, token: j.idToken, email };
 }
 async function callFn(name, data, token){
   const r = await fetch(`${FN}/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify({ data }) });
@@ -65,9 +71,10 @@ async function pendingOrder(member, productId, title){
 const session = (orderId, extra = {}) => ({ id: 'cs_test_' + orderId, object: 'checkout.session', payment_status: 'paid', amount_total: 1800, currency: 'usd', payment_intent: 'pi_test_' + orderId, customer_details: { email: 'a@example.com', name: 'Member A' }, metadata: { kind: 'shop', id: orderId }, ...extra });
 
 // ---- setup ----
-const owner = await user('owner@example.com', 'admin');
-const memberA = await user('a@example.com', 'member');
-const memberB = await user('b@example.com', 'member');
+const owner = await user('owner@example.com', 'admin', 'owner-1');
+const memberA = await user('a@example.com', 'member', 'member-a');
+const memberB = await user('b@example.com', 'member', 'member-b');
+const outsider = await user('d@example.com', 'member', 'member-d');
 const PDF = Buffer.from('%PDF-1.4\n% Unveiled Assembly test file\n1 0 obj <<>> endobj\ntrailer <<>>\n%%EOF\n');
 const product = { id: 'concealed', title: 'Concealed', subtitle: '', type: 'digital', category: 'digital', status: 'published', featured: false, priceCents: 1800, availability: 'Available', collection: 'Digital', image: '', images: [], description: '', included: [], delivery: '', options: [], tags: [], trackInventory: false, stock: null, isPlaceholder: false };
 await db.doc('shopProducts/concealed').set(product);
@@ -79,9 +86,18 @@ await db.doc('shopDigitalFiles/concealed').set({ productId: 'concealed', storage
 await db.doc('shopDigitalFiles/manual-study').set({ productId: 'manual-study', storagePath: 'private/digital-products/manual-study/1-manual.pdf', fileName: 'Manual.pdf', sizeBytes: PDF.length, autoDelivery: false });
 
 // ---- checkout gate (rejected before any Stripe call) ----
-await test('signed-out visitor cannot check out a digital product', async () => {
+await test('with test keys, the public domain cannot open checkout', async () => {
+  const r = await callFn('createCheckoutSession', { kind: 'shop', items: [{ productId: 'concealed', quantity: 1 }], returnUrl: PUBLIC_RETURN }, memberA.token);
+  assert.equal(r.error, 'FAILED_PRECONDITION'); assert.match(r.message, /coming soon/i);
+});
+await test('with test keys, a member who is not a listed tester cannot open checkout', async () => {
+  const r = await callFn('createCheckoutSession', { kind: 'donation', amountCents: 500, returnUrl: RETURN }, outsider.token);
+  assert.equal(r.error, 'FAILED_PRECONDITION'); assert.match(r.message, /coming soon/i);
+  assert.equal((await db.collection('donations').where('uid', '==', outsider.uid).get()).size, 0, 'no pending record is created');
+});
+await test('signed-out visitor cannot open checkout', async () => {
   const r = await callFn('createCheckoutSession', { kind: 'shop', items: [{ productId: 'concealed', quantity: 1 }], returnUrl: RETURN });
-  assert.equal(r.error, 'UNAUTHENTICATED');
+  assert.equal(r.error, 'FAILED_PRECONDITION');
 });
 await test('digital product without an uploaded PDF cannot be bought', async () => {
   const r = await callFn('createCheckoutSession', { kind: 'shop', items: [{ productId: 'no-file-yet', quantity: 1 }], returnUrl: RETURN }, memberA.token);
@@ -300,7 +316,7 @@ await test('a delayed payment that fails grants nothing', async () => {
 // ---- archived products, later sign-in, unverified accounts ----
 await test('an archived product cannot be bought, but past buyers keep their download', async () => {
   await db.doc('shopProducts/manual-study').update({ status: 'archived' });
-  const memberC = await user('c@example.com', 'member');
+  const memberC = await user('c@example.com', 'member', 'member-c');
   assert.equal((await callFn('createCheckoutSession', { kind: 'shop', items: [{ productId: 'manual-study', quantity: 1 }], returnUrl: RETURN }, memberC.token)).error, 'FAILED_PRECONDITION');
   const link = await callFn('createDigitalDownloadLink', { accessId: orderM + '_manual-study' }, memberA.token);
   assert.equal((await fetch(link.url)).status, 200);
