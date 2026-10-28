@@ -839,4 +839,21 @@ Owner brief: dark, cinematic, editorial Teachings page in the order **Hero → F
 
 **Remaining risks / manual items:** email delivery not connected; no CSP; single shared Firebase project (retire the sandbox channel after launch); Artifact Registry cleanup policy undecided; the Stripe-API refund path in `markRefunded` is only verifiable in the sandbox; test records to review before any deletion (none deleted).
 
+---
+
+## 37. Revised launch scope (2026-10-28): payments stay OFF; management + library go live first
+
+The owner is not taking real payments yet. Phases:
+- **Phase 1 (done):** shared-backend fixes on the one Firebase project. Deployed: `startDigitalFileUpload`, `finishDigitalFileUpload` (new), `createCheckoutSession` (test-mode gate), `digitalDownload` (file-name fix), Storage rules (deny-all), Firestore rules (launch-prep). The sandbox channel serves `launch-prep`. Rollback snapshot: the functions/rules from `ee97bf1`; Firestore/Storage rules history in the Firebase console.
+- **Phase 2A (prepared, not merged):** merge `launch-prep` → `main` so GitHub Pages publishes the Owner Portal Digital Files/Orders, the member library, the corrected counter, and `shop/confirmation.html` with **checkout disabled on the public hostname**. No backend deploy is part of 2A.
+- **Phase 2B (not started; needs separate approval):** live Stripe keys/webhook, `PUBLIC_PAYMENTS_ENABLED = true`, real products, real-payment smoke test.
+
+**How public checkout is off (two independent locks)**
+1. Browser: `app.js` `PUBLIC_PAYMENTS_ENABLED = false` → `LIVE_PAYMENTS` is true only on the sandbox host; on the public site the Shop renders a disabled **"Purchases Coming Soon"** button (product page, quick view, cart), no delivery promise, and the booking/class/Give flows behave exactly as today (no card checkout).
+2. Server: `assertCheckoutAllowed` — while the functions hold Stripe **test** keys, `createCheckoutSession` only accepts the sandbox origin AND the owner or a UID in `functions/.env` `SANDBOX_TESTER_UIDS`; everything else gets "Purchases are coming soon." With **live** keys it only accepts the public domains (the sandbox is refused).
+
+Sandbox purchases share the real database: records whose `stripeSessionId` starts with `cs_test_` are excluded from Owner Portal revenue/paid totals (with a note) and labeled "Test payment" in Store → Orders.
+
+`_config.yml` keeps internal files (this doc, functions/, tests/, rules, firebase.json, zips) out of the GitHub Pages build.
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*
