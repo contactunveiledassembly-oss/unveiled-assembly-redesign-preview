@@ -34,6 +34,7 @@ import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
 import { initShopSystem } from "./shop-system.js?v=5";
 import { initDigitalLibrary } from "./digital-library.js?v=1";
+import { initOwnerReports } from "./owner-reports.js?v=1";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -64,6 +65,8 @@ const DEMO_MODE = !PRODUCTION_HOSTS.includes(window.location.hostname) && !IS_SA
 let ownerSim = null;
 // Paid-PDF library (digital-library.js); set up beside the Shop below.
 let digitalLibrary = null;
+// Owner Portal → Reports & Backups (owner-reports.js).
+let ownerReports = null;
 // Used by generateConfirmationId() further down. Declared here (rather
 // than beside that function) because the preview-data backfill runs
 // very early during module load and needs this constant already
@@ -1405,6 +1408,10 @@ function dialogsHtml(){
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
             Finances
           </button>
+          <button type="button" class="owner-sidebar-item" data-owner-nav="reports">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z"/><path d="M14 3.5V8h4"/><path d="M9.5 16.5v-3M12 16.5v-5M14.5 16.5v-2"/></svg>
+            Reports &amp; Backups
+          </button>
           <button type="button" class="owner-sidebar-item" data-owner-nav="communication">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8A2.5 2.5 0 0 1 17.5 17H9l-5 4z"/><path d="M8 8.5h8M8 11.5h5"/></svg>
             Communications
@@ -1580,6 +1587,7 @@ function dialogsHtml(){
           <div id="ownerWebsitePagesList" class="admin-website-pages"></div>
           <div id="ownerWebsiteEditor"></div>
         </article>
+        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="reports" hidden><div id="ownerReportsRoot"></div></article>
         <article class="portal-panel" style="grid-column:1/-1" data-owner-section="payments">
           <span class="portal-label">Finances</span>
           <p class="admin-panel-intro">Every payment taken through Stripe: One-on-One sessions, Teachings, Shop orders, and card Donations. Refunds are issued from the Stripe Dashboard and show up here automatically.</p>
@@ -9629,6 +9637,7 @@ const OWNER_SECTION_DESCRIPTIONS = {
   website: 'Control the words and images visitors see on each page.',
   store: 'Create, organize, and publish the Shop collection.',
   payments: 'Every payment collected through the website, in one place.',
+  reports: 'Monthly and quarterly ministry reports, custom date ranges, and encrypted backups.',
   bookings: 'Manage one-on-one session requests and your weekly availability.',
   registrations: 'See who registered for every class, and manage attendance.',
   people: 'Everyone who has created an account.',
@@ -9789,6 +9798,7 @@ document.getElementById('ownerSidebar').addEventListener('click', event => {
   showOwnerSection(btn.dataset.ownerNav);
   if(btn.dataset.ownerNav === 'paths') renderOwnerLearningPaths();
   if(btn.dataset.ownerNav === 'store' && shopSystem) void shopSystem.loadAdmin().catch(() => {});
+  if(btn.dataset.ownerNav === 'reports' && ownerReports) void ownerReports.render();
   if(btn.dataset.ownerNav === 'dashboard'){ renderOwnerTodayView(); renderOwnerActionRequired(); renderOwnerUpcomingActivity(); }
   if(btn.dataset.ownerNav === 'payments') renderFinances();
 });
@@ -14470,6 +14480,8 @@ onAuthStateChanged(auth, async (user) => {
   // Teaching detail page — re-render now that we actually know who's
   // viewing (this listener resolves after the page's first paint).
   renderPublicTeachingPages();
+  // The emailed report link page needs the owner role, known only now.
+  if(ownerReports && document.body.dataset.page === 'owner-report') void ownerReports.renderLinkPage();
   if(memberPortalDialog.open){
     if(currentUser && currentProfile){
       // Right after registration, createUserWithEmailAndPassword signs the
@@ -14554,6 +14566,17 @@ digitalLibrary = initDigitalLibrary({
 // page once sign-in resolves; the preview build's sample auth answers
 // before this module exists, so render it here.
 if(DEMO_MODE && document.body.dataset.page === 'shop-confirmation') void digitalLibrary.renderConfirmation();
+ownerReports = initOwnerReports({
+  DEMO_MODE,
+  db,
+  firestore: { collection, getDocs },
+  call: name => httpsCallable(getFunctions(fbApp), name),
+  escapeHtml,
+  getUser: () => currentUser,
+  isOwner: () => !!(currentProfile && currentProfile.role === 'admin'),
+  openAccount: () => openPortal()
+});
+if(DEMO_MODE && document.body.dataset.page === 'owner-report') void ownerReports.renderLinkPage();
 shopSystem = initShopSystem({
   DEMO_MODE,
   db,

@@ -843,3 +843,25 @@ exports.finishDigitalFileUpload = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async
   return { file: { fileName: record.fileName, sizeBytes: size, autoDelivery: record.autoDelivery } };
 });
 
+
+/* ---------------------------------------------------------------
+   Owner Reports & Backups (functions/reports.js). Every entry point
+   re-checks the owner role on the server.
+   --------------------------------------------------------------- */
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { createReports } = require('./reports');
+const reports = createReports({ db, FieldValue, Timestamp, getStorage, HttpsError, logger, stripe, stripeLiveMode, callerIsOwner });
+const REPORT_RUNTIME = { secrets: [STRIPE_SECRET_KEY], timeoutSeconds: 300, memory: '512MiB' };
+
+// 8:00 AM New York time: monthly on the 1st; quarterly on Jan/Apr/Jul/Oct 1.
+exports.monthlyOwnerReport = onSchedule({ schedule: '0 8 1 * *', timeZone: 'America/New_York', ...REPORT_RUNTIME }, () => reports.runScheduled('monthly'));
+exports.quarterlyOwnerReport = onSchedule({ schedule: '0 8 1 1,4,7,10 *', timeZone: 'America/New_York', ...REPORT_RUNTIME }, () => reports.runScheduled('quarterly'));
+exports.generateOwnerReport = onCall({ cors: ALLOWED_RETURN_ORIGINS, ...REPORT_RUNTIME }, request => reports.generateNow(request));
+exports.createOwnerReportLink = onCall({ cors: ALLOWED_RETURN_ORIGINS }, request => reports.fileLink(request));
+exports.issueOwnerReportEmailLink = onCall({ cors: ALLOWED_RETURN_ORIGINS }, request => reports.issueEmailLink(request));
+exports.ownerReportLinkDetails = onCall({ cors: ALLOWED_RETURN_ORIGINS }, request => reports.linkDetails(request));
+exports.createOwnerBackup = onCall({ cors: ALLOWED_RETURN_ORIGINS, timeoutSeconds: 540, memory: '1GiB' }, request => reports.createBackup(request));
+exports.ownerReportFile = onRequest(async (req, res) => {
+  try { await reports.serveFile(req, res); }
+  catch (err) { logger.error('report file failed', err.message); if(!res.headersSent) res.status(500).send('The file could not be opened.'); }
+});
