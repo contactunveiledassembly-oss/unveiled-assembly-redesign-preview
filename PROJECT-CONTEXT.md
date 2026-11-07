@@ -856,4 +856,46 @@ Sandbox purchases share the real database: records whose `stripeSessionId` start
 
 `_config.yml` keeps internal files (this doc, functions/, tests/, rules, firebase.json, zips) out of the GitHub Pages build.
 
+## 38. Session Log — 2026-11-06: Resources Shop (branch `resources-shop` from `main` 7f81859; NOT committed, NOT deployed)
+
+Owner brief: a complete digital-resources shop + owner shop management, extending the existing Firebase/Stripe setup; "Concealed" as a draft with every owner input left open; separate test mode; nothing invented.
+
+**Owner Portal → "Resources Shop"** (sidebar item renamed from "Shop & Resources"; tabs in `shop-system.js` `OWNER_TABS`): Overview · Products · Orders · Digital Files · Collections · Customers · Discounts · Reports · Store Settings. New module **`shop-admin.js`** renders Overview/Orders/Collections/Customers/Discounts/Reports/Settings; Products/Inventory/Appearance stay in `shop-system.js`; Digital Files + Download Access in `digital-library.js` (Download Access now sits under Orders).
+- **Live / Test records switch** at the top. Test = `testMode: true` or a `cs_test_` session id. Test records never count in live totals.
+- **Overview alerts** (each with a button to the fix): paid orders waiting on a missing PDF, paid customers waiting for manual delivery, possible duplicate purchases, paid orders with no access record, refunds Stripe hasn't confirmed, checkouts that never closed, Active products without a PDF, products needing owner input, discount codes used up / ending within 7 days, purchases paused, public checkout off, unarchived sandbox test products.
+- **Orders**: prices as sold (unit, discount, paid per item), payment status and per-item download permission shown separately, filters + search, CSV export, **Issue Refund…** (dialog with amount + required checkbox → `manageShopOrder`), Add Note, Mark Resolved, Give/Turn Off access (confirm + reason), audit trail per order.
+- **Products**: status buttons Draft / Coming Soon / **Set Active** (= `published`) / Archive (archive confirms). "Needs your input: price · description · cover · PDF" on every product missing them. Collection field offers the owner's collections. New "Test product" checkbox (`testOnly`).
+- **Concealed**: `ensureConcealedDraft()` creates `shopProducts/concealed` (status draft, price null, empty description/cover, tag "needs owner input") the first time the owner opens the Resources Shop, only if no product titled Concealed exists. Nothing else about it was invented.
+- **Collections**: stored in `shopSettings/store.collections` [{name, description, visible}]; add, reorder, hide, rename (moves the products), remove. Visible collections with a public product show as filter chips on the Shop (`?collection=`); product breadcrumbs link to them.
+- **Customers**: grouped by account, paid orders, net spent, library items with access state + give/turn off.
+- **Discounts** (Shop codes, `discountCodes/{sha256}` with `scope: 'shop'`): percent or fixed, product scope (`productIds`), start/last day (Eastern), usage limit, pause/resume, edit, delete, test-only. Session/class codes stay in Website Content → Discounts (that list now labels Shop codes).
+- **Reports**: period picker; gross, refunds, net, paid orders, average order, discounts given; product performance (sold, gross, refunded, net, downloads); codes used; current access issues. Recalculated from `shopOrders`/`digitalAccess` every time.
+- **Store Settings**: pause/resume new purchases + customer message (`shopSettings/store`), payment status (public checkout flag, which Stripe keys are loaded via `shopStoreStatus`), test-mode instructions, audit trail (`shopAuditLog`), Shop Appearance.
+
+**Customer side**: working discount field in the bag (estimate only; server decides), discount + estimated total rows, "Purchases Paused" on product/quick view/cart when paused, collection chips, test-only products hidden on the public site. Member library now shows **Payment Pending** (open checkout Stripe hasn't confirmed), **Download Available**, **Access Unavailable · Turned Off / Refunded**, each with a "Payment: … / Download: …" line.
+
+**Server (`functions/index.js` + new `functions/shop-pricing.js`)**
+- `createCheckoutSession` (shop): refuses when `shopSettings/store.purchasesPaused`; validates + reserves a Shop discount in a transaction (`discountRedemptions/shop_{orderId}`, `usedCount`), splits it to the cent across eligible lines and Stripe line items; stores per-item `discountCents`/`paidCents`, `discountCode`, `testMode`, `signature`; **reuses** the member's open order for the same bag/prices/code instead of creating a second; a $0 order (verified 100% code, digital only) is fulfilled through `markPaid` without Stripe; if Stripe never opens, the order is closed and the discount use returned. `testOnly` products/codes are refused once live keys are loaded.
+- Webhook `markPaid` (shop): `testMode` from `session.livemode`; access `amountPaidCents` = what was actually paid; `reviewFlags` `missing-file:{id}` / `duplicate-purchase:{id}`. `markAbandoned` now returns Shop discount uses.
+- `finishDigitalFileUpload`: attaching a PDF (auto-delivery on) unlocks paid `pending_delivery` customers and reports how many.
+- `createDigitalDownloadLink`: refunded/turned-off are checked first (fixes the "not verified as paid" message for refunds — follow-up from §37).
+- New owner-only callables: **`manageShopOrder`** (`refund` — requires `confirmed: true` and the exact remaining amount, Stripe idempotency key, refuses test-vs-live mismatches; status/access change only when Stripe's `charge.refunded` arrives; `note`; `resolve-flag`) and **`shopStoreStatus`** (key mode, never the key). `manageDigitalAccess` and uploads now also write **`shopAuditLog`**.
+- **`firestore.rules`**: `shopOrders` write → nobody (server only; was admin); `shopDigitalFiles` owner may only change `autoDelivery`; new `shopAuditLog` (owner read, no writes); `shopSettings/store` public read, owner write with schema; products may carry optional bool `testOnly`; Shop codes can't go through the browser claim path. The site only writes `testOnly` when used and tolerates the old rules, so the page won't break if it is published before the rules — but deploy rules + functions first.
+
+**Verification (local, nothing deployed, no real data touched)**
+- `tests/resources-shop-ui.mjs` **37/37** (preview build, desktop + 390px): nine tabs, Concealed draft + inputs flagged, Active refused without price, alerts + jump links, orders/discount/access display, filters, refund dialog confirmation, access confirm, test-records view, customers, discount create/validate/pause/expired, collections add/rename, report math ($45.60 from two labeled preview samples), pause → product page shows Purchases Paused, cart codes (unknown/used-up/paused/valid, −$4.80 → $19.20), collection chips, library Payment Pending vs Download Available, no page errors.
+- `tests/shop-pricing.test.mjs` **15/15** (dates in Eastern, limits, test-only, exact-cent splits, Stripe line splitting, reuse signature).
+- `tests/digital-library-ui.mjs` 22/22 (labels updated). Full browser suite passes except the known-stale `owner-editor-discounts` (§32); `discount-claim-lifecycle` not run (known to hang).
+- **Written but NOT run:** `tests/resources-shop-emulator.mjs` (pause, availability, every discount refusal, Stripe-never-opened release, 100% fulfillment, usage limit, frozen paid price after a price change, retried events, duplicate/missing-file flags, auto-delivery on upload, expired checkout release, archived product keeps access, refund guards, audit, all new rules). Needs Java 21 (none on this Mac), `functions/.secret.local` dummy values, and `cd functions && npm install` (local `node_modules` is missing `pdfkit`, used by reports.js). Also run the existing `digital-downloads-emulator.mjs`.
+
+**Remaining steps (owner approval needed for each)**
+1. Deploy backend: `firebase deploy --only functions,firestore:rules` (shared project — never without `--only`).
+2. Publish site: commit `resources-shop`, PR → `main` (GitHub Pages).
+3. Test mode: the `stripe-sandbox` preview channel expired 2026-11-03 — `firebase hosting:channel:deploy stripe-sandbox --expires 7d`.
+4. Owner content: Concealed price, description, cover, PDF; collections; any discount codes. Archive TESTING / TESTING 2.
+5. Phase 2B (live payments) unchanged and still unapproved — **add: the live restricted key now also needs Refunds: Write** for Issue Refund.
+6. Still not connected: access emails (provider choice), taxes, shipping charges.
+
+---
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

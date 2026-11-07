@@ -26,14 +26,17 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
-  getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
+  getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
-import { initSiteManagement } from "./site-management.js?v=5";
+import { initSiteManagement } from "./site-management.js?v=6";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
-import { initShopSystem } from "./shop-system.js?v=5";
-import { initDigitalLibrary } from "./digital-library.js?v=1";
+// shop-admin.js imports shop-system.js with this same ?v= — keep them
+// equal so the browser loads one copy of the module.
+import { initShopSystem } from "./shop-system.js?v=6";
+import { initDigitalLibrary } from "./digital-library.js?v=2";
+import { initShopAdmin } from "./shop-admin.js?v=1";
 import { initOwnerReports } from "./owner-reports.js?v=1";
 
 /* ---------------------------------------------------------------
@@ -1402,7 +1405,7 @@ function dialogsHtml(){
           </div>
           <button type="button" class="owner-sidebar-item" data-owner-nav="store">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8l1.5-4h13L20 8"/><path d="M4 8h16v11.5a.5.5 0 0 1-.5.5h-15a.5.5 0 0 1-.5-.5z"/><path d="M9 12a3 3 0 0 0 6 0"/></svg>
-            Shop &amp; Resources
+            Resources Shop
           </button>
           <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
@@ -3574,6 +3577,7 @@ let currentProfile = null;
 let siteManagement = null;
 let eventsSystem = null;
 let shopSystem = null;
+let shopAdmin = null;
 // Ministry's scheduling timezone. The Scheduling Settings panel (below)
 // can change this in-memory for preview purposes; loadSchedulingConfig()
 // would also assign it once that panel is reconnected to Firestore.
@@ -9635,7 +9639,7 @@ const OWNER_SECTION_DESCRIPTIONS = {
   teachings: 'Create, edit, and publish the weekly Teaching classes.',
   events: 'Create, publish, and manage special ministry events.',
   website: 'Control the words and images visitors see on each page.',
-  store: 'Create, organize, and publish the Shop collection.',
+  store: 'Study guides, PDFs, orders, customers, discounts and reports.',
   payments: 'Every payment collected through the website, in one place.',
   reports: 'Monthly and quarterly ministry reports, custom date ranges, and encrypted backups.',
   bookings: 'Manage one-on-one session requests and your weekly availability.',
@@ -9718,7 +9722,7 @@ const OWNER_SETTINGS_CATALOG = [
   { title: 'Account Settings (Email & Password)', keywords: 'password email account security login', action: () => showOwnerSection('settings') },
   { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => { showOwnerSection('payments'); renderFinances(); } },
   { title: 'Reports & Backups', keywords: 'reports report monthly quarterly rollup custom date range pdf backup backups encrypted export finances income summary', action: () => { showOwnerSection('reports'); if(ownerReports) void ownerReports.render(); } },
-  { title: 'Store Products', keywords: 'shop store product collection price publish inventory', action: () => showOwnerSection('store') },
+  { title: 'Resources Shop', keywords: 'shop store product collection price publish inventory orders customers refund discount code pdf download access reports pause', action: () => showOwnerSection('store') },
   { title: 'Event Types', keywords: 'session types event types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
   { title: 'Blocked Dates', keywords: 'blocked dates vacation unavailable bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('blocked'); } },
   { title: 'Availability', keywords: 'availability hours schedule windows bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('availability'); } },
@@ -14561,7 +14565,8 @@ digitalLibrary = initDigitalLibrary({
   openAccount: tab => { openPortal(); if(tab && currentUser) showMemberTab(tab); },
   getProducts: () => (shopSystem && shopSystem.getProducts ? shopSystem.getProducts() : []),
   // Shop orders join Transactions & Confirmations once they've loaded.
-  onMemberLoaded: () => renderMemberPurchases()
+  onMemberLoaded: () => renderMemberPurchases(),
+  onOwnerChanged: () => { if(shopAdmin) void shopAdmin.reload(); }
 });
 // On the live site the auth listener (above) renders the confirmation
 // page once sign-in resolves; the preview build's sample auth answers
@@ -14578,6 +14583,13 @@ ownerReports = initOwnerReports({
   openAccount: () => openPortal()
 });
 if(DEMO_MODE && document.body.dataset.page === 'owner-report') void ownerReports.renderLinkPage();
+// The Shop needs the server's whole answer (a $0 order verified by a
+// discount comes back as { free, ref } instead of a Stripe URL).
+async function shopCheckout(payload){
+  const result = await startStripeCheckout(payload);
+  if(result.url) window.location.assign(result.url);
+  return result;
+}
 shopSystem = initShopSystem({
   DEMO_MODE,
   db,
@@ -14585,11 +14597,31 @@ shopSystem = initShopSystem({
   escapeHtml,
   resizeImage: resizeImageToDataUrl,
   base: BASE,
-  checkout: LIVE_PAYMENTS ? redirectToStripeCheckout : null,
+  checkout: LIVE_PAYMENTS ? shopCheckout : null,
   purchasesComingSoon: !DEMO_MODE && !LIVE_PAYMENTS,
+  sandbox: IS_SANDBOX_PREVIEW,
   isSignedIn: () => !!currentUser,
   openAccount: () => openPortal(),
-  onOwnerRender: () => { if(digitalLibrary) void digitalLibrary.renderOwner(); }
+  getFileState: () => (shopAdmin && shopAdmin.getFileState()) || (digitalLibrary && digitalLibrary.getFileState()) || null,
+  onOwnerRender: () => {
+    if(digitalLibrary) void digitalLibrary.renderOwner();
+    if(shopAdmin) void shopAdmin.open();
+  },
+  onOwnerOverview: () => { if(shopAdmin) shopAdmin.renderOverview(); },
+  onStoreTab: tab => { if(shopAdmin) shopAdmin.renderTab(tab); },
+  onProductsChanged: () => { if(shopAdmin) shopAdmin.renderOverview(); }
+});
+shopAdmin = initShopAdmin({
+  DEMO_MODE,
+  db,
+  firestore: { doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, orderBy, limit, serverTimestamp },
+  call: name => httpsCallable(getFunctions(fbApp), name),
+  escapeHtml,
+  base: BASE,
+  shop: shopSystem,
+  library: digitalLibrary,
+  publicPaymentsEnabled: PUBLIC_PAYMENTS_ENABLED,
+  sandbox: IS_SANDBOX_PREVIEW
 });
 applyLivePaymentCopy();
 handleCheckoutReturn();

@@ -194,16 +194,102 @@ async function priceTeaching(id, uid){
   };
 }
 
-// Mirrors productIsPurchasable() in shop-system.js.
+// Mirrors productIsPurchasable() in shop-system.js. Draft, Coming Soon
+// and archived products can never be bought; products marked "test
+// only" can only be bought while the functions hold Stripe TEST keys.
 function productPurchasable(p){
   if(!p || p.status !== 'published' || p.isPlaceholder || !Number.isInteger(p.priceCents) || p.priceCents <= 0) return false;
+  if(p.testOnly === true && stripeLiveMode()) return false;
   if(p.type === 'physical' && p.trackInventory && !(Number.isInteger(p.stock) && p.stock > 0)) return false;
   return true;
 }
 
-async function priceShop(items, uid, email){
+/* ---------------------------------------------------------------
+   Resources Shop settings + discounts.
+
+   shopSettings/store (owner-written, publicly readable) holds the
+   purchase pause. Pausing only stops NEW checkouts here; download
+   access for earlier purchases is never checked against it.
+
+   Shop discount codes live in the same discountCodes/{sha256(code)}
+   collection as session/class codes, with scope 'shop'. Unlike those
+   (claimed from the browser), a Shop code is checked and reserved
+   entirely on the server, at checkout time:
+     type 'percent' | 'fixed', amount, productIds [] (empty = every
+     product), expiresAt 'YYYY-MM-DD' (last valid day, Eastern),
+     startsAt 'YYYY-MM-DD', maxUses, usedCount, active (pause),
+     testOnly (refused once live keys are loaded).
+   One use is reserved when Checkout opens and given back if that
+   checkout expires unpaid (releaseDiscountFor).
+   --------------------------------------------------------------- */
+async function shopStoreSettings(){
+  const snap = await db.doc('shopSettings/store').get();
+  return snap.exists ? snap.data() : {};
+}
+// Pure pricing rules (no database) live in shop-pricing.js so they can
+// be unit-tested: tests/shop-pricing.test.mjs.
+const pricing = require('./shop-pricing');
+const easternToday = pricing.easternToday;
+const allocateDiscount = pricing.allocateDiscount;
+const stripeLinesFor = pricing.stripeLinesFor;
+function shopDiscountProblem(code, today = easternToday()){ return pricing.shopDiscountProblem(code, today, stripeLiveMode()); }
+async function shopDiscountFor(rawCode, lines){
+  const normalized = normalizeCode(rawCode);
+  if(!normalized) return null;
+  const codeSnap = await db.doc('discountCodes/' + hashCode(normalized)).get();
+  if(!codeSnap.exists) throw new HttpsError('not-found', 'That discount code wasn’t found.');
+  const code = codeSnap.data();
+  const problem = shopDiscountProblem(code);
+  if(problem) throw new HttpsError('failed-precondition', problem);
+  const scoped = Array.isArray(code.productIds) ? code.productIds.map(String).filter(Boolean) : [];
+  const eligible = lines.map(l => !scoped.length || scoped.includes(l.productId));
+  const eligibleCents = lines.reduce((sum, l, i) => sum + (eligible[i] ? l.unitCents * l.quantity : 0), 0);
+  if(eligibleCents <= 0) throw new HttpsError('failed-precondition', 'That code doesn’t apply to anything in your bag.');
+  const value = Math.max(0, Number(code.amount) || 0);
+  const discountCents = code.type === 'percent'
+    ? Math.round(eligibleCents * Math.min(100, value) / 100)
+    : Math.min(eligibleCents, dollarsToCents(value));
+  return { codeId: codeSnap.id, code: code.code || normalized, type: code.type === 'percent' ? 'percent' : 'fixed', amount: value, perLine: allocateDiscount(lines, eligible, discountCents), discountCents };
+}
+// Reserves one use, re-checking the limit inside the transaction so two
+// simultaneous checkouts can't both take the last use.
+async function reserveShopDiscount(discount, orderId, uid){
+  const codeRef = db.doc('discountCodes/' + discount.codeId);
+  const redemptionId = 'shop_' + orderId;
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(codeRef);
+    const problem = snap.exists ? shopDiscountProblem(snap.data()) : 'That discount code wasn’t found.';
+    if(problem) throw new HttpsError('failed-precondition', problem);
+    tx.update(codeRef, { usedCount: (Number(snap.data().usedCount) || 0) + 1, redeemedSourceIds: FieldValue.arrayUnion(redemptionId), lastRedeemedSourceId: redemptionId });
+    tx.set(db.doc('discountRedemptions/' + redemptionId), {
+      uid: uid || null, codeId: discount.codeId, status: 'confirmed', sourceCollection: 'shopOrders', sourceId: orderId,
+      discountCents: discount.discountCents, createdAt: FieldValue.serverTimestamp(), confirmedAt: FieldValue.serverTimestamp()
+    });
+  });
+}
+// A member who opens Checkout twice for the same bag (two tabs, back
+// button) gets the same still-open order instead of a second one, so
+// the same PDF can't be paid for twice by accident.
+const shopSignature = pricing.shopSignature;
+async function reusablePendingOrder(uid, signature){
+  if(!uid) return null;
+  const pending = await db.collection('shopOrders').where('uid', '==', uid).where('status', '==', 'pending_payment').get();
+  const cutoff = Date.now() - CHECKOUT_TTL_SECONDS * 1000;
+  const match = pending.docs.find(d => {
+    const o = d.data();
+    const created = o.createdAt && o.createdAt.toMillis ? o.createdAt.toMillis() : 0;
+    return o.signature === signature && o.stripeSessionId && created > cutoff;
+  });
+  return match || null;
+}
+
+async function priceShop(items, uid, email, rawDiscountCode){
   if(!Array.isArray(items) || items.length === 0) throw new HttpsError('invalid-argument', 'Your bag is empty.');
   if(items.length > SHOP_MAX_LINES) throw new HttpsError('invalid-argument', 'Too many items in one order.');
+  const store = await shopStoreSettings();
+  if(store.purchasesPaused === true){
+    throw new HttpsError('failed-precondition', String(store.pausedMessage || '').trim() || 'New purchases are paused right now. Anything you already own is still in My Assembly → Purchases & Downloads.');
+  }
   const lines = [];
   const seenDigital = new Set();
   for(const item of items){
@@ -225,15 +311,34 @@ async function priceShop(items, uid, email){
     if(p.type === 'physical' && p.trackInventory && quantity > p.stock) throw new HttpsError('failed-precondition', 'Only ' + p.stock + ' of ' + p.title + ' left.');
     lines.push({ productId, name: p.title, description: option || p.subtitle || '', option, type: p.type, trackInventory: !!p.trackInventory, unitCents: p.priceCents, quantity });
   }
+  const discount = rawDiscountCode ? await shopDiscountFor(rawDiscountCode, lines) : null;
+  lines.forEach((l, i) => { l.discountCents = discount ? discount.perLine[i] : 0; });
   const subtotalCents = lines.reduce((sum, l) => sum + l.unitCents * l.quantity, 0);
+  const discountCents = lines.reduce((sum, l) => sum + l.discountCents, 0);
+  const signature = shopSignature(lines, discount);
+
+  const existing = await reusablePendingOrder(uid, signature);
+  if(existing) return { ref: existing.ref, record: existing.data(), email, lines: stripeLinesFor(lines), code: discount ? discount.code : null, reused: true };
+
   const ref = db.collection('shopOrders').doc();
+  if(discount) await reserveShopDiscount(discount, ref.id, uid);
+  // The order keeps the prices it was sold at. Later price changes on
+  // the product never touch it.
   await ref.set({
     uid: uid || null, email: email || null, status: 'pending_payment', paymentStatus: 'pending',
-    items: lines.map(({ productId, name, option, type, trackInventory, unitCents, quantity }) => ({ productId, title: name, option, type, trackInventory, unitPriceCents: unitCents, quantity })),
-    subtotalCents, totalCents: subtotalCents, hasPhysical: lines.some(l => l.type === 'physical'),
+    items: lines.map(l => ({
+      productId: l.productId, title: l.name, option: l.option, type: l.type, trackInventory: l.trackInventory,
+      unitPriceCents: l.unitCents, quantity: l.quantity, discountCents: l.discountCents,
+      paidCents: l.unitCents * l.quantity - l.discountCents
+    })),
+    subtotalCents, discountCents, totalCents: subtotalCents - discountCents,
+    ...(discount ? { discountCode: discount.code, discountCodeId: discount.codeId, discountType: discount.type, discountValue: discount.amount } : {}),
+    hasPhysical: lines.some(l => l.type === 'physical'),
+    testMode: !stripeLiveMode(),
+    signature,
     createdAt: FieldValue.serverTimestamp()
   });
-  return { ref, record: { uid: uid || null }, email, lines, code: null };
+  return { ref, record: { uid: uid || null }, email, lines: stripeLinesFor(lines), code: discount ? discount.code : null };
 }
 
 async function priceDonation(amountCents, uid, email){
@@ -268,11 +373,21 @@ exports.createCheckoutSession = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALL
   let priced;
   if(kind === 'booking') priced = await priceBooking(String(data.id || ''), uid);
   else if(kind === 'teaching') priced = await priceTeaching(String(data.id || ''), uid);
-  else if(kind === 'shop') priced = await priceShop(data.items, uid, authEmail);
+  else if(kind === 'shop') priced = await priceShop(data.items, uid, authEmail, data.discountCode);
   else if(kind === 'donation') priced = await priceDonation(data.amountCents, uid, authEmail);
   else throw new HttpsError('invalid-argument', 'Unknown checkout type.');
 
   const totalCents = priced.lines.reduce((sum, l) => sum + l.unitCents * l.quantity, 0);
+  if(kind === 'shop' && totalCents < STRIPE_MIN_CENTS){
+    // Only a server-verified owner discount can bring a Shop order to
+    // $0. That order is fulfilled here, exactly as a paid one would be.
+    if(totalCents > 0 || priced.lines.some(l => l.type === 'physical')){
+      await abandonShopOrder(priced.ref.id, 'below-card-minimum');
+      throw new HttpsError('failed-precondition', totalCents > 0 ? 'The total is below the $0.50 card minimum.' : 'Free orders can only include digital resources.');
+    }
+    await fulfillFreeShopOrder(priced.ref.id, uid);
+    return { free: true, ref: priced.ref.id };
+  }
   if(totalCents <= 0) return { free: true };
   if(totalCents < STRIPE_MIN_CENTS) throw new HttpsError('failed-precondition', 'The total is below the $0.50 card minimum.');
 
@@ -294,7 +409,9 @@ exports.createCheckoutSession = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALL
   const metadata = { kind, id, uid: uid || '' };
   if(priced.code) metadata.discountCode = priced.code;
   const hasPhysical = priced.lines.some(l => l.type === 'physical');
-  const session = await stripe().checkout.sessions.create({
+  let session;
+  try {
+  session = await stripe().checkout.sessions.create({
     integration_identifier: STRIPE_INTEGRATION_IDENTIFIER,
     mode: 'payment',
     submit_type: kind === 'donation' ? 'donate' : kind === 'shop' ? 'pay' : 'book',
@@ -311,6 +428,12 @@ exports.createCheckoutSession = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALL
     success_url: returnLink(returnBase, { checkout: 'success', kind, ref: id, session_id: 'SESSION_ID_PLACEHOLDER' }),
     cancel_url: returnLink(returnBase, { checkout: 'cancelled', kind, ref: id })
   });
+  } catch (err) {
+    // Stripe never opened, so no webhook will ever close this order —
+    // close it now and give back any discount use it reserved.
+    if(kind === 'shop' && !priced.reused) await abandonShopOrder(id, 'checkout-not-opened');
+    throw err;
+  }
   await priced.ref.update({ stripeSessionId: session.id, checkoutStartedAt: FieldValue.serverTimestamp() });
   return { url: session.url };
 });
@@ -357,6 +480,12 @@ async function markPaid(session){
     const stockSnaps = await Promise.all(stockRefs.map(s => tx.get(s.ref)));
     const digitalItems = kind === 'shop' ? (record.items || []).filter(i => i.type === 'digital') : [];
     const digitalFileSnaps = await Promise.all(digitalItems.map(i => tx.get(db.doc('shopDigitalFiles/' + i.productId))));
+    // Already owned through another order? The payment still counts and
+    // access is still recorded, but the order is flagged for the owner
+    // (who can refund the duplicate) rather than silently doubled.
+    const ownedSnaps = record.uid ? await Promise.all(digitalItems.map(i => tx.get(
+      db.collection('digitalAccess').where('uid', '==', record.uid).where('productId', '==', i.productId)
+    ))) : [];
 
     if(kind === 'booking'){
       // A member could cancel in another tab while Stripe was charging.
@@ -385,9 +514,14 @@ async function markPaid(session){
     } else if(kind === 'shop'){
       const shipping = session.shipping_details || (session.collected_information && session.collected_information.shipping_details) || null;
       const email = (session.customer_details && session.customer_details.email) || record.email || null;
+      const reviewFlags = [];
       const digitalAccessIds = digitalItems.map((item, i) => {
         const accessId = id + '_' + item.productId;
-        tx.set(db.doc('digitalAccess/' + accessId), digitalAccessRecord({ orderId: id, record, item, email, session, paid, file: digitalFileSnaps[i].exists ? digitalFileSnaps[i].data() : null }));
+        const file = digitalFileSnaps[i].exists ? digitalFileSnaps[i].data() : null;
+        if(!file || !file.storagePath) reviewFlags.push('missing-file:' + item.productId);
+        const owned = ownedSnaps[i] && ownedSnaps[i].docs.some(d => d.id !== accessId && ['active', 'pending_delivery'].includes(d.data().accessStatus));
+        if(owned) reviewFlags.push('duplicate-purchase:' + item.productId);
+        tx.set(db.doc('digitalAccess/' + accessId), digitalAccessRecord({ orderId: id, record, item, email, session, paid, file }));
         return accessId;
       });
       tx.update(ref, {
@@ -395,6 +529,9 @@ async function markPaid(session){
         email,
         customerName: (session.customer_details && session.customer_details.name) || null,
         shipping: shipping ? { name: shipping.name || null, address: shipping.address || null } : null,
+        testMode: session.livemode === false,
+        ...(session.free ? { freeWithDiscount: true, paymentMethod: 'discount' } : {}),
+        ...(reviewFlags.length ? { reviewFlags } : {}),
         ...(digitalAccessIds.length ? { digitalAccessIds } : {})
       });
       stockRefs.forEach((s, i) => {
@@ -465,10 +602,34 @@ async function markAbandoned(session){
       released = true;
     } else {
       tx.update(ref, { status: 'expired', paymentStatus: 'unpaid', updatedAt: FieldValue.serverTimestamp() });
+      if(kind === 'shop') released = true;
     }
   });
   if(released) await releaseDiscountFor(collectionName, id);
   logger.info('checkout not completed', kind, id, session.id);
+}
+
+// A Shop order whose Stripe page never opened (or that couldn't be
+// charged) is closed straight away and its discount use given back.
+async function abandonShopOrder(orderId, reason){
+  const ref = db.doc('shopOrders/' + orderId);
+  let closed = false;
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if(!snap.exists || snap.data().paymentStatus === 'paid' || snap.data().status !== 'pending_payment') return;
+    tx.update(ref, { status: 'expired', paymentStatus: 'unpaid', closeReason: reason, updatedAt: FieldValue.serverTimestamp() });
+    closed = true;
+  });
+  if(closed) await releaseDiscountFor('shopOrders', orderId);
+}
+
+// $0 after a verified discount: fulfilled through the same markPaid
+// path as a card payment, so access, flags and idempotency are shared.
+async function fulfillFreeShopOrder(orderId, uid){
+  await markPaid({
+    id: 'free_' + orderId, free: true, metadata: { kind: 'shop', id: orderId, uid: uid || '' },
+    amount_total: 0, currency: 'usd', payment_intent: null, livemode: stripeLiveMode(), customer_details: null
+  });
 }
 
 async function markRefunded(charge){
@@ -594,12 +755,15 @@ function digitalAccessRecord({ orderId, record, item, email, session, paid, file
   return {
     orderId, uid: record.uid || null, email,
     productId: item.productId, productTitle: item.title || '',
-    amountPaidCents: (item.unitPriceCents || 0) * (item.quantity || 1),
+    // What this customer actually paid for this item (after any
+    // discount), frozen at purchase time.
+    amountPaidCents: Number.isInteger(item.paidCents) ? item.paidCents : (item.unitPriceCents || 0) * (item.quantity || 1),
     currency: session.currency || 'usd',
     stripeSessionId: session.id, paymentIntentId: paid.paymentIntentId,
     paymentStatus: 'paid',
     accessStatus: auto ? 'active' : 'pending_delivery',
-    accessSource: 'stripe-payment',
+    accessSource: session.free ? 'discount-free' : 'stripe-payment',
+    testMode: session.livemode === false,
     refundStatus: 'none',
     emailStatus: EMAIL_PROVIDER_CONNECTED ? 'queued' : 'not_connected',
     downloadCount: 0, lastDownloadAt: null,
@@ -644,9 +808,11 @@ exports.createDigitalDownloadLink = onCall({ cors: ALLOWED_RETURN_ORIGINS }, asy
   // Someone else's purchase looks exactly like a missing one.
   if(!snap || !snap.exists || snap.data().uid !== uid) throw new HttpsError('not-found', 'We could not find that purchase on your account.');
   const access = snap.data();
-  if(access.paymentStatus !== 'paid' && access.accessSource !== 'owner-grant') throw new HttpsError('failed-precondition', 'This purchase has not been verified as paid.');
-  if(access.accessStatus === 'refunded') throw new HttpsError('failed-precondition', 'This purchase was refunded, so the download is no longer available.');
+  // Refunded/turned-off come first so a refunded purchase says so,
+  // rather than "not verified as paid".
+  if(access.accessStatus === 'refunded' || access.paymentStatus === 'refunded') throw new HttpsError('failed-precondition', 'This purchase was refunded, so the download is no longer available.');
   if(access.accessStatus === 'revoked') throw new HttpsError('permission-denied', 'Access to this download has been turned off. Please contact the ministry.');
+  if(access.paymentStatus !== 'paid' && access.accessSource !== 'owner-grant') throw new HttpsError('failed-precondition', 'This purchase has not been verified as paid.');
   if(access.accessStatus !== 'active') throw new HttpsError('failed-precondition', 'Your download is being prepared by the ministry. It will appear here as soon as it is ready.');
   const file = await db.doc('shopDigitalFiles/' + access.productId).get();
   if(!file.exists || !file.data().storagePath) throw new HttpsError('failed-precondition', 'This file is being updated. Please try again shortly.');
@@ -753,6 +919,7 @@ exports.manageDigitalAccess = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async req
       purchasedAt: FieldValue.serverTimestamp(), grantedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       ownerActions: FieldValue.arrayUnion(log)
     }, { merge: true });
+    await shopAudit({ ...log, accessId, orderId: null, productId, customerUid: memberUid });
     return { ok: true, accessId };
   }
 
@@ -778,7 +945,91 @@ exports.manageDigitalAccess = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async req
   } else {
     throw new HttpsError('invalid-argument', 'Unknown action.');
   }
+  await shopAudit({ ...log, accessId, orderId: access.orderId || null, productId: access.productId || null, customerUid: access.uid || null });
   return { ok: true };
+});
+
+/* ---------------------------------------------------------------
+   Resources Shop — owner-only order actions and store status.
+
+   shopAuditLog/{id} (owner read, server write only) is the store-wide
+   trail of every consequential owner action: access given/turned off,
+   refunds issued, flags resolved, notes. Each entry also lands on the
+   affected record's ownerActions[] so it reads in context.
+   --------------------------------------------------------------- */
+async function shopAudit(entry){
+  await db.collection('shopAuditLog').add({ ...entry, at: FieldValue.serverTimestamp() });
+}
+function centsFromDollars(value){ return Math.round((Number(value) || 0) * 100); }
+
+exports.manageShopOrder = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALLOWED_RETURN_ORIGINS }, async request => {
+  const uid = request.auth ? request.auth.uid : null;
+  if(!(await callerIsOwner(uid))) throw new HttpsError('permission-denied', 'Only the ministry owner can do this.');
+  const data = request.data || {};
+  const action = String(data.action || '');
+  const orderId = String(data.orderId || '');
+  const note = String(data.note || '').trim().slice(0, 500);
+  const ref = orderId ? db.doc('shopOrders/' + orderId) : null;
+  const snap = ref ? await ref.get() : null;
+  if(!snap || !snap.exists) throw new HttpsError('not-found', 'That order could not be found.');
+  const order = snap.data();
+  const log = { action, by: uid, at: new Date().toISOString(), ...(note ? { note } : {}) };
+
+  if(action === 'refund'){
+    // The owner confirms the exact amount in the portal; a stale screen
+    // (the order changed since it loaded) is refused instead of guessed.
+    if(data.confirmed !== true) throw new HttpsError('failed-precondition', 'Please confirm the refund first.');
+    if(!['paid', 'partially_refunded'].includes(order.paymentStatus)) throw new HttpsError('failed-precondition', 'Only a paid order can be refunded.');
+    if(!order.paymentIntentId) throw new HttpsError('failed-precondition', 'This order has no card payment to refund.');
+    const paidCents = centsFromDollars(order.amountPaid);
+    const refundedCents = centsFromDollars(order.amountRefunded);
+    const remaining = paidCents - refundedCents;
+    if(remaining <= 0) throw new HttpsError('failed-precondition', 'This order has already been refunded in full.');
+    if(Number(data.expectedAmountCents) !== remaining) throw new HttpsError('failed-precondition', 'This order changed since you opened it. Refresh and try again.');
+    const testRecord = order.testMode === true || /^cs_test_/.test(order.stripeSessionId || '');
+    if(testRecord && stripeLiveMode()) throw new HttpsError('failed-precondition', 'This was a test payment. Refund it from the Stripe sandbox Dashboard.');
+    if(!testRecord && !stripeLiveMode()) throw new HttpsError('failed-precondition', 'Live payments can only be refunded while live payments are switched on.');
+    let refund;
+    try {
+      // Same key on a retry = the same refund, never a second one.
+      refund = await stripe().refunds.create(
+        { payment_intent: order.paymentIntentId, amount: remaining, reason: 'requested_by_customer', metadata: { kind: 'shop', id: orderId, requestedBy: uid } },
+        { idempotencyKey: 'ua-shop-refund-' + orderId + '-' + refundedCents }
+      );
+    } catch (err) {
+      logger.error('refund failed', orderId, err.message);
+      throw new HttpsError('failed-precondition', 'Stripe could not issue this refund: ' + (err.message || 'unknown error'));
+    }
+    // Payment status and download access change when Stripe's verified
+    // charge.refunded event arrives (markRefunded) — not here.
+    await ref.update({ refundRequestedAt: FieldValue.serverTimestamp(), refundRequestedBy: uid, lastRefundId: refund.id, refundStatus: refund.status, ownerActions: FieldValue.arrayUnion({ ...log, amountCents: remaining, refundId: refund.id }), updatedAt: FieldValue.serverTimestamp() });
+    await shopAudit({ ...log, orderId, amountCents: remaining, refundId: refund.id, customerUid: order.uid || null, testMode: testRecord });
+    return { ok: true, refundId: refund.id, status: refund.status, amountCents: remaining };
+  }
+  if(action === 'resolve-flag'){
+    const flag = String(data.flag || '');
+    if(!(order.reviewFlags || []).includes(flag)) throw new HttpsError('not-found', 'That alert is already resolved.');
+    await ref.update({ reviewFlags: FieldValue.arrayRemove(flag), resolvedFlags: FieldValue.arrayUnion({ flag, by: uid, at: log.at, ...(note ? { note } : {}) }), ownerActions: FieldValue.arrayUnion({ ...log, flag }), updatedAt: FieldValue.serverTimestamp() });
+    await shopAudit({ ...log, orderId, flag, customerUid: order.uid || null });
+    return { ok: true };
+  }
+  if(action === 'note'){
+    if(!note) throw new HttpsError('invalid-argument', 'Write a note first.');
+    await ref.update({ ownerActions: FieldValue.arrayUnion(log), updatedAt: FieldValue.serverTimestamp() });
+    await shopAudit({ ...log, orderId, customerUid: order.uid || null });
+    return { ok: true };
+  }
+  throw new HttpsError('invalid-argument', 'Unknown action.');
+});
+
+// What the Store Settings screen shows about payments. Never returns a key.
+exports.shopStoreStatus = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALLOWED_RETURN_ORIGINS }, async request => {
+  const uid = request.auth ? request.auth.uid : null;
+  if(!(await callerIsOwner(uid))) throw new HttpsError('permission-denied', 'Only the ministry owner can do this.');
+  let mode = 'not-configured';
+  try { mode = stripeLiveMode() ? 'live' : (/^(sk|rk)_test_/.test(STRIPE_SECRET_KEY.value()) ? 'test' : 'not-configured'); } catch (err) { mode = 'not-configured'; }
+  const testers = String(process.env.SANDBOX_TESTER_UIDS || '').split(',').map(v => v.trim()).filter(Boolean);
+  return { stripeMode: mode, emailConnected: EMAIL_PROVIDER_CONNECTED, sandboxTesterCount: testers.length, today: easternToday() };
 });
 
 exports.startDigitalFileUpload = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async request => {
@@ -839,8 +1090,22 @@ exports.finishDigitalFileUpload = onCall({ cors: ALLOWED_RETURN_ORIGINS }, async
   };
   await fileRef.set(record);
   await ref.delete();
+  // Customers who paid while no PDF was attached were left waiting
+  // (pending_delivery). With auto-delivery on, attaching the file now
+  // unlocks them — only paid entries, never revoked or refunded ones.
+  let delivered = 0;
+  if(record.autoDelivery){
+    const waiting = await db.collection('digitalAccess').where('productId', '==', upload.productId).where('accessStatus', '==', 'pending_delivery').get();
+    const batch = db.batch();
+    waiting.docs.filter(d => d.data().paymentStatus === 'paid').forEach(d => {
+      delivered += 1;
+      batch.update(d.ref, { accessStatus: 'active', grantedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), ownerActions: FieldValue.arrayUnion({ action: 'grant', by: uid, at: new Date().toISOString(), note: 'Delivered automatically when the PDF was attached' }) });
+    });
+    if(delivered) await batch.commit();
+  }
+  await shopAudit({ action: prior.storagePath ? 'file-replaced' : 'file-uploaded', by: uid, at: new Date().toISOString(), productId: upload.productId, fileName: record.fileName, sizeBytes: size });
   logger.info('digital file attached', upload.productId);
-  return { file: { fileName: record.fileName, sizeBytes: size, autoDelivery: record.autoDelivery } };
+  return { file: { fileName: record.fileName, sizeBytes: size, autoDelivery: record.autoDelivery }, delivered };
 });
 
 

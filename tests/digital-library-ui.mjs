@@ -47,7 +47,7 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
   await page.waitForSelector('#memberDigitalLibrary .dl-item', { timeout: 8000 }).catch(() => {});
   await test(label + ': library shows the purchase with verified status', async () => {
     const text = await page.locator('#memberDigitalLibrary').innerText();
-    assert.match(text, /YOUR DIGITAL LIBRARY/i); assert.match(text, /CONCEALED/i); assert.match(text, /PAYMENT VERIFIED/i);
+    assert.match(text, /YOUR DIGITAL LIBRARY/i); assert.match(text, /CONCEALED/i); assert.match(text, /DOWNLOAD AVAILABLE/i);
   });
   await test(label + ': preview sample is clearly marked, never a real paid receipt', async () => {
     const text = await page.locator('#memberDigitalLibrary').innerText();
@@ -123,7 +123,7 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
   await page.locator('[data-store-tab="orders"]').click();
   await test('owner Orders shows payment, access, email, downloads, and actions', async () => {
     const text = await page.locator('#ownerDigitalOrders').innerText();
-    for(const label of ['Digital Orders', 'Payment', 'Access', 'Refund', 'Email', 'Downloads', 'Give Access To A Member', 'Not Connected Yet']) assert.ok(text.toLowerCase().includes(label.toLowerCase()), 'missing ' + label);
+    for(const label of ['Download Access', 'Payment', 'Access', 'Refund', 'Email', 'Downloads', 'Give Access To A Member', 'Not Connected Yet']) assert.ok(text.toLowerCase().includes(label.toLowerCase()), 'missing ' + label);
     assert.equal(await page.locator('[data-dl-owner="resend"]').first().isDisabled(), true);
   });
   await test('owner actions in preview are simulated, not faked', async () => {

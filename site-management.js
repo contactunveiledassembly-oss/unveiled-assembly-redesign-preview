@@ -730,7 +730,7 @@ export function initSiteManagement(context){
     } catch (err) { discountCodes = []; }
     discountsLoaded = true;
   }
-  function scopeLabel(scope){ return scope === 'oneonone' ? 'One-on-Ones' : scope === 'teaching' ? 'Teachings' : 'One-on-Ones + Teachings'; }
+  function scopeLabel(scope){ return scope === 'oneonone' ? 'One-on-Ones' : scope === 'teaching' ? 'Teachings' : scope === 'shop' ? 'Resources Shop (manage in Resources Shop → Discounts)' : 'One-on-Ones + Teachings'; }
   function usageLabel(item){
     const used = Number(item.usedCount) || 0;
     if(item.maxUses === null || item.maxUses === undefined || item.maxUses === '') return used + ' used · unlimited';
