@@ -26,15 +26,19 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, collection, query, where,
-  getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction
+  getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction, orderBy, limit, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
-import { initSiteManagement } from "./site-management.js?v=5";
+import { initSiteManagement } from "./site-management.js?v=7";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
-import { initShopSystem } from "./shop-system.js?v=5";
-import { initDigitalLibrary } from "./digital-library.js?v=1";
-import { initOwnerReports } from "./owner-reports.js?v=1";
+// shop-admin.js imports shop-system.js with this same ?v= — keep them
+// equal so the browser loads one copy of the module.
+import { initShopSystem } from "./shop-system.js?v=7";
+import { initDigitalLibrary } from "./digital-library.js?v=4";
+import { initShopAdmin } from "./shop-admin.js?v=5";
+import { OWNER_NAV_GROUPS, groupForNav, buildOwnerAlerts, alertCounts, recordTone, toMs } from "./owner-portal-alerts.js?v=2";
+import { initOwnerReports } from "./owner-reports.js?v=2";
 
 /* ---------------------------------------------------------------
    Preview-mode safety lock. Only the real production domain may
@@ -1334,16 +1338,30 @@ function dialogsHtml(){
     </dialog>
 
     <div class="portal-view" data-portal-view="owner" hidden>
-      <div class="portal-head">
-        <div>
-          <div class="kicker on-light">My Assembly Administration</div>
-          <h3>Ministry Portal</h3>
-          <p id="ownerSectionDescription">Everything you need to run the website, in one place.</p>
+      <div class="portal-head owner-topbar">
+        <div class="owner-topbar-brand">
+          <span class="owner-topbar-kicker">The Unveiled Assembly of Christ Jesus</span>
+          <h3>Owner Portal</h3>
+          <p><span id="ownerDashboardWelcome">Welcome back.</span><span class="owner-topbar-date" id="ownerTodayDate"></span></p>
         </div>
         <div class="owner-header-controls">
-          <span class="portal-account">Private Owner View</span>
-          <button type="button" class="owner-header-btn" id="ownerHeaderMemberViewBtn" title="Preview the Member Portal as Maya Johnson — the sample member with an existing booking, class registrations, and notifications">Member View</button>
-          <button type="button" class="owner-header-btn owner-header-signout" id="ownerHeaderSignOutBtn">Sign Out</button>
+          <button type="button" class="owner-bell" id="ownerAlertBell" aria-label="Needs your attention: nothing right now">
+            <svg viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+            <span class="owner-bell-count" id="ownerBellCount" hidden></span>
+          </button>
+          <div class="owner-account">
+            <button type="button" class="owner-account-btn" id="ownerAccountMenuBtn" aria-expanded="false" aria-controls="ownerAccountMenu">
+              <span class="owner-account-avatar" id="ownerHeaderAvatar" aria-hidden="true">?</span>
+              <span class="owner-account-name" id="ownerHeaderName">Owner</span>
+              <span class="owner-sidebar-dept-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="owner-account-menu" id="ownerAccountMenu" hidden>
+              <button type="button" data-owner-account-go="settings">Owner Account</button>
+              <button type="button" data-owner-account-go="communication">Notifications</button>
+              <button type="button" id="ownerHeaderMemberViewBtn" title="Preview the Member Portal as Maya Johnson — the sample member with an existing booking, class registrations, and notifications">Member View</button>
+              <button type="button" class="owner-header-signout" id="ownerHeaderSignOutBtn">Sign Out</button>
+            </div>
+          </div>
         </div>
       </div>
       <div id="ownerSimBar"></div>
@@ -1357,87 +1375,124 @@ function dialogsHtml(){
           Menu
         </button>
         <div class="owner-sidebar-backdrop" id="ownerSidebarBackdrop"></div>
-        <nav class="owner-sidebar" id="ownerSidebar">
+        <nav class="owner-sidebar" id="ownerSidebar" aria-label="Owner Portal sections">
           <button type="button" class="owner-sidebar-collapse-btn" id="ownerSidebarCollapseBtn" title="Collapse sidebar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg>
             <span>Collapse</span>
           </button>
           <button type="button" class="owner-sidebar-item active" data-owner-nav="dashboard">
             <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
-            Dashboard
+            <span class="owner-nav-label">Overview</span><span class="owner-alert-count" data-alert-nav="dashboard" hidden></span>
           </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="people">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
-            People
+          <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">
+            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
+            <span class="owner-nav-label">Bookings</span><span class="owner-alert-count" data-alert-nav="bookings" hidden></span>
           </button>
-          <div class="owner-sidebar-dept" data-dept="ministry">
-            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="ministry" aria-expanded="false">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="4.5" r="2"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/><path d="M12 6.5v4M12 10.5 6 17M12 10.5l6 6.5"/></svg>
-              <span>Ministry Operations</span>
+          <div class="owner-sidebar-dept" data-dept="classroom">
+            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="classroom" aria-expanded="false" aria-controls="ownerDeptClassroom">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18H6.5A2.5 2.5 0 0 0 4 20.5"/></svg>
+              <span>Classroom</span><span class="owner-alert-count" data-alert-group="classroom" hidden></span>
               <span class="owner-sidebar-dept-chevron" aria-hidden="true"></span>
             </button>
-            <div class="owner-sidebar-dept-items" data-dept-items="ministry" hidden>
+            <div class="owner-sidebar-dept-items" id="ownerDeptClassroom" data-dept-items="classroom" hidden>
               <button type="button" class="owner-sidebar-item" data-owner-nav="teachings">
                 <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18H6.5A2.5 2.5 0 0 0 4 20.5"/></svg>
-                Teachings
-              </button>
-              <button type="button" class="owner-sidebar-item" data-owner-nav="paths">
-                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="20" cy="12" r="1.6"/><circle cx="19" cy="18" r="1.6"/></svg>
-                Learning Paths
+                <span class="owner-nav-label">Classes &amp; Lessons</span><span class="owner-alert-count" data-alert-nav="teachings" hidden></span>
               </button>
               <button type="button" class="owner-sidebar-item" data-owner-nav="registrations">
                 <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v15.5L14 18l-4.5 2.5L5 18V5A1.5 1.5 0 0 1 6.5 3.5z"/><path d="M9 9h6M9 12.5h6"/></svg>
-                Registrations
+                <span class="owner-nav-label">Registrations &amp; Attendance</span><span class="owner-alert-count" data-alert-nav="registrations" hidden></span>
               </button>
-              <button type="button" class="owner-sidebar-item" data-owner-nav="events">
-                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5h16v15H4z"/><path d="M4 9h16M8 3v4M16 3v4"/><circle cx="9" cy="14" r="1.5"/><path d="M13 14h4M8 18h9"/></svg>
-                Events
+              <button type="button" class="owner-sidebar-item" data-owner-nav="paths">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="20" cy="12" r="1.6"/><circle cx="19" cy="18" r="1.6"/></svg>
+                <span class="owner-nav-label">Learning Paths</span>
               </button>
-              <button type="button" class="owner-sidebar-item" data-owner-nav="bookings">
-                <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
-                One-on-One Scheduling
-              </button>
-              <div data-owner-sidebar-group="inbox"></div>
+              <div data-owner-sidebar-slot="class-reviews"></div>
             </div>
           </div>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="store">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8l1.5-4h13L20 8"/><path d="M4 8h16v11.5a.5.5 0 0 1-.5.5h-15a.5.5 0 0 1-.5-.5z"/><path d="M9 12a3 3 0 0 0 6 0"/></svg>
-            Shop &amp; Resources
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
-            Finances
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="reports">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z"/><path d="M14 3.5V8h4"/><path d="M9.5 16.5v-3M12 16.5v-5M14.5 16.5v-2"/></svg>
-            Reports &amp; Backups
-          </button>
-          <button type="button" class="owner-sidebar-item" data-owner-nav="communication">
-            <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8A2.5 2.5 0 0 1 17.5 17H9l-5 4z"/><path d="M8 8.5h8M8 11.5h5"/></svg>
-            Communications
-          </button>
-          <div class="owner-sidebar-dept" data-dept="website-settings">
-            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="website-settings" aria-expanded="false">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
-              <span>Website &amp; Settings</span>
+          <div class="owner-sidebar-dept" data-dept="community">
+            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="community" aria-expanded="false" aria-controls="ownerDeptCommunity">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.2c1.7.4 3 2 3 3.8s-1.3 3.4-3 3.8M21.5 20c0-3-2-5.2-5-5.8"/></svg>
+              <span>Community</span><span class="owner-alert-count" data-alert-group="community" hidden></span>
               <span class="owner-sidebar-dept-chevron" aria-hidden="true"></span>
             </button>
-            <div class="owner-sidebar-dept-items" data-dept-items="website-settings" hidden>
+            <div class="owner-sidebar-dept-items" id="ownerDeptCommunity" data-dept-items="community" hidden>
+              <div data-owner-sidebar-slot="prayer-requests"></div>
+              <div data-owner-sidebar-slot="testimonials"></div>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="events">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 5h16v15H4z"/><path d="M4 9h16M8 3v4M16 3v4"/><circle cx="9" cy="14" r="1.5"/><path d="M13 14h4M8 18h9"/></svg>
+                <span class="owner-nav-label">Events &amp; Outreach</span>
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="people">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/></svg>
+                <span class="owner-nav-label">Members</span>
+              </button>
+            </div>
+          </div>
+          <div class="owner-sidebar-dept" data-dept="resources">
+            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="resources" aria-expanded="false" aria-controls="ownerDeptResources">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8l1.5-4h13L20 8"/><path d="M4 8h16v11.5a.5.5 0 0 1-.5.5h-15a.5.5 0 0 1-.5-.5z"/><path d="M9 12a3 3 0 0 0 6 0"/></svg>
+              <span>Resources</span><span class="owner-alert-count" data-alert-group="resources" hidden></span>
+              <span class="owner-sidebar-dept-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="owner-sidebar-dept-items" id="ownerDeptResources" data-dept-items="resources" hidden>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="store">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8l1.5-4h13L20 8"/><path d="M4 8h16v11.5a.5.5 0 0 1-.5.5h-15a.5.5 0 0 1-.5-.5z"/></svg>
+                <span class="owner-nav-label">Resources Shop</span><span class="owner-alert-count" data-alert-nav="store" hidden></span>
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="payments">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>
+                <span class="owner-nav-label">Finances</span>
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="reports">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z"/><path d="M14 3.5V8h4"/></svg>
+                <span class="owner-nav-label">Reports &amp; Backups</span>
+              </button>
+            </div>
+          </div>
+          <div class="owner-sidebar-dept" data-dept="website">
+            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="website" aria-expanded="false" aria-controls="ownerDeptWebsite">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg>
+              <span>Website</span><span class="owner-alert-count" data-alert-group="website" hidden></span>
+              <span class="owner-sidebar-dept-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="owner-sidebar-dept-items" id="ownerDeptWebsite" data-dept-items="website" hidden>
               <button type="button" class="owner-sidebar-item" data-owner-nav="website">
-                <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg>
-                Website
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="9"/></svg>
+                <span class="owner-nav-label">Pages &amp; Content</span>
               </button>
               <button type="button" class="owner-sidebar-item" data-owner-nav="media">
                 <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 16l-5.5-5.5a1.5 1.5 0 0 0-2 0L4 20"/></svg>
-                Media
-              </button>
-              <button type="button" class="owner-sidebar-item" data-owner-nav="settings">
-                <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
-                Settings
+                <span class="owner-nav-label">Media Library</span>
               </button>
               <button type="button" class="owner-sidebar-item" data-owner-nav="policies">
-                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/><path d="M15 3.5V7.5a.5.5 0 0 0 .5.5H19"/><path d="M10 12.5h5M10 15.5h5M10 9.5h2"/></svg>
-                Policies
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20z"/></svg>
+                <span class="owner-nav-label">Forms &amp; Policies</span>
+              </button>
+            </div>
+          </div>
+          <div class="owner-sidebar-dept" data-dept="settings">
+            <button type="button" class="owner-sidebar-dept-toggle" data-dept-toggle="settings" aria-expanded="false" aria-controls="ownerDeptSettings">
+              <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>
+              <span>Settings</span><span class="owner-alert-count" data-alert-group="settings" hidden></span>
+              <span class="owner-sidebar-dept-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="owner-sidebar-dept-items" id="ownerDeptSettings" data-dept-items="settings" hidden>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="settings">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>
+                <span class="owner-nav-label">Owner Account</span>
+              </button>
+              <button type="button" class="owner-sidebar-item" data-owner-nav="communication">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8A2.5 2.5 0 0 1 17.5 17H9l-5 4z"/></svg>
+                <span class="owner-nav-label">Notifications</span>
+              </button>
+              <button type="button" class="owner-sidebar-item owner-sidebar-shortcut" data-owner-shortcut="store-settings">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/></svg>
+                <span class="owner-nav-label">Payments &amp; Store Settings</span>
+              </button>
+              <button type="button" class="owner-sidebar-item owner-sidebar-shortcut" data-owner-shortcut="audit">
+                <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 4h14v16H5z"/></svg>
+                <span class="owner-nav-label">Audit History</span>
               </button>
             </div>
           </div>
@@ -1450,41 +1505,38 @@ function dialogsHtml(){
           </div>
         </nav>
         <div class="owner-content">
-      <div class="owner-breadcrumb" id="ownerBreadcrumb"></div>
+      <header class="owner-page-head" id="ownerPageHead">
+        <div class="owner-breadcrumb" id="ownerBreadcrumb"></div>
+        <h2 id="ownerPageTitle">Overview</h2>
+        <p class="owner-page-desc" id="ownerSectionDescription"></p>
+        <div class="owner-section-alerts" id="ownerSectionAlerts" hidden></div>
+      </header>
       <div class="portal-owner-grid">
-        <article class="portal-panel" style="grid-column:1/-1" data-owner-section="dashboard">
-          <h3 style="font-family:var(--serif);font-size:22px;font-weight:600;color:var(--owner-text);margin:0 0 4px" id="ownerDashboardWelcome">Welcome back.</h3>
-          <p class="admin-panel-intro" style="margin-bottom:16px">Here's what's happening with your ministry.</p>
-
-          <div class="owner-dash-card">
-            <div class="owner-dash-card-head"><span class="owner-dash-card-title">Overview</span></div>
-            <div class="admin-stat-row admin-stat-row-3col" id="ownerTodayStats"></div>
-            <div class="admin-stat-row" id="ownerDashboardStats" style="margin-top:10px"></div>
-          </div>
-
-          <div class="owner-dash-card-row">
-            <div class="owner-dash-card">
-              <div class="owner-dash-card-head">
-                <div class="admin-tabs" id="ownerActivityTabs" role="tablist">
-                  <button type="button" class="admin-tab active" data-activity-tab="attention">Needs Attention<span class="owner-dash-card-count" id="ownerActionRequiredCount"></span></button>
-                  <button type="button" class="admin-tab" data-activity-tab="upcoming">Upcoming</button>
-                  <button type="button" class="admin-tab" data-activity-tab="recent">Recent</button>
-                </div>
+        <article class="portal-panel owner-overview" style="grid-column:1/-1" data-owner-section="dashboard">
+          <div class="owner-summary-grid" id="ownerSummaryCards" aria-live="polite"></div>
+          <div class="owner-overview-grid">
+            <section class="owner-card owner-card-attention" aria-labelledby="ownerAttentionHeading">
+              <header class="owner-card-head"><h4 id="ownerAttentionHeading" tabindex="-1">Needs Your Attention</h4><span class="owner-card-count" id="ownerActionRequiredCount"></span></header>
+              <div id="ownerActionRequired"></div>
+            </section>
+            <section class="owner-card owner-card-schedule" aria-labelledby="ownerScheduleHeading">
+              <header class="owner-card-head"><h4 id="ownerScheduleHeading">Upcoming Schedule</h4><button type="button" class="owner-link-btn" id="ownerOpenCalendar">Open Calendar</button></header>
+              <div id="ownerUpcomingActivity"></div>
+            </section>
+            <section class="owner-card owner-card-actions" aria-labelledby="ownerActionsHeading">
+              <header class="owner-card-head"><h4 id="ownerActionsHeading">Quick Actions</h4></header>
+              <div class="owner-quick-grid" id="ownerQuickActions">
+                <button type="button" data-quick-action="bookings">Manage Bookings</button>
+                <button type="button" data-quick-action="new-teaching">Schedule a Class</button>
+                <button type="button" data-quick-action="prayer">Review Prayer Requests</button>
+                <button type="button" data-quick-action="resources">Manage Resources</button>
+                <button type="button" data-quick-action="website">Edit Website Content</button>
               </div>
-              <div data-activity-panel="attention"><div id="ownerActionRequired"></div></div>
-              <div data-activity-panel="upcoming" hidden><div id="ownerUpcomingActivity"></div></div>
-              <div data-activity-panel="recent" hidden><div id="ownerRecentActivity"></div></div>
-            </div>
-            <div class="owner-dash-card">
-              <div class="owner-dash-card-head"><span class="owner-dash-card-title">Quick Actions</span></div>
-              <div style="display:flex;flex-direction:column;gap:8px" id="ownerQuickActions">
-                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="new-teaching" data-dept="classes" style="text-align:left">+ Create A Teaching Class</button>
-                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="media" data-dept="system" style="text-align:left">Upload Media</button>
-                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="bookings" data-dept="scheduling" style="text-align:left">Manage Bookings</button>
-                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="registrants" data-dept="classes" style="text-align:left">View Registrations</button>
-                <button type="button" class="admin-btn-ghost owner-quick-action" data-quick-action="website" data-dept="system" style="text-align:left">Edit Website</button>
-              </div>
-            </div>
+            </section>
+            <section class="owner-card owner-card-recent" aria-labelledby="ownerRecentHeading">
+              <header class="owner-card-head"><h4 id="ownerRecentHeading">Recent Activity</h4></header>
+              <div id="ownerRecentActivity"></div>
+            </section>
           </div>
         </article>
         <article class="portal-panel admin-panel" style="grid-column:1/-1" data-owner-section="events" hidden>
@@ -1625,7 +1677,7 @@ function dialogsHtml(){
           </div>
           <div class="discount-manager">
             <span class="portal-label">Discount Codes</span>
-            <p class="admin-panel-intro">Create codes for One-on-One sessions, Teachings, or both. Codes adjust checkout totals now; the real charge will use the adjusted total once a payment processor is connected.</p>
+            <p class="admin-panel-intro">Create codes for One-on-One sessions, Teachings, or both. Each code lowers the checkout total; the payment server checks the code again (paused, end date, usage limit) before anyone is charged. Resources Shop codes are managed in Resources Shop → Discounts.</p>
             <form id="ownerDiscountCodeForm" class="discount-manager-form">
               <label>Code<input id="ownerDiscountCode" type="text" placeholder="GRACE20" maxlength="30" required /></label>
               <label>Kind<select id="ownerDiscountType"><option value="percent">Percentage</option><option value="fixed">Fixed Amount</option></select></label>
@@ -1786,34 +1838,45 @@ function dialogsHtml(){
             <div id="bookingsCalendarView"></div>
           </div>
 
-          <div class="admin-edit-panel" data-bookings-panel="availability" hidden>
-            <p class="admin-hint" style="margin-bottom:16px">Controls when visitors are allowed to request a 1:1 session — your time zone, how far ahead people can book, and how much notice you need.</p>
-            <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px">
-              <div class="form-field" style="min-width:260px">
-                <label for="schedTimezone">Ministry Time Zone</label>
-                <select id="schedTimezone" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
-                  <option value="America/New_York">Eastern (America/New_York)</option>
-                  <option value="America/Chicago">Central (America/Chicago)</option>
-                  <option value="America/Denver">Mountain (America/Denver)</option>
-                  <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
-                  <option value="America/Anchorage">Alaska (America/Anchorage)</option>
-                  <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
-                </select>
+          <div class="admin-edit-panel avl" data-bookings-panel="availability" hidden>
+            <div class="avl-toolbar">
+              <div class="avl-schedule">
+                <label for="avlScheduleSelect"><span class="avl-step-num" aria-hidden="true">1</span> Availability schedule</label>
+                <div class="avl-schedule-row">
+                  <select id="avlScheduleSelect" aria-describedby="avlScheduleHint"></select>
+                  <button type="button" class="admin-btn-ghost" id="avlScheduleNew">New Schedule</button>
+                  <button type="button" class="admin-btn-ghost" id="avlScheduleRename">Rename</button>
+                  <button type="button" class="admin-btn-ghost" id="avlScheduleDelete">Delete</button>
+                </div>
+                <div class="avl-schedule-name" id="avlScheduleNameRow" hidden>
+                  <label for="avlScheduleName" id="avlScheduleNameLabel">Schedule name</label>
+                  <input id="avlScheduleName" type="text" maxlength="60" placeholder="e.g. Weekend availability" />
+                  <button type="button" class="admin-btn-solid" id="avlScheduleNameSave">Add Schedule</button>
+                  <button type="button" class="admin-btn-ghost" id="avlScheduleNameCancel">Cancel</button>
+                </div>
+                <span class="admin-hint" id="avlScheduleHint">A schedule controls when you're available. Each session type follows one schedule; several types can share it.</span>
+                <p class="avl-msg" id="avlScheduleMsg" role="status"></p>
               </div>
-              <div class="form-field" style="flex:0 0 170px"><label for="schedMaxPerDay">Maximum Appointments Per Day</label><input id="schedMaxPerDay" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 150px"><label for="schedMinNotice">Minimum Notice (hours)</label><input id="schedMinNotice" type="number" min="0" placeholder="None" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 170px"><label for="schedMaxAdvance">Maximum Advance Booking (days)</label><input id="schedMaxAdvance" type="number" min="0" placeholder="No limit" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <label style="display:flex;align-items:center;gap:8px;color:var(--owner-text);font-size:13px;padding-bottom:8px;white-space:nowrap;flex:0 0 auto">
-                <input id="schedBookingPaused" type="checkbox" style="accent-color:var(--owner-accent)" />
-                Pause all new booking requests
-              </label>
+              <div class="avl-save-wrap">
+                <span class="avl-dirty" id="avlDirtyNote" role="status">All changes saved.</span>
+                <button type="button" class="admin-btn-ghost" id="avlDiscardBtn">Discard Changes</button><button type="button" class="admin-btn-solid avl-save" id="avlSaveBtn">Save Schedule</button>
+              </div>
             </div>
-            <p class="admin-hint" style="margin-bottom:20px">"Buffer Time" is set per Event Type (see the Event Types tab). Nothing on this screen takes effect until you click Save Changes above.</p>
+            <ol class="avl-steps" aria-label="How to set availability">
+              <li>Choose a schedule</li><li>Set weekly hours</li><li>Pick a date</li><li>Add special hours or block it</li><li>Choose the session types that use it</li><li>Check the open times</li><li>Save</li>
+            </ol>
 
-            <div class="admin-subsection-label">Available Days &amp; Hours</div>
-            <p class="admin-hint" style="margin-bottom:12px">These are the weekly windows visitors can request a time in. Add as many as you'd like — each one applies every week until removed.</p>
-            <div id="schedRulesList" style="margin-bottom:14px"></div>
-            <form id="schedRuleForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+            <div class="avl-workspace">
+              <section class="avl-panel" aria-labelledby="avlWeekTitle">
+                <div class="avl-panel-head">
+                  <h4 id="avlWeekTitle"><span class="avl-step-num" aria-hidden="true">2</span>Regular weekly hours</h4>
+                  <p>The days and times you normally accept one-on-ones. Each block repeats every week until you remove it.</p>
+                </div>
+                <div class="avl-panel-body">
+                  <div class="avl-week" id="avlWeek"></div>
+                  <div class="avl-editor" id="avlRuleEditor">
+                    <h5 class="avl-editor-title" id="avlRuleEditorTitle">Add hours</h5>
+              <form id="schedRuleForm">
               <div class="form-field" style="flex:1;min-width:130px">
                 <label for="schedRuleDay">Day</label>
                 <select id="schedRuleDay" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
@@ -1824,17 +1887,109 @@ function dialogsHtml(){
               <div class="form-field" style="flex:0 0 120px"><label for="schedRuleStart">Start</label><input id="schedRuleStart" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 120px"><label for="schedRuleEnd">End</label><input id="schedRuleEnd" type="time" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
               <div class="form-field" style="flex:0 0 110px"><label for="schedRuleCapacity">Capacity</label><input id="schedRuleCapacity" type="number" min="1" value="1" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:1;min-width:220px">
-                <label>Session Types Allowed</label>
+              <details class="form-field avl-wide avl-advanced">
+                <summary>Optional: limit these hours to certain session types</summary>
+                <p class="admin-hint">Usually leave every type selected — the schedule already decides which session types use these hours.</p>
                 <div id="schedRuleTypesCheckboxes" class="sched-session-type-options"></div>
-              </div>
-              <div class="form-field" style="flex:1;min-width:160px"><label for="schedRuleNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedRuleNotes" type="text" placeholder="e.g. Prayer line only" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <button class="admin-btn-ghost" type="submit">Add Window</button>
+              </details>
+              <div class="form-field avl-wide"><label for="schedRuleNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedRuleNotes" type="text" placeholder="e.g. Prayer line only" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="avl-editor-actions"><button class="admin-btn-solid" type="submit" id="avlRuleSubmit">Add Hours</button><button class="admin-btn-ghost" type="button" id="avlRuleCancel" hidden>Cancel Editing</button></div>
             </form>
-            <div class="form-status" id="schedRuleStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
-            <p class="admin-hint" style="margin-top:8px">Uncheck a type above to keep this window from applying to it — leave all checked (the default) for a window every Event Type can use. Capacity is how many people can book the same exact time. Remove and re-add a window to change its scoping later.</p>
+                    <div class="form-status" id="schedRuleStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+                    <p class="admin-hint" style="margin-top:8px">Capacity is how many people can book the same exact time.</p>
+                  </div>
+                  <details class="avl-details">
+                    <summary>All weekly hours as a list</summary>
+                    <div id="schedRulesList"></div>
+                  </details>
+                </div>
+              </section>
 
-            <div class="admin-subsection-label">Night Of Prayer</div>
+              <section class="avl-panel" aria-labelledby="avlCalTitle">
+                <div class="avl-panel-head">
+                  <h4 id="avlCalTitle"><span class="avl-step-num" aria-hidden="true">3</span>Date calendar</h4>
+                  <p>Select a date to add special hours for this schedule, block the date, and see the times visitors can book. Past times are never offered.</p>
+                </div>
+                <div class="avl-month">
+                  <div class="avl-month-head">
+                    <h5 id="avlMonthLabel" aria-live="polite"></h5>
+                    <div class="avl-month-nav">
+                      <button type="button" id="avlPrevMonth" aria-label="Previous month">‹</button>
+                      <button type="button" id="avlNextMonth" aria-label="Next month">›</button>
+                    </div>
+                  </div>
+                  <div class="avl-grid" id="avlCalendar" role="grid" aria-labelledby="avlMonthLabel"></div>
+                </div>
+                <div class="avl-legend" aria-hidden="true"><span><i class="lg-hours"></i>Has hours</span><span><i class="lg-special"></i>Special hours</span><span><i class="lg-blocked"></i>Blocked</span></div>
+                <div class="avl-selected" id="avlSelected">
+                  <div class="avl-selected-label">Selected date</div>
+                  <h5 id="avlSelectedDate">Choose a date</h5>
+                  <p class="avl-selected-status" id="avlSelectedStatus">Pick a day on the calendar above.</p>
+                  <div class="avl-selected-actions" id="avlSelectedActions"></div>
+                  <p class="avl-msg" id="avlSelectedMsg" role="status"></p>
+                  <div class="avl-editor" id="avlOverrideEditor" hidden>
+                    <h5 class="avl-editor-title"><span class="avl-step-num" aria-hidden="true">4</span> Special hours for this date</h5>
+              <form id="schedOverrideForm">
+              <div class="form-field" style="flex:1;min-width:150px"><label for="schedOverrideDate">Date</label><input id="schedOverrideDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideStart">Start</label><input id="schedOverrideStart" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideEnd">End</label><input id="schedOverrideEnd" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <details class="form-field avl-wide avl-advanced">
+                <summary>Optional: limit these hours to certain session types</summary>
+                <div id="schedOverrideTypesCheckboxes" class="sched-session-type-options"></div>
+              </details>
+              <div class="form-field avl-wide"><label for="schedOverrideNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedOverrideNotes" type="text" placeholder="e.g. Ministry event" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+              <label class="avl-pause avl-wide">
+                <input id="schedOverrideClosed" type="checkbox" style="accent-color:var(--owner-accent)" /> Fully closed this date
+              </label>
+              <div class="avl-editor-actions"><button class="admin-btn-solid" type="submit">Save Special Hours</button><button class="admin-btn-ghost" type="button" id="avlOverrideCancel">Cancel</button></div>
+            </form>
+                    <div class="form-status" id="schedOverrideStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
+                  </div>
+                </div>
+                <div class="avl-assign" aria-labelledby="avlAssignTitle">
+                  <h5 id="avlAssignTitle"><span class="avl-step-num" aria-hidden="true">5</span> Session types using this schedule</h5>
+                  <p class="admin-hint">Title, duration, buffers and price stay on each session type (Event Types tab). Here you choose which ones follow these hours.</p>
+                  <div class="sched-session-type-options" id="avlAssignTypes" role="group" aria-labelledby="avlAssignTitle"></div>
+                  <p class="avl-msg" id="avlAssignMsg" role="status"></p>
+                </div>
+                <div class="avl-slots" aria-labelledby="avlSlotsTitle">
+                  <div class="avl-slots-head"><h5 id="avlSlotsTitle"><span class="avl-step-num" aria-hidden="true">6</span> Available time slots</h5></div>
+                  <div class="avl-type-chips" id="avlSlotTypes" role="group" aria-label="Show times for session type"></div>
+                  <div id="avlSlots" aria-live="polite"></div>
+                  <p class="avl-note" id="avlSlotsNote"></p>
+                </div>
+              </section>
+            </div>
+
+            <section class="avl-panel" aria-labelledby="avlRulesTitle">
+              <div class="avl-panel-head">
+                <h4 id="avlRulesTitle">Booking rules</h4>
+                <p>Your time zone, how far ahead people can book, and how much notice you need. "Buffer time" is set per session type on the Event Types tab.</p>
+              </div>
+              <div class="avl-panel-body">
+                <div class="avl-rules-grid">
+                  <div class="form-field">
+                    <label for="schedTimezone">Ministry time zone</label>
+                    <select id="schedTimezone" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf">
+                  <option value="America/New_York">Eastern (America/New_York)</option>
+                  <option value="America/Chicago">Central (America/Chicago)</option>
+                  <option value="America/Denver">Mountain (America/Denver)</option>
+                  <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
+                  <option value="America/Anchorage">Alaska (America/Anchorage)</option>
+                  <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
+                </select>
+                  </div>
+                  <div class="form-field"><label for="schedMaxPerDay">Maximum appointments per day</label><input id="schedMaxPerDay" type="number" min="0" placeholder="No limit" /></div>
+                  <div class="form-field"><label for="schedMinNotice">Minimum notice (hours)</label><input id="schedMinNotice" type="number" min="0" placeholder="None" /></div>
+                  <div class="form-field"><label for="schedMaxAdvance">Maximum advance booking (days)</label><input id="schedMaxAdvance" type="number" min="0" placeholder="No limit" /></div>
+                  <label class="avl-pause"><input id="schedBookingPaused" type="checkbox" /> Pause all new booking requests</label>
+                </div>
+              </div>
+            </section>
+
+            <section class="avl-panel" aria-labelledby="avlNightTitle">
+              <div class="avl-panel-body" style="padding-top:18px">
+            <h4 id="avlNightTitle" style="margin:0 0 6px;font:600 16px var(--sans);color:var(--owner-text)">Night Of Prayer</h4>
             <p class="admin-hint" style="margin-bottom:12px">Until a date is set here, the homepage shows a neutral "announced soon" message instead of a fake date — it never advertises an unscheduled event.</p>
             <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
               <div class="form-field" style="flex:0 0 170px"><label for="nightOfPrayerDate">Date</label><input id="nightOfPrayerDate" type="date" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
@@ -1843,6 +1998,8 @@ function dialogsHtml(){
             </div>
             <p class="admin-hint" style="margin-bottom:8px">Fixed for now: Zoom · Capacity 100 · Free · No registration required. This also only takes effect once you click Save Changes above.</p>
             <div class="form-status" id="nightOfPrayerStatus" style="color:var(--owner-text-muted)"></div>
+              </div>
+            </section>
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="types" hidden>
@@ -1867,6 +2024,7 @@ function dialogsHtml(){
                 <div class="form-field" style="flex:0 0 130px"><label for="schedTypeCapacity">Capacity <span class="admin-hint">(optional)</span></label><input id="schedTypeCapacity" type="number" min="1" placeholder="Unlimited" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
                 <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferBefore">Buffer before</label><input id="schedTypeBufferBefore" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
                 <div class="form-field" style="flex:0 0 110px"><label for="schedTypeBufferAfter">Buffer after</label><input id="schedTypeBufferAfter" type="number" min="0" step="5" placeholder="0 min" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
+                <div class="form-field" style="flex:1;min-width:200px"><label for="schedTypeSchedule">Availability schedule</label><select id="schedTypeSchedule"></select></div>
                 <div class="form-field" style="flex:1;min-width:200px"><label for="schedTypeDescription">Description</label><input id="schedTypeDescription" type="text" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
                 <div class="admin-image-field" data-image-field="session-type" style="max-width:280px">
                   <span class="admin-microlabel">Session Image <span class="admin-hint">(optional — shown on the public One-on-One page)</span></span>
@@ -1910,24 +2068,10 @@ function dialogsHtml(){
             </form>
             <div class="form-status" id="schedRangeStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
 
-            <div class="admin-subsection-label">Specific Time Block</div>
-            <p class="admin-hint" style="margin-bottom:12px">Change just one date's hours — for example, open later than usual, close early, or fully closed for part of the day. Set a start and end time and the system automatically offers every bookable time inside it (no need to list each time by hand). Leave start/end blank and check "Fully closed" to block the whole date.</p>
+            <div class="admin-subsection-label">Special Hours For One Date</div>
+            <p class="avl-moved-note">Special hours for a single date (open later, close early, or fully closed) are now set from <strong>Availability → Date calendar</strong>: pick the date and choose “Set Special Hours”.</p>
+            <div class="admin-hint" style="margin-bottom:8px">Dates that currently have special hours:</div>
             <div id="schedOverridesList" style="margin-bottom:14px"></div>
-            <form id="schedOverrideForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-              <div class="form-field" style="flex:1;min-width:150px"><label for="schedOverrideDate">Date</label><input id="schedOverrideDate" type="date" required style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideStart">Start</label><input id="schedOverrideStart" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:0 0 120px"><label for="schedOverrideEnd">End</label><input id="schedOverrideEnd" type="time" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <div class="form-field" style="flex:1;min-width:220px">
-                <label>Session Types Allowed</label>
-                <div id="schedOverrideTypesCheckboxes" class="sched-session-type-options"></div>
-              </div>
-              <div class="form-field" style="flex:1;min-width:160px"><label for="schedOverrideNotes">Notes <span class="admin-hint">(optional)</span></label><input id="schedOverrideNotes" type="text" placeholder="e.g. Ministry event" style="background:#fdfcfb;color:var(--black);border-color:#bfbfbf" /></div>
-              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--owner-text);padding-bottom:8px;white-space:nowrap;flex:0 0 auto">
-                <input id="schedOverrideClosed" type="checkbox" style="accent-color:var(--owner-accent)" /> Fully closed this date
-              </label>
-              <button class="admin-btn-ghost" type="submit">Save Override</button>
-            </form>
-            <div class="form-status" id="schedOverrideStatus" style="color:var(--owner-text-muted);margin-top:8px"></div>
           </div>
 
           <div class="admin-edit-panel" data-bookings-panel="policies" hidden>
@@ -3430,10 +3574,12 @@ window.startStripeCheckout = startStripeCheckout; // for page-level scripts; app
 // its time or seat until the 30-minute Stripe session expires, so it
 // offers to resume rather than start over.
 const CHECKOUT_RETURN_COPY = {
-  booking: { thing: 'session', success: 'Your payment was received and your session is confirmed. Your confirmation will appear in My Assembly → Sessions within a minute.' },
-  teaching: { thing: 'class seat', success: 'Your payment was received and your seat is confirmed. Classroom access will appear in My Assembly → Classes within a minute.' },
-  shop: { thing: 'order', success: 'Your order is paid. A receipt from Stripe is on its way to your email.' },
-  donation: { thing: 'gift', success: 'Your gift was received. A receipt from Stripe is on its way to your email. Thank you for your generosity.' }
+  // Returning from Stripe alone proves nothing, so these say what
+  // happens next; the verified webhook is what confirms and unlocks.
+  booking: { thing: 'session', success: 'Thank you — we received your checkout. Your session shows as confirmed in My Assembly → Sessions as soon as Stripe verifies the payment, usually within a minute.' },
+  teaching: { thing: 'class seat', success: 'Thank you — we received your checkout. Your seat and classroom access appear in My Assembly → Classes as soon as Stripe verifies the payment, usually within a minute.' },
+  shop: { thing: 'order', success: 'Thank you — we received your checkout. Your order and receipt appear in My Assembly → Purchases & Downloads as soon as Stripe verifies the payment.' },
+  donation: { thing: 'gift', success: 'Thank you for your generosity. Your gift is recorded as soon as Stripe verifies the payment.' }
 };
 function showCheckoutNotice({ title, message, resume }){
   let dialog = document.getElementById('checkoutNoticeDialog');
@@ -3574,6 +3720,7 @@ let currentProfile = null;
 let siteManagement = null;
 let eventsSystem = null;
 let shopSystem = null;
+let shopAdmin = null;
 // Ministry's scheduling timezone. The Scheduling Settings panel (below)
 // can change this in-memory for preview purposes; loadSchedulingConfig()
 // would also assign it once that panel is reconnected to Firestore.
@@ -3636,6 +3783,38 @@ let BLOCKOUT_RANGES = [];
 // weekly windows entirely — used for "special availability for a
 // specific date" (extra hours, or reduced/closed for part of a day).
 let AVAILABILITY_OVERRIDES = {};
+// Upcoming single-date blocks as last loaded/saved (production mirror of
+// the `blockouts` collection; DEMO_MODE uses DEMO_BLOCKED_DATES). The
+// scheduling draft copies this so blocks are staged until Save.
+let BLOCKED_DATES_LIVE = [];
+
+/* Availability schedules (2026-11-17). A schedule says WHEN the ministry
+   is available (weekly hours + special-date hours); a session type says
+   WHAT is booked (title, duration, buffers, price…) and points at one
+   schedule via `scheduleId`. Several types can share a schedule. The
+   list lives in schedulingSettings/global.schedules. Anything without a
+   scheduleId — every rule, override and type created before this — is
+   on the main schedule, so existing data behaves exactly as before.
+   Special-date hours for the main schedule keep their plain date key
+   (availabilityOverrides/{date}); other schedules use "{date}@{id}". */
+const DEFAULT_SCHEDULE_ID = 'default';
+function availabilitySchedules(settings){
+  const list = ((settings || SCHEDULING_SETTINGS).schedules || []).filter(x => x && x.id);
+  return list.some(x => x.id === DEFAULT_SCHEDULE_ID) ? list : [{ id: DEFAULT_SCHEDULE_ID, name: 'Main availability' }, ...list];
+}
+function scheduleIdOf(record){ return (record && record.scheduleId) || DEFAULT_SCHEDULE_ID; }
+function scheduleIdForType(typeId, types){ return scheduleIdOf((types || SESSION_TYPES)[typeId]); }
+function overrideKey(dateStr, scheduleId){ return (!scheduleId || scheduleId === DEFAULT_SCHEDULE_ID) ? dateStr : dateStr + '@' + scheduleId; }
+function parseOverrideKey(key){ const i = key.indexOf('@'); return i === -1 ? { date: key, scheduleId: DEFAULT_SCHEDULE_ID } : { date: key.slice(0, i), scheduleId: key.slice(i + 1) }; }
+// "Today" and "now" on the MINISTRY's clock — not UTC (toISOString), which
+// is already tomorrow during US evenings, and not the visitor's zone.
+function ministryNowParts(){
+  const map = {};
+  new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TZ, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    .formatToParts(new Date()).forEach(p => { map[p.type] = p.value; });
+  return { date: map.year + '-' + map.month + '-' + map.day, minutes: (Number(map.hour) % 24) * 60 + Number(map.minute) };
+}
+function ministryToday(){ return ministryNowParts().date; }
 
 async function loadSchedulingConfig(){
   try {
@@ -3801,6 +3980,23 @@ function savePreviewToStorage(){
     console.error('Could not save preview data to this browser', err);
     return false;
   }
+}
+// Preview only: another open tab may have booked since this page
+// loaded. Re-reading the stored bookings right before the slot check
+// (like the live site's transaction re-reads the slot) stops two tabs
+// double-booking one time, and stops this tab writing an older list
+// back over the other tab's booking. Ids continue after the highest
+// stored one so a reload can't reuse an id.
+function refreshDemoBookingsFromStorage(){
+  if(!DEMO_MODE) return;
+  try {
+    const bk = localStorage.getItem(PREVIEW_STORAGE_KEYS.bookings);
+    if(bk) DEMO_BOOKINGS = JSON.parse(bk);
+  } catch (err) { /* keep the in-memory list */ }
+  DEMO_BOOKINGS.forEach(b => {
+    const n = Number((String(b.id).match(/^demo-(\d+)$/) || [])[1]) || 0;
+    if(n > DEMO_BOOKING_SEQ) DEMO_BOOKING_SEQ = n;
+  });
 }
 function saveBookingsPreviewToStorage(){
   if(!DEMO_MODE) return true;
@@ -4497,35 +4693,31 @@ function formatVisibilityBadge(visibility){
   return map[visibility] || 'Public';
 }
 
+// Sidebar badges now show UNRESOLVED items only (red alerts), not the
+// total number of records — see refreshOwnerAlerts().
 function renderOwnerInboxBadges(){
-  const countMap = {
-    'prayer-requests': PRAYER_REQUESTS.length,
-    'testimonials': TESTIMONIALS.length,
-    'class-reviews': CLASS_REVIEWS.length
-  };
-  Object.entries(countMap).forEach(([key, count]) => {
-    const badge = document.querySelector('[data-owner-nav="' + key + '"] .owner-nav-count');
-    if(badge) badge.textContent = count;
-  });
+  refreshOwnerAlerts();
 }
 
 function initOwnerInboxNavigation(){
   const sidebar = document.getElementById('ownerSidebar');
   const content = document.querySelector('.owner-content');
   if(!sidebar || !content) return;
-  // Nav buttons go inside Ministry Operations' sub-list (Master Redesign
-  // Phase 2 navigation restructuring), not appended to the end of the
-  // sidebar as a separate top-level group like before.
-  const inboxGroup = sidebar.querySelector('[data-owner-sidebar-group="inbox"]') || sidebar;
-  if(!sidebar.querySelector('[data-owner-nav="prayer-requests"]')) {
-    inboxGroup.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="prayer-requests"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20H6.5A2.5 2.5 0 0 1 4 17.5zm0 0 8 6 8-6"/></svg>Prayer Requests<span class="owner-nav-count">0</span></button>');
-  }
-  if(!sidebar.querySelector('[data-owner-nav="testimonials"]')) {
-    inboxGroup.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="testimonials"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 18.5V5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5v8A1.5 1.5 0 0 1 17.5 15H9l-4 3.5z"/><path d="M9 8h6M9 11h6"/></svg>Testimonials<span class="owner-nav-count">0</span></button>');
-  }
-  if(!sidebar.querySelector('[data-owner-nav="class-reviews"]')) {
-    inboxGroup.insertAdjacentHTML('beforeend', '<button type="button" class="owner-sidebar-item" data-owner-nav="class-reviews"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3.5 14.7 8l5 .7-3.6 3.5 1 4.9-4.7-2.4-4.7 2.4 1-4.9L4.3 8.7l5-.7L12 3.5z"/></svg>Class Reviews<span class="owner-nav-count">0</span></button>');
-  }
+  // Each inbox gets its own slot in the redesigned sidebar: Prayer
+  // Requests and Testimonials under Community, Class Reviews under
+  // Classroom. The badge shows unresolved (red) items only.
+  const INBOX_NAV = {
+    'prayer-requests': ['Prayer Requests', '<path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20H6.5A2.5 2.5 0 0 1 4 17.5zm0 0 8 6 8-6"/>'],
+    'testimonials': ['Testimonies', '<path d="M5 18.5V5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5v8A1.5 1.5 0 0 1 17.5 15H9l-4 3.5z"/><path d="M9 8h6M9 11h6"/>'],
+    'class-reviews': ['Class Reviews', '<path d="M12 3.5 14.7 8l5 .7-3.6 3.5 1 4.9-4.7-2.4-4.7 2.4 1-4.9L4.3 8.7l5-.7L12 3.5z"/>']
+  };
+  Object.entries(INBOX_NAV).forEach(([nav, [label, icon]]) => {
+    if(sidebar.querySelector('[data-owner-nav="' + nav + '"]')) return;
+    const html = '<button type="button" class="owner-sidebar-item" data-owner-nav="' + nav + '"><svg viewBox="0 0 24 24" stroke-width="1.8">' + icon + '</svg>' +
+      '<span class="owner-nav-label">' + label + '</span><span class="owner-alert-count" data-alert-nav="' + nav + '" hidden></span></button>';
+    const slot = sidebar.querySelector('[data-owner-sidebar-slot="' + nav + '"]');
+    if(slot) slot.outerHTML = html; else sidebar.querySelector('.owner-sidebar-profile').insertAdjacentHTML('beforebegin', html);
+  });
 
   if(!content.querySelector('[data-owner-section="prayer-requests"]')) {
     content.insertAdjacentHTML('beforeend', '<article class="portal-panel ministry-inbox" style="grid-column:1/-1" data-owner-section="prayer-requests"><div class="admin-panel-head"><div><span class="portal-label">Prayer Requests</span><p class="admin-panel-intro">Prayer submissions, status tracking, private handling, and ministry follow-up.</p></div></div><div class="admin-tabs" role="tablist" style="margin:16px 0"><button type="button" class="admin-tab active" data-prayer-filter="all">All</button><button type="button" class="admin-tab" data-prayer-filter="new">New</button><button type="button" class="admin-tab" data-prayer-filter="in-progress">In Progress</button><button type="button" class="admin-tab" data-prayer-filter="completed">Completed</button><button type="button" class="admin-tab" data-prayer-filter="archived">Archived</button></div><div id="prayerInboxList"></div><div class="admin-subsection-label">Prayer Request Terms</div><p class="admin-hint">Shown to visitors on the Prayer Request form. Editing here or from Policies changes the same real thing.</p><div id="prayerPolicyTermsEmbed"></div></article>');
@@ -4558,7 +4750,7 @@ function renderPrayerInbox(filter = 'all'){
     return true;
   });
   if(items.length === 0){ wrap.innerHTML = '<p class="admin-hint">No prayer requests in this view yet.</p>'; return; }
-  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(getNameLabel(item, 'Anonymous')) + '</strong><span class="admin-status-pill ' + (item.status === 'completed' ? 'completed' : item.status === 'archived' ? 'cancelled' : 'published') + '">' + escapeHtml((item.status || 'new').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 130)) + (item.message && item.message.length > 130 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-prayer-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-prayer-delete="' + item.id + '">Delete</button></div></div>').join('');
+  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(getNameLabel(item, 'Anonymous')) + '</strong><span class="admin-status-pill ' + (item.status === 'completed' ? 'completed' : item.status === 'archived' ? 'cancelled' : item.status === 'in-progress' ? 'pending' : 'action') + '">' + escapeHtml((item.status || 'new').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 130)) + (item.message && item.message.length > 130 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-prayer-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-prayer-delete="' + item.id + '">Delete</button></div></div>').join('');
 }
 
 function renderTestimonyInbox(filter = 'all'){
@@ -4569,7 +4761,7 @@ function renderTestimonyInbox(filter = 'all'){
     return item.status === filter;
   });
   if(items.length === 0){ wrap.innerHTML = '<p class="admin-hint">No testimonies in this view yet.</p>'; return; }
-  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(getPublicPreviewLegacy(item)) + '</strong><span class="admin-status-pill ' + (item.status === 'published' ? 'published' : item.status === 'private' ? 'draft' : item.status === 'archived' ? 'cancelled' : 'draft') + '">' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 150)) + (item.message && item.message.length > 150 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-testimony-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-testimony-delete="' + item.id + '">Delete</button></div></div>').join('');
+  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(getPublicPreviewLegacy(item)) + '</strong><span class="admin-status-pill ' + (item.status === 'published' ? 'published' : item.status === 'private' ? 'draft' : item.status === 'archived' ? 'cancelled' : 'action') + '">' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 150)) + (item.message && item.message.length > 150 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-testimony-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-testimony-delete="' + item.id + '">Delete</button></div></div>').join('');
 }
 
 function renderClassReviewInbox(filter = 'all'){
@@ -4580,7 +4772,7 @@ function renderClassReviewInbox(filter = 'all'){
     return item.status === filter;
   });
   if(items.length === 0){ wrap.innerHTML = '<p class="admin-hint">No class reviews in this view yet.</p>'; return; }
-  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(item.className || 'Class Review') + '</strong><span class="admin-status-pill ' + (item.status === 'published' ? 'published' : item.status === 'private' ? 'draft' : item.status === 'archived' ? 'cancelled' : 'draft') + '">' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(getPublicPreviewLegacy(item)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 150)) + (item.message && item.message.length > 150 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-review-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-review-delete="' + item.id + '">Delete</button></div></div>').join('');
+  wrap.innerHTML = items.map(item => '<div class="admin-teaching-row"><div class="admin-teaching-info"><div class="admin-teaching-title-row"><strong>' + escapeHtml(item.className || 'Class Review') + '</strong><span class="admin-status-pill ' + (item.status === 'published' ? 'published' : item.status === 'private' ? 'draft' : item.status === 'archived' ? 'cancelled' : 'action') + '">' + escapeHtml((item.status || 'pending').replace('-', ' ')) + '</span></div><div class="admin-teaching-meta">' + escapeHtml(shortDate(item.createdAt)) + ' · ' + escapeHtml(getPublicPreviewLegacy(item)) + ' · ' + escapeHtml(formatVisibilityBadge(item.visibility)) + '</div><p style="margin:8px 0 0;color:var(--owner-text-muted);max-width:60ch">' + escapeHtml((item.message || '').slice(0, 150)) + (item.message && item.message.length > 150 ? '…' : '') + '</p></div><div class="admin-teaching-actions"><button type="button" class="admin-btn-ghost" data-review-view="' + item.id + '">View</button><button type="button" class="admin-btn-ghost" data-review-delete="' + item.id + '">Delete</button></div></div>').join('');
 }
 
 function renderMinistryInboxViews(){
@@ -6872,7 +7064,7 @@ const bookingOptionsEl = document.getElementById('bookingOptions');
 const bookingIntroEl = document.getElementById('bookingIntro');
 const bookingTimeZoneSelect = document.getElementById('bookingTimeZone');
 
-bookingDateInput.min = new Date().toISOString().slice(0, 10);
+bookingDateInput.min = ministryToday();
 
 /* Calendly-style month calendar. The native date input remains the
    form's source of truth, but is visually replaced by this calendar so
@@ -6891,10 +7083,11 @@ function calendarDatePotentiallyOpen(dateStr){
   if((DEMO_MODE && DEMO_BLOCKED_DATES.includes(dateStr)) || dateInAnyBlockoutRange(dateStr)) return false;
   const selected = document.querySelector('input[name="sessionType"]:checked');
   const service = selected ? selected.value : null;
-  const override = AVAILABILITY_OVERRIDES[dateStr];
-  if(override) return !override.closed && (override.windows || []).some(w => !w.sessionTypeIds || !w.sessionTypeIds.length || !service || w.sessionTypeIds.includes(service));
-  const dow = new Date(dateStr + 'T12:00:00').getDay();
-  return AVAILABILITY_RULES.some(r => r.dayOfWeek === dow && (!r.sessionTypeIds || !r.sessionTypeIds.length || !service || r.sessionTypeIds.includes(service)));
+  const hasHours = id => { const r = resolveAvailabilityWindows(dateStr, id); return !r.closed && r.windows.length > 0; };
+  if(service) return hasHours(service);
+  // No session type picked yet: open if any type's schedule has hours.
+  const typeIds = Object.keys(SESSION_TYPES);
+  return typeIds.length ? typeIds.some(hasHours) : hasHours(null);
 }
 function renderBookingCalendar(){
   const grid = document.getElementById('bookingCalendarGrid');
@@ -7039,21 +7232,25 @@ if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
 // of computeOpenSlots so createHold()/createBooking() can resolve the
 // same window (for its capacity/duration/buffers) when writing a public
 // `slots` doc, without duplicating the override-vs-rule logic.
-function resolveAvailabilityWindows(dateStr, sessionTypeId){
-  const override = AVAILABILITY_OVERRIDES[dateStr];
+// Windows for one SCHEDULE on a date. `src` lets the owner calendar ask
+// the same question of the unsaved draft ({ rules, overrides }); the
+// booking flow always uses the live data. `sessionTypeId` (optional)
+// still honours older windows limited to specific session types.
+function resolveScheduleWindows(dateStr, scheduleId, sessionTypeId, src){
+  const rules = src ? src.rules : AVAILABILITY_RULES;
+  const overrides = src ? src.overrides : AVAILABILITY_OVERRIDES;
+  const typeOk = w => !w.sessionTypeIds || w.sessionTypeIds.length === 0 || !sessionTypeId || w.sessionTypeIds.includes(sessionTypeId);
+  const override = overrides[overrideKey(dateStr, scheduleId)];
   if(override){
-    if(override.closed) return { windows: [], closed: true };
-    return {
-      closed: false,
-      windows: (override.windows || []).filter(w => !w.sessionTypeIds || w.sessionTypeIds.length === 0 || !sessionTypeId || w.sessionTypeIds.includes(sessionTypeId))
-    };
+    if(override.closed) return { windows: [], closed: true, override };
+    return { closed: false, override, windows: (override.windows || []).filter(typeOk) };
   }
   const weekday = new Date(dateStr + 'T12:00:00').getDay();
-  return {
-    closed: false,
-    windows: AVAILABILITY_RULES.filter(r => r.dayOfWeek === weekday &&
-      (!r.sessionTypeIds || r.sessionTypeIds.length === 0 || !sessionTypeId || r.sessionTypeIds.includes(sessionTypeId)))
-  };
+  return { closed: false, windows: rules.filter(r => r.dayOfWeek === weekday && scheduleIdOf(r) === scheduleId && typeOk(r)) };
+}
+// A session type follows the schedule it's assigned to.
+function resolveAvailabilityWindows(dateStr, sessionTypeId){
+  return resolveScheduleWindows(dateStr, sessionTypeId ? scheduleIdForType(sessionTypeId) : DEFAULT_SCHEDULE_ID, sessionTypeId);
 }
 // What a NEW `slots` doc should contain for a given date/time/session —
 // used at hold- and booking-creation time (before any doc exists yet),
@@ -7141,6 +7338,10 @@ async function computeOpenSlots(dateStr, duration, sessionTypeId){
     return { ok: false, reason: 'We could not load availability. Please refresh or try again.', kind: 'invalid-config' };
   }
   if(SCHEDULING_SETTINGS.bookingPaused) return { ok: false, reason: 'Booking is temporarily paused — please check back soon', kind: 'paused' };
+  // Times that have already passed on the ministry's clock are never
+  // offered (before this, earlier times on today's date still showed).
+  const ministryNow = ministryNowParts();
+  if(dateStr < ministryNow.date) return { ok: false, reason: 'That date has already passed — please choose another', kind: 'no-availability' };
   if(SCHEDULING_SETTINGS.minNoticeHours){
     const earliestDateStr = new Date(Date.now() + SCHEDULING_SETTINGS.minNoticeHours * 3600000).toISOString().slice(0, 10);
     if(dateStr < earliestDateStr) return { ok: false, reason: 'That date is too soon — please choose a later date', kind: 'no-availability' };
@@ -7167,7 +7368,8 @@ async function computeOpenSlots(dateStr, duration, sessionTypeId){
   // The Ministry owner hasn't configured any weekly hours yet (and there's
   // no one-off override either) — this is the real, honest "nothing to
   // show" state, not an error, and never falls back to sample times.
-  if(AVAILABILITY_RULES.length === 0 && !AVAILABILITY_OVERRIDES[dateStr]){
+  const typeScheduleId = scheduleIdForType(sessionTypeId);
+  if(!AVAILABILITY_RULES.some(r => scheduleIdOf(r) === typeScheduleId) && !AVAILABILITY_OVERRIDES[overrideKey(dateStr, typeScheduleId)]){
     return { ok: false, reason: 'No booking times are currently available. Please check back soon.', kind: 'no-availability' };
   }
   // A one-off override for this exact date replaces the normal weekly
@@ -7200,6 +7402,7 @@ async function computeOpenSlots(dateStr, duration, sessionTypeId){
     for(let start = winStart; start + duration <= winEnd; start += duration){
       const end = start + duration;
       const hhmm = minutesToHHMM(start);
+      if(dateStr === ministryNow.date && start <= ministryNow.minutes) continue;
       if(heldTimes.has(hhmm)) continue;
       const atCapacity = (countsByTime[hhmm] || 0) >= capacity;
       if(atCapacity) continue;
@@ -7710,6 +7913,7 @@ async function createBooking({ name, email, phone, reason, sessionType, date, ti
   // while Demo Mode is on would fall through to the real Firestore
   // transaction below and write an actual booking to production.
   if(DEMO_MODE || ownerSim.isActive()){
+    if(DEMO_MODE && !ownerSim.isActive()) refreshDemoBookingsFromStorage();
     if(DEMO_BOOKINGS.some(b => b.slotId === slotId && b.status !== 'declined' && b.status !== 'cancelled')){
       throw new Error('slot-taken');
     }
@@ -7770,14 +7974,22 @@ function markThrottled(storageKey){
 // `prefix` is 'booking' or 'teachingRegister', matching the matching
 // *PriceChangeConfirm/*PriceChangeMessage/*PriceChangeContinueBtn/
 // *PriceChangeBackBtn elements in each dialog.
-function waitForPriceChangeConfirm(prefix, oldTotal, newTotal){
+// `reason` is the failed claim's reason: 'limit' (usage limit reached)
+// or 'unavailable' (deleted, paused or expired since it was applied).
+function discountLostPhrase(reason){
+  return reason === 'unavailable' ? 'is no longer available' : 'just reached its usage limit';
+}
+function discountLostNote(reason){
+  return reason === 'unavailable' ? 'discount code is no longer available' : 'discount code reached its usage limit';
+}
+function waitForPriceChangeConfirm(prefix, oldTotal, newTotal, reason = 'limit'){
   return new Promise(resolve => {
     const block = document.getElementById(prefix + 'PriceChangeConfirm');
     const message = document.getElementById(prefix + 'PriceChangeMessage');
     const continueBtn = document.getElementById(prefix + 'PriceChangeContinueBtn');
     const backBtn = document.getElementById(prefix + 'PriceChangeBackBtn');
     if(!block || !message || !continueBtn || !backBtn){ resolve(true); return; }
-    message.textContent = 'This discount code just reached its usage limit. Your total has changed from ' +
+    message.textContent = 'This discount code ' + discountLostPhrase(reason) + '. Your total has changed from ' +
       previewPriceLabel(oldTotal) + ' to ' + previewPriceLabel(newTotal) + '.';
     continueBtn.textContent = 'Continue at ' + previewPriceLabel(newTotal);
     block.hidden = false;
@@ -7853,7 +8065,9 @@ bookingForm.addEventListener('submit', async event => {
   // they last agreed to.
   let discountClaim = siteManagement ? await siteManagement.claimDiscount('oneonone', currentUser.uid) : null;
   let discountLimitReached = false;
+  let discountLostReason = 'limit';
   if(discountClaim && !discountClaim.ok){
+    discountLostReason = discountClaim.reason === 'unavailable' ? 'unavailable' : 'limit';
     const oldTotal = siteManagement.pricing('oneonone', bookingPrice).total;
     siteManagement.resetCheckout('oneonone');
     renderBookingOrderSummary();
@@ -7861,9 +8075,9 @@ bookingForm.addEventListener('submit', async event => {
     discountLimitReached = true;
     bookingStatus.textContent = '';
     bookingSubmitBtn.disabled = false;
-    const proceed = await waitForPriceChangeConfirm('booking', oldTotal, bookingPrice);
+    const proceed = await waitForPriceChangeConfirm('booking', oldTotal, bookingPrice, discountLostReason);
     if(!proceed){
-      bookingStatus.textContent = 'Booking not submitted — the discount code reached its usage limit.';
+      bookingStatus.textContent = 'Booking not submitted — the ' + discountLostNote(discountLostReason) + '.';
       return;
     }
     bookingSubmitBtn.disabled = true;
@@ -7898,7 +8112,7 @@ bookingForm.addEventListener('submit', async event => {
     document.getElementById('bookingConfirmWhen').textContent = formatLocalDateTime(dateStr, time, clientTimeZone);
     document.getElementById('bookingConfirmEmail').textContent = email;
     document.getElementById('bookingConfirmPayment').textContent = previewPaymentStatusLabel(discount.totalAfterDiscount) +
-      (discountLimitReached ? ' (discount code reached its usage limit — full price applied)' : '');
+      (discountLimitReached ? ' (' + discountLostNote(discountLostReason) + ' — full price applied)' : '');
     document.getElementById('bookingConfirmId').textContent = record.confirmationId;
     bookingForm.dataset.lastBookingId = record.id;
     bookingStatus.textContent = '';
@@ -8038,6 +8252,9 @@ function schedCloneLiveState(){
     rules: JSON.parse(JSON.stringify(AVAILABILITY_RULES)),
     ranges: JSON.parse(JSON.stringify(BLOCKOUT_RANGES)),
     overrides: JSON.parse(JSON.stringify(AVAILABILITY_OVERRIDES)),
+    // Single-date blocks are staged with everything else and only take
+    // effect on Save (the owner's decision, 2026-11-17).
+    blocks: (DEMO_MODE ? DEMO_BLOCKED_DATES : BLOCKED_DATES_LIVE).filter(d => d >= ministryToday()).sort(),
     nightOfPrayer: JSON.parse(JSON.stringify(NIGHT_OF_PRAYER))
   };
 }
@@ -8058,6 +8275,7 @@ function schedRenderAllFromDraft(){
   renderSchedRulesList();
   renderSchedRangesList();
   renderSchedOverridesList();
+  renderBlockedDatesList();
 }
 
 function renderSchedSettingsForm(){
@@ -8131,13 +8349,13 @@ function renderNightOfPrayerCard(){
 // bookings. Surfacing this per-card is the main point of Event Types:
 // the scoping already existed, it just had no visible summary before.
 function sessionTypeAvailabilitySummary(typeId){
-  if(SCHED_DRAFT.rules.length === 0) return 'No weekly availability configured yet';
-  const windows = SCHED_DRAFT.rules.filter(r => !r.sessionTypeIds || r.sessionTypeIds.length === 0 || r.sessionTypeIds.includes(typeId));
-  if(windows.length === 0) return 'Not included in any weekly window yet';
-  const label = windows.length + (windows.length === 1 ? ' window' : ' windows');
-  if(windows.length === SCHED_DRAFT.rules.length) return 'All weekly availability · ' + label;
-  const days = Array.from(new Set(windows.map(r => DAY_NAMES[r.dayOfWeek].slice(0, 3))));
-  return days.join(', ') + ' · ' + label;
+  const scheduleId = scheduleIdOf(SCHED_DRAFT.types[typeId]);
+  const schedule = availabilitySchedules(SCHED_DRAFT.settings).find(x => x.id === scheduleId);
+  const name = schedule ? schedule.name : 'Main availability';
+  const windows = SCHED_DRAFT.rules.filter(r => scheduleIdOf(r) === scheduleId && (!r.sessionTypeIds || r.sessionTypeIds.length === 0 || r.sessionTypeIds.includes(typeId)));
+  if(windows.length === 0) return 'Schedule: ' + name + ' · no weekly windows yet';
+  const days = Array.from(new Set(windows.slice().sort((x, y) => x.dayOfWeek - y.dayOfWeek).map(r => DAY_NAMES[r.dayOfWeek].slice(0, 3))));
+  return 'Schedule: ' + name + ' · ' + days.join(', ') + ' · ' + windows.length + (windows.length === 1 ? ' weekly window' : ' weekly windows');
 }
 function renderSchedTypesList(){
   if(!schedTypesList) return;
@@ -8238,8 +8456,11 @@ function renderSchedOverridesList(){
     const o = SCHED_DRAFT.overrides[d];
     const desc = o.closed ? 'Fully closed' : (o.windows || []).map(w => minutesToLabel(hhmmToMinutes(w.startTime)) + '–' + minutesToLabel(hhmmToMinutes(w.endTime)) +
       ' (' + sessionTypesAllowedLabel(w.sessionTypeIds) + ')').join(', ');
+    const parsed = parseOverrideKey(d);
+    const sched = availabilitySchedules(SCHED_DRAFT.settings).find(x => x.id === parsed.scheduleId);
+    const label = parsed.date + (parsed.scheduleId !== DEFAULT_SCHEDULE_ID || availabilitySchedules(SCHED_DRAFT.settings).length > 1 ? ' · ' + (sched ? sched.name : 'Removed schedule') : '');
     return '<div class="portal-row" data-override-date="' + escapeHtml(d) + '" style="padding:8px 0">' +
-      '<div><strong>' + escapeHtml(d) + '</strong><small>' + escapeHtml(desc) + (o.notes ? ' · ' + escapeHtml(o.notes) : '') + '</small></div>' +
+      '<div><strong>' + escapeHtml(label) + '</strong><small>' + escapeHtml(desc) + (o.notes ? ' · ' + escapeHtml(o.notes) : '') + '</small></div>' +
       '<button class="portal-secondary sched-override-delete" type="button" style="min-height:28px;padding:0 10px;font-size:9px">Remove</button></div>';
   }).join('');
 }
@@ -8282,6 +8503,9 @@ if(schedTimezoneSelect){
     const heading = document.getElementById('schedTypeEditorHeading');
     const t = id ? SCHED_DRAFT.types[id] : null;
     schedTypeForm.reset();
+    const scheduleSelectEl = document.getElementById('schedTypeSchedule');
+    scheduleSelectEl.innerHTML = availabilitySchedules(SCHED_DRAFT.settings).map(x => '<option value="' + escapeHtml(x.id) + '">' + escapeHtml(x.name) + '</option>').join('');
+    scheduleSelectEl.value = scheduleIdOf(t);
     schedTypeIdInput.value = id || '';
     schedTypeIdInput.readOnly = Boolean(id);
     schedTypeIdInput.title = id ? 'The ID can\'t change once a type exists — delete and re-add it instead.' : '';
@@ -8296,10 +8520,10 @@ if(schedTimezoneSelect){
       document.getElementById('schedTypeBufferAfter').value = t.bufferAfterMin || '';
       document.getElementById('schedTypeDescription').value = t.description || '';
       document.getElementById('schedTypeImage').value = t.imageUrl || '';
-      document.getElementById('schedTypeAvailabilityHint').textContent = sessionTypeAvailabilitySummary(id) + ' — change scoping from the Availability tab.';
+      document.getElementById('schedTypeAvailabilityHint').textContent = sessionTypeAvailabilitySummary(id) + ' — set the hours themselves on the Availability tab.';
     } else {
       heading.textContent = 'New Event Type';
-      document.getElementById('schedTypeAvailabilityHint').textContent = 'New types aren\'t in any weekly window until you add one on the Availability tab.';
+      document.getElementById('schedTypeAvailabilityHint').textContent = 'Pick the availability schedule this session type follows. Its hours are set on the Availability tab.';
     }
     adminImagePreviewRefreshers.forEach(fn => fn());
     schedTypeStatus.textContent = '';
@@ -8334,6 +8558,7 @@ if(schedTimezoneSelect){
       bufferBeforeMin, bufferAfterMin, format,
       capacity: capacityRaw ? Number(capacityRaw) : null,
       imageUrl,
+      scheduleId: document.getElementById('schedTypeSchedule').value || DEFAULT_SCHEDULE_ID,
       description, active: existing.active !== false,
       order: existing.order || (Object.keys(SCHED_DRAFT.types).length + 1)
     };
@@ -8469,6 +8694,8 @@ if(schedTimezoneSelect){
         BLOCKOUT_RANGES = SCHED_DRAFT.ranges;
         AVAILABILITY_OVERRIDES = SCHED_DRAFT.overrides;
         NIGHT_OF_PRAYER = SCHED_DRAFT.nightOfPrayer;
+        DEMO_BLOCKED_DATES = SCHED_DRAFT.blocks.slice();
+        BLOCKED_DATES_LIVE = SCHED_DRAFT.blocks.slice();
         saveBookingsPreviewToStorage();
       } else {
         const writes = [];
@@ -8510,9 +8737,17 @@ if(schedTimezoneSelect){
         Object.keys(AVAILABILITY_OVERRIDES).forEach(date => {
           if(!(date in SCHED_DRAFT.overrides)) writes.push(deleteDoc(doc(db, 'availabilityOverrides', date)));
         });
+        // Single-date blocks: same `blockouts/{date}` docs as always, now
+        // written on Save. Only upcoming dates are ever in either list, so
+        // past blocks are left alone; bookings are never touched.
+        const liveBlocks = new Set(BLOCKED_DATES_LIVE);
+        const draftBlocks = new Set(SCHED_DRAFT.blocks);
+        SCHED_DRAFT.blocks.forEach(d => { if(!liveBlocks.has(d)) writes.push(setDoc(doc(db, 'blockouts', d), { date: d, createdAt: serverTimestamp() })); });
+        BLOCKED_DATES_LIVE.forEach(d => { if(!draftBlocks.has(d)) writes.push(deleteDoc(doc(db, 'blockouts', d))); });
         await Promise.all(writes);
         await loadSchedulingConfig();
         await loadNightOfPrayerConfig();
+        await loadBlockedDates({ keepDraft: true });
       }
       if(bookingIntroEl) bookingIntroEl.textContent = availabilitySummaryText();
       renderNightOfPrayerCard();
@@ -9631,26 +9866,32 @@ document.getElementById('ownerNotifCenterTabs').addEventListener('click', event 
    where they live.
    --------------------------------------------------------------- */
 const OWNER_SECTION_DESCRIPTIONS = {
-  dashboard: "A quick look at what's happening across the site.",
-  teachings: 'Create, edit, and publish the weekly Teaching classes.',
-  events: 'Create, publish, and manage special ministry events.',
-  website: 'Control the words and images visitors see on each page.',
-  store: 'Create, organize, and publish the Shop collection.',
+  dashboard: 'What needs you today, what is coming up, and what happened recently.',
+  teachings: 'Plan, schedule, and publish classes — topics, lessons, seats, and waitlists.',
+  paths: 'Group classes into guided learning paths.',
+  events: 'Gatherings and outreach — publish events, announcements, and access links.',
+  website: 'Edit the words and images on each page, and choose which pages are visible.',
+  store: 'Products, orders, customers, discounts, reports, and store settings.',
   payments: 'Every payment collected through the website, in one place.',
   reports: 'Monthly and quarterly ministry reports, custom date ranges, and encrypted backups.',
-  bookings: 'Manage one-on-one session requests and your weekly availability.',
-  registrations: 'See who registered for every class, and manage attendance.',
-  people: 'Everyone who has created an account.',
-  media: 'Every image currently uploaded to the website.',
-  communication: 'A preview of outbound email/SMS, once a real provider is connected.',
-  settings: 'Your sign-in email, phone, and password.',
-  policies: 'The terms and agreements visitors see across ministry forms and checkout.'
+  bookings: 'One-on-one requests, your calendar, availability, and blocked dates.',
+  registrations: 'Who registered for each class, payments, and attendance.',
+  people: 'Everyone who has created an account, and where members are located.',
+  media: 'Every image uploaded to the website.',
+  communication: 'Booking reminders, member notifications, and their history.',
+  settings: 'Your profile, sign-in email, phone, and password.',
+  policies: 'The terms visitors agree to on ministry forms and at checkout.',
+  'prayer-requests': 'Prayer submissions, private handling, and follow-up.',
+  testimonials: 'Review, publish, or keep private the testimonies people share.',
+  'class-reviews': 'Class feedback — approve, publish, or keep private.'
 };
 // The nav button's own label text is the one place a department's
 // display name already lives (no second list to keep in sync) — it's
 // a bare text node between the icon and the optional unread-count
 // badge, e.g. <svg/>"Prayer Requests"<span class="owner-nav-count">.
 function ownerNavLabel(btn){
+  const labelEl = btn.querySelector('.owner-nav-label');
+  if(labelEl) return labelEl.textContent.trim();
   for(const node of btn.childNodes){
     if(node.nodeType === 3 && node.textContent.trim()) return node.textContent.trim();
   }
@@ -9661,10 +9902,11 @@ function ownerNavLabel(btn){
 // under which expandable parent. Departments not listed here (Dashboard,
 // People, Finances, Communications) are single-destination top-level
 // buttons with nothing to expand.
-const OWNER_SIDEBAR_DEPTS = {
-  ministry: { label: 'Ministry Operations', members: ['teachings', 'paths', 'registrations', 'events', 'bookings', 'prayer-requests', 'testimonials', 'class-reviews'] },
-  'website-settings': { label: 'Website & Settings', members: ['website', 'media', 'settings', 'policies'] }
-};
+// Redesign (2026-11-17): seven sections — Overview and Bookings are
+// single destinations, the other five expand. Built from the same map
+// the alert counts use (owner-portal-alerts.js), so badges and
+// navigation can never disagree about where a section lives.
+const OWNER_SIDEBAR_DEPTS = Object.fromEntries(OWNER_NAV_GROUPS.filter(g => g.nav.length > 1).map(g => [g.key, { label: g.label, members: g.nav }]));
 function ownerSidebarDeptFor(name){
   for(const key of Object.keys(OWNER_SIDEBAR_DEPTS)){
     if(OWNER_SIDEBAR_DEPTS[key].members.includes(name)) return key;
@@ -9678,16 +9920,19 @@ function showOwnerSection(name){
   if(desc) desc.textContent = OWNER_SECTION_DESCRIPTIONS[name] || '';
   const dept = ownerSidebarDeptFor(name);
   if(dept) setOwnerSidebarDeptOpen(dept, true);
+  const navBtn = document.querySelector('#ownerSidebar .owner-sidebar-item[data-owner-nav="' + name + '"]');
+  const label = navBtn ? ownerNavLabel(navBtn) : '';
+  const title = document.getElementById('ownerPageTitle');
+  if(title) title.textContent = label || 'Owner Portal';
   const crumb = document.getElementById('ownerBreadcrumb');
   if(crumb){
-    const navBtn = document.querySelector('#ownerSidebar .owner-sidebar-item[data-owner-nav="' + name + '"]');
-    const label = navBtn ? ownerNavLabel(navBtn) : '';
     const deptLabel = dept ? OWNER_SIDEBAR_DEPTS[dept].label : '';
-    crumb.innerHTML = (name === 'dashboard' || !label) ? '<span class="owner-breadcrumb-current">Owner Portal</span>'
+    crumb.innerHTML = (name === 'dashboard' || !label) ? ''
       : '<span>Owner Portal</span><span class="owner-breadcrumb-sep">/</span>' +
         (deptLabel ? '<span>' + escapeHtml(deptLabel) + '</span><span class="owner-breadcrumb-sep">/</span>' : '') +
         '<span class="owner-breadcrumb-current">' + escapeHtml(label) + '</span>';
   }
+  if(typeof renderOwnerSectionAlerts === 'function') renderOwnerSectionAlerts();
   closeOwnerSidebarDrawer();
 }
 
@@ -9718,7 +9963,7 @@ const OWNER_SETTINGS_CATALOG = [
   { title: 'Account Settings (Email & Password)', keywords: 'password email account security login', action: () => showOwnerSection('settings') },
   { title: 'Discount Codes', keywords: 'discount code coupon promo payments', action: () => { showOwnerSection('payments'); renderFinances(); } },
   { title: 'Reports & Backups', keywords: 'reports report monthly quarterly rollup custom date range pdf backup backups encrypted export finances income summary', action: () => { showOwnerSection('reports'); if(ownerReports) void ownerReports.render(); } },
-  { title: 'Store Products', keywords: 'shop store product collection price publish inventory', action: () => showOwnerSection('store') },
+  { title: 'Resources Shop', keywords: 'shop store product collection price publish inventory orders customers refund discount code pdf download access reports pause', action: () => showOwnerSection('store') },
   { title: 'Event Types', keywords: 'session types event types one on one pricing bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('types'); } },
   { title: 'Blocked Dates', keywords: 'blocked dates vacation unavailable bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('blocked'); } },
   { title: 'Availability', keywords: 'availability hours schedule windows bookings', action: () => { showOwnerSection('bookings'); showBookingsTab('availability'); } },
@@ -9796,11 +10041,19 @@ function closeOwnerSidebarDrawer(){
 document.getElementById('ownerSidebar').addEventListener('click', event => {
   const btn = event.target.closest('.owner-sidebar-item');
   if(!btn) return;
+  // Settings shortcuts open the existing Store Settings tab (payment
+  // mode, purchase pause, audit trail) instead of duplicating it.
+  if(btn.dataset.ownerShortcut){
+    showOwnerSection('store');
+    if(shopSystem) void shopSystem.loadAdmin().then(() => shopSystem.showStoreTab('settings')).catch(() => {});
+    if(btn.dataset.ownerShortcut === 'audit') setTimeout(() => { const a = document.querySelector('#ownerShopSettings .rs-audit, #ownerShopSettings [data-rs-audit]'); if(a) a.scrollIntoView({ block: 'start' }); }, 400);
+    return;
+  }
   showOwnerSection(btn.dataset.ownerNav);
   if(btn.dataset.ownerNav === 'paths') renderOwnerLearningPaths();
   if(btn.dataset.ownerNav === 'store' && shopSystem) void shopSystem.loadAdmin().catch(() => {});
   if(btn.dataset.ownerNav === 'reports' && ownerReports) void ownerReports.render();
-  if(btn.dataset.ownerNav === 'dashboard'){ renderOwnerTodayView(); renderOwnerActionRequired(); renderOwnerUpcomingActivity(); }
+  if(btn.dataset.ownerNav === 'dashboard') renderOwnerDashboardStats();
   if(btn.dataset.ownerNav === 'payments') renderFinances();
 });
 document.getElementById('ownerSidebarToggle').addEventListener('click', openOwnerSidebarDrawer);
@@ -9860,6 +10113,7 @@ function updateOwnerSidebarProfile(){
     avatar.style.backgroundImage = '';
     avatar.textContent = name.trim().charAt(0).toUpperCase() || '?';
   }
+  renderOwnerHeader();
 }
 
 /* ---------------------------------------------------------------
@@ -10318,95 +10572,311 @@ document.getElementById('ownerSimBar').addEventListener('click', event => {
 });
 
 /* ---------------------------------------------------------------
-   Owner Dashboard — Today + Action Required. Pulls from systems that
-   already exist (prayer requests, testimonials, class reviews,
-   registrations, waitlist) rather than inventing a parallel data
-   model — an action item always links straight to its real record.
+   Owner Portal — Overview + action-required alerts (redesign,
+   2026-11-17). Every alert is computed by buildOwnerAlerts()
+   (owner-portal-alerts.js) from the records' CURRENT state, so:
+   - opening or viewing an item never clears it;
+   - it clears only when the record really changes (confirmed,
+     answered, approved, PDF attached…);
+   - counts are the same after a refresh or a new sign-in, because
+     they are recomputed from the database, never from browser storage.
+   In production the inbox and booking queues are watched live
+   (onSnapshot), so a change made anywhere updates the badges here.
    --------------------------------------------------------------- */
-function renderOwnerTodayView(){
-  const wrap = document.getElementById('ownerTodayStats');
-  if(!wrap) return;
-  const today = new Date().toISOString().slice(0, 10);
-  // Real production bookings/registrations live in OWNER_ALL_BOOKINGS_CACHE/
-  // OWNER_ALL_REGISTRATIONS_CACHE (populated once at dashboard load by
-  // loadOwnerSearchCaches()) — DEMO_BOOKINGS/DEMO_TEACHING_REGISTRATIONS are
-  // only the right source in DEMO_MODE or while Demo Mode (simulation) is
-  // active, in which case they've already been swapped to that data.
-  const useSeedArrays = DEMO_MODE || ownerSim.isActive();
-  const todaysBookings = useSeedArrays ? DEMO_BOOKINGS : OWNER_ALL_BOOKINGS_CACHE;
-  const todaysRegs = useSeedArrays ? DEMO_TEACHING_REGISTRATIONS : OWNER_ALL_REGISTRATIONS_CACHE;
-  const todaysClasses = Object.values(TEACHINGS).filter(t => t.date === today && t.status !== 'draft' && t.status !== 'cancelled').length;
-  const todaysSessions = todaysBookings.filter(b => b.date === today && b.status === 'confirmed').length;
-  const unreadPrayer = PRAYER_REQUESTS.filter(p => p.status === 'new').length;
-  const newRegsToday = todaysRegs.filter(r => (r.registeredAt || '').slice(0, 10) === today).length;
-  const pendingTestimonials = TESTIMONIALS.filter(t => t.status === 'pending').length;
-  const pendingReviews = CLASS_REVIEWS.filter(r => r.status === 'pending').length;
-  wrap.innerHTML =
-    '<div class="admin-stat-tile"><span>Today\'s Classes</span><strong>' + todaysClasses + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Today\'s 1:1s</span><strong>' + todaysSessions + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Unread Prayer Requests</span><strong>' + unreadPrayer + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>New Registrations</span><strong>' + newRegsToday + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Pending Testimonials</span><strong>' + pendingTestimonials + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Pending Class Reviews</span><strong>' + pendingReviews + '</strong></div>';
+// `var` on purpose: showOwnerSection() runs once at start-up, above
+// this point in the file, and must see "not ready yet" rather than a
+// temporal-dead-zone error.
+var OWNER_ALERT_STATE = { ready: false, items: [], shop: [], shopSummary: null, failedReports: [], pendingBookings: null, pendingRegistrations: null, paymentReviews: { bookings: [], teachingRegistrations: [] }, errors: {} };
+var OWNER_ALERT_UNSUBS = [];
+function ownerUsesSeedData(){ return DEMO_MODE || ownerSim.isActive(); }
+function ownerTodayKey(){ return new Date().toISOString().slice(0, 10); }
+function ownerBookingsSource(){ return ownerUsesSeedData() ? DEMO_BOOKINGS : OWNER_ALL_BOOKINGS_CACHE; }
+function ownerRegistrationsSource(){ return ownerUsesSeedData() ? DEMO_TEACHING_REGISTRATIONS : OWNER_ALL_REGISTRATIONS_CACHE; }
+function ownerPendingBookings(){
+  if(!ownerUsesSeedData() && OWNER_ALERT_STATE.pendingBookings) return OWNER_ALERT_STATE.pendingBookings;
+  return ownerBookingsSource().filter(b => b.status === 'pending');
 }
-let ownerActionItemsCache = [];
-function ownerActionItems(){
-  const items = [];
-  const today = new Date().toISOString().slice(0, 10);
-  DEMO_TEACHING_REGISTRATIONS.filter(r => r.status === 'pending_payment' && r.teachingDate >= today).forEach(r =>
-    items.push({ priority: 'needs-attention', label: 'Unpaid registration — ' + ((r.firstName + ' ' + r.lastName).trim() || r.email) + ' · ' + (r.teachingTitle || 'Class'),
-      action: () => { showOwnerSection('registrations'); showClassRegTab('registrations'); openClassRegDetail(r.id); } }));
-  PRAYER_REQUESTS.filter(p => p.status === 'new').forEach(p =>
-    items.push({ priority: 'urgent', label: 'Unanswered prayer request — ' + getNameLabel(p, 'Anonymous'),
-      action: () => { showOwnerSection('prayer-requests'); openPrayerDetailWindow(p.id); } }));
-  TESTIMONIALS.filter(t => t.status === 'pending').forEach(t =>
-    items.push({ priority: 'needs-attention', label: 'Testimony awaiting approval — ' + getNameLabel(t, 'Anonymous'),
-      action: () => { showOwnerSection('testimonials'); openTestimonyDetailWindow(t.id); } }));
-  CLASS_REVIEWS.filter(r => r.status === 'pending').forEach(r =>
-    items.push({ priority: 'needs-attention', label: 'Class review awaiting approval — ' + (r.className || 'Class'),
-      action: () => { showOwnerSection('class-reviews'); openReviewDetailWindow(r.id); } }));
-  Object.values(TEACHINGS).filter(t => t.unlimitedCapacity === false && !t.archived && t.status !== 'cancelled' && t.status !== 'completed').forEach(t => {
-    const remaining = classSeatsRemaining(t);
-    if(remaining !== null && remaining > 0 && remaining <= 2){
-      items.push({ priority: 'needs-attention', label: 'Class nearly full — ' + t.title + ' (' + remaining + ' seat' + (remaining === 1 ? '' : 's') + ' left)',
-        action: () => { showOwnerSection('teachings'); openTeachingEditor(t.id); } });
-    }
-    if(remaining !== null && remaining > 0 && waitlistFor(t.id).some(w => liveWaitlistStatus(w) === 'waiting')){
-      items.push({ priority: 'normal', label: 'Waitlist seat available — ' + t.title,
-        action: async () => { showOwnerSection('teachings'); await openTeachingEditor(t.id); showTeachingEditTab('waitlist'); } });
-    }
+function gatherOwnerAlertSources(){
+  const classes = Object.values(TEACHINGS)
+    .filter(t => t.unlimitedCapacity === false && !t.archived && t.status !== 'cancelled' && t.status !== 'completed' && t.status !== 'draft')
+    .map(t => ({ id: t.id, title: t.title, seatsRemaining: classSeatsRemaining(t), waitlistWaiting: waitlistFor(t.id).some(w => liveWaitlistStatus(w) === 'waiting') }));
+  return {
+    bookings: ownerPendingBookings().map(b => ({ ...b, sessionLabel: sessionTypeName(b.sessionType), dateLabel: b.date ? formatTeachingDateShort(b.date) : '', time: b.time ? formatTeachingTime(b.time) : '' })),
+    prayers: PRAYER_REQUESTS, testimonials: TESTIMONIALS, reviews: CLASS_REVIEWS,
+    registrations: (!ownerUsesSeedData() && OWNER_ALERT_STATE.pendingRegistrations) || ownerRegistrationsSource(), classes,
+    shop: OWNER_ALERT_STATE.shop,
+    paymentReviews: ownerUsesSeedData() ? [] : [...OWNER_ALERT_STATE.paymentReviews.bookings, ...OWNER_ALERT_STATE.paymentReviews.teachingRegistrations],
+    failedReports: OWNER_ALERT_STATE.failedReports,
+    loadErrors: Object.entries(OWNER_ALERT_STATE.errors).map(([source, label]) => ({ source, label }))
+  };
+}
+function ownerAlertWhen(ms){
+  if(!ms) return '';
+  const d = new Date(ms);
+  const days = Math.floor((Date.now() - ms) / 86400000);
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  if(days < 1 && d.toDateString() === new Date().toDateString()) return 'Today, ' + time;
+  if(days < 2) return 'Yesterday, ' + time;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+}
+const OWNER_TONE_LABEL = { action: 'Action required', progress: 'In progress', done: 'Completed', info: 'Scheduled' };
+function ownerAlertItemHtml(item, idx){
+  const group = groupForNav(item.nav);
+  const navBtn = document.querySelector('#ownerSidebar [data-owner-nav="' + item.nav + '"]');
+  const section = navBtn ? ownerNavLabel(navBtn) : (group ? group.label : '');
+  const when = ownerAlertWhen(item.at);
+  return '<article class="owner-alert-item is-' + item.level + '" data-owner-alert="' + escapeHtml(item.key) + '">' +
+    '<div><strong>' + escapeHtml(item.title) + '</strong>' +
+    (item.detail ? '<p class="owner-alert-detail">' + escapeHtml(item.detail) + '</p>' : '') +
+    '<div class="owner-alert-meta"><span class="owner-tone owner-tone-' + item.level + '">' + escapeHtml(item.status) + '</span>' +
+    '<span>' + escapeHtml(section) + '</span>' + (when ? '<span>' + escapeHtml(when) + '</span>' : '') + '</div></div>' +
+    '<button type="button" class="admin-btn-ghost" data-owner-alert-go="' + idx + '">' + escapeHtml(item.actionLabel) + '</button></article>';
+}
+function refreshOwnerAlerts(){
+  // Inbox renderers call this during page start-up too, before the
+  // owner has signed in and before class/waitlist data exists.
+  if(!OWNER_ALERT_STATE || !OWNER_ALERT_STATE.ready) return null;
+  OWNER_ALERT_STATE.items = buildOwnerAlerts(gatherOwnerAlertSources(), ownerTodayKey());
+  const counts = alertCounts(OWNER_ALERT_STATE.items);
+  // Every section gets a badge slot, so any alert type (now or later)
+  // is always counted somewhere visible in the sidebar.
+  document.querySelectorAll('#ownerSidebar .owner-sidebar-item[data-owner-nav]').forEach(btn => {
+    if(btn.querySelector('[data-alert-nav]')) return;
+    const span = document.createElement('span');
+    span.className = 'owner-alert-count'; span.dataset.alertNav = btn.dataset.ownerNav; span.hidden = true;
+    btn.appendChild(span);
   });
-  const order = { urgent: 0, 'needs-attention': 1, normal: 2 };
-  return items.sort((a, b) => order[a.priority] - order[b.priority]);
+  document.querySelectorAll('#ownerSidebar [data-alert-nav]').forEach(el => {
+    const n = counts.byNav[el.dataset.alertNav] || 0;
+    el.hidden = n === 0; el.textContent = String(n);
+    el.setAttribute('aria-label', n + ' need' + (n === 1 ? 's' : '') + ' your attention');
+  });
+  document.querySelectorAll('#ownerSidebar [data-alert-group]').forEach(el => {
+    const n = counts.byGroup[el.dataset.alertGroup] || 0;
+    el.hidden = n === 0; el.textContent = String(n);
+    el.setAttribute('aria-label', n + ' need' + (n === 1 ? 's' : '') + ' your attention');
+  });
+  const bell = document.getElementById('ownerAlertBell');
+  const bellCount = document.getElementById('ownerBellCount');
+  if(bell && bellCount){
+    bellCount.hidden = counts.total === 0;
+    bellCount.textContent = String(counts.total);
+    bell.classList.toggle('has-alerts', counts.total > 0);
+    bell.setAttribute('aria-label', counts.total === 0 ? 'Needs your attention: nothing right now' : 'Needs your attention: ' + counts.total + ' item' + (counts.total === 1 ? '' : 's'));
+  }
+  renderOwnerActionRequired();
+  renderOwnerSummaryCards();
+  renderOwnerSectionAlerts();
+  return counts;
 }
-const ACTION_PRIORITY_LABELS = { urgent: 'Urgent', 'needs-attention': 'Needs Attention', normal: 'Normal' };
+// Shop alerts come from shop-admin.js (the same rules its own Overview
+// tab uses); it calls this back whenever its records reload.
+async function refreshOwnerShopAlerts(){
+  if(!shopAdmin || !shopAdmin.alerts) return;
+  try {
+    OWNER_ALERT_STATE.shop = await shopAdmin.alerts();
+    OWNER_ALERT_STATE.shopSummary = shopAdmin.summary ? shopAdmin.summary() : null;
+    delete OWNER_ALERT_STATE.errors.shop;
+  } catch (err) {
+    console.error('[owner-alerts] shop alerts failed', err);
+    OWNER_ALERT_STATE.errors.shop = 'Resources Shop records';
+  }
+  refreshOwnerAlerts();
+}
+async function refreshOwnerReportAlerts(){
+  if(!ownerReports || !ownerReports.failedReports) return;
+  try {
+    OWNER_ALERT_STATE.failedReports = await ownerReports.failedReports();
+    delete OWNER_ALERT_STATE.errors.reports;
+  } catch (err) {
+    OWNER_ALERT_STATE.errors.reports = 'ministry reports';
+  }
+  refreshOwnerAlerts();
+}
+function upsertById(list, id, data){
+  const idx = list.findIndex(x => x.id === id);
+  if(data === null){ if(idx >= 0) list.splice(idx, 1); return; }
+  if(idx >= 0) list[idx] = { id, ...data }; else list.unshift({ id, ...data });
+}
+function stopOwnerAlertListeners(){
+  while(OWNER_ALERT_UNSUBS.length){ try { OWNER_ALERT_UNSUBS.pop()(); } catch (err) { /* already closed */ } }
+  OWNER_ALERT_STATE.pendingBookings = null;
+  OWNER_ALERT_STATE.pendingRegistrations = null;
+  OWNER_ALERT_STATE.ready = false;
+}
+// Live watches on the queues that drive red alerts. A record leaving a
+// watched query (e.g. a prayer marked completed on another device) is
+// re-read once so the inbox list here shows its new status too.
+function startOwnerAlertListeners(){
+  if(DEMO_MODE || OWNER_ALERT_UNSUBS.length) return;
+  const watch = (key, label, q, onChange) => {
+    let first = true;
+    OWNER_ALERT_UNSUBS.push(onSnapshot(q, snap => {
+      delete OWNER_ALERT_STATE.errors[key];
+      onChange(snap, first);
+      first = false;
+      refreshOwnerAlerts();
+    }, err => {
+      console.error('[owner-alerts] ' + key + ' watch failed', err);
+      OWNER_ALERT_STATE.errors[key] = label;
+      refreshOwnerAlerts();
+    }));
+  };
+  // getList() is read on every change, never captured once: the inbox
+  // arrays are replaced on each reload and swapped while Demo Mode
+  // (simulation) is on — real updates must not leak into sample data.
+  const inbox = (getList, colName) => (snap, first) => {
+    if(ownerSim.isActive()) return;
+    snap.docChanges().forEach(change => {
+      if(change.type === 'removed'){
+        getDoc(doc(db, colName, change.doc.id))
+          .then(fresh => { if(ownerSim.isActive()) return; upsertById(getList(), change.doc.id, fresh.exists() ? fresh.data() : null); renderMinistryInboxViews(); })
+          .catch(() => {});
+      } else upsertById(getList(), change.doc.id, change.doc.data());
+    });
+    if(!first) renderMinistryInboxViews();
+  };
+  watch('bookings', 'booking requests', query(collection(db, 'bookings'), where('status', '==', 'pending')), (snap, first) => {
+    OWNER_ALERT_STATE.pendingBookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(!ownerSim.isActive()) snap.docChanges().forEach(change => {
+      if(change.type !== 'removed') upsertById(OWNER_ALL_BOOKINGS_CACHE, change.doc.id, change.doc.data());
+    });
+    if(!first) void loadOwnerBookings();
+  });
+  // Payments the server flagged for the owner (charged twice, paid after
+  // cancelling, chargebacks) on bookings and class registrations.
+  ['bookings', 'teachingRegistrations'].forEach(colName => {
+    watch('payment-review-' + colName, 'payments to review', query(collection(db, colName), where('paymentNeedsReview', '==', true)), snap => {
+      OWNER_ALERT_STATE.paymentReviews[colName] = snap.docs.map(d => {
+        const r = d.data();
+        return { ...r, id: d.id, collection: colName, sessionLabel: r.sessionType ? sessionTypeName(r.sessionType) : '' };
+      });
+    });
+  });
+  // Registration payments are confirmed by the Stripe webhook on the
+  // server, so this watch is what turns an amber "waiting on payment"
+  // item off without a page reload.
+  watch('registrations', 'class registrations', query(collection(db, 'teachingRegistrations'), where('status', '==', 'pending_payment')), snap => {
+    OWNER_ALERT_STATE.pendingRegistrations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(ownerSim.isActive()) return;
+    snap.docChanges().forEach(change => {
+      if(change.type !== 'removed'){ upsertById(OWNER_ALL_REGISTRATIONS_CACHE, change.doc.id, change.doc.data()); return; }
+      getDoc(doc(db, 'teachingRegistrations', change.doc.id))
+        .then(fresh => { if(!ownerSim.isActive()) upsertById(OWNER_ALL_REGISTRATIONS_CACHE, change.doc.id, fresh.exists() ? fresh.data() : null); })
+        .catch(() => {});
+    });
+  });
+  watch('prayers', 'prayer requests', query(collection(db, 'prayerRequests'), where('status', 'in', ['new', 'in-progress'])), inbox(() => PRAYER_REQUESTS, 'prayerRequests'));
+  watch('testimonials', 'testimonies', query(collection(db, 'testimonials'), where('status', '==', 'pending')), inbox(() => TESTIMONIALS, 'testimonials'));
+  watch('reviews', 'class reviews', query(collection(db, 'classReviews'), where('status', '==', 'pending')), inbox(() => CLASS_REVIEWS, 'classReviews'));
+}
+async function runOwnerAlertTarget(item){
+  const t = item.target || {};
+  if(t.kind === 'booking'){
+    showOwnerSection('bookings');
+    showBookingsTab('appointments');
+    const pendingFilter = document.querySelector('[data-appt-filter="pending"]');
+    if(pendingFilter) pendingFilter.click();
+    if(ownerUsesSeedData()) openBookingDetail(t.id);
+  } else if(t.kind === 'prayer'){ showOwnerSection('prayer-requests'); openPrayerDetailWindow(t.id); }
+  else if(t.kind === 'testimony'){ showOwnerSection('testimonials'); openTestimonyDetailWindow(t.id); }
+  else if(t.kind === 'review'){ showOwnerSection('class-reviews'); openReviewDetailWindow(t.id); }
+  else if(t.kind === 'registration'){ showOwnerSection('registrations'); showClassRegTab('registrations'); openClassRegDetail(t.id); }
+  else if(t.kind === 'waitlist'){ showOwnerSection('teachings'); await openTeachingEditor(t.id); showTeachingEditTab('waitlist'); }
+  else if(t.kind === 'class'){ showOwnerSection('teachings'); await openTeachingEditor(t.id); }
+  else if(t.kind === 'shop'){
+    showOwnerSection('store');
+    if(shopSystem) await shopSystem.loadAdmin().catch(() => {});
+    if(shopAdmin && shopAdmin.goTo) shopAdmin.goTo(t.alert);
+  } else if(t.kind === 'reports'){ showOwnerSection('reports'); if(ownerReports) void ownerReports.render(); }
+  else if(t.kind === 'reload'){ window.location.reload(); }
+  else if(t.kind === 'payment-review'){
+    // The fix itself (a refund, a reply to the bank) happens in Stripe;
+    // this records that the owner has dealt with it.
+    if(ownerUsesSeedData() || !['bookings', 'teachingRegistrations'].includes(t.collection)) return;
+    if(!window.confirm('Mark this payment as reviewed? Do this after you have handled it in Stripe (refund, or a reply to the bank).')) return;
+    try {
+      await updateDoc(doc(db, t.collection, t.id), { paymentNeedsReview: false, paymentReviewedAt: serverTimestamp(), paymentReviewedBy: currentUser ? currentUser.uid : null });
+    } catch (err) {
+      console.error('[owner-alerts] could not mark payment reviewed', err);
+      window.alert('That could not be saved. Please try again.');
+    }
+  }
+}
+function ownerAlertClickHandler(event){
+  const btn = event.target.closest('[data-owner-alert-go]');
+  if(!btn) return;
+  const item = OWNER_ALERT_STATE.items.find(i => i.key === btn.closest('[data-owner-alert]').dataset.ownerAlert);
+  if(item) void runOwnerAlertTarget(item);
+}
+
+// C. Needs Your Attention — red first, then amber; gray "for your
+// information" items are tucked behind a disclosure so they never
+// crowd the things that need action.
 function renderOwnerActionRequired(){
   const wrap = document.getElementById('ownerActionRequired');
   if(!wrap) return;
-  ownerActionItemsCache = ownerActionItems();
+  const items = OWNER_ALERT_STATE.items;
+  const active = items.filter(i => i.level !== 'info');
+  const info = items.filter(i => i.level === 'info');
+  const red = items.filter(i => i.level === 'action').length;
   const countEl = document.getElementById('ownerActionRequiredCount');
-  if(countEl) countEl.textContent = ownerActionItemsCache.length === 0 ? 'All caught up' : String(ownerActionItemsCache.length);
-  wrap.innerHTML = ownerActionItemsCache.length === 0
-    ? '<p class="admin-hint">Nothing needs your attention right now.</p>'
-    : ownerActionItemsCache.map((item, idx) => '<div class="portal-row" data-action-idx="' + idx + '" style="cursor:pointer"><div><strong>' + escapeHtml(item.label) + '</strong></div>' +
-      '<span class="admin-status-pill ' + (item.priority === 'urgent' ? 'cancelled' : item.priority === 'needs-attention' ? 'pending' : 'draft') + '">' + ACTION_PRIORITY_LABELS[item.priority] + '</span></div>').join('');
+  if(countEl){
+    countEl.textContent = red ? red + ' need' + (red === 1 ? 's' : '') + ' action' : (active.length ? active.length + ' in progress' : 'All caught up');
+    countEl.classList.toggle('has-alerts', red > 0);
+  }
+  const list = arr => '<div class="owner-alert-list">' + arr.map(i => ownerAlertItemHtml(i, items.indexOf(i))).join('') + '</div>';
+  wrap.innerHTML = (active.length ? list(active) : '<p class="owner-empty">Nothing needs your attention right now.</p>') +
+    (info.length ? '<details class="owner-alert-more"><summary>For your information (' + info.length + ')</summary>' + list(info) + '</details>' : '');
 }
-document.getElementById('ownerActionRequired').addEventListener('click', event => {
-  const row = event.target.closest('[data-action-idx]');
-  if(!row) return;
-  const item = ownerActionItemsCache[Number(row.dataset.actionIdx)];
-  if(item && item.action) item.action();
-});
-
+// Page-level alerts for whichever section is open (structure step 2).
+function renderOwnerSectionAlerts(){
+  const wrap = document.getElementById('ownerSectionAlerts');
+  if(!wrap || !OWNER_ALERT_STATE) return;
+  const current = (document.querySelector('#ownerSidebar .owner-sidebar-item.active') || {}).dataset?.ownerNav;
+  // Overview and the Resources Shop already list these in their own
+  // panels, so the page-level strip would only repeat them there.
+  const items = current && current !== 'dashboard' && current !== 'store' ? OWNER_ALERT_STATE.items.filter(i => i.nav === current && i.level !== 'info') : [];
+  wrap.hidden = items.length === 0;
+  wrap.innerHTML = items.slice(0, 3).map(i => ownerAlertItemHtml(i, OWNER_ALERT_STATE.items.indexOf(i))).join('') +
+    (items.length > 3 ? '<button type="button" class="owner-link-btn owner-section-alerts-more" data-owner-nav-go="dashboard">See all ' + items.length + ' in Overview</button>' : '');
+}
+// B. Summary cards — counts from the same records the sections use.
+function renderOwnerSummaryCards(){
+  const wrap = document.getElementById('ownerSummaryCards');
+  if(!wrap) return;
+  const today = ownerTodayKey();
+  const bookings = ownerBookingsSource();
+  const upcoming = bookings.filter(b => b.status === 'confirmed' && b.date >= today);
+  const todayCount = upcoming.filter(b => b.date === today).length;
+  const pending = ownerPendingBookings().length;
+  const classes = teachingsForTab('upcoming');
+  const classesToday = classes.filter(t => t.date === today).length;
+  const drafts = Object.values(TEACHINGS).filter(t => t.status === 'draft').length;
+  const counts = alertCounts(OWNER_ALERT_STATE.items);
+  const shop = OWNER_ALERT_STATE.shopSummary;
+  const card = (key, label, value, sub, tone) => '<button type="button" class="owner-summary-card' + (tone ? ' is-' + tone : '') + '" data-owner-summary="' + key + '">' +
+    '<span class="owner-summary-label">' + label + '</span><span class="owner-summary-value">' + value + '</span><span class="owner-summary-sub">' + sub + '</span></button>';
+  wrap.innerHTML =
+    card('bookings', 'Upcoming Bookings', upcoming.length,
+      todayCount + ' today' + (pending ? ' · <strong>' + pending + ' awaiting confirmation</strong>' : ' · none awaiting confirmation'), pending ? 'action' : '') +
+    card('classes', 'Active Classes', classes.length, classesToday + ' today · ' + drafts + ' in drafts', '') +
+    card('attention', 'Needs Your Attention', counts.total,
+      counts.total ? (counts.progress ? counts.progress + ' more in progress' : 'Open the list below') : (counts.progress ? counts.progress + ' in progress' : 'All caught up'), counts.total ? 'action' : 'done') +
+    card('orders', 'Resource Orders', shop ? shop.paid30 : '—',
+      shop ? ('Paid in the last 30 days' + (shop.mode === 'test' ? ' (test records)' : '')) : 'Loading store records…', shop && shop.attention ? 'action' : '');
+}
+// D. Upcoming Schedule — real confirmed bookings, published classes
+// and the next gathering, in date order. Gray: scheduled, not urgent.
 let ownerUpcomingActivityCache = [];
 function renderOwnerUpcomingActivity(){
   const wrap = document.getElementById('ownerUpcomingActivity');
   if(!wrap) return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ownerTodayKey();
   const items = [];
-  DEMO_BOOKINGS.filter(b => b.status === 'confirmed' && b.date >= today).forEach(b =>
-    items.push({ date: b.date, time: b.time || '', type: '1:1', label: (b.name || 'Guest') + ' — ' + sessionTypeName(b.sessionType),
-      action: () => { showOwnerSection('bookings'); openBookingDetail(b.id); } }));
+  ownerBookingsSource().filter(b => b.status === 'confirmed' && b.date >= today).forEach(b =>
+    items.push({ date: b.date, time: b.time || '', type: 'One-on-One', label: (b.name || 'Guest') + ' — ' + sessionTypeName(b.sessionType),
+      action: () => { showOwnerSection('bookings'); showBookingsTab('calendar'); } }));
   teachingsForTab('upcoming').forEach(t =>
     items.push({ date: t.date || '', time: t.startTime || '', type: 'Class', label: t.title || '(untitled)',
       action: () => { showOwnerSection('teachings'); openTeachingEditor(t.id); } }));
@@ -10418,79 +10888,139 @@ function renderOwnerUpcomingActivity(){
   items.sort((a, b) => (a.date + 'T' + (a.time || '00:00')).localeCompare(b.date + 'T' + (b.time || '00:00')));
   ownerUpcomingActivityCache = items.slice(0, 6);
   wrap.innerHTML = ownerUpcomingActivityCache.length === 0
-    ? '<p class="admin-hint">Nothing scheduled yet.</p>'
-    : ownerUpcomingActivityCache.map((item, idx) => '<div class="portal-row" data-upcoming-idx="' + idx + '" style="cursor:pointer"><div><strong>' + escapeHtml(item.label) +
-      '</strong><div class="admin-hint" style="margin-top:2px">' + escapeHtml(formatTeachingDateShort(item.date)) + (item.time ? ' · ' + escapeHtml(formatTeachingTime(item.time)) : '') + '</div></div>' +
-      '<span class="admin-status-pill draft">' + item.type + '</span></div>').join('');
+    ? '<p class="owner-empty is-neutral">Nothing scheduled yet.</p>'
+    : '<div class="owner-schedule-list">' + ownerUpcomingActivityCache.map((item, idx) => {
+      const d = item.date ? new Date(item.date + 'T12:00:00') : null;
+      return '<button type="button" class="owner-schedule-row" data-upcoming-idx="' + idx + '">' +
+        '<span class="owner-schedule-date">' + (d ? escapeHtml(d.toLocaleDateString(undefined, { month: 'short' })) + '<b>' + d.getDate() + '</b>' : 'TBA') + '</span>' +
+        '<span class="owner-schedule-main"><strong>' + escapeHtml(item.label) + '</strong><span>' +
+        escapeHtml(item.date ? formatTeachingDateShort(item.date) : 'Date to be announced') + (item.time ? ' · ' + escapeHtml(formatTeachingTime(item.time)) : '') + '</span></span>' +
+        '<span class="owner-tone owner-tone-info">' + escapeHtml(item.type) + '</span></button>';
+    }).join('') + '</div>';
 }
+// F. Recent Activity — newest real records across the ministry. Shows
+// who and what only, never private message content.
+let ownerRecentActivityCache = [];
+function renderOwnerRecentActivity(){
+  const wrap = document.getElementById('ownerRecentActivity');
+  if(!wrap) return;
+  const rows = [];
+  ownerBookingsSource().forEach(b => rows.push({ at: toMs(b.createdAt), kind: 'booking', status: b.status,
+    label: 'Booking ' + (b.status === 'pending' ? 'request' : (b.status || 'request')) + ' — ' + (b.name || 'Guest'),
+    sub: sessionTypeName(b.sessionType) + (b.date ? ' · ' + formatTeachingDateShort(b.date) : ''), action: () => { showOwnerSection('bookings'); showBookingsTab('appointments'); } }));
+  ownerRegistrationsSource().forEach(r => rows.push({ at: toMs(r.registeredAt), kind: 'registration', status: r.status,
+    label: 'Class registration — ' + (((r.firstName || '') + ' ' + (r.lastName || '')).trim() || r.email || 'Guest'), sub: r.teachingTitle || 'Class',
+    action: () => { showOwnerSection('registrations'); showClassRegTab('registrations'); openClassRegDetail(r.id); } }));
+  PRAYER_REQUESTS.forEach(p => rows.push({ at: toMs(p.createdAt), kind: 'prayer', status: p.status,
+    label: 'Prayer request — ' + getNameLabel(p, 'Anonymous'), sub: (p.status || 'new').replace('-', ' '), action: () => { showOwnerSection('prayer-requests'); openPrayerDetailWindow(p.id); } }));
+  TESTIMONIALS.forEach(t => rows.push({ at: toMs(t.createdAt), kind: 'testimony', status: t.status,
+    label: 'Testimony — ' + getNameLabel(t, 'Anonymous'), sub: (t.status || 'pending'), action: () => { showOwnerSection('testimonials'); openTestimonyDetailWindow(t.id); } }));
+  ((shopAdmin && shopAdmin.recentOrders) ? shopAdmin.recentOrders(8) : []).forEach(o => rows.push({ at: o.at, kind: 'order', status: o.status,
+    label: 'Resource order — ' + o.who, sub: o.summary, action: () => { showOwnerSection('store'); if(shopSystem) shopSystem.showStoreTab('orders'); } }));
+  ownerRecentActivityCache = rows.filter(r => r.at).sort((a, b) => b.at - a.at).slice(0, 8);
+  wrap.innerHTML = ownerRecentActivityCache.length === 0
+    ? '<p class="owner-empty is-neutral">No activity recorded yet.</p>'
+    : '<div class="owner-recent-list">' + ownerRecentActivityCache.map((r, idx) => {
+      const tone = recordTone(r.kind, r.status);
+      return '<button type="button" class="owner-recent-row" data-recent-idx="' + idx + '">' +
+        '<span class="owner-recent-main"><strong>' + escapeHtml(r.label) + '</strong><span>' + escapeHtml(r.sub || '') + ' · ' + escapeHtml(ownerAlertWhen(r.at)) + '</span></span>' +
+        '<span class="owner-tone owner-tone-' + tone + '">' + escapeHtml(OWNER_TONE_LABEL[tone]) + '</span></button>';
+    }).join('') + '</div>';
+}
+function renderOwnerHeader(){
+  const welcome = document.getElementById('ownerDashboardWelcome');
+  const firstName = currentProfile ? (currentProfile.name || '').split(' ')[0] : '';
+  if(welcome) welcome.textContent = 'Welcome back' + (firstName ? ', ' + firstName : '') + '.';
+  const dateEl = document.getElementById('ownerTodayDate');
+  if(dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const name = currentProfile ? (currentProfile.name || currentProfile.email || 'Owner') : 'Owner';
+  const nameEl = document.getElementById('ownerHeaderName');
+  if(nameEl) nameEl.textContent = name;
+  const avatar = document.getElementById('ownerHeaderAvatar');
+  if(avatar){
+    const photo = typeof currentOwnerProfilePhoto === 'function' ? currentOwnerProfilePhoto() : '';
+    avatar.style.backgroundImage = photo ? "url('" + photo.replace(/'/g, '%27') + "')" : '';
+    avatar.textContent = photo ? '' : (name.trim()[0] || '?').toUpperCase();
+  }
+}
+async function renderOwnerDashboardStats(){
+  renderOwnerHeader();
+  refreshOwnerAlerts();
+  renderOwnerUpcomingActivity();
+  renderOwnerRecentActivity();
+}
+// Kept under its old name — owner-simulation.js and the sim-mode switch
+// call it to repaint the Overview after swapping data sets.
+function renderOwnerTodayView(){ renderOwnerDashboardStats(); }
+
+document.getElementById('ownerActionRequired').addEventListener('click', ownerAlertClickHandler);
+document.getElementById('ownerSectionAlerts').addEventListener('click', event => {
+  if(event.target.closest('[data-owner-nav-go]')){ showOwnerSection('dashboard'); renderOwnerDashboardStats(); return; }
+  ownerAlertClickHandler(event);
+});
 document.getElementById('ownerUpcomingActivity').addEventListener('click', event => {
   const row = event.target.closest('[data-upcoming-idx]');
-  if(!row) return;
-  const item = ownerUpcomingActivityCache[Number(row.dataset.upcomingIdx)];
+  const item = row && ownerUpcomingActivityCache[Number(row.dataset.upcomingIdx)];
   if(item && item.action) item.action();
 });
-// Dashboard: Needs Attention / Upcoming / Recent used to be three
-// separate stacked cards — consolidated into one tabbed card (user
-// feedback: the dashboard read as too busy) so only one list shows at
-// a time instead of three, with Needs Attention surfaced first since
-// it's the one that's actually actionable every day.
-document.getElementById('ownerActivityTabs').addEventListener('click', event => {
-  const btn = event.target.closest('[data-activity-tab]');
-  if(!btn) return;
-  document.querySelectorAll('#ownerActivityTabs .admin-tab').forEach(b => b.classList.toggle('active', b === btn));
-  document.querySelectorAll('[data-activity-panel]').forEach(p => { p.hidden = p.dataset.activityPanel !== btn.dataset.activityTab; });
+document.getElementById('ownerRecentActivity').addEventListener('click', event => {
+  const row = event.target.closest('[data-recent-idx]');
+  const item = row && ownerRecentActivityCache[Number(row.dataset.recentIdx)];
+  if(item && item.action) item.action();
 });
-
-async function renderOwnerDashboardStats(){
-  const wrap = document.getElementById('ownerDashboardStats');
-  if(!wrap) return;
-  renderOwnerTodayView();
-  renderOwnerActionRequired();
-  renderOwnerUpcomingActivity();
-  const welcome = document.getElementById('ownerDashboardWelcome');
-  if(welcome && currentProfile){
-    const firstName = (currentProfile.name || '').split(' ')[0];
-    welcome.textContent = 'Welcome back' + (firstName ? ', ' + firstName : '') + '.';
-  }
-  let memberCount = '—', pendingBookings = [];
-  try {
-    if(DEMO_MODE){
-      memberCount = String(DEMO_MEMBERS.length);
-      pendingBookings = DEMO_BOOKINGS.filter(b => b.status === 'pending');
-    } else {
-      const [usersSnap, bookingsSnap] = await Promise.all([
-        getDocs(collection(db, 'users')),
-        getDocs(query(collection(db, 'bookings'), where('status', '==', 'pending')))
-      ]);
-      memberCount = String(usersSnap.size);
-      bookingsSnap.forEach(d => pendingBookings.push({ id: d.id, ...d.data() }));
-    }
-  } catch (err) { /* leave placeholders */ }
-  const upcomingClassCount = teachingsForTab('upcoming').length;
-  const draftCount = Object.values(TEACHINGS).filter(t => t.status === 'draft').length;
-  wrap.innerHTML =
-    '<div class="admin-stat-tile"><span>Total Members</span><strong>' + memberCount + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Upcoming Classes</span><strong>' + upcomingClassCount + '</strong><em>' + draftCount + ' in drafts</em></div>' +
-    '<div class="admin-stat-tile"><span>1:1 Bookings Pending</span><strong>' + pendingBookings.length + '</strong></div>' +
-    '<div class="admin-stat-tile"><span>Revenue</span><strong style="font-size:14px;color:var(--owner-text-muted)">Payment system not connected</strong></div>';
-
-  const activityWrap = document.getElementById('ownerRecentActivity');
-  if(activityWrap){
-    const lines = [];
-    pendingBookings.slice(0, 4).forEach(b => lines.push('New booking request from ' + (b.name || 'a visitor') + (b.date ? ' — ' + formatTeachingDateShort(b.date) : '')));
-    if(draftCount > 0) lines.push(draftCount + ' teaching' + (draftCount === 1 ? '' : 's') + ' saved as draft, not yet published');
-    if(lines.length === 0) lines.push('Nothing new right now — you\'re all caught up.');
-    activityWrap.innerHTML = lines.map(l => '<div class="admin-hint" style="padding:9px 0;border-bottom:1px solid var(--owner-border)">' + escapeHtml(l) + '</div>').join('');
-  }
+document.getElementById('ownerOpenCalendar').addEventListener('click', () => { showOwnerSection('bookings'); showBookingsTab('calendar'); });
+document.getElementById('ownerSummaryCards').addEventListener('click', event => {
+  const cardBtn = event.target.closest('[data-owner-summary]');
+  if(!cardBtn) return;
+  const key = cardBtn.dataset.ownerSummary;
+  if(key === 'bookings'){ showOwnerSection('bookings'); showBookingsTab('appointments'); }
+  else if(key === 'classes'){ showOwnerSection('teachings'); }
+  else if(key === 'attention'){ const h = document.getElementById('ownerAttentionHeading'); if(h){ h.scrollIntoView({ block: 'start', behavior: 'smooth' }); h.focus({ preventScroll: true }); } }
+  else if(key === 'orders'){ showOwnerSection('store'); if(shopSystem){ void shopSystem.loadAdmin().catch(() => {}); shopSystem.showStoreTab('orders'); } }
+});
+document.getElementById('ownerAlertBell').addEventListener('click', () => {
+  showOwnerSection('dashboard');
+  renderOwnerDashboardStats();
+  const h = document.getElementById('ownerAttentionHeading');
+  if(h){ h.scrollIntoView({ block: 'start', behavior: 'smooth' }); h.focus({ preventScroll: true }); }
+});
+function setOwnerAccountMenu(open){
+  const btn = document.getElementById('ownerAccountMenuBtn');
+  const menu = document.getElementById('ownerAccountMenu');
+  if(!btn || !menu) return;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  menu.hidden = !open;
+  if(open){ const first = menu.querySelector('button'); if(first) first.focus(); }
 }
+document.getElementById('ownerAccountMenuBtn').addEventListener('click', () => setOwnerAccountMenu(document.getElementById('ownerAccountMenu').hidden));
+document.getElementById('ownerAccountMenu').addEventListener('click', event => {
+  const go = event.target.closest('[data-owner-account-go]');
+  if(go){ setOwnerAccountMenu(false); showOwnerSection(go.dataset.ownerAccountGo); }
+});
+document.addEventListener('click', event => {
+  if(!event.target.closest('.owner-account')) { const m = document.getElementById('ownerAccountMenu'); if(m && !m.hidden) setOwnerAccountMenu(false); }
+});
+document.addEventListener('keydown', event => {
+  if(event.key !== 'Escape') return;
+  const m = document.getElementById('ownerAccountMenu');
+  if(m && !m.hidden){ event.preventDefault(); setOwnerAccountMenu(false); document.getElementById('ownerAccountMenuBtn').focus(); }
+});
+// Store/booking changes made elsewhere in this tab can't fire a
+// Firestore watch for the Shop (it isn't watched), so re-read it when
+// the owner comes back to the tab.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && currentProfile && currentProfile.role === 'admin' && !document.querySelector('[data-portal-view="owner"]')?.hidden){
+    if(shopAdmin && shopAdmin.reload) void shopAdmin.reload().catch(() => {});
+  }
+});
 document.getElementById('ownerQuickActions').addEventListener('click', event => {
   const btn = event.target.closest('[data-quick-action]');
   if(!btn) return;
   const action = btn.dataset.quickAction;
   if(action === 'new-teaching'){ showOwnerSection('teachings'); openTeachingEditor(null); }
-  else if(action === 'media'){ showOwnerSection('media'); }
   else if(action === 'bookings'){ showOwnerSection('bookings'); }
-  else if(action === 'registrants'){ showOwnerSection('teachings'); }
+  else if(action === 'prayer'){ showOwnerSection('prayer-requests'); }
+  else if(action === 'resources'){ showOwnerSection('store'); if(shopSystem) void shopSystem.loadAdmin().catch(() => {}); }
   else if(action === 'website'){ showOwnerSection('website'); }
 });
 
@@ -10661,6 +11191,7 @@ document.getElementById('financesRefundsList')?.addEventListener('click', event 
 
 async function loadOwnerData(){
   if(!currentProfile || currentProfile.role !== 'admin') return;
+  OWNER_ALERT_STATE.ready = true;
   updateOwnerSidebarProfile();
   if(!DEMO_MODE){ try { await loadSchedulingConfig(); } catch (err) { /* keep whatever is already loaded */ } }
   if(!DEMO_MODE){ try { await loadTeachingPageConfig(); } catch (err) { /* keep whatever is already loaded */ } }
@@ -10670,6 +11201,9 @@ async function loadOwnerData(){
   if(!DEMO_MODE){ try { await loadOwnerSearchCaches(); } catch (err) { /* keep whatever is already loaded */ } }
   if(eventsSystem){ try { await eventsSystem.loadAdmin(); } catch (err) { /* keep the public event state */ } }
   if(shopSystem){ try { await shopSystem.loadAdmin(); } catch (err) { /* keep the Store panel available with its safe empty state */ } }
+  startOwnerAlertListeners();
+  void refreshOwnerShopAlerts();
+  void refreshOwnerReportAlerts();
   renderOwnerProfilePhotoPreview();
   renderOwnerAccountProfile();
   // Re-sync the scheduling draft with whatever just loaded from
@@ -10867,7 +11401,7 @@ function ownerPendingRowHtml(b){
   const format = (SESSION_TYPES[b.sessionType] && SESSION_TYPES[b.sessionType].format) || 'zoom';
   const formatLabel = format === 'phone' ? 'Phone' : format === 'in-person' ? 'In Person' : 'Zoom';
   return '<div class="portal-request" data-booking-id="' + b.id + '" data-slot-id="' + escapeHtml(b.slotId || '') + '">' +
-    '<div><strong>' + escapeHtml(b.name) + '</strong> <span class="admin-status-pill draft">Pending</span>' +
+    '<div><strong>' + escapeHtml(b.name) + '</strong> <span class="admin-status-pill action">Awaiting Confirmation</span>' +
     '<p>' + escapeHtml(label) + ' · ' + formatLabel + ' · ' + escapeHtml(ownerBookingTimeLine(b)) +
     ' · ' + escapeHtml(b.email) + (b.phone ? ' · ' + escapeHtml(b.phone) : '') + (b.reason ? '<br>“' + escapeHtml(b.reason) + '”' : '') + '</p></div>' +
     '<div class="portal-inline-actions">' +
@@ -10926,6 +11460,7 @@ document.getElementById('ownerBookingsList').addEventListener('click', async eve
       loadOwnerBookings();
       renderBookingsOverviewStats();
       renderBookingsToday();
+      refreshOwnerAlerts();
       return;
     }
     if(confirmBtn){
@@ -11396,80 +11931,595 @@ const blockDateForm = document.getElementById('blockDateForm');
 const blockDateInput = document.getElementById('blockDateInput');
 const blockDateStatus = document.getElementById('blockDateStatus');
 const blockDateSubmitBtn = document.getElementById('blockDateSubmitBtn');
-blockDateInput.min = new Date().toISOString().slice(0, 10);
+blockDateInput.min = ministryToday();
 
 function blockedDateRowHtml(d){
-  return '<div class="portal-row" data-blocked-date="' + escapeHtml(d) + '"><div><strong>' + escapeHtml(d) + '</strong></div>' +
+  const unsaved = !BLOCKED_DATES_LIVE.includes(d);
+  return '<div class="portal-row" data-blocked-date="' + escapeHtml(d) + '"><div><strong>' + escapeHtml(d) + '</strong>' +
+    (unsaved ? '<small class="sched-unsaved-tag">Not saved yet</small>' : '') + '</div>' +
     '<button class="portal-secondary owner-unblock-date" type="button" style="min-height:32px;padding:0 10px;font-size:9px">Unblock</button></div>';
 }
-
-async function loadBlockedDates(){
+// The list shows the DRAFT (what will be true after Save), so a staged
+// block or unblock is visible right away and clearly marked.
+function renderBlockedDatesList(){
   const container = document.getElementById('blockedDatesList');
   if(!container) return;
-  container.innerHTML = '<p style="color:#656565">Loading blocked dates…</p>';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ministryToday();
+  const dates = SCHED_DRAFT.blocks.filter(d => d >= today).sort();
+  const removed = BLOCKED_DATES_LIVE.filter(d => d >= today && !SCHED_DRAFT.blocks.includes(d));
+  container.innerHTML = (dates.length === 0 ? '<p style="color:#656565">No upcoming dates are blocked.</p>' : dates.map(blockedDateRowHtml).join('')) +
+    (removed.length ? '<p class="admin-hint" style="margin-top:8px">Will be unblocked when you save: ' + removed.map(escapeHtml).join(', ') + '</p>' : '');
+}
+async function loadBlockedDates(opts){
+  const container = document.getElementById('blockedDatesList');
+  if(!container) return;
+  const today = ministryToday();
   if(DEMO_MODE){
-    const dates = DEMO_BLOCKED_DATES.filter(d => d >= today).sort();
-    container.innerHTML = dates.length === 0
-      ? '<p style="color:#656565">No upcoming dates are blocked.</p>'
-      : dates.map(blockedDateRowHtml).join('');
-    return;
-  }
-  try {
-    const snap = await getDocs(collection(db, 'blockouts'));
-    const dates = [];
-    snap.forEach(docSnap => { if(docSnap.id >= today) dates.push(docSnap.id); });
-    dates.sort();
-    if(dates.length === 0){
-      container.innerHTML = '<p style="color:#656565">No upcoming dates are blocked.</p>';
+    BLOCKED_DATES_LIVE = DEMO_BLOCKED_DATES.filter(d => d >= today).sort();
+  } else {
+    try {
+      const snap = await getDocs(collection(db, 'blockouts'));
+      const dates = [];
+      snap.forEach(docSnap => { if(docSnap.id >= today) dates.push(docSnap.id); });
+      BLOCKED_DATES_LIVE = dates.sort();
+    } catch (err) {
+      container.innerHTML = '<p style="color:#656565">Could not load blocked dates.</p>';
       return;
     }
-    container.innerHTML = dates.map(blockedDateRowHtml).join('');
-  } catch (err) {
-    container.innerHTML = '<p style="color:#656565">Could not load blocked dates.</p>';
   }
+  // Never overwrite blocks the owner has staged but not saved.
+  if(!schedDirty || (opts && opts.keepDraft === false)) SCHED_DRAFT.blocks = BLOCKED_DATES_LIVE.slice();
+  renderBlockedDatesList();
 }
 
-blockDateForm.addEventListener('submit', async event => {
+blockDateForm.addEventListener('submit', event => {
   event.preventDefault();
   const dateStr = blockDateInput.value;
   if(!dateStr) return;
-  blockDateSubmitBtn.disabled = true;
-  blockDateStatus.textContent = 'Blocking…';
-  try {
-    if(DEMO_MODE){
-      if(!DEMO_BLOCKED_DATES.includes(dateStr)) DEMO_BLOCKED_DATES.push(dateStr);
-      saveBookingsPreviewToStorage();
-    } else {
-      await setDoc(doc(db, 'blockouts', dateStr), { date: dateStr, createdAt: serverTimestamp() });
-    }
-    blockDateStatus.textContent = 'Blocked.';
-    blockDateForm.reset();
-    loadBlockedDates();
-  } catch (err) {
-    blockDateStatus.textContent = 'Could not block that date.';
-  } finally {
-    blockDateSubmitBtn.disabled = false;
-  }
+  if(dateStr < ministryToday()){ blockDateStatus.textContent = 'That date has already passed.'; return; }
+  if(!SCHED_DRAFT.blocks.includes(dateStr)) SCHED_DRAFT.blocks.push(dateStr);
+  SCHED_DRAFT.blocks.sort();
+  blockDateForm.reset();
+  renderBlockedDatesList();
+  schedMarkDirty();
+  blockDateStatus.textContent = 'Blocked in this draft — click Save Changes to apply it. Existing appointments are never changed.';
 });
 
-document.getElementById('blockedDatesList').addEventListener('click', async event => {
+document.getElementById('blockedDatesList').addEventListener('click', event => {
   const btn = event.target.closest('.owner-unblock-date');
   if(!btn) return;
   const row = event.target.closest('[data-blocked-date]');
-  btn.disabled = true;
-  try {
-    if(DEMO_MODE){
-      const idx = DEMO_BLOCKED_DATES.indexOf(row.dataset.blockedDate);
-      if(idx !== -1) DEMO_BLOCKED_DATES.splice(idx, 1);
-      saveBookingsPreviewToStorage();
-    } else {
-      await deleteDoc(doc(db, 'blockouts', row.dataset.blockedDate));
+  const idx = SCHED_DRAFT.blocks.indexOf(row.dataset.blockedDate);
+  if(idx !== -1) SCHED_DRAFT.blocks.splice(idx, 1);
+  renderBlockedDatesList();
+  schedMarkDirty();
+  blockDateStatus.textContent = 'Unblocked in this draft — click Save Changes to apply it.';
+});
+
+/* ---------------------------------------------------------------
+   Bookings → Availability workspace (Calendly-style layout, 2026-11-17)
+   A presentation layer over the EXISTING scheduling draft. Every change
+   still goes through the original handlers so validation, staging and
+   saving are unchanged:
+     • weekly hours  → #schedRuleForm submit / .sched-rule-delete
+     • special hours → #schedOverrideForm submit / .sched-override-delete
+     • block a date  → #blockDateForm submit / .owner-unblock-date
+       (staged like everything else; applied on Save)
+     • date ranges   → .sched-range-delete
+     • save/discard  → #schedSaveAllBtn / #schedDiscardBtn
+   Time slots come from computeOpenSlots() — the same function the
+   public booking page uses — so they reflect real bookings, holds,
+   buffers, capacity, daily limits and the ministry clock for SAVED
+   settings. Schedules (when) are separate from session types (what);
+   see availabilitySchedules().
+   --------------------------------------------------------------- */
+(function initAvailabilityWorkspace(){
+  const panel = document.querySelector('[data-bookings-panel="availability"]');
+  const weekEl = document.getElementById('avlWeek');
+  if(!panel || !weekEl || !schedRuleForm) return;
+  const $ = id => document.getElementById(id);
+  const scheduleSelect = $('avlScheduleSelect');
+  const calEl = $('avlCalendar');
+  const ruleDay = $('schedRuleDay'), ruleStart = $('schedRuleStart'), ruleEnd = $('schedRuleEnd');
+  const ruleCap = $('schedRuleCapacity'), ruleNotes = $('schedRuleNotes');
+  const ruleSubmit = $('avlRuleSubmit'), ruleCancel = $('avlRuleCancel'), ruleTitle = $('avlRuleEditorTitle');
+  const ovrEditor = $('avlOverrideEditor');
+  const ovrDate = $('schedOverrideDate'), ovrStart = $('schedOverrideStart'), ovrEnd = $('schedOverrideEnd');
+  const ovrClosed = $('schedOverrideClosed'), ovrNotes = $('schedOverrideNotes');
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const timeLabel = hhmm => minutesToLabel(hhmmToMinutes(hhmm));
+  const rangeLabel = w => timeLabel(w.startTime) + ' – ' + timeLabel(w.endTime);
+  const longDate = ds => new Date(ds + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const schedules = () => availabilitySchedules(SCHED_DRAFT.settings);
+  const scheduleName = id => (schedules().find(x => x.id === id) || { name: 'Main availability' }).name;
+  let viewSchedule = DEFAULT_SCHEDULE_ID;
+  const today0 = ministryToday();
+  let monthStart = new Date(Number(today0.slice(0, 4)), Number(today0.slice(5, 7)) - 1, 1);
+  let selected = '';
+  let focusDate = '';
+  let editingRuleId = null;
+  let slotType = '';
+  let slotSeq = 0;
+  let nameMode = '';
+
+  function dayState(ds){
+    if(SCHED_DRAFT.blocks.includes(ds)) return { kind: 'blocked-single', saved: BLOCKED_DATES_LIVE.includes(ds) };
+    const range = SCHED_DRAFT.ranges.find(r => ds >= r.startDate && ds <= r.endDate);
+    if(range) return { kind: 'blocked-range', range };
+    const res = resolveScheduleWindows(ds, viewSchedule, null, SCHED_DRAFT);
+    if(res.override) return res.closed ? { kind: 'closed', override: res.override } : { kind: 'special', override: res.override, windows: res.windows };
+    return { kind: 'weekly', windows: res.windows };
+  }
+  function appointmentsOn(ds){
+    try { return ownerBookingsSource().filter(b => b.date === ds && (b.status === 'confirmed' || b.status === 'pending')).length; }
+    catch (err) { return 0; }
+  }
+
+  /* 1 — schedules (when you're available) */
+  function renderScheduleSelect(){
+    const list = schedules();
+    if(!list.some(x => x.id === viewSchedule)) viewSchedule = DEFAULT_SCHEDULE_ID;
+    scheduleSelect.innerHTML = list.map(x => {
+      const n = Object.keys(SCHED_DRAFT.types).filter(id => scheduleIdOf(SCHED_DRAFT.types[id]) === x.id).length;
+      return '<option value="' + escapeHtml(x.id) + '">' + escapeHtml(x.name) + ' — ' + n + ' session type' + (n === 1 ? '' : 's') + '</option>';
+    }).join('');
+    scheduleSelect.value = viewSchedule;
+    $('avlScheduleDelete').disabled = viewSchedule === DEFAULT_SCHEDULE_ID;
+    $('avlScheduleDelete').title = viewSchedule === DEFAULT_SCHEDULE_ID ? 'The main schedule can’t be deleted.' : '';
+  }
+  function ensureScheduleList(){
+    if(!Array.isArray(SCHED_DRAFT.settings.schedules) || !SCHED_DRAFT.settings.schedules.some(x => x.id === DEFAULT_SCHEDULE_ID)){
+      SCHED_DRAFT.settings.schedules = availabilitySchedules(SCHED_DRAFT.settings).map(x => ({ id: x.id, name: x.name }));
     }
-    loadBlockedDates();
-  } catch (err) {
-    blockDateStatus.textContent = 'Could not unblock that date.';
-    btn.disabled = false;
+    return SCHED_DRAFT.settings.schedules;
+  }
+  function openNameRow(mode){
+    nameMode = mode;
+    $('avlScheduleNameRow').hidden = false;
+    $('avlScheduleNameLabel').textContent = mode === 'new' ? 'New schedule name' : 'Rename “' + scheduleName(viewSchedule) + '”';
+    $('avlScheduleNameSave').textContent = mode === 'new' ? 'Add Schedule' : 'Save Name';
+    $('avlScheduleName').value = mode === 'new' ? '' : scheduleName(viewSchedule);
+    $('avlScheduleName').focus();
+  }
+  function closeNameRow(){ nameMode = ''; $('avlScheduleNameRow').hidden = true; }
+  $('avlScheduleNew').addEventListener('click', () => openNameRow('new'));
+  $('avlScheduleRename').addEventListener('click', () => openNameRow('rename'));
+  $('avlScheduleNameCancel').addEventListener('click', closeNameRow);
+  $('avlScheduleName').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); $('avlScheduleNameSave').click(); } if(e.key === 'Escape') closeNameRow(); });
+  $('avlScheduleNameSave').addEventListener('click', () => {
+    const name = $('avlScheduleName').value.trim();
+    const msg = $('avlScheduleMsg');
+    if(!name){ msg.textContent = 'Give the schedule a name.'; return; }
+    if(schedules().some(x => x.name.toLowerCase() === name.toLowerCase() && !(nameMode === 'rename' && x.id === viewSchedule))){ msg.textContent = 'You already have a schedule with that name.'; return; }
+    const list = ensureScheduleList();
+    if(nameMode === 'new'){
+      const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'schedule';
+      let id = base, n = 2;
+      while(list.some(x => x.id === id) || id === DEFAULT_SCHEDULE_ID) id = base + '-' + (n++);
+      list.push({ id, name });
+      viewSchedule = id;
+      msg.textContent = '“' + name + '” added to this draft. Add its hours, choose the session types that use it, then Save Schedule.';
+    } else {
+      const item = list.find(x => x.id === viewSchedule);
+      if(item) item.name = name;
+      msg.textContent = 'Renamed in this draft — click Save Schedule to apply it.';
+    }
+    closeNameRow();
+    schedMarkDirty();
+    renderSchedTypesList();
+    renderSchedOverridesList();
+    refresh();
+  });
+  $('avlScheduleDelete').addEventListener('click', () => {
+    const msg = $('avlScheduleMsg');
+    if(viewSchedule === DEFAULT_SCHEDULE_ID) return;
+    const users = Object.keys(SCHED_DRAFT.types).filter(id => scheduleIdOf(SCHED_DRAFT.types[id]) === viewSchedule);
+    if(users.length){
+      msg.textContent = 'Move ' + users.map(id => '“' + (SCHED_DRAFT.types[id].name || id) + '”').join(', ') + ' to another schedule first (step 5 or the Event Types tab).';
+      return;
+    }
+    const gone = viewSchedule, goneName = scheduleName(gone);
+    SCHED_DRAFT.settings.schedules = ensureScheduleList().filter(x => x.id !== gone);
+    SCHED_DRAFT.rules = SCHED_DRAFT.rules.filter(r => scheduleIdOf(r) !== gone);
+    Object.keys(SCHED_DRAFT.overrides).forEach(k => { if(parseOverrideKey(k).scheduleId === gone) delete SCHED_DRAFT.overrides[k]; });
+    viewSchedule = DEFAULT_SCHEDULE_ID;
+    schedMarkDirty();
+    renderSchedRulesList();
+    renderSchedOverridesList();
+    msg.textContent = '“' + goneName + '” and its hours were removed from this draft — click Save Schedule to apply it.';
+    refresh();
+  });
+  scheduleSelect.addEventListener('change', () => {
+    viewSchedule = scheduleSelect.value;
+    $('avlScheduleMsg').textContent = '';
+    resetRuleEditor();
+    ovrEditor.hidden = true;
+    refresh();
+  });
+
+  /* 2 — weekly hours of the selected schedule */
+  function renderWeek(){
+    weekEl.innerHTML = DAY_NAMES.map((name, day) => {
+      const mine = SCHED_DRAFT.rules.filter(r => r.dayOfWeek === day && scheduleIdOf(r) === viewSchedule)
+        .sort((a, b) => hhmmToMinutes(a.startTime) - hhmmToMinutes(b.startTime));
+      const chips = mine.map(r => {
+        const meta = [];
+        if((r.capacity || 1) > 1) meta.push('up to ' + r.capacity + ' per time');
+        if(r.sessionTypeIds && r.sessionTypeIds.length) meta.push('only ' + sessionTypesAllowedLabel(r.sessionTypeIds));
+        if(r.notes) meta.push(r.notes);
+        return '<span class="avl-window">' +
+          '<button type="button" class="avl-window-edit" data-avl-edit="' + escapeHtml(r.id) + '" aria-label="Edit ' + escapeHtml(name + ' ' + rangeLabel(r)) + '">' +
+          escapeHtml(rangeLabel(r)) + (meta.length ? '<small>' + escapeHtml(meta.join(' · ')) + '</small>' : '') + '</button>' +
+          '<button type="button" class="avl-window-remove" data-avl-remove="' + escapeHtml(r.id) + '" aria-label="Remove ' + escapeHtml(name + ' ' + rangeLabel(r)) + '">×</button></span>';
+      }).join('');
+      return '<div class="avl-day" data-avl-day="' + day + '">' +
+        '<div class="avl-day-name"><button type="button" class="avl-switch" role="switch" aria-checked="' + (mine.length > 0) + '" data-avl-switch="' + day + '" aria-label="' + name + ' available"></button>' + name + '</div>' +
+        '<div class="avl-windows">' + (chips || '<span class="avl-closed">Unavailable</span>') + '</div>' +
+        '<button type="button" class="avl-add" data-avl-add="' + day + '" aria-label="Add hours on ' + name + '">+</button></div>';
+    }).join('');
+  }
+  function openRuleEditor(day, rule){
+    editingRuleId = rule ? rule.id : null;
+    ruleDay.value = String(rule ? rule.dayOfWeek : day);
+    ruleStart.value = rule ? rule.startTime : '';
+    ruleEnd.value = rule ? rule.endTime : '';
+    ruleCap.value = rule ? (rule.capacity || 1) : 1;
+    ruleNotes.value = rule ? (rule.notes || '') : '';
+    renderSessionTypeCheckboxes('schedRuleTypesCheckboxes', rule ? rule.sessionTypeIds : null);
+    ruleTitle.textContent = rule ? 'Edit ' + DAY_NAMES[rule.dayOfWeek] + ' ' + rangeLabel(rule) : 'Add hours for ' + DAY_NAMES[day];
+    ruleSubmit.textContent = rule ? 'Update Hours' : 'Add Hours';
+    ruleCancel.hidden = !rule;
+    $('avlRuleEditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    ruleStart.focus({ preventScroll: true });
+  }
+  function resetRuleEditor(){
+    editingRuleId = null;
+    ruleTitle.textContent = 'Add hours';
+    ruleSubmit.textContent = 'Add Hours';
+    ruleCancel.hidden = true;
+  }
+  function removeRule(id){
+    const btn = document.querySelector('#schedRulesList [data-rule-id="' + CSS.escape(id) + '"] .sched-rule-delete');
+    if(btn) btn.click();
+  }
+  function switchDayOff(day){
+    SCHED_DRAFT.rules = SCHED_DRAFT.rules.filter(r => !(r.dayOfWeek === day && scheduleIdOf(r) === viewSchedule));
+    renderSchedRulesList();
+    schedMarkDirty();
+    $('schedRuleStatus').textContent = DAY_NAMES[day] + ' turned off in this draft — click Save Schedule to apply it.';
+  }
+  weekEl.addEventListener('click', e => {
+    const sw = e.target.closest('[data-avl-switch]');
+    const add = e.target.closest('[data-avl-add]');
+    const edit = e.target.closest('[data-avl-edit]');
+    const rm = e.target.closest('[data-avl-remove]');
+    if(sw){
+      const day = Number(sw.dataset.avlSwitch);
+      if(sw.getAttribute('aria-checked') === 'true') switchDayOff(day);
+      else openRuleEditor(day, null);
+    } else if(add){
+      openRuleEditor(Number(add.dataset.avlAdd), null);
+    } else if(edit){
+      const r = SCHED_DRAFT.rules.find(x => x.id === edit.dataset.avlEdit);
+      if(r) openRuleEditor(r.dayOfWeek, r);
+    } else if(rm){
+      if(editingRuleId === rm.dataset.avlRemove) resetRuleEditor();
+      removeRule(rm.dataset.avlRemove);
+    }
+  });
+  ruleCancel.addEventListener('click', () => { schedRuleForm.reset(); renderSessionTypeCheckboxes('schedRuleTypesCheckboxes'); resetRuleEditor(); });
+  // The original submit handler adds the window to the draft; these two
+  // listeners (before/after it) put it on the selected schedule and, when
+  // editing, retire the block it replaces.
+  let rulesBeforeSubmit = 0;
+  schedRuleForm.addEventListener('submit', () => { rulesBeforeSubmit = SCHED_DRAFT.rules.length; }, true);
+  schedRuleForm.addEventListener('submit', () => {
+    const added = SCHED_DRAFT.rules.length > rulesBeforeSubmit;
+    if(!added) return;
+    SCHED_DRAFT.rules[SCHED_DRAFT.rules.length - 1].scheduleId = viewSchedule;
+    if(editingRuleId){
+      const idx = SCHED_DRAFT.rules.findIndex(r => r.id === editingRuleId);
+      if(idx !== -1) SCHED_DRAFT.rules.splice(idx, 1);
+      $('schedRuleStatus').textContent = 'Hours updated in this draft — click Save Schedule to apply them.';
+    } else {
+      $('schedRuleStatus').textContent = 'Hours added to this draft — click Save Schedule to apply them.';
+    }
+    renderSchedRulesList();
+    resetRuleEditor();
+  });
+
+  /* 3 — month calendar */
+  function renderCalendar(){
+    const y = monthStart.getFullYear(), m = monthStart.getMonth();
+    $('avlMonthLabel').textContent = monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const first = new Date(y, m, 1).getDay();
+    const days = new Date(y, m + 1, 0).getDate();
+    const today = ministryToday();
+    const monthKey = ymd(monthStart).slice(0, 7);
+    if(!focusDate || focusDate.slice(0, 7) !== monthKey){
+      focusDate = (selected && selected.slice(0, 7) === monthKey) ? selected : (today.slice(0, 7) === monthKey ? today : ymd(new Date(y, m, 1)));
+    }
+    let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => '<div class="avl-wd" role="columnheader" aria-label="' + d + '">' + d.slice(0, 2) + '</div>').join('');
+    for(let i = 0; i < first; i++) html += '<span class="avl-date is-outside" aria-hidden="true"></span>';
+    for(let d = 1; d <= days; d++){
+      const ds = ymd(new Date(y, m, d));
+      const st = dayState(ds);
+      const past = ds < today;
+      const cls = ['avl-date'];
+      let note;
+      if(st.kind === 'blocked-single' || st.kind === 'blocked-range' || st.kind === 'closed'){ cls.push('is-blocked'); note = 'blocked' + (st.kind === 'blocked-single' && !st.saved ? ', not saved yet' : ''); }
+      else if(st.kind === 'special'){ cls.push('is-special'); if(st.windows.length) cls.push('has-hours'); note = 'special hours'; }
+      else if(st.windows.length){ cls.push('has-hours'); note = 'has hours'; }
+      else note = 'no hours';
+      if(st.kind === 'blocked-single' && !st.saved) cls.push('is-unsaved');
+      if(ds === today) cls.push('is-today');
+      html += '<button type="button" class="' + cls.join(' ') + '" data-avl-date="' + ds + '"' + (past ? ' disabled' : '') +
+        ' aria-pressed="' + (ds === selected) + '" tabindex="' + (ds === focusDate ? '0' : '-1') + '"' +
+        ' aria-label="' + escapeHtml(longDate(ds) + (ds === today ? ' (today)' : '') + ', ' + (past ? 'past' : note)) + '">' + d + '</button>';
+    }
+    const hadFocus = calEl.contains(document.activeElement);
+    calEl.innerHTML = html;
+    if(hadFocus){ const f = calEl.querySelector('[data-avl-date="' + focusDate + '"]'); if(f) f.focus(); }
+    $('avlPrevMonth').disabled = monthKey <= today.slice(0, 7);
+  }
+  function moveFocus(ds){
+    if(ds < ministryToday()) return;
+    const dt = new Date(ds + 'T12:00:00');
+    focusDate = ds;
+    if(dt.getMonth() !== monthStart.getMonth() || dt.getFullYear() !== monthStart.getFullYear()) monthStart = new Date(dt.getFullYear(), dt.getMonth(), 1);
+    renderCalendar();
+    const btn = calEl.querySelector('[data-avl-date="' + ds + '"]');
+    if(btn) btn.focus();
+  }
+  calEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-avl-date]');
+    if(!b || b.disabled) return;
+    selectDate(b.dataset.avlDate);
+  });
+  calEl.addEventListener('keydown', e => {
+    const b = e.target.closest('[data-avl-date]');
+    const steps = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+    if(!b || !(e.key in steps)) return;
+    e.preventDefault();
+    const dt = new Date(b.dataset.avlDate + 'T12:00:00');
+    dt.setDate(dt.getDate() + steps[e.key]);
+    moveFocus(ymd(dt));
+  });
+  $('avlPrevMonth').addEventListener('click', () => { monthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1); focusDate = ''; renderCalendar(); });
+  $('avlNextMonth').addEventListener('click', () => { monthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1); focusDate = ''; renderCalendar(); });
+
+  /* 4 — selected date: special hours (this schedule) / block (every schedule) */
+  function selectDate(ds){
+    selected = ds; focusDate = ds;
+    $('avlSelectedMsg').textContent = '';
+    ovrEditor.hidden = true;
+    renderCalendar();
+    renderSelected();
+    renderSlots();
+  }
+  function renderSelected(){
+    const actions = $('avlSelectedActions');
+    if(!selected){
+      $('avlSelectedDate').textContent = 'Choose a date';
+      $('avlSelectedStatus').textContent = 'Pick a day on the calendar above.';
+      actions.innerHTML = '';
+      return;
+    }
+    const isToday = selected === ministryToday();
+    $('avlSelectedDate').textContent = longDate(selected) + (isToday ? ' (today)' : '');
+    const st = dayState(selected);
+    const btn = (act, label) => '<button type="button" class="admin-btn-ghost" data-avl-act="' + act + '">' + label + '</button>';
+    const appts = appointmentsOn(selected);
+    const apptNote = appts ? ' ' + appts + ' existing appointment' + (appts === 1 ? ' stays' : 's stay') + ' booked.' : '';
+    let status = '', html = '';
+    if(st.kind === 'blocked-single'){
+      status = '<strong>Blocked' + (st.saved ? '' : ' (not saved yet)') + '.</strong> No new bookings on this date, on any schedule.' + escapeHtml(apptNote);
+      html = btn('unblock', 'Unblock Date');
+    } else if(st.kind === 'blocked-range'){
+      status = '<strong>Blocked</strong> by the date range ' + escapeHtml(st.range.startDate + ' – ' + st.range.endDate) + (st.range.reason ? ' (' + escapeHtml(st.range.reason) + ')' : '') + '.';
+      html = btn('remove-range', 'Remove This Range');
+    } else if(st.kind === 'closed'){
+      status = '<strong>Closed all day</strong> on ' + escapeHtml(scheduleName(viewSchedule)) + ' (special hours).' + (st.override.notes ? ' ' + escapeHtml(st.override.notes) : '');
+      html = btn('special', 'Edit Special Hours') + btn('remove-special', 'Remove Special Hours') + btn('block', isToday ? 'Block Rest Of Today' : 'Block This Date');
+    } else if(st.kind === 'special'){
+      status = '<strong>Special hours:</strong> ' + escapeHtml((st.override.windows || []).map(rangeLabel).join(', ')) + (st.override.notes ? ' · ' + escapeHtml(st.override.notes) : '');
+      html = btn('special', 'Edit Special Hours') + btn('remove-special', 'Remove Special Hours') + btn('block', isToday ? 'Block Rest Of Today' : 'Block This Date');
+    } else {
+      status = st.windows.length
+        ? '<strong>Regular hours:</strong> ' + escapeHtml(st.windows.map(rangeLabel).join(', '))
+        : 'No regular hours on ' + DAY_NAMES[new Date(selected + 'T12:00:00').getDay()] + 's on this schedule.';
+      html = btn('special', 'Set Special Hours') + btn('block', isToday ? 'Block Rest Of Today' : 'Block This Date');
+    }
+    if(isToday && st.kind !== 'blocked-single') status += (/[.!]$/.test(status.replace(/<[^>]+>/g, '').trim()) ? ' ' : '. ') + 'Times earlier than now are already unavailable.';
+    $('avlSelectedStatus').innerHTML = status;
+    actions.innerHTML = html;
+  }
+  function openOverrideEditor(){
+    const o = SCHED_DRAFT.overrides[overrideKey(selected, viewSchedule)];
+    schedOverrideForm.reset();
+    ovrDate.value = selected;
+    const w = o && !o.closed && o.windows && o.windows[0];
+    ovrStart.value = w ? w.startTime : '';
+    ovrEnd.value = w ? w.endTime : '';
+    ovrClosed.checked = !!(o && o.closed);
+    ovrNotes.value = o ? (o.notes || '') : '';
+    renderSessionTypeCheckboxes('schedOverrideTypesCheckboxes', w ? w.sessionTypeIds : null);
+    $('schedOverrideStatus').textContent = '';
+    ovrEditor.hidden = false;
+    ovrStart.focus();
+  }
+  $('avlOverrideCancel').addEventListener('click', () => { ovrEditor.hidden = true; });
+  // The original handler stores special hours under the plain date (the
+  // main schedule's key). For another schedule, move them to that
+  // schedule's key and put back whatever the main schedule had.
+  let ovrSubmitDate = '', ovrMainBefore;
+  schedOverrideForm.addEventListener('submit', () => {
+    ovrSubmitDate = ovrDate.value;
+    ovrMainBefore = SCHED_DRAFT.overrides[ovrSubmitDate];
+  }, true);
+  schedOverrideForm.addEventListener('submit', () => {
+    const date = ovrSubmitDate;
+    if(!date || !$('schedOverrideStatus').textContent.startsWith('Added')) return;
+    if(viewSchedule !== DEFAULT_SCHEDULE_ID){
+      SCHED_DRAFT.overrides[overrideKey(date, viewSchedule)] = SCHED_DRAFT.overrides[date];
+      if(ovrMainBefore === undefined) delete SCHED_DRAFT.overrides[date];
+      else SCHED_DRAFT.overrides[date] = ovrMainBefore;
+      renderSchedOverridesList();
+    }
+    ovrEditor.hidden = true;
+    $('schedOverrideStatus').textContent = '';
+    $('avlSelectedMsg').textContent = 'Special hours saved to this draft — click Save Schedule to apply them.';
+    selected = date;
+    refresh();
+  });
+  $('avlSelectedActions').addEventListener('click', e => {
+    const b = e.target.closest('[data-avl-act]');
+    if(!b || !selected) return;
+    const msg = $('avlSelectedMsg');
+    const act = b.dataset.avlAct;
+    if(act === 'special') openOverrideEditor();
+    else if(act === 'remove-special'){
+      const del = document.querySelector('#schedOverridesList [data-override-date="' + CSS.escape(overrideKey(selected, viewSchedule)) + '"] .sched-override-delete');
+      if(del){ del.click(); msg.textContent = 'Special hours removed from this draft — click Save Schedule to apply it.'; }
+    } else if(act === 'remove-range'){
+      const st = dayState(selected);
+      const del = st.range && document.querySelector('#schedRangesList [data-range-id="' + CSS.escape(st.range.id || '') + '"] .sched-range-delete');
+      if(del){ del.click(); msg.textContent = 'Date range removed from this draft — click Save Schedule to apply it.'; }
+    } else if(act === 'block'){
+      const input = document.getElementById('blockDateInput');
+      input.min = ministryToday();
+      input.value = selected;
+      document.getElementById('blockDateForm').requestSubmit();
+      const appts = appointmentsOn(selected);
+      msg.textContent = (selected === ministryToday() ? 'The rest of today is blocked in this draft' : 'Blocked in this draft') +
+        ' — click Save Schedule to apply it.' + (appts ? ' The ' + appts + ' appointment' + (appts === 1 ? '' : 's') + ' already booked on this date will not be changed.' : ' Existing appointments are never changed.');
+    } else if(act === 'unblock'){
+      const del = document.querySelector('#blockedDatesList [data-blocked-date="' + selected + '"] .owner-unblock-date');
+      if(del){ del.click(); msg.textContent = 'Unblocked in this draft — click Save Schedule to apply it.'; }
+    }
+  });
+
+  /* 5 — which session types use this schedule */
+  function renderAssign(){
+    const box = $('avlAssignTypes');
+    const ids = Object.keys(SCHED_DRAFT.types);
+    if(!ids.length){ box.innerHTML = '<p class="avl-closed">No session types yet — add one on the Event Types tab.</p>'; return; }
+    box.innerHTML = ids.map(id => {
+      const t = SCHED_DRAFT.types[id];
+      const on = scheduleIdOf(t) === viewSchedule;
+      const elsewhere = on ? '' : ' (now on ' + scheduleName(scheduleIdOf(t)) + ')';
+      return '<label class="sched-session-type-option"><input type="checkbox" data-avl-assign="' + escapeHtml(id) + '"' + (on ? ' checked' : '') + ' />' +
+        '<span>' + escapeHtml((t.name || id) + (t.active === false ? ' — inactive' : '') + elsewhere) + '</span></label>';
+    }).join('');
+  }
+  $('avlAssignTypes').addEventListener('change', e => {
+    const box = e.target.closest('[data-avl-assign]');
+    if(!box) return;
+    const id = box.dataset.avlAssign;
+    const msg = $('avlAssignMsg');
+    const t = SCHED_DRAFT.types[id];
+    if(box.checked){
+      const from = scheduleName(scheduleIdOf(t));
+      t.scheduleId = viewSchedule;
+      msg.textContent = '“' + (t.name || id) + '” now follows ' + scheduleName(viewSchedule) + ' (was ' + from + ') — click Save Schedule to apply it.';
+    } else if(viewSchedule === DEFAULT_SCHEDULE_ID){
+      box.checked = true;
+      msg.textContent = 'Every session type needs a schedule. To move “' + (t.name || id) + '”, open the schedule it should use and select it there.';
+      return;
+    } else {
+      t.scheduleId = DEFAULT_SCHEDULE_ID;
+      msg.textContent = '“' + (t.name || id) + '” moved back to ' + scheduleName(DEFAULT_SCHEDULE_ID) + ' — click Save Schedule to apply it.';
+    }
+    schedMarkDirty();
+    renderSchedTypesList();
+    refresh();
+  });
+
+  /* 6 — real open times (saved settings) for this schedule's session types */
+  function renderSlotTypes(){
+    const ids = Object.keys(SESSION_TYPES).filter(id => SESSION_TYPES[id].active !== false && scheduleIdForType(id) === viewSchedule);
+    if(!ids.includes(slotType)) slotType = ids[0] || '';
+    $('avlSlotTypes').innerHTML = ids.map(id => '<button type="button" class="avl-chip" data-avl-type="' + escapeHtml(id) + '" aria-pressed="' + (id === slotType) + '">' + escapeHtml(SESSION_TYPES[id].name || id) + '</button>').join('');
+  }
+  $('avlSlotTypes').addEventListener('click', e => {
+    const c = e.target.closest('[data-avl-type]');
+    if(!c) return;
+    slotType = c.dataset.avlType;
+    renderSlots();
+  });
+  async function renderSlots(){
+    const wrap = $('avlSlots');
+    const note = $('avlSlotsNote');
+    renderSlotTypes();
+    note.className = 'avl-note' + (schedDirty ? ' is-warn' : '');
+    note.textContent = schedDirty
+      ? 'Unsaved changes are not included yet — these are the times visitors can book right now. Click Save Schedule to apply your changes.'
+      : 'Exactly what visitors see on the booking page — past times, existing bookings, holds, buffers and daily limits are already accounted for.';
+    if(!selected){ wrap.innerHTML = '<div class="avl-slots-empty">Select a date to see its open times.</div>'; return; }
+    if(!slotType){ wrap.innerHTML = '<div class="avl-slots-empty">No saved, active session type uses this schedule yet. Choose them in step 5, then Save Schedule.</div>'; return; }
+    const seq = ++slotSeq;
+    wrap.innerHTML = '<div class="avl-slots-empty">Loading available times…</div>';
+    let result;
+    try { result = await computeOpenSlots(selected, SESSION_TYPES[slotType].durationMinutes, slotType); }
+    catch (err) { result = { ok: false, reason: 'We could not load availability. Please refresh or try again.' }; }
+    if(seq !== slotSeq) return;
+    if(!result.ok){ wrap.innerHTML = '<div class="avl-slots-empty">' + escapeHtml(result.reason) + '</div>'; return; }
+    wrap.innerHTML = '<div class="avl-slot-grid">' + result.openStarts.map(m =>
+      '<button type="button" class="avl-slot" aria-pressed="false" data-avl-slot="' + m + '">' + escapeHtml(minutesToLabel(m)) + '</button>').join('') + '</div>';
+  }
+  $('avlSlots').addEventListener('click', e => {
+    const sl = e.target.closest('[data-avl-slot]');
+    if(!sl) return;
+    $('avlSlots').querySelectorAll('[data-avl-slot]').forEach(x => x.setAttribute('aria-pressed', String(x === sl)));
+    $('avlSlotsNote').className = 'avl-note';
+    $('avlSlotsNote').textContent = 'Visitors can request ' + sl.textContent + ' on ' + longDate(selected) + ' for ' + (SESSION_TYPES[slotType].name || slotType) + '.';
+  });
+
+  /* 7 — save / discard, plus a clear "Unsaved changes" signal */
+  $('avlSaveBtn').addEventListener('click', () => { if(schedSaveAllBtn) schedSaveAllBtn.click(); });
+  $('avlDiscardBtn').addEventListener('click', () => { if(schedDiscardBtn) schedDiscardBtn.click(); resetRuleEditor(); ovrEditor.hidden = true; $('avlSelectedMsg').textContent = ''; $('avlScheduleMsg').textContent = ''; $('avlAssignMsg').textContent = ''; });
+  function renderDirty(){
+    const el = $('avlDirtyNote');
+    const status = schedSaveBarStatus ? schedSaveBarStatus.textContent : '';
+    el.classList.toggle('is-dirty', schedDirty);
+    el.textContent = schedDirty ? 'Unsaved changes — click Save Schedule to apply them' : (/no changes/i.test(status) ? 'All changes saved.' : status);
+    $('avlSaveBtn').disabled = !!(schedSaveAllBtn && schedSaveAllBtn.disabled);
+    $('avlDiscardBtn').hidden = !schedDirty;
+    document.querySelectorAll('#bookingsSubNav [data-bookings-tab="availability"], #bookingsSubNav [data-bookings-tab="types"], #bookingsSubNav [data-bookings-tab="blocked"]').forEach(tab => {
+      tab.classList.toggle('has-unsaved', schedDirty);
+      if(schedDirty) tab.setAttribute('title', 'Unsaved changes'); else tab.removeAttribute('title');
+    });
+  }
+
+  let pending = false;
+  function refresh(){
+    if(pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      renderScheduleSelect();
+      renderWeek();
+      renderCalendar();
+      renderSelected();
+      renderAssign();
+      renderSlots();
+      renderDirty();
+    });
+  }
+  ['schedRulesList', 'schedOverridesList', 'schedRangesList', 'blockedDatesList', 'schedTypesList'].forEach(id => {
+    const el = $(id);
+    if(el) new MutationObserver(refresh).observe(el, { childList: true, subtree: true });
+  });
+  if(schedSaveBar) new MutationObserver(() => { renderDirty(); if(!panel.hidden) refresh(); }).observe(schedSaveBar, { attributes: true, subtree: true, childList: true, characterData: true });
+  new MutationObserver(() => { if(!panel.hidden) refresh(); }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
+  refresh();
+})();
+// Phones: the owner tab rows scroll sideways, so keep the chosen tab in view.
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.portal-view[data-portal-view="owner"] .admin-tab');
+  if(tab && tab.parentElement && tab.parentElement.scrollWidth > tab.parentElement.clientWidth){
+    tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 });
 
@@ -12211,7 +13261,9 @@ teachingRegisterForm.addEventListener('submit', async event => {
   // fact must be explicitly accepted, never applied automatically.
   let discountClaim = siteManagement ? await siteManagement.claimDiscount('teaching', currentUser.uid) : null;
   let discountLimitReached = false;
+  let discountLostReason = 'limit';
   if(discountClaim && !discountClaim.ok){
+    discountLostReason = discountClaim.reason === 'unavailable' ? 'unavailable' : 'limit';
     const oldTotal = siteManagement.pricing('teaching', teachingPrice).total;
     siteManagement.resetCheckout('teaching');
     renderTeachingRegistrationOrderSummary();
@@ -12219,9 +13271,9 @@ teachingRegisterForm.addEventListener('submit', async event => {
     discountLimitReached = true;
     teachingRegisterStatus.textContent = '';
     teachingRegisterSubmitBtn.disabled = false;
-    const proceed = await waitForPriceChangeConfirm('teachingRegister', oldTotal, teachingPrice);
+    const proceed = await waitForPriceChangeConfirm('teachingRegister', oldTotal, teachingPrice, discountLostReason);
     if(!proceed){
-      teachingRegisterStatus.textContent = 'Registration not submitted — the discount code reached its usage limit.';
+      teachingRegisterStatus.textContent = 'Registration not submitted — the ' + discountLostNote(discountLostReason) + '.';
       return;
     }
     teachingRegisterSubmitBtn.disabled = true;
@@ -12260,7 +13312,7 @@ teachingRegisterForm.addEventListener('submit', async event => {
     document.getElementById('teachingRegisterConfirmWhen').textContent = formatTeachingDate(t.date || '') + ' · ' + formatTeachingTime(t.startTime, t.timeZone);
     document.getElementById('teachingRegisterConfirmFormat').textContent = formatLabel;
     document.getElementById('teachingRegisterConfirmPayment').textContent = previewPaymentStatusLabel(discount.totalAfterDiscount) +
-      (discountLimitReached ? ' (discount code reached its usage limit — full price applied)' : '');
+      (discountLimitReached ? ' (' + discountLostNote(discountLostReason) + ' — full price applied)' : '');
     document.getElementById('teachingRegisterConfirmId').textContent = record.confirmationId;
     teachingRegisterForm.hidden = true;
     document.getElementById('teachingRegisterConfirmStep').hidden = false;
@@ -14447,6 +15499,7 @@ onAuthStateChanged(auth, async (user) => {
     digitalLibrary.resetMember();
     if(document.body.dataset.page === 'shop-confirmation') void digitalLibrary.renderConfirmation();
   }
+  if(!user || (currentProfile && currentProfile.role !== 'admin')) stopOwnerAlertListeners();
   if(user){
     if(DEMO_MODE){
       // Never touch real Firestore in demo mode — the profile is built
@@ -14561,7 +15614,8 @@ digitalLibrary = initDigitalLibrary({
   openAccount: tab => { openPortal(); if(tab && currentUser) showMemberTab(tab); },
   getProducts: () => (shopSystem && shopSystem.getProducts ? shopSystem.getProducts() : []),
   // Shop orders join Transactions & Confirmations once they've loaded.
-  onMemberLoaded: () => renderMemberPurchases()
+  onMemberLoaded: () => renderMemberPurchases(),
+  onOwnerChanged: () => { if(shopAdmin) void shopAdmin.reload(); }
 });
 // On the live site the auth listener (above) renders the confirmation
 // page once sign-in resolves; the preview build's sample auth answers
@@ -14575,9 +15629,17 @@ ownerReports = initOwnerReports({
   escapeHtml,
   getUser: () => currentUser,
   isOwner: () => !!(currentProfile && currentProfile.role === 'admin'),
-  openAccount: () => openPortal()
+  openAccount: () => openPortal(),
+  onAlertsChanged: () => { if(currentProfile && currentProfile.role === 'admin') void refreshOwnerReportAlerts(); }
 });
 if(DEMO_MODE && document.body.dataset.page === 'owner-report') void ownerReports.renderLinkPage();
+// The Shop needs the server's whole answer (a $0 order verified by a
+// discount comes back as { free, ref } instead of a Stripe URL).
+async function shopCheckout(payload){
+  const result = await startStripeCheckout(payload);
+  if(result.url) window.location.assign(result.url);
+  return result;
+}
 shopSystem = initShopSystem({
   DEMO_MODE,
   db,
@@ -14585,11 +15647,32 @@ shopSystem = initShopSystem({
   escapeHtml,
   resizeImage: resizeImageToDataUrl,
   base: BASE,
-  checkout: LIVE_PAYMENTS ? redirectToStripeCheckout : null,
+  checkout: LIVE_PAYMENTS ? shopCheckout : null,
   purchasesComingSoon: !DEMO_MODE && !LIVE_PAYMENTS,
+  sandbox: IS_SANDBOX_PREVIEW,
   isSignedIn: () => !!currentUser,
   openAccount: () => openPortal(),
-  onOwnerRender: () => { if(digitalLibrary) void digitalLibrary.renderOwner(); }
+  getFileState: () => (shopAdmin && shopAdmin.getFileState()) || (digitalLibrary && digitalLibrary.getFileState()) || null,
+  onOwnerRender: () => {
+    if(digitalLibrary) void digitalLibrary.renderOwner();
+    if(shopAdmin) void shopAdmin.open();
+  },
+  onOwnerOverview: () => { if(shopAdmin) shopAdmin.renderOverview(); },
+  onStoreTab: tab => { if(shopAdmin) shopAdmin.renderTab(tab); },
+  onProductsChanged: () => { if(shopAdmin) shopAdmin.renderOverview(); }
+});
+shopAdmin = initShopAdmin({
+  DEMO_MODE,
+  db,
+  firestore: { doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, orderBy, limit, serverTimestamp },
+  call: name => httpsCallable(getFunctions(fbApp), name),
+  escapeHtml,
+  base: BASE,
+  shop: shopSystem,
+  library: digitalLibrary,
+  publicPaymentsEnabled: PUBLIC_PAYMENTS_ENABLED,
+  sandbox: IS_SANDBOX_PREVIEW,
+  onAlertsChanged: () => { if(currentProfile && currentProfile.role === 'admin') void refreshOwnerShopAlerts(); }
 });
 applyLivePaymentCopy();
 handleCheckoutReturn();
@@ -14625,8 +15708,7 @@ ownerSim.bindDataRefs({
 });
 ownerSim.onChange(() => {
   renderOwnerSimBar();
-  if(document.getElementById('ownerTodayStats')) renderOwnerTodayView();
-  if(document.getElementById('ownerDashboardStats')) renderOwnerDashboardStats();
+  if(document.getElementById('ownerSummaryCards')) renderOwnerDashboardStats();
   if(document.getElementById('ownerNotificationsList')) renderOwnerNotifications();
   renderMinistryInboxViews();
   if(document.getElementById('bookingsSubNav')) renderBookingsPanels();

@@ -47,7 +47,7 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
   await page.waitForSelector('#memberDigitalLibrary .dl-item', { timeout: 8000 }).catch(() => {});
   await test(label + ': library shows the purchase with verified status', async () => {
     const text = await page.locator('#memberDigitalLibrary').innerText();
-    assert.match(text, /YOUR DIGITAL LIBRARY/i); assert.match(text, /CONCEALED/i); assert.match(text, /PAYMENT VERIFIED/i);
+    assert.match(text, /YOUR DIGITAL LIBRARY/i); assert.match(text, /CONCEALED/i); assert.match(text, /DOWNLOAD AVAILABLE/i);
   });
   await test(label + ': preview sample is clearly marked, never a real paid receipt', async () => {
     const text = await page.locator('#memberDigitalLibrary').innerText();
@@ -88,7 +88,24 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
     assert.equal(await page.locator('[data-dl-download]').isDisabled(), true, 'preview download stays inactive');
     assert.match(text, /OWNER PREVIEW/i);
   });
+  await test('receipt lists subtotal, discount, tax, total, payment status and reference — and promises no email', async () => {
+    await page.locator('.dl-receipt summary').click();
+    const r = await page.locator('.dl-receipt').innerText();
+    for(const label of [/Subtotal/i, /Discount/i, /Tax/i, /Total Paid/i, /Payment Status/i, /Payment Reference/i, /Date/i]) assert.match(r, label);
+    assert.match(r, /not charged/i);
+    assert.match(r, /not connected yet/i);
+    assert.doesNotMatch(await page.locator('#shopConfirmationRoot').innerText(), /emails a payment receipt/i);
+  });
   if(shots) await page.screenshot({ path: `${shots}/confirmation.png`, fullPage: true });
+  // Stripe's cancel link is ?checkout=cancelled (createCheckoutSession).
+  await page.goto(`${baseUrl}/shop/confirmation.html?checkout=cancelled&kind=shop&ref=TESTORDER1`, { waitUntil: 'load' });
+  await page.waitForTimeout(800);
+  await test('returning from a cancelled checkout says nothing was charged (not “Verifying Payment”)', async () => {
+    const text = await page.locator('#shopConfirmationRoot').innerText();
+    assert.match(text, /Payment Not Completed/i);
+    assert.match(text, /Nothing was charged/i);
+    assert.doesNotMatch(text, /Verifying Payment/i);
+  });
   await page.goto(`${baseUrl}/shop/product.html?id=concealed`, { waitUntil: 'load' });
   await page.waitForTimeout(1200);
   await test('product page tells buyers the PDF goes to their account', async () => {
@@ -100,7 +117,8 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
 {
   const page = await newPage({ width: 1500, height: 1200 });
   await signIn(page, 'contactunveiledassembly@gmail.com');
-  await page.waitForSelector('[data-owner-nav="store"]', { timeout: 15000 });
+  await page.waitForSelector('[data-dept-toggle="resources"]', { timeout: 15000 });
+  await page.locator('[data-dept-toggle="resources"]').evaluate(b => { if(b.getAttribute('aria-expanded') !== 'true') b.click(); });
   await page.locator('[data-owner-nav="store"]').click();
   await page.waitForTimeout(500);
   await page.locator('[data-store-tab="files"]').click();
@@ -123,7 +141,7 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
   await page.locator('[data-store-tab="orders"]').click();
   await test('owner Orders shows payment, access, email, downloads, and actions', async () => {
     const text = await page.locator('#ownerDigitalOrders').innerText();
-    for(const label of ['Digital Orders', 'Payment', 'Access', 'Refund', 'Email', 'Downloads', 'Give Access To A Member', 'Not Connected Yet']) assert.ok(text.toLowerCase().includes(label.toLowerCase()), 'missing ' + label);
+    for(const label of ['Download Access', 'Payment', 'Access', 'Refund', 'Email', 'Downloads', 'Give Access To A Member', 'Not Connected Yet']) assert.ok(text.toLowerCase().includes(label.toLowerCase()), 'missing ' + label);
     assert.equal(await page.locator('[data-dl-owner="resend"]').first().isDisabled(), true);
   });
   await test('owner actions in preview are simulated, not faked', async () => {

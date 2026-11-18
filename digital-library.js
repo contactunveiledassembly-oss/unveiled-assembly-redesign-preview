@@ -19,17 +19,21 @@
 // No transactional email provider is connected yet (PROJECT-CONTEXT
 // §19.7). The email buttons stay visible but disabled and say so.
 const EMAIL_CONNECTED = false;
+// Payment status and download permission are separate facts; the
+// member sees both. Three clear states: Payment Pending, Download
+// Available, Access Unavailable (with the reason).
 const ACCESS_LABELS = {
-  active: 'Payment Verified',
-  pending_delivery: 'Being Prepared',
-  revoked: 'Access Turned Off',
-  refunded: 'Refunded'
+  active: 'Download Available',
+  pending_delivery: 'Payment Verified · File Being Prepared',
+  revoked: 'Access Unavailable · Turned Off',
+  suspended: 'Access Paused · Payment Dispute',
+  refunded: 'Access Unavailable · Refunded'
 };
-const OWNER_ACCESS_LABELS = { active: 'Active', pending_delivery: 'Waiting For Owner', revoked: 'Turned Off', refunded: 'Refunded' };
+const OWNER_ACCESS_LABELS = { active: 'Active', pending_delivery: 'Waiting For Owner', revoked: 'Turned Off', refunded: 'Refunded', suspended: 'Paused · Chargeback Open' };
 const PAYMENT_LABELS = { paid: 'Paid', complimentary: 'Complimentary', refunded: 'Refunded', partially_refunded: 'Partly Refunded' };
 const DEMO_FILES_KEY = 'ua_preview_digital_files_v1';
 // Sandbox (Stripe test mode) purchases share the real database.
-const isTestPurchase = a => /^cs_test_/.test((a && a.stripeSessionId) || '');
+const isTestPurchase = a => !!a && (a.testMode === true || /^cs_test_/.test(a.stripeSessionId || ''));
 
 export function initDigitalLibrary(context){
   const { DEMO_MODE, db, firestore, call, getUser, escapeHtml: esc, base, openAccount, getProducts, onMemberLoaded } = context;
@@ -47,6 +51,28 @@ export function initDigitalLibrary(context){
   const shortDate = value => { const d = toDate(value); return d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; };
   const orderNumber = id => id ? 'UA-' + String(id).slice(0, 8).toUpperCase() : 'Complimentary';
   const reference = id => id ? '…' + String(id).slice(-8) : '—';
+  // One readable receipt for an order: what was bought, any discount,
+  // tax, the total actually paid, the payment status and the reference.
+  // Tax isn't collected at checkout today, so it says so instead of
+  // leaving it out.
+  function receiptRowsHtml(order, { preview = false } = {}){
+    const items = order.items || [];
+    const subtotal = Number.isInteger(order.subtotalCents) ? order.subtotalCents : items.reduce((t, i) => t + (i.unitPriceCents || 0) * (i.quantity || 1), 0);
+    const discount = Number(order.discountCents) || 0;
+    const paid = order.amountPaid != null ? Math.round(Number(order.amountPaid) * 100) : (Number.isInteger(order.totalCents) ? order.totalCents : subtotal - discount);
+    const status = preview ? 'Sample — no payment' : (PAYMENT_LABELS[order.paymentStatus] || order.paymentStatus || '—') +
+      (order.paymentStatus === 'paid' ? ' · verified by Stripe' : '');
+    return `<div><dt>Order Number</dt><dd>${esc(orderNumber(order.id))}</dd></div>
+      <div><dt>Date</dt><dd>${esc(shortDate(order.paidAt || order.createdAt || new Date()))}</dd></div>
+      ${items.map(i => `<div><dt>${esc(i.title)}${i.quantity > 1 ? ' × ' + i.quantity : ''}</dt><dd>${esc(money((i.unitPriceCents || 0) * (i.quantity || 1)))}</dd></div>`).join('')}
+      <div><dt>Subtotal</dt><dd>${esc(money(subtotal))}</dd></div>
+      <div><dt>Discount${order.discountCode ? ' · ' + esc(order.discountCode) : ''}</dt><dd>${discount ? '−' + esc(money(discount)) : '$0.00'}</dd></div>
+      <div><dt>Tax</dt><dd>$0.00 · not charged</dd></div>
+      <div><dt>Total Paid</dt><dd>${esc(money(paid))} ${esc(String(order.currency || 'usd').toUpperCase())}</dd></div>
+      <div><dt>Payment Status</dt><dd>${esc(status)}</dd></div>
+      <div><dt>Payment Reference</dt><dd>${esc(preview ? '—' : reference(order.paymentIntentId))}</dd></div>`;
+  }
+  const RECEIPT_NOTE = 'This receipt is saved to your account under My Assembly → Purchases &amp; Downloads. Receipt emails from this website are not connected yet.';
   const assetUrl = url => !url ? '' : /^(https?:|data:)/.test(url) ? url : base + url.replace(/^\//, '');
   const coverStyle = url => url ? ` style="background-image:url('${esc(assetUrl(url))}')"` : '';
   const sizeLabel = bytes => !bytes ? '' : bytes > 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
@@ -84,7 +110,9 @@ export function initDigitalLibrary(context){
   function demoMemberData(){
     return {
       access: [{ id: 'preview-concealed', productId: 'preview-concealed', productTitle: 'Concealed', orderId: 'PREVIEWORDER1', amountPaidCents: 1800, currency: 'usd', paymentStatus: 'paid', accessStatus: 'active', paymentIntentId: 'pi_preview00000000', purchasedAt: new Date().toISOString(), downloadCount: 0, emailStatus: 'not_connected', preview: true }],
-      orders: []
+      // A checkout Stripe hasn't confirmed yet, so the preview shows the
+      // "Payment Pending" state too.
+      orders: [{ id: 'PREVIEWPENDING1', preview: true, status: 'pending_payment', paymentStatus: 'pending', stripeSessionId: 'cs_preview_pending', items: [{ productId: 'preview-demo-discernment-guide', title: 'Discernment Study Guide', type: 'digital', quantity: 1 }], createdAt: new Date().toISOString() }]
     };
   }
 
@@ -126,12 +154,15 @@ export function initDigitalLibrary(context){
     const statusText = (a.paymentStatus === 'complimentary' && status === 'active' ? 'Access Granted' : (ACCESS_LABELS[status] || 'Pending')) + (a.preview ? ' · Sample' : '');
     const note = status === 'pending_delivery' ? 'Your payment is verified. The ministry is preparing this file — it will be ready here shortly.'
       : status === 'refunded' ? 'This purchase was refunded, so the download is closed.'
+      : status === 'suspended' ? 'This payment is being disputed with your bank, so the download is paused while it is reviewed. Your purchase record is kept. Please contact the ministry.'
+      : status === 'revoked' && a.revokedReason === 'chargeback-lost' ? 'This payment was reversed by your bank after a dispute, so the download is no longer available. Your purchase record is kept.'
       : status === 'revoked' ? 'Access to this download is turned off. Please contact the ministry if this is unexpected.'
       : '';
     return `<article class="dl-item" data-dl-access="${esc(a.id)}">
       <div class="dl-cover"${coverStyle(product && product.image)}>${product && product.image ? '' : `<span>${esc(a.productTitle || 'Digital Resource')}</span>`}</div>
       <div class="dl-body">
         <span class="dl-status dl-status-${esc(status)}">${esc(statusText)}</span>
+        <p class="dl-facts"><span>Payment: ${esc(a.preview ? 'Sample' : (PAYMENT_LABELS[a.paymentStatus] || a.paymentStatus || '—'))}</span><span>Download: ${canDownload ? 'Allowed' : 'Not available'}</span></p>
         <h4>${esc(a.productTitle || (product && product.title) || 'Digital Resource')}</h4>
         <p class="dl-meta">PDF · ${a.orderId ? 'Purchased' : 'Added'} ${esc(shortDate(a.purchasedAt))}${a.downloadCount ? ' · Downloaded ' + Number(a.downloadCount) + (a.downloadCount === 1 ? ' time' : ' times') : ''}</p>
         ${note ? `<p class="dl-note">${esc(note)}</p>` : ''}
@@ -143,14 +174,16 @@ export function initDigitalLibrary(context){
         <p class="dl-message" role="status" aria-live="polite"></p>
         <details class="dl-receipt">
           <summary>Receipt Details</summary>
-          <dl>
-            <div><dt>Order Number</dt><dd>${esc(orderNumber(a.orderId))}</dd></div>
+          <dl>${(() => {
+            const order = memberState.orders.find(o => o.id === a.orderId);
+            if(order) return receiptRowsHtml(order, { preview: !!a.preview });
+            return `<div><dt>Order Number</dt><dd>${esc(orderNumber(a.orderId))}</dd></div>
             <div><dt>Date</dt><dd>${esc(shortDate(a.purchasedAt))}</dd></div>
             <div><dt>Amount</dt><dd>${esc(money(a.amountPaidCents))} ${esc(String(a.currency || 'usd').toUpperCase())}</dd></div>
             <div><dt>Payment</dt><dd>${esc(a.preview ? 'Sample — no payment' : (PAYMENT_LABELS[a.paymentStatus] || a.paymentStatus || '—'))}</dd></div>
-            <div><dt>Payment Reference</dt><dd>${esc(a.preview ? '—' : reference(a.paymentIntentId))}</dd></div>
-          </dl>
-          <p>Stripe also emails a payment receipt to the address used at checkout.</p>
+            <div><dt>Payment Reference</dt><dd>${esc(a.preview ? '—' : reference(a.paymentIntentId))}</dd></div>`;
+          })()}</dl>
+          <p>${RECEIPT_NOTE}</p>
         </details>
       </div>
     </article>`;
@@ -173,6 +206,26 @@ export function initDigitalLibrary(context){
       }));
   }
 
+  // Checkouts Stripe hasn't confirmed yet. Shown so the member knows the
+  // purchase is in progress — never downloadable from here.
+  function pendingPaymentItems(){
+    const cutoff = Date.now() - 24 * 3600 * 1000;
+    return memberState.orders.filter(o => o.status === 'pending_payment' && o.paymentStatus === 'pending' && o.stripeSessionId &&
+      (o.items || []).some(i => i.type === 'digital') && (toDate(o.createdAt) || new Date()).getTime() > cutoff);
+  }
+  function pendingItemHtml(o){
+    const titles = (o.items || []).filter(i => i.type === 'digital').map(i => i.title).join(', ');
+    return `<article class="dl-item dl-item-pending" data-dl-pending="${esc(o.id)}">
+      <div class="dl-cover"><span>${esc(titles || 'Digital Resource')}</span></div>
+      <div class="dl-body">
+        <span class="dl-status dl-status-payment_pending">Payment Pending${o.preview ? ' · Sample' : ''}</span>
+        <p class="dl-facts"><span>Payment: Waiting for Stripe</span><span>Download: Not yet</span></p>
+        <h4>${esc(titles || 'Digital Resource')}</h4>
+        <p class="dl-meta">${esc(orderNumber(o.id))} · Started ${esc(shortDate(o.createdAt))}</p>
+        <p class="dl-note">We haven’t received confirmation of this payment yet. If you finished paying, it unlocks here automatically in a minute or two. If you left checkout, nothing was charged.</p>
+      </div>
+    </article>`;
+  }
   function renderMember(){
     const wrap = document.getElementById('memberDigitalLibrary');
     if(!wrap) return;
@@ -181,8 +234,8 @@ export function initDigitalLibrary(context){
     if(memberState.loading){ wrap.innerHTML = head + '<div class="dl-loading" role="status">Loading your library…</div>'; return; }
     if(memberState.error){ wrap.innerHTML = head + `<div class="member-empty-state"><strong>${esc(memberState.error)}</strong><span><button type="button" class="link-btn" data-dl-refresh>Try again</button></span></div>`; return; }
     wrap.innerHTML = head +
-      (memberState.access.length
-        ? `<div class="dl-list">${memberState.access.map(libraryItemHtml).join('')}</div><p class="dl-private">Your files are private to your account. Each download uses a secure link that works once and expires after a few minutes, so it can't be shared or reused.</p>`
+      (memberState.access.length || pendingPaymentItems().length
+        ? `<div class="dl-list">${pendingPaymentItems().map(pendingItemHtml).join('')}${memberState.access.map(libraryItemHtml).join('')}</div><p class="dl-private">Your files are private to your account. Each download uses a secure link that works once and expires after a few minutes, so it can't be shared or reused.</p>`
         : `<div class="member-empty-state"><strong>No digital resources yet.</strong><span>PDF studies you purchase from the <a href="${esc(base)}shop/">Shop</a> will appear here after payment is verified.</span></div>`) +
       (DEMO_MODE ? '<p class="dl-preview-flag">Preview: this sample shows how a verified purchase appears. Real downloads only work on the live site.</p>' : '');
   }
@@ -221,7 +274,7 @@ export function initDigitalLibrary(context){
     return `${preview ? '<p class="dl-preview-flag">Owner preview — sample order. Buttons are inactive.</p>' : ''}
       <span class="shop-micro">Order Complete</span>
       <h1>Payment Verified.</h1>
-      <p class="dl-confirm-lead">Thank you. Stripe confirmed your payment and your purchase is saved to your account.</p>
+      <p class="dl-confirm-lead">Thank you — your purchase was received. Stripe confirmed your payment, and it is saved to your My Assembly account.</p>
       <dl class="dl-confirm-facts">
         <div><dt>Order Number</dt><dd>${esc(orderNumber(order.id))}</dd></div>
         <div><dt>Amount</dt><dd>${esc(order.amountPaid != null ? '$' + Number(order.amountPaid).toFixed(2) : money(order.totalCents))}</dd></div>
@@ -230,11 +283,8 @@ export function initDigitalLibrary(context){
       ${items ? `<div class="dl-confirm-items">${items}</div>` : ''}
       ${physical.length ? `<p class="dl-note">${esc(physical.map(i => i.title).join(', '))} will ship to the address you entered at checkout.</p>` : ''}
       <details class="dl-receipt"><summary>View Receipt</summary><dl>
-        <div><dt>Order Number</dt><dd>${esc(orderNumber(order.id))}</dd></div>
-        ${(order.items || []).map(i => `<div><dt>${esc(i.title)}${i.quantity > 1 ? ' × ' + i.quantity : ''}</dt><dd>${esc(money((i.unitPriceCents || 0) * (i.quantity || 1)))}</dd></div>`).join('')}
-        <div><dt>Total Paid</dt><dd>${esc(order.amountPaid != null ? '$' + Number(order.amountPaid).toFixed(2) : money(order.totalCents))}</dd></div>
-        <div><dt>Payment Reference</dt><dd>${esc(reference(order.paymentIntentId))}</dd></div>
-      </dl><p>Stripe also emails a payment receipt to the address used at checkout.</p></details>
+        ${receiptRowsHtml(order, { preview })}
+      </dl>${order.receiptUrl && !preview ? `<p><a class="shop-text-link" href="${esc(order.receiptUrl)}" target="_blank" rel="noopener">View Stripe payment receipt</a></p>` : ''}<p>${RECEIPT_NOTE}</p></details>
       ${confirmActionsHtml()}`;
   }
 
@@ -256,7 +306,7 @@ export function initDigitalLibrary(context){
     }
     const outcome = params.get('checkout');
     const orderId = params.get('ref');
-    if(outcome === 'cancel'){
+    if(outcome === 'cancelled' || outcome === 'cancel'){
       confirmShell(`<span class="shop-micro">Checkout</span><h1>Payment Not Completed.</h1><p class="dl-confirm-lead">Nothing was charged. Your bag is saved if you'd like to try again.</p>${confirmActionsHtml()}`);
       return;
     }
@@ -385,6 +435,7 @@ export function initDigitalLibrary(context){
       ownerState.files[productId] = { ...existing, previewFileName: file.name, fileName: file.name, sizeBytes: file.size, uploadedAt: new Date().toISOString(), autoDelivery: existing.autoDelivery !== false };
       saveDemoFiles(ownerState.files);
       renderOwnerFiles();
+      if(context.onOwnerChanged) context.onOwnerChanged();
       return;
     }
     msg.textContent = 'Uploading privately…';
@@ -398,6 +449,10 @@ export function initDigitalLibrary(context){
       const finished = await call('finishDigitalFileUpload')({ uploadId: started.data.uploadId });
       ownerState.files[productId] = { ...existing, ...finished.data.file, storagePath: true, uploadedAt: new Date().toISOString() };
       renderOwnerFiles();
+      const delivered = finished.data.delivered || 0;
+      const fresh = document.querySelector('[data-dl-product="' + productId + '"] .dl-message');
+      if(fresh) fresh.textContent = 'PDF attached.' + (delivered ? ' ' + delivered + ' waiting customer' + (delivered === 1 ? ' was' : 's were') + ' given access.' : '');
+      if(context.onOwnerChanged) context.onOwnerChanged();
     } catch (err) {
       console.error('[library] upload failed', err);
       msg.textContent = friendlyError(err);
@@ -420,7 +475,7 @@ export function initDigitalLibrary(context){
     const actions = [
       status !== 'active' && status !== 'refunded' ? `<button type="button" class="admin-btn-solid" data-dl-owner="grant" data-dl-id="${esc(a.id)}">Give Access</button>` : '',
       status === 'active' || status === 'pending_delivery' ? `<button type="button" class="admin-btn-ghost" data-dl-owner="revoke" data-dl-id="${esc(a.id)}">Turn Off Access</button>` : '',
-      status !== 'refunded' && a.paymentStatus === 'paid' ? `<button type="button" class="admin-btn-ghost" data-dl-owner="refunded" data-dl-id="${esc(a.id)}">Record Refund</button>` : '',
+      status !== 'refunded' && a.paymentStatus === 'paid' ? `<button type="button" class="admin-btn-ghost" data-dl-owner="refunded" data-dl-id="${esc(a.id)}" title="Use when the money was already returned outside the portal. To return money, use Issue Refund on the order above.">Close As Refunded</button>` : '',
       `<button type="button" class="admin-btn-ghost" data-dl-owner="resend" data-dl-id="${esc(a.id)}"${EMAIL_CONNECTED ? '' : ' disabled'}>Resend Access Email</button>`
     ].join('');
     return `<article class="dl-owner-order" data-dl-order="${esc(a.id)}">
@@ -447,7 +502,7 @@ export function initDigitalLibrary(context){
     const products = digitalProducts();
     const real = ownerState.access.filter(a => !isTestPurchase(a));
     const waiting = real.filter(a => a.accessStatus === 'pending_delivery').length;
-    wrap.innerHTML = `<div class="store-products-head"><div><h4>Digital Orders</h4><p>Every digital purchase, its payment, and whether the customer can download it. Payments are confirmed by Stripe — nothing here can mark an order paid.</p></div></div>
+    wrap.innerHTML = `<div class="store-products-head"><div><h4>Download Access</h4><p>Every library entry — purchased or complimentary — with its payment and whether the customer can download it. Payments are confirmed by Stripe; nothing here can mark an order paid.</p></div></div>
       ${DEMO_MODE ? '<p class="dl-preview-flag">Preview: sample order. Actions here are simulated and change nothing.</p>' : ''}
       ${ownerState.message ? `<p class="admin-hint">${esc(ownerState.message)}</p>` : ''}
       <div class="admin-stat-row store-stat-row"><div class="admin-stat-tile"><span>Digital Orders</span><strong>${real.filter(a => a.orderId).length}</strong></div><div class="admin-stat-tile"><span>Waiting For You</span><strong>${waiting}</strong></div><div class="admin-stat-tile"><span>Downloads</span><strong>${real.reduce((n, a) => n + (Number(a.downloadCount) || 0), 0)}</strong></div></div>
@@ -469,10 +524,15 @@ export function initDigitalLibrary(context){
   async function ownerAction(action, accessId, row){
     const msg = row.querySelector('.dl-message');
     if(DEMO_MODE){ msg.textContent = 'Preview only — on the live site this ' + (action === 'grant' ? 'gives access' : action === 'revoke' ? 'turns access off' : action === 'refunded' ? 'records the refund and closes the download' : 'emails the customer') + '.'; return; }
-    if((action === 'revoke' || action === 'refunded') && !window.confirm(action === 'revoke' ? 'Turn off this customer’s download access?' : 'Record this order as refunded and close the download? (Return the money itself from the Stripe Dashboard.)')) return;
+    if((action === 'revoke' || action === 'refunded' || action === 'grant') && !window.confirm(
+      action === 'revoke' ? 'Turn off this customer’s download access? This is recorded in the audit trail.'
+      : action === 'grant' ? 'Give this customer download access? This is recorded in the audit trail.'
+      : 'Close this download as refunded? This does NOT return money — use Issue Refund on the order for that.')) return;
+    const note = action === 'revoke' || action === 'grant' ? (window.prompt('Reason (saved in the audit trail, optional):', '') || '') : '';
     msg.textContent = 'Saving…';
     try {
-      await call('manageDigitalAccess')({ action, accessId });
+      await call('manageDigitalAccess')({ action, accessId, note });
+      if(context.onOwnerChanged) context.onOwnerChanged();
       await loadOwner(true); renderOwnerOrders();
     } catch (err) { msg.textContent = friendlyError(err); }
   }
@@ -516,6 +576,9 @@ export function initDigitalLibrary(context){
     renderOwner,
     renderOwnerFiles,
     renderOwnerOrders,
+    reloadOwner: async () => { await loadOwner(true); renderOwnerFiles(); renderOwnerOrders(); },
+    getFileState: () => ownerState.loaded ? ownerState.files : null,
+    getOwnerAccess: () => ownerState.access,
     shopOrderPurchases
   };
 }

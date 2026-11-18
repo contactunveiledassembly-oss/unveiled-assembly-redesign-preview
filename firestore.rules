@@ -18,13 +18,24 @@ service cloud.firestore {
           'id','title','subtitle','type','category','status','featured',
           'priceCents','availability','collection','image','images',
           'description','included','delivery','options','tags',
-          'trackInventory','stock','isPlaceholder','updatedAt'
+          'trackInventory','stock','isPlaceholder','updatedAt','testOnly',
+          'format','pricing','stripeTestProductId','stripeTestPriceId','stripeLiveProductId','stripeLivePriceId'
         ]) &&
+        // Optional catalog fields (2026-11-18): what a digital product
+        // delivers, fixed vs customer-chooses pricing, and links to
+        // EXISTING Stripe objects per mode (ids only, never secrets).
+        (!('format' in d) || d.format in ['', 'pdf', 'audio', 'audio_pdf']) &&
+        (!('pricing' in d) || d.pricing in ['fixed', 'choose']) &&
+        (!('stripeTestProductId' in d) || d.stripeTestProductId == '' || d.stripeTestProductId.matches('^prod_[A-Za-z0-9]{1,250}$')) &&
+        (!('stripeLiveProductId' in d) || d.stripeLiveProductId == '' || d.stripeLiveProductId.matches('^prod_[A-Za-z0-9]{1,250}$')) &&
+        (!('stripeTestPriceId' in d) || d.stripeTestPriceId == '' || d.stripeTestPriceId.matches('^price_[A-Za-z0-9]{1,250}$')) &&
+        (!('stripeLivePriceId' in d) || d.stripeLivePriceId == '' || d.stripeLivePriceId.matches('^price_[A-Za-z0-9]{1,250}$')) &&
         d.id == productId &&
+        (!('testOnly' in d) || d.testOnly is bool) &&
         d.title is string && d.title.size() > 0 && d.title.size() <= 180 &&
         d.subtitle is string && d.subtitle.size() <= 300 &&
         d.type in ['digital', 'physical'] &&
-        d.category in ['digital', 'books', 'apparel'] &&
+        d.category in ['digital', 'audio', 'study', 'books', 'apparel'] &&
         d.status in ['draft', 'coming_soon', 'published', 'archived'] &&
         d.featured is bool &&
         (d.priceCents == null || (d.priceCents is int && d.priceCents >= 0 && d.priceCents <= 100000000)) &&
@@ -52,7 +63,9 @@ service cloud.firestore {
     function isEnrolledInClass(teachingId) {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/classEnrollments/$(teachingId + '_' + request.auth.uid)) &&
-        get(/databases/$(database)/documents/classEnrollments/$(teachingId + '_' + request.auth.uid)).data.status != 'cancelled';
+        // Paused during a chargeback ('suspended') or removed after one
+        // was lost ('revoked'): no classroom access.
+        !(get(/databases/$(database)/documents/classEnrollments/$(teachingId + '_' + request.auth.uid)).data.status in ['cancelled', 'suspended', 'revoked']);
     }
 
     // Member/admin profiles. A user can only ever create/read their own
@@ -591,6 +604,9 @@ service cloud.firestore {
          (
            // Claim: reserve one use for a brand-new ticket.
            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedCount', 'redeemedSourceIds', 'lastRedeemedSourceId']) &&
+            // A paused code can't be claimed (dates are checked by the
+            // payment server against the ticket's createdAt).
+            resource.data.get('active', true) != false &&
             request.resource.data.usedCount == resource.data.usedCount + 1 &&
             (resource.data.maxUses == null || resource.data.usedCount < resource.data.maxUses) &&
             request.resource.data.redeemedSourceIds.size() == resource.data.redeemedSourceIds.size() + 1 &&
@@ -639,7 +655,13 @@ service cloud.firestore {
         request.resource.data.status == 'claimed' &&
         request.resource.data.sourceCollection == null &&
         request.resource.data.sourceId == null &&
-        get(/databases/$(database)/documents/discountCodes/$(request.resource.data.codeId)).data.code is string;
+        // Server time, so the payment server can trust the claim date.
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.keys().hasOnly(['uid', 'codeId', 'status', 'sourceCollection', 'sourceId', 'createdAt']) &&
+        get(/databases/$(database)/documents/discountCodes/$(request.resource.data.codeId)).data.code is string &&
+        get(/databases/$(database)/documents/discountCodes/$(request.resource.data.codeId)).data.get('active', true) != false &&
+        // Shop codes are reserved by the checkout server only.
+        get(/databases/$(database)/documents/discountCodes/$(request.resource.data.codeId)).data.get('scope', '') != 'shop';
       allow update: if isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'claimed' &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'sourceCollection', 'sourceId', 'confirmedAt']) &&
         request.resource.data.status == 'confirmed' &&
@@ -697,7 +719,15 @@ service cloud.firestore {
     // Public-facing Shop copy only. Keeping this in its own document lets
     // the owner edit the hero without mixing settings into product records.
     match /shopSettings/{settingsId} {
-      allow read: if settingsId == 'public';
+      allow read: if settingsId == 'public' || settingsId == 'store';
+      // Resources Shop store settings: the purchase pause (enforced again
+      // by createCheckoutSession) and the owner's collection list.
+      allow create, update: if isAdmin() && settingsId == 'store' &&
+        request.resource.data.keys().hasOnly(['purchasesPaused','pausedMessage','collections','updatedAt']) &&
+        request.resource.data.purchasesPaused is bool &&
+        request.resource.data.pausedMessage is string && request.resource.data.pausedMessage.size() <= 400 &&
+        request.resource.data.collections is list && request.resource.data.collections.size() <= 40 &&
+        request.resource.data.updatedAt == request.time;
       allow create, update: if isAdmin() && settingsId == 'public' &&
         request.resource.data.keys().hasAll(['eyebrow','title','tagline','description','buttonLabel','updatedAt']) &&
         request.resource.data.keys().hasOnly(['eyebrow','title','tagline','description','buttonLabel','updatedAt']) &&
@@ -718,7 +748,18 @@ service cloud.firestore {
     // file name/size, and automatic delivery. Owner-only; the path is
     // never copied into public shopProducts data.
     match /shopDigitalFiles/{fileId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      // Files are attached only by finishDigitalFileUpload (which checks
+      // the PDF); the owner's browser may only switch auto-delivery.
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['autoDelivery']) &&
+        request.resource.data.autoDelivery is bool;
+      allow create, delete: if false;
+    }
+    // Store-wide record of owner actions (access, refunds, files). Server only.
+    match /shopAuditLog/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
     // A member's right to download a purchased PDF. Created and changed
     // only by Cloud Functions (verified Stripe webhook / owner actions),
@@ -763,7 +804,10 @@ service cloud.firestore {
     }
     match /shopOrders/{orderId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
-      allow write: if isAdmin();
+      // Orders, payments and refunds are written only by Cloud Functions
+      // (verified Stripe events / owner actions re-checked there) — not
+      // even the owner's browser can mark an order paid.
+      allow write: if false;
     }
     match /donations/{donationId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);

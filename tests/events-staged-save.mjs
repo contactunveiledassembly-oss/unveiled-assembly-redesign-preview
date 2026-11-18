@@ -23,8 +23,8 @@ await page.fill('#signinPassword', 'whatever123');
 await page.locator('#emailSignInForm').evaluate(form => form.requestSubmit());
 // Events now lives nested under the Ministry Operations department
 // (Owner Portal navigation restructuring) — expand it first.
-await page.waitForSelector('[data-dept-toggle="ministry"]', { timeout: 15000 });
-await page.locator('[data-dept-toggle="ministry"]').click();
+await page.waitForSelector('[data-dept-toggle="community"]', { timeout: 15000 });
+await page.locator('[data-dept-toggle="community"]').evaluate(b => { if(b.getAttribute('aria-expanded') !== 'true') b.click(); });
 await page.locator('[data-owner-nav="events"]').click();
 await page.waitForSelector('#eventsAdminStats .admin-stat-tile', { timeout: 15000 });
 

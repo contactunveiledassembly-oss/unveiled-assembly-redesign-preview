@@ -22,7 +22,8 @@ await page.evaluate(() => {
 await page.fill('#signinEmail', 'contactunveiledassembly@gmail.com');
 await page.fill('#signinPassword', 'whatever123');
 await page.locator('#emailSignInForm').evaluate(form => form.requestSubmit());
-await page.waitForSelector('[data-owner-nav="payments"]', { timeout: 15000 });
+await page.waitForSelector('[data-dept-toggle="resources"]', { timeout: 15000 });
+await page.locator('[data-dept-toggle="resources"]').evaluate(b => { if(b.getAttribute('aria-expanded') !== 'true') b.click(); });
 
 await page.locator('[data-owner-nav="payments"]').click();
 await page.waitForTimeout(300);

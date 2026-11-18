@@ -19,7 +19,7 @@ const BACKUP_MAGIC = 'UABK1';
 const BACKUP_KDF_ITERATIONS = 600000;
 
 export function initOwnerReports(context){
-  const { DEMO_MODE, db, firestore, call, escapeHtml: esc, getUser, isOwner, openAccount } = context;
+  const { DEMO_MODE, db, firestore, call, escapeHtml: esc, getUser, isOwner, openAccount, onAlertsChanged = null } = context;
   let state = { loaded: false, reports: [], events: [], backups: [], message: '' };
 
   const money = c => '$' + ((Number(c) || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -290,8 +290,15 @@ export function initOwnerReports(context){
     if(event.target.closest('[data-rb-link-download]')) return openFile(params.get('r'), 'attachment', box.querySelector('.rb-message'), { linkKey: params.get('k') });
   });
 
+  const notify = () => { if(onAlertsChanged) try { onAlertsChanged(); } catch (err) { /* badges refresh on next load */ } };
   return {
-    render: async () => { render(); await load(); render(); },
+    render: async () => { render(); await load(); render(); notify(); },
+    // Owner Portal alerts: a failed report stays an alert until a retry
+    // replaces it with a ready one (same report id, new status).
+    async failedReports(){
+      await load();
+      return state.reports.filter(r => r.status === 'failed').map(r => ({ id: r.id, label: r.label || (r.periodStart + ' – ' + r.periodEnd), at: toDate(r.createdAt) }));
+    },
     renderLinkPage
   };
 }

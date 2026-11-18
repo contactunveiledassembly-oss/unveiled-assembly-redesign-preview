@@ -721,6 +721,15 @@ export function initSiteManagement(context){
     discountsLoaded = true;
   }
   function saveDemoDiscounts(){ try { localStorage.setItem(DISCOUNT_STORAGE_KEY, JSON.stringify(discountCodes)); } catch (err) {} }
+  // The Preview keeps codes in this browser's storage, shared by every
+  // open tab. Any change re-reads it first so one tab can never write
+  // back an older copy over another tab's claim, release or edit.
+  function readDemoDiscountsFresh(){
+    try {
+      const raw = localStorage.getItem(DISCOUNT_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : clone(DEMO_DISCOUNT_DEFAULTS);
+    } catch (err) { return clone(DEMO_DISCOUNT_DEFAULTS); }
+  }
   async function loadDiscountCodes(){
     if(discountsLoaded) return;
     if(DEMO_MODE){ loadDemoDiscounts(); return; }
@@ -730,7 +739,7 @@ export function initSiteManagement(context){
     } catch (err) { discountCodes = []; }
     discountsLoaded = true;
   }
-  function scopeLabel(scope){ return scope === 'oneonone' ? 'One-on-Ones' : scope === 'teaching' ? 'Teachings' : 'One-on-Ones + Teachings'; }
+  function scopeLabel(scope){ return scope === 'oneonone' ? 'One-on-Ones' : scope === 'teaching' ? 'Teachings' : scope === 'shop' ? 'Resources Shop (manage in Resources Shop → Discounts)' : 'One-on-Ones + Teachings'; }
   function usageLabel(item){
     const used = Number(item.usedCount) || 0;
     if(item.maxUses === null || item.maxUses === undefined || item.maxUses === '') return used + ' used · unlimited';
@@ -826,6 +835,16 @@ export function initSiteManagement(context){
   // Closing that completely needs a trusted server (e.g. a payment
   // webhook or Cloud Function) to confirm or release claims on its own,
   // independent of whether the customer's browser stays open.
+  // Why a code can no longer be claimed at submit time: 'limit' (usage
+  // limit reached) or 'unavailable' (deleted, paused, expired or not
+  // valid here). '' means it can be claimed.
+  function claimProblem(stored, scope){
+    if(!stored || stored.active === false) return 'unavailable';
+    if(stored.scope !== 'both' && stored.scope !== scope) return 'unavailable';
+    if(stored.expiresAt && new Date(stored.expiresAt + 'T23:59:59').getTime() < Date.now()) return 'unavailable';
+    if(stored.maxUses !== null && stored.maxUses !== undefined && stored.maxUses !== '' && (Number(stored.usedCount) || 0) >= Number(stored.maxUses)) return 'limit';
+    return '';
+  }
   async function claimDiscount(scope, uid){
     const item = appliedDiscounts[scope];
     if(!item) return null;
@@ -837,16 +856,15 @@ export function initSiteManagement(context){
       // immediately before validating and writing, so this stays
       // correct across separate demo sessions sharing one browser
       // profile (not just within a single already-open page).
-      let fresh;
-      try {
-        const raw = localStorage.getItem(DISCOUNT_STORAGE_KEY);
-        fresh = raw ? JSON.parse(raw) : clone(DEMO_DISCOUNT_DEFAULTS);
-      } catch (err) { fresh = clone(DEMO_DISCOUNT_DEFAULTS); }
+      const fresh = readDemoDiscountsFresh();
       const stored = fresh.find(x => x.id === item.id);
-      if(!stored) return null;
-      if(stored.maxUses !== null && stored.maxUses !== undefined && (Number(stored.usedCount) || 0) >= Number(stored.maxUses)){
+      // Deleted, paused or expired since the member pressed Apply: the
+      // discount must not be kept (it used to be silently kept when the
+      // code had been deleted).
+      const problem = claimProblem(stored, scope);
+      if(problem){
         discountCodes = fresh;
-        return { ok: false, reason: 'limit' };
+        return { ok: false, reason: problem };
       }
       const claimId = 'demo-claim-' + Math.random().toString(36).slice(2);
       stored.redeemedSourceIds = Array.isArray(stored.redeemedSourceIds) ? stored.redeemedSourceIds : [];
@@ -864,13 +882,14 @@ export function initSiteManagement(context){
       await setDoc(claimRef, { uid, codeId: item.id, status: 'claimed', sourceCollection: null, sourceId: null, createdAt: serverTimestamp() });
     } catch (err) { console.error('discount claim ticket failed to save', err); return { ok: false, reason: 'error' }; }
     let claimed = false;
+    let claimFailure = 'limit';
     try {
       const codeRef = doc(db, 'discountCodes', item.id);
       await runTransaction(db, async tx => {
         const snap = await tx.get(codeRef);
-        if(!snap.exists()) return;
+        claimFailure = claimProblem(snap.exists() ? snap.data() : null, scope);
+        if(claimFailure) return;
         const data = snap.data();
-        if(data.maxUses !== null && data.maxUses !== undefined && (Number(data.usedCount) || 0) >= Number(data.maxUses)) return;
         const redeemedSourceIds = Array.isArray(data.redeemedSourceIds) ? data.redeemedSourceIds : [];
         tx.update(codeRef, {
           usedCount: (Number(data.usedCount) || 0) + 1,
@@ -882,7 +901,7 @@ export function initSiteManagement(context){
     } catch (err) { console.error('discount claim failed to save', err); }
     if(!claimed){
       try { await deleteDoc(claimRef); } catch (err) { /* harmless if it never committed */ }
-      return { ok: false, reason: 'limit' };
+      return { ok: false, reason: claimFailure || 'limit' };
     }
     item.usedCount = (Number(item.usedCount) || 0) + 1;
     return { ok: true, claimId };
@@ -899,6 +918,7 @@ export function initSiteManagement(context){
   async function releaseDiscountClaim(claimId){
     if(!claimId) return;
     if(DEMO_MODE){
+      discountCodes = readDemoDiscountsFresh();
       const stored = discountCodes.find(x => Array.isArray(x.redeemedSourceIds) && x.redeemedSourceIds.includes(claimId));
       if(stored){
         stored.usedCount = Math.max(0, (Number(stored.usedCount) || 0) - 1);
@@ -1042,27 +1062,47 @@ export function initSiteManagement(context){
     }
     status.textContent = 'Saving…';
     const id = DEMO_MODE ? 'demo-' + code.toLowerCase() : await hashCode(code);
-    const existing = discountCodes.find(x => x.id === id || normalizeCode(x.code) === code);
-    const usedCount = existing ? (Number(existing.usedCount) || 0) : 0;
     // Editing an existing code (re-submitting the same code string)
     // must keep its accumulated redemption history — only a brand-new
     // code starts with an empty ticket list. The discountCodes security
     // rule requires this field to already be a list before any
     // non-admin redemption can ever succeed against this code.
-    const redeemedSourceIds = existing && Array.isArray(existing.redeemedSourceIds) ? existing.redeemedSourceIds : [];
-    const lastRedeemedSourceId = existing && existing.lastRedeemedSourceId ? existing.lastRedeemedSourceId : null;
-    const item = { id, code, type, amount, scope, active: true, expiresAt: expiresAt || '', maxUses, usedCount, redeemedSourceIds, lastRedeemedSourceId };
+    // The history is read fresh at save time (a transaction on the live
+    // site): the copy loaded with this page may be out of date, and
+    // writing it back would lower usedCount and let a limited code be
+    // used past its limit.
+    const history = current => ({
+      usedCount: current ? (Number(current.usedCount) || 0) : 0,
+      redeemedSourceIds: current && Array.isArray(current.redeemedSourceIds) ? current.redeemedSourceIds : [],
+      lastRedeemedSourceId: current && current.lastRedeemedSourceId ? current.lastRedeemedSourceId : null
+    });
     try {
+      let item;
+      if(DEMO_MODE){
+        discountCodes = readDemoDiscountsFresh();
+        const existing = discountCodes.find(x => x.id === id || normalizeCode(x.code) === code);
+        item = { id, code, type, amount, scope, active: true, expiresAt: expiresAt || '', maxUses, ...history(existing) };
+      } else {
+        const codeRef = doc(db, 'discountCodes', id);
+        await runTransaction(db, async tx => {
+          const snap = await tx.get(codeRef);
+          item = { id, code, type, amount, scope, active: true, expiresAt: expiresAt || '', maxUses, ...history(snap.exists() ? snap.data() : null) };
+          const { id: _id, ...data } = item;
+          tx.set(codeRef, { ...data, updatedAt: serverTimestamp() });
+        });
+      }
       const idx = discountCodes.findIndex(x => x.id === id || normalizeCode(x.code) === code);
       if(idx >= 0) discountCodes[idx] = item; else discountCodes.push(item);
-      if(DEMO_MODE) saveDemoDiscounts(); else await setDoc(doc(db, 'discountCodes', id), { code, type, amount, scope, active: true, expiresAt: expiresAt || '', maxUses, usedCount, redeemedSourceIds, lastRedeemedSourceId, updatedAt: serverTimestamp() });
+      if(DEMO_MODE) saveDemoDiscounts();
       event.target.reset(); document.getElementById('ownerDiscountType').value = 'percent'; document.getElementById('ownerDiscountScope').value = 'both';
       status.textContent = code + ' is ready to use.'; renderDiscountRows();
     } catch (err) { console.error('save discount failed', err); status.textContent = 'Could not save that code. Try again.'; }
   });
   document.getElementById('ownerDiscountCodesList')?.addEventListener('click', async event => {
     const action = event.target.closest('[data-discount-action]'); if(!action) return;
-    const row = action.closest('[data-discount-id]'); const item = discountCodes.find(x => x.id === row.dataset.discountId); if(!item) return;
+    const row = action.closest('[data-discount-id]');
+    if(DEMO_MODE) discountCodes = readDemoDiscountsFresh();
+    const item = discountCodes.find(x => x.id === row.dataset.discountId); if(!item){ renderDiscountRows(); return; }
     if(action.dataset.discountAction === 'toggle'){
       item.active = item.active === false;
       if(DEMO_MODE) saveDemoDiscounts(); else await updateDoc(doc(db, 'discountCodes', item.id), { active: item.active, updatedAt: serverTimestamp() });

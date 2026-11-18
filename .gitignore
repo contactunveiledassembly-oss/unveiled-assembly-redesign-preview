@@ -1,0 +1,15 @@
+# Never commit dependencies, local secrets, env files, logs or emulator data.
+node_modules/
+.secret.local
+**/.secret.local
+**/.secret.*
+.env
+.env.*
+**/.env
+**/.env.*
+*.log
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+emulator-data/
+.stripe-cli/

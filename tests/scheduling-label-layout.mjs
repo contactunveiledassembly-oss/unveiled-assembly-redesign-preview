@@ -13,6 +13,11 @@ await page.evaluate(() => {
   document.querySelectorAll('[data-owner-section]').forEach(section => { section.hidden = false; });
   document.querySelector('[data-bookings-panel="availability"]').hidden = false;
   document.querySelector('[data-bookings-panel="blocked"]').hidden = false;
+  // The special-hours form now lives in the Availability calendar's
+  // editor, which stays collapsed until a date is picked.
+  const ovr = document.querySelector('#avlOverrideEditor'); if (ovr) ovr.hidden = false;
+  // The per-window session-type limit is now an optional, collapsed section.
+  document.querySelectorAll('.avl-advanced').forEach(d => { d.open = true; });
   const choices = ['15-Minute One-on-One', '30-Minute One-on-One'];
   for (const id of ['schedRuleTypesCheckboxes', 'schedOverrideTypesCheckboxes']) {
     document.querySelector(`#${id}`).innerHTML = choices.map(label =>

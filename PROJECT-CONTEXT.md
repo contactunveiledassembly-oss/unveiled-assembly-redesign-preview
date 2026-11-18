@@ -856,4 +856,150 @@ Sandbox purchases share the real database: records whose `stripeSessionId` start
 
 `_config.yml` keeps internal files (this doc, functions/, tests/, rules, firebase.json, zips) out of the GitHub Pages build.
 
+## 38. Session Log — 2026-11-06: Resources Shop (branch `resources-shop` from `main` 7f81859; NOT committed, NOT deployed)
+
+Owner brief: a complete digital-resources shop + owner shop management, extending the existing Firebase/Stripe setup; "Concealed" as a draft with every owner input left open; separate test mode; nothing invented.
+
+**Owner Portal → "Resources Shop"** (sidebar item renamed from "Shop & Resources"; tabs in `shop-system.js` `OWNER_TABS`): Overview · Products · Orders · Digital Files · Collections · Customers · Discounts · Reports · Store Settings. New module **`shop-admin.js`** renders Overview/Orders/Collections/Customers/Discounts/Reports/Settings; Products/Inventory/Appearance stay in `shop-system.js`; Digital Files + Download Access in `digital-library.js` (Download Access now sits under Orders).
+- **Live / Test records switch** at the top. Test = `testMode: true` or a `cs_test_` session id. Test records never count in live totals.
+- **Overview alerts** (each with a button to the fix): paid orders waiting on a missing PDF, paid customers waiting for manual delivery, possible duplicate purchases, paid orders with no access record, refunds Stripe hasn't confirmed, checkouts that never closed, Active products without a PDF, products needing owner input, discount codes used up / ending within 7 days, purchases paused, public checkout off, unarchived sandbox test products.
+- **Orders**: prices as sold (unit, discount, paid per item), payment status and per-item download permission shown separately, filters + search, CSV export, **Issue Refund…** (dialog with amount + required checkbox → `manageShopOrder`), Add Note, Mark Resolved, Give/Turn Off access (confirm + reason), audit trail per order.
+- **Products**: status buttons Draft / Coming Soon / **Set Active** (= `published`) / Archive (archive confirms). "Needs your input: price · description · cover · PDF" on every product missing them. Collection field offers the owner's collections. New "Test product" checkbox (`testOnly`).
+- **Concealed**: `ensureConcealedDraft()` creates `shopProducts/concealed` (status draft, price null, empty description/cover, tag "needs owner input") the first time the owner opens the Resources Shop, only if no product titled Concealed exists. Nothing else about it was invented.
+- **Collections**: stored in `shopSettings/store.collections` [{name, description, visible}]; add, reorder, hide, rename (moves the products), remove. Visible collections with a public product show as filter chips on the Shop (`?collection=`); product breadcrumbs link to them.
+- **Customers**: grouped by account, paid orders, net spent, library items with access state + give/turn off.
+- **Discounts** (Shop codes, `discountCodes/{sha256}` with `scope: 'shop'`): percent or fixed, product scope (`productIds`), start/last day (Eastern), usage limit, pause/resume, edit, delete, test-only. Session/class codes stay in Website Content → Discounts (that list now labels Shop codes).
+- **Reports**: period picker; gross, refunds, net, paid orders, average order, discounts given; product performance (sold, gross, refunded, net, downloads); codes used; current access issues. Recalculated from `shopOrders`/`digitalAccess` every time.
+- **Store Settings**: pause/resume new purchases + customer message (`shopSettings/store`), payment status (public checkout flag, which Stripe keys are loaded via `shopStoreStatus`), test-mode instructions, audit trail (`shopAuditLog`), Shop Appearance.
+
+**Customer side**: working discount field in the bag (estimate only; server decides), discount + estimated total rows, "Purchases Paused" on product/quick view/cart when paused, collection chips, test-only products hidden on the public site. Member library now shows **Payment Pending** (open checkout Stripe hasn't confirmed), **Download Available**, **Access Unavailable · Turned Off / Refunded**, each with a "Payment: … / Download: …" line.
+
+**Server (`functions/index.js` + new `functions/shop-pricing.js`)**
+- `createCheckoutSession` (shop): refuses when `shopSettings/store.purchasesPaused`; validates + reserves a Shop discount in a transaction (`discountRedemptions/shop_{orderId}`, `usedCount`), splits it to the cent across eligible lines and Stripe line items; stores per-item `discountCents`/`paidCents`, `discountCode`, `testMode`, `signature`; **reuses** the member's open order for the same bag/prices/code instead of creating a second; a $0 order (verified 100% code, digital only) is fulfilled through `markPaid` without Stripe; if Stripe never opens, the order is closed and the discount use returned. `testOnly` products/codes are refused once live keys are loaded.
+- Webhook `markPaid` (shop): `testMode` from `session.livemode`; access `amountPaidCents` = what was actually paid; `reviewFlags` `missing-file:{id}` / `duplicate-purchase:{id}`. `markAbandoned` now returns Shop discount uses.
+- `finishDigitalFileUpload`: attaching a PDF (auto-delivery on) unlocks paid `pending_delivery` customers and reports how many.
+- `createDigitalDownloadLink`: refunded/turned-off are checked first (fixes the "not verified as paid" message for refunds — follow-up from §37).
+- New owner-only callables: **`manageShopOrder`** (`refund` — requires `confirmed: true` and the exact remaining amount, Stripe idempotency key, refuses test-vs-live mismatches; status/access change only when Stripe's `charge.refunded` arrives; `note`; `resolve-flag`) and **`shopStoreStatus`** (key mode, never the key). `manageDigitalAccess` and uploads now also write **`shopAuditLog`**.
+- **`firestore.rules`**: `shopOrders` write → nobody (server only; was admin); `shopDigitalFiles` owner may only change `autoDelivery`; new `shopAuditLog` (owner read, no writes); `shopSettings/store` public read, owner write with schema; products may carry optional bool `testOnly`; Shop codes can't go through the browser claim path. The site only writes `testOnly` when used and tolerates the old rules, so the page won't break if it is published before the rules — but deploy rules + functions first.
+
+**Verification (local, nothing deployed, no real data touched)**
+- `tests/resources-shop-ui.mjs` **37/37** (preview build, desktop + 390px): nine tabs, Concealed draft + inputs flagged, Active refused without price, alerts + jump links, orders/discount/access display, filters, refund dialog confirmation, access confirm, test-records view, customers, discount create/validate/pause/expired, collections add/rename, report math ($45.60 from two labeled preview samples), pause → product page shows Purchases Paused, cart codes (unknown/used-up/paused/valid, −$4.80 → $19.20), collection chips, library Payment Pending vs Download Available, no page errors.
+- `tests/shop-pricing.test.mjs` **15/15** (dates in Eastern, limits, test-only, exact-cent splits, Stripe line splitting, reuse signature).
+- `tests/digital-library-ui.mjs` 22/22 (labels updated). Full browser suite passes except the known-stale `owner-editor-discounts` (§32); `discount-claim-lifecycle` not run (known to hang).
+- **Written but NOT run:** `tests/resources-shop-emulator.mjs` (pause, availability, every discount refusal, Stripe-never-opened release, 100% fulfillment, usage limit, frozen paid price after a price change, retried events, duplicate/missing-file flags, auto-delivery on upload, expired checkout release, archived product keeps access, refund guards, audit, all new rules). Needs Java 21 (none on this Mac), `functions/.secret.local` dummy values, and `cd functions && npm install` (local `node_modules` is missing `pdfkit`, used by reports.js). Also run the existing `digital-downloads-emulator.mjs`.
+
+**Remaining steps (owner approval needed for each)**
+1. Deploy backend: `firebase deploy --only functions,firestore:rules` (shared project — never without `--only`).
+2. Publish site: commit `resources-shop`, PR → `main` (GitHub Pages).
+3. Test mode: the `stripe-sandbox` preview channel expired 2026-11-03 — `firebase hosting:channel:deploy stripe-sandbox --expires 7d`.
+4. Owner content: Concealed price, description, cover, PDF; collections; any discount codes. Archive TESTING / TESTING 2.
+5. Phase 2B (live payments) unchanged and still unapproved — **add: the live restricted key now also needs Refunds: Write** for Issue Refund.
+6. Still not connected: access emails (provider choice), taxes, shipping charges.
+
+## 39. Session Log — 2026-11-17: Owner Portal redesign (branch `owner-portal-redesign` from `resources-shop` 43dfa71; NOT committed, NOT deployed)
+
+**Goal (owner's spec):** calmer, simpler Owner Portal — same features, data, permissions and business logic.
+
+**Audit — before:** dark theme; sidebar = Dashboard, People, Ministry Operations (Teachings, Learning Paths, Registrations, Events, One-on-One Scheduling, Prayer Requests, Testimonials, Class Reviews), Resources Shop, Finances, Reports & Backups, Communications, Website & Settings (Website, Media, Settings, Policies). Dashboard = 10 stat tiles + tabbed Needs Attention/Upcoming/Recent + quick actions.
+Bugs found: Needs Attention and Upcoming read DEMO_* sample arrays even in production (real pending bookings/registrations never appeared there); pending bookings were never an attention item; inbox badges showed total records, not unresolved.
+
+**Navigation map (old id → new place; every `data-owner-nav`/`data-owner-section` id unchanged):**
+- Overview: dashboard · Bookings: bookings (its own tabs: calendar, availability, pending, blocked dates…)
+- Classroom: teachings ("Classes & Lessons"), registrations ("Registrations & Attendance"), paths, class-reviews
+- Community: prayer-requests, testimonials ("Testimonies"), events ("Events & Outreach"), people ("Members")
+- Resources: store, payments (Finances), reports
+- Website: website ("Pages & Content"), media ("Media Library"), policies ("Forms & Policies")
+- Settings: settings ("Owner Account"), communication ("Notifications"), + shortcuts to Store Settings (payment mode, purchase pause) and its audit trail
+- Map lives in `owner-portal-alerts.js` (`OWNER_NAV_GROUPS`); `OWNER_SIDEBAR_DEPTS` is built from it.
+
+**Built:**
+- `styles.css` (appended "Owner Portal — calm redesign"): spec palette as `--owner-*` tokens; overrides the old dark-theme rules; four-color status rule (red action / amber in progress / green done / gray info) incl. `.admin-status-pill` mapping and new `.action` pill; visible focus ring; responsive 4→2→1 summary cards; inline legacy light-on-dark text colours remapped. Gold/amber/green are used for bars/dots; their TEXT uses darker shades for 4.5:1 contrast.
+- Header: title, welcome, date, bell (red count), account menu (Owner Account, Notifications, Member View, Sign Out; Esc closes, focus returns).
+- Page head on every section: breadcrumb, title, description, that section's open alerts (not on Overview/Resources Shop, which list them already).
+- Overview: 4 summary cards (Upcoming Bookings, Active Classes, Needs Your Attention, Resource Orders), Needs Your Attention (description, section, date, status, action button; gray items behind "For your information"), Upcoming Schedule (real confirmed bookings + classes + next gathering, Open Calendar), Quick Actions (5 from spec), Recent Activity (real records, no private message text).
+- Alerts: `owner-portal-alerts.js` (pure, unit-tested). Derived from record state every time — no seen/dismissed storage — so viewing never clears; only the real action does; counts identical after reload/new sign-in. Sources: pending bookings, new/in-progress prayer requests, pending testimonies & class reviews, unpaid upcoming registrations, waitlist seats, Resources Shop alerts (shop-admin `alerts()/summary()/recentOrders()/goTo()`), failed reports (owner-reports `failedReports()`), and load failures. Production: live `onSnapshot` watches on bookings(pending), teachingRegistrations(pending_payment), prayerRequests(new|in-progress), testimonials(pending), classReviews(pending); stopped on sign-out; ignored while Demo Mode (simulation) is on. Shop re-reads when the tab regains focus. No new Firestore rules or indexes needed (single-field queries the owner can already read).
+- Cache version → `owner-redesign-20261117` on all 17 pages; `shop-admin.js?v=2`, `owner-reports.js?v=2`, `owner-portal-alerts.js?v=1`.
+
+**Tests (local, preview build):** new `tests/owner-alerts.test.mjs` 15/15, new `tests/owner-portal-redesign.mjs` 21/21 (seven sections, all old ids, cards, bell = list = badge sum, view-doesn't-clear, in-progress → amber, confirm booking clears, reload keeps counts, quick actions, keyboard menu, focus ring, palette, phone no-overflow + drawer, member can't see owner portal). Updated for the new menu: nav-restructure (rewritten), theming, sim-mode, event-types, events-staged-save, events-system, scheduling-staged-save, finances-consolidation, digital-library-ui, resources-shop-ui — all pass. Still failing exactly as before this work: owner-editor-discounts, discount-claim-lifecycle (stale since the earlier sidebar restructure).
+
+**Not built / needs owner decision:** no "Administrative permissions" screen exists (roles are enforced by Firestore rules; only the single owner email can be admin) — not invented; no "Community assistance programs" feature exists — not invented; general audit history exists only for the Resources Shop (`shopAuditLog`) — the Settings "Audit History" shortcut opens it. Old Dashboard tiles "Total Members" (now on Community → Members) and "Revenue — not connected" (Finances has real figures) were dropped from the Overview.
+
+**SUPERSEDED → Calendly-inspired light theme (same day, same branch, uncommitted).** After seeing Modern Mist, the owner approved the default "Calendly" option of `~/.codex/visualizations/2026/10/23/01a169ec-…/owner-portal-color-selector.html`. The Modern Mist palette and layer below were replaced. What's current:
+- **Tokens** (same token block; legacy `--owner-gold-*` names now carry the blue accent):
+  - Page `#F1F5F8`, panel `#FBFCFD`, sunken `#EDF3F7`, field `#F8FAFC`, sidebar `#E7EEF4`.
+  - Lines `#C9D6DF`, with `#7890A6` for field and switch outlines (3:1).
+  - Navy text `#0B3558` (11.5:1), muted text `#476788` (5.4:1).
+  - Blue `#006BFF` (white text on it 4.6:1); blue text `#0057D9`; soft blue `#E6F0FF`.
+  - Red `#C94D5A` (text `#A8323F`, badge `#B8404D`), amber text `#8A5300`, green text `#1D6B43`.
+  - Radii 18/14/10/pill.
+- **Styling layer:** "Owner Portal — Calendly-inspired layer" at the end of `styles.css`.
+  - Pill tabs (active = soft blue), pill buttons (one blue primary, white-ish secondary), rounded panels, very light shadows.
+  - Session-type options are shown as bubbles. A blue focus ring and reduced-motion support apply everywhere in the owner area, including the same 11 owner dialogs.
+  - The sidebar is now `position:sticky` on desktop; the shell is `overflow:visible` so that works. The main navigation stays on screen while long pages scroll.
+- **Bookings → Availability rebuilt as a workflow** (`initAvailabilityWorkspace()` in `app.js`; `avl-*` CSS):
+  1. Schedule selector: "Shared — all session types" or one session type, which maps onto the existing per-type scoping of weekly windows. There is still only one data model.
+  2. Weekly hours: a row per day with a switch and the time blocks shown as pills. Use + to add, click a block to edit (add the new one, then remove the old), or × to remove. Turning a day off in a single type's view keeps shared hours for the other types.
+  3. Month calendar showing has-hours, special-hours and blocked days. Arrow keys move between days; focus is kept across redraws.
+  4. Selected-date card: Set/Edit/Remove Special Hours, Block/Unblock Date, or Remove Range.
+  5. Session-type bubbles inside the hours and special-hours editors.
+  6. Real time-slot buttons from `computeOpenSlots()`, which reflects the saved state. A note appears when there are unsaved changes.
+  7. Save Schedule / Discard Changes, which drive `#schedSaveAllBtn` / `#schedDiscardBtn`. The shared save bar is hidden on this tab only.
+  - Every change goes through the ORIGINAL forms and handlers (`#schedRuleForm`, `#schedOverrideForm`, `#blockDateForm`, the list remove buttons). Nothing changed in the booking, slot, double-booking or save logic.
+  - The special-hours editor moved from Blocked Dates into the calendar; Blocked Dates keeps single-date and range blocks plus the special-hours list.
+  - Booking rules (time zone, limits, pause) and Night of Prayer sit below it in their own panels.
+  - Single-date blocks still take effect immediately, as before; the UI says so.
+- **Existing quirk found, documented, not fixed:** `blockDateInput.min` uses the UTC date (`toISOString`). In US evenings, today (and in the calendar, today's tile) can't be blocked through the block form. The workaround offered in the UI is special hours → "Fully closed".
+- **Tests:**
+  - New `tests/availability-workspace.mjs` (15 checks).
+  - `scheduling-staged-save` now clicks the toolbar's Save Schedule on the Availability tab.
+  - The palette checks in `owner-portal-redesign` now check the Calendly tokens.
+- Cache version → `owner-calm-blue-20261117`.
+- Test results:
+  - Every browser and logic suite passes: availability-workspace 15/15, owner-portal-redesign 22/22, owner-alerts 15/15, resources-shop-ui 37/37 and digital-library-ui 22/22, plus the admin-label-audit, scheduling, events, finances, member-portal, sim-mode, theming, nav and shop suites.
+  - Emulator tests, each in its own session: 24/24, 33/33 and 50/50.
+  - Still failing exactly as before this work: owner-editor-discounts, discount-claim-lifecycle.
+  - Two tests were updated because the UI legitimately moved:
+    - `admin-label-audit` itself is unchanged; Quick Actions now uses auto-fill columns.
+    - `scheduling-label-layout` now opens the collapsed special-hours editor before measuring.
+
+**Owner decisions applied (same day, uncommitted). These supersede the "blocks take effect immediately" and "schedule = session type" notes above.**
+1. **Single-date blocks are staged.**
+   - `SCHED_DRAFT.blocks` is copied from `BLOCKED_DATES_LIVE` (in demo, `DEMO_BLOCKED_DATES`).
+   - The Blocked Dates form and the calendar's Block/Unblock edit only the draft. Rows show "Not saved yet", and dates waiting to be unblocked are listed.
+   - Save writes and deletes the same `blockouts/{date}` docs as before. Only upcoming dates are in either list, so past blocks are left alone. Bookings are never touched.
+   - "Unsaved changes" appears in three places: the Availability toolbar (amber, kept on screen while scrolling), an amber dot on the Availability / Event Types / Blocked Dates tabs, and the existing save bar.
+2. **"Today" uses the ministry's time zone** (`ministryNowParts()` / `ministryToday()` via `Intl`, using `BUSINESS_TZ`).
+   - `blockDateInput.min` and `bookingDateInput.min` use the ministry date, no longer UTC.
+   - **Booking-logic fix, directly related:** `computeOpenSlots()` used to offer times that had already passed on today's date. It now refuses past dates and skips start times at or before the current ministry time.
+   - Blocking today ("Block Rest Of Today") closes the remaining times. Existing appointments are untouched, and the UI says how many stay booked.
+3. **Schedules are separate from session types.**
+   - `schedulingSettings/global.schedules` = `[{ id, name }]`. The default `{ id: 'default', name: 'Main availability' }` is implied when the list is missing.
+   - Rules have `scheduleId`; missing means default. Session types have `scheduleId`; missing means default, and several types can share a schedule.
+   - Special hours: the main schedule keeps the plain-date doc id `availabilityOverrides/{date}`; other schedules use `{date}@{scheduleId}`.
+   - Single-date blocks and date ranges apply to every schedule.
+   - `resolveScheduleWindows(date, scheduleId, typeId, src?)` does the work. `resolveAvailabilityWindows(date, typeId)` uses it via the type's schedule, and the owner calendar uses it over the draft.
+   - Older per-window `sessionTypeIds` limits are still honoured. In the UI they're an optional, collapsed "advanced" section.
+   - The Availability toolbar offers New Schedule, Rename and Delete. A schedule can't be deleted while a type uses it, and the main schedule can't be deleted at all.
+   - Step 5 assigns session types to the schedule. The Event Types editor has an "Availability schedule" select, and the cards show "Schedule: Name · days · N weekly windows".
+   - **No Firestore rules change is needed** (these collections have no field validation) and **no data migration**: existing data is all on the main schedule and behaves exactly as before.
+- Tests:
+  - `availability-workspace.mjs` is now 18 checks: staged block, rest of today, no past times, bookings untouched, discard, schedules sharing types, delete guard, Event Types schedule select.
+  - `scheduling-label-layout` opens the collapsed advanced sections before measuring.
+
+**Modern Mist visual pass (same day, same branch, uncommitted — replaced by the entry above).** The owner judged the off-white version too bright and the old dark one uncomfortable; approved direction = mockup `~/.codex/visualizations/2026/10/23/01a169ec-…/owner-portal-modern-mist-mockup.html`. Visual only — no logic, data, alert, permission or Demo Mode changes.
+- Tokens (in the redesign token block, also applied to the 11 owner-only dialogs by id: teachingEdit, teachingRegistrants, classRegDetail, bookingDetail, personProfile, mediaUse, policyView, prayer/testimony/reviewDetail, rsRefund): page `#A9ADAF`, panel `#C4C7C7`, sunken `#B9BDBD`, field `#CED1D0`, sidebar `#8E9395→#868B8D`, line `#9A9F9F`, text `#232729`, muted `#383D40`, champagne `#806E52` (decorative only; its text shade `#4E412A`), red/amber/green `#8F4F50/#856538/#486B52` with darker text shades + tints. Radii 3–6px, shadow `0 16px 48px rgba(78,84,86,.11)`.
+- Contrast: every text/background pair ≥4.5:1 measured against the *page* colour (worst case — panels are lighter); max ~10:1 so nothing is stark. Status always has a text label (pills, badges carry numbers).
+- "Modern Mist refinement layer" appended at the end of `styles.css`: glass panels (backdrop blur), editorial masthead (Inter 300 headings, Courier Prime micro-labels — both already loaded), summary strip, hairline alert rows with slim status rule, Quick Actions as a full-width 5-tile band (mockup layout), squared controls, tables, legacy-grey label remap (min 10.5px), dialog headers/fields/buttons, `prefers-reduced-motion` kills transitions/animations, responsive 5→3→2 quick actions.
+- Class editor footer: Publish Class is the one solid button; Save Draft / Preview / Duplicate are quiet (was four black buttons).
+- Cache version → `owner-mist-20261117` on all 17 pages.
+- `tests/owner-portal-redesign.mjs` palette check rewritten for Modern Mist (tokens, charcoal text, gradient panels/sidebar) + new "no pure-white / near-black surfaces" check.
+- Tests after Modern Mist:
+  - All browser and logic tests pass: owner-portal-redesign 22/22, owner-alerts 15/15, resources-shop-ui 37/37 and digital-library-ui 22/22, plus the nav, theming, sim-mode, events, scheduling, finances, member-portal and shop suites.
+  - The emulator tests pass when each runs in its own emulator session: resources-shop 24/24, owner-reports 33/33, digital-downloads 50/50. Chaining them in one session fails with "uid already exists", a test-isolation quirk rather than a bug.
+  - events-system timed out once while loading the page, then passed on two reruns.
+  - owner-editor-discounts and discount-claim-lifecycle still fail exactly as they did before this work.
+- Audit helper (scratch, not committed) walked all 18 sections, the account menu and all 11 dialogs at 1440px and 390px: no white/near-black surfaces, no text under 4.5:1 except a switch knob (intentionally light) and the "Open Calendar" link, which passes on its real panel.
+
+---
+
 *This file should be updated any time a feature moves from PLANNED to IMPLEMENTED, or when architecture changes — so the next AI session (or the next person) can trust it again.*

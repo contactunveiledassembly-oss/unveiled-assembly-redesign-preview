@@ -1,14 +1,10 @@
-// Confirms the Owner Portal navigation restructuring (7-department
-// sidebar: Dashboard, People, Ministry Operations, Shop & Resources
-// (data-owner-nav="store", merged in from shop-development-phase-1),
-// Finances, Communications, Website & Settings): every pre-existing nav
-// item still exists and still works, the
-// two expandable departments (Ministry Operations, Website & Settings)
-// disclose their sub-items on click and persist that choice across a
-// reload, items start collapsed by default, auto-expand when navigated
-// to directly, and the breadcrumb grows a middle segment for nested
-// items. Nothing here changes any existing data-owner-section id, so
-// this is purely a navigation-layer check.
+// Owner Portal navigation — redesign (2026-11-17): seven sections.
+// Overview and Bookings are single destinations; Classroom, Community,
+// Resources, Website and Settings expand. Every pre-existing section id
+// still exists exactly once and still opens its unchanged panel; groups
+// start collapsed, toggle with aria-expanded, auto-open when you land on
+// one of their sections some other way (search), and remember their
+// open/closed state across a reload.
 import { chromium } from '/Users/yaunahlove/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
 
@@ -26,60 +22,56 @@ await page.evaluate(() => {
 await page.fill('#signinEmail', 'contactunveiledassembly@gmail.com');
 await page.fill('#signinPassword', 'whatever123');
 await page.locator('#emailSignInForm').evaluate(form => form.requestSubmit());
-await page.waitForSelector('[data-dept-toggle="ministry"]', { timeout: 15000 });
+await page.waitForSelector('[data-dept-toggle="classroom"]', { timeout: 15000 });
 
-// Every old nav id survives the restructuring, exactly once.
 const ALL_NAV_IDS = ['dashboard', 'people', 'teachings', 'paths', 'registrations', 'events', 'bookings',
-  'prayer-requests', 'testimonials', 'class-reviews', 'store', 'payments', 'communication', 'website', 'media', 'settings', 'policies'];
+  'prayer-requests', 'testimonials', 'class-reviews', 'store', 'payments', 'reports', 'communication', 'website', 'media', 'settings', 'policies'];
 for (const id of ALL_NAV_IDS) {
   const count = await page.locator('[data-owner-nav="' + id + '"]').count();
   assert.equal(count, 1, 'nav item "' + id + '" should exist exactly once, got ' + count);
 }
+const GROUPS = { classroom: ['teachings', 'registrations', 'paths', 'class-reviews'], community: ['prayer-requests', 'testimonials', 'events', 'people'],
+  resources: ['store', 'payments', 'reports'], website: ['website', 'media', 'policies'], settings: ['settings', 'communication'] };
+for (const [group, ids] of Object.entries(GROUPS)) {
+  assert.equal(await page.locator('[data-dept-items="' + group + '"]').isHidden(), true, group + ' starts collapsed');
+  for (const id of ids) assert.equal(await page.locator('[data-dept-items="' + group + '"] [data-owner-nav="' + id + '"]').count(), 1, id + ' lives in ' + group);
+}
+for (const id of ['dashboard', 'bookings']) assert.equal(await page.locator('#ownerSidebar > [data-owner-nav="' + id + '"]').count(), 1, id + ' is top level');
 
-// Both expandable departments start collapsed.
-assert.equal(await page.locator('[data-dept-items="ministry"]').isHidden(), true, 'Ministry Operations starts collapsed');
-assert.equal(await page.locator('[data-dept-items="website-settings"]').isHidden(), true, 'Website & Settings starts collapsed');
+// Toggle opens and closes; aria-expanded follows.
+await page.locator('[data-dept-toggle="classroom"]').click();
+assert.equal(await page.locator('[data-dept-items="classroom"]').isVisible(), true);
+assert.equal(await page.locator('[data-dept-toggle="classroom"]').getAttribute('aria-expanded'), 'true');
+await page.locator('[data-dept-toggle="classroom"]').click();
+assert.equal(await page.locator('[data-dept-items="classroom"]').isHidden(), true, 'clicking again collapses it');
 
-// Clicking a toggle discloses its items; the chevron rotates (aria-expanded flips).
-await page.locator('[data-dept-toggle="ministry"]').click();
-assert.equal(await page.locator('[data-dept-items="ministry"]').isVisible(), true);
-assert.equal(await page.locator('[data-dept-toggle="ministry"]').getAttribute('aria-expanded'), 'true');
-await page.locator('[data-dept-toggle="ministry"]').click();
-assert.equal(await page.locator('[data-dept-items="ministry"]').isHidden(), true, 'clicking again collapses it');
-
-// Navigating straight to a nested item through another real feature (the
-// settings directory, same mechanism a notification click-through uses)
-// auto-expands its department without the sidebar being touched directly,
-// and the breadcrumb grows a middle segment.
-await page.locator('[data-dept-toggle="ministry"]').click(); // leaves it collapsed again below
-await page.locator('[data-dept-toggle="ministry"]').click();
-assert.equal(await page.locator('[data-dept-items="ministry"]').isHidden(), true, 'collapsed again before the auto-expand check');
-await page.fill('#ownerGlobalSearch', 'availability');
+// Landing on a nested section another way (settings search) opens its group,
+// and the breadcrumb names the group.
+await page.fill('#ownerGlobalSearch', 'media');
 await page.waitForTimeout(200);
 await page.locator('#ownerGlobalSearchResults [data-search-idx]').first().click();
 await page.waitForTimeout(200);
-assert.equal(await page.locator('[data-dept-items="ministry"]').isVisible(), true, 'navigating to a nested item auto-expands its department');
-assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*ministry operations\s*\/\s*one-on-one scheduling/i);
+assert.equal(await page.locator('[data-dept-items="website"]').isVisible(), true, 'navigating to a nested item auto-expands its group');
+assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*website\s*\/\s*media library/i);
+assert.equal((await page.locator('#ownerPageTitle').innerText()).trim(), 'Media Library');
 
-// Finances (relabeled from Payments) and Communications (relabeled from
-// Communication) are direct, single-click top-level items — no disclosure.
-await page.locator('[data-owner-nav="payments"]').click();
-assert.equal(await page.locator('[data-owner-section="payments"]').isVisible(), true);
-assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*finances/i);
-assert.match(await page.locator('[data-owner-section="payments"] .portal-label').first().innerText(), /finances/i);
+// Bookings is one click, no disclosure.
+await page.locator('#ownerSidebar > [data-owner-nav="bookings"]').click();
+assert.equal(await page.locator('[data-owner-section="bookings"]').isVisible(), true);
+assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*bookings/i);
 
-// Shop & Resources (data-owner-nav="store") is now the real Store
-// Management panel merged in from the shop-development-phase-1 branch.
+// Resources → Resources Shop still opens the real Store Management panel.
+await page.locator('[data-dept-toggle="resources"]').click();
 await page.locator('[data-owner-nav="store"]').click();
 assert.equal(await page.locator('[data-owner-section="store"]').isVisible(), true);
 await page.waitForSelector('#ownerStoreTabs', { timeout: 10000 });
 
 // Disclosure state persists across a reload.
-await page.locator('[data-dept-toggle="website-settings"]').click();
+await page.locator('[data-dept-toggle="settings"]').click();
 await page.reload({ waitUntil: 'domcontentloaded' });
 await page.locator('#navMemberPortal').click();
-await page.waitForSelector('[data-dept-toggle="website-settings"]', { timeout: 15000 });
-assert.equal(await page.locator('[data-dept-items="website-settings"]').isVisible(), true, 'disclosure state survives a reload');
+await page.waitForSelector('[data-dept-toggle="settings"]', { timeout: 15000 });
+assert.equal(await page.locator('[data-dept-items="settings"]').isVisible(), true, 'disclosure state survives a reload');
 
 assert.deepEqual(errors, []);
 await browser.close();

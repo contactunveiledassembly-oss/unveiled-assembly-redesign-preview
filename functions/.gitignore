@@ -1,3 +1,7 @@
 node_modules/
 .secret.local
 .env.local
+# Any local env/secret file, e.g. .env.demo-unveiledassembly (offline
+# test switch) or .env.demo-uastripetest (Stripe CLI test listener).
+.env.*
+.secret.*
