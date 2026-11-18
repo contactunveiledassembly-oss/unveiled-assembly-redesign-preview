@@ -27,8 +27,7 @@ await page.fill('#signinPassword', 'whatever123');
 await page.locator('#emailSignInForm').evaluate(form => form.requestSubmit());
 // Bookings now lives nested under the Ministry Operations department
 // (Owner Portal navigation restructuring) — expand it first.
-await page.waitForSelector('[data-dept-toggle="ministry"]', { timeout: 15000 });
-await page.locator('[data-dept-toggle="ministry"]').click();
+await page.waitForSelector('[data-owner-nav="bookings"]', { timeout: 15000 });
 await page.locator('[data-owner-nav="bookings"]').click();
 await page.waitForFunction(() => document.querySelectorAll('#schedTypesList [data-type-id]').length > 0, null, { timeout: 15000 });
 
@@ -72,7 +71,9 @@ await page.fill('#schedRuleEnd', '11:00');
 await page.locator('#schedRuleForm button[type="submit"]').click();
 assert.equal(await page.locator('#schedRulesList [data-rule-id]').count(), rulesBefore + 1, 'new rule appears in the draft list');
 assert.equal(await page.locator('#schedSaveBar').evaluate(el => el.classList.contains('is-dirty')), true, 'adding a rule marks dirty');
-await page.locator('#schedSaveAllBtn').click();
+// On Availability the toolbar's "Save Schedule" is the single primary
+// action (it drives the same #schedSaveAllBtn handler).
+await page.locator('#avlSaveBtn').click();
 await page.waitForFunction(() => !document.getElementById('schedSaveBar').classList.contains('is-dirty'));
 assert.equal(await page.locator('#schedRulesList [data-rule-id]').count(), rulesBefore + 1, 'rule survives save');
 

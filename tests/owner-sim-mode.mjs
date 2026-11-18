@@ -25,7 +25,7 @@ await page.locator('#emailSignInForm').evaluate(form => form.requestSubmit());
 await page.waitForSelector('#ownerSimToggle', { timeout: 15000 });
 
 assert.equal(await page.locator('.owner-sim-banner').count(), 0, 'banner hidden before activation');
-const liveSnapshot = await page.locator('#ownerTodayStats').innerText();
+const liveSnapshot = await page.locator('#ownerSummaryCards').innerText();
 
 await page.locator('#ownerSimToggle').locator('xpath=ancestor::label').click();
 await page.waitForSelector('.owner-sim-banner', { timeout: 5000 });
@@ -33,7 +33,8 @@ await page.selectOption('#ownerSimScenario', 'busy');
 await page.waitForTimeout(200);
 
 // Progressive reveal: count only grows as the simulated clock advances.
-const countAt = async () => Number((await page.locator('#ownerTodayStats').innerText()).match(/Today's 1:1s\s*(\d+)/)[1]);
+// Overview "Upcoming Bookings" card: "<n> today · …" counts today's confirmed 1:1s.
+const countAt = async () => Number((await page.locator('[data-owner-summary="bookings"] .owner-summary-sub').innerText()).match(/(\d+) today/)[1]);
 const at0 = await countAt();
 await page.locator('#ownerSimAdvanceHour').click();
 await page.waitForTimeout(150);
@@ -50,7 +51,6 @@ assert.ok(atEnd >= at1h, 'advancing to end of day should reveal at least as many
 // Bookings/Prayer Requests/Testimonials all now live nested under the
 // Ministry Operations department (Owner Portal navigation restructuring) —
 // expand it once; it stays open for the later clicks into that same group.
-await page.locator('[data-dept-toggle="ministry"]').click();
 await page.locator('[data-owner-nav="bookings"]').click();
 await page.locator('#bookingsSubNav [data-bookings-tab="reports"]').click();
 await page.waitForTimeout(300);
@@ -61,6 +61,7 @@ assert.ok(totalBookings >= atEnd, 'confirmed-only dashboard count should never e
 // Notification center now lives in its own Communication & Email Center
 // department (Master Redesign Stage 7), not embedded in the Dashboard —
 // "Owner Alerts" is its own tab there, alongside Templates/History/Settings.
+await page.locator('[data-dept-toggle="settings"]').evaluate(b => { if(b.getAttribute('aria-expanded') !== 'true') b.click(); });
 await page.locator('[data-owner-nav="communication"]').click();
 await page.waitForTimeout(200);
 await page.locator('[data-notif-center-tab="alerts"]').click();
@@ -86,6 +87,7 @@ assert.match(await page.locator('.owner-sim-clock').innerText(), /6:00 AM/);
 // Prayer Requests inbox reflects the same swapped data (not a parallel system).
 await page.locator('#ownerSimAdvanceDay').click();
 await page.waitForTimeout(200);
+await page.locator('[data-dept-toggle="community"]').evaluate(b => { if(b.getAttribute('aria-expanded') !== 'true') b.click(); });
 await page.locator('[data-owner-nav="prayer-requests"]').click();
 await page.waitForTimeout(300);
 const prayerText = await page.locator('#prayerInboxList').innerText();
@@ -129,7 +131,7 @@ await page.waitForTimeout(200);
 await page.locator('#ownerSimToggle').locator('xpath=ancestor::label').click();
 await page.waitForTimeout(200);
 assert.equal(await page.locator('.owner-sim-banner').count(), 0, 'banner gone after returning to Live Data');
-assert.equal(await page.locator('#ownerTodayStats').innerText(), liveSnapshot, 'Live Data restored exactly');
+assert.equal(await page.locator('#ownerSummaryCards').innerText(), liveSnapshot, 'Live Data restored exactly');
 
 assert.deepEqual(errors, []);
 await browser.close();

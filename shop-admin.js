@@ -30,7 +30,7 @@ const ACCESS_LABELS = { active: 'Download Allowed', pending_delivery: 'Waiting',
 const PERIODS = [['30', 'Last 30 days'], ['90', 'Last 90 days'], ['365', 'Last 12 months'], ['ytd', 'This year'], ['all', 'All time']];
 
 export function initShopAdmin(context){
-  const { DEMO_MODE, db, firestore, call, escapeHtml: esc, base, shop, library, publicPaymentsEnabled = false, sandbox = false } = context;
+  const { DEMO_MODE, db, firestore, call, escapeHtml: esc, base, shop, library, publicPaymentsEnabled = false, sandbox = false, onAlertsChanged = null } = context;
   const state = {
     loaded: false, loading: null, mode: sandbox ? 'test' : 'live',
     orders: [], access: [], files: {}, codes: [], audit: [], status: null, message: '',
@@ -123,6 +123,8 @@ export function initShopAdmin(context){
       state.orders.sort((a, b) => (toDate(b.paidAt || b.createdAt) || 0) - (toDate(a.paidAt || a.createdAt) || 0));
       state.loaded = true;
       state.loading = null;
+      // Owner Portal header/sidebar badges recompute from these records.
+      if(onAlertsChanged) try { onAlertsChanged(); } catch (err) { /* badges refresh on next load */ }
     })();
     return state.loading;
   }
@@ -841,6 +843,34 @@ export function initShopAdmin(context){
 
   return {
     async open(){ wire(); renderModeBar(); await load(); renderAll(); },
+    // For the Owner Portal Overview + alert badges (owner-portal-alerts.js).
+    async alerts(){ await load(); return computeAlerts(); },
+    summary(){
+      if(!state.loaded) return null;
+      const since = Date.now() - 30 * 86400000;
+      const orders = state.orders.filter(inMode);
+      return {
+        mode: state.mode,
+        paid30: orders.filter(o => isPaid(o) && (toDate(o.paidAt) || new Date(0)).getTime() >= since).length,
+        attention: computeAlerts().filter(a => a.level === 'urgent').length
+      };
+    },
+    recentOrders(n = 8){
+      if(!state.loaded) return [];
+      return state.orders.filter(inMode).filter(o => isPaid(o) || o.status === 'pending_payment').slice(0, n).map(o => ({
+        at: (toDate(o.paidAt || o.createdAt) || new Date(0)).getTime(),
+        status: o.paymentStatus === 'paid' ? 'paid' : o.paymentStatus === 'refunded' ? 'refunded' : o.status === 'pending_payment' ? 'pending_payment' : (o.paymentStatus || o.status),
+        who: o.customerName || o.email || 'Customer',
+        summary: (o.items || []).map(i => i.title).filter(Boolean).join(', ') || orderNumber(o.id)
+      }));
+    },
+    goTo(alert){
+      wire();
+      if(!alert) return;
+      if(alert.edit){ shop.openEditor(alert.edit); return; }
+      if(alert.filter) state.orderFilter = alert.filter;
+      shop.showStoreTab(alert.go || 'overview');
+    },
     renderOverview: () => { wire(); renderOverview(); },
     renderTab: tab => { wire(); renderTab(tab); },
     reload,

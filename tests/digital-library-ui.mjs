@@ -100,7 +100,8 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
 {
   const page = await newPage({ width: 1500, height: 1200 });
   await signIn(page, 'contactunveiledassembly@gmail.com');
-  await page.waitForSelector('[data-owner-nav="store"]', { timeout: 15000 });
+  await page.waitForSelector('[data-dept-toggle="resources"]', { timeout: 15000 });
+  await page.locator('[data-dept-toggle="resources"]').evaluate(b => { if(b.getAttribute('aria-expanded') !== 'true') b.click(); });
   await page.locator('[data-owner-nav="store"]').click();
   await page.waitForTimeout(500);
   await page.locator('[data-store-tab="files"]').click();

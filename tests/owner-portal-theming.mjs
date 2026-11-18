@@ -22,26 +22,23 @@ await page.evaluate(() => {
 await page.fill('#signinEmail', 'contactunveiledassembly@gmail.com');
 await page.fill('#signinPassword', 'whatever123');
 await page.locator('#emailSignInForm').evaluate(form => form.requestSubmit());
-await page.waitForSelector('#ownerBreadcrumb', { timeout: 15000 });
+await page.waitForSelector('#ownerPageTitle', { timeout: 15000 });
 
-// Breadcrumb: "Owner Portal" alone on the dashboard, "Owner Portal / X"
-// elsewhere. The breadcrumb is CSS-uppercased, so match case-insensitively.
-assert.match((await page.locator('#ownerBreadcrumb').innerText()).trim(), /^owner portal$/i);
+// Redesign: Overview carries its title and no breadcrumb; other sections
+// show "Owner Portal / Group / Section". CSS-uppercased, so match /i.
+assert.equal((await page.locator('#ownerPageTitle').innerText()).trim(), 'Overview');
+assert.equal((await page.locator('#ownerBreadcrumb').innerText()).trim(), '');
 // Prayer Requests now lives nested under the Ministry Operations
 // department (Owner Portal navigation restructuring) — expand it first;
 // the breadcrumb grows a middle segment for nested items.
-await page.locator('[data-dept-toggle="ministry"]').click();
+await page.locator('[data-dept-toggle="community"]').evaluate(b => { if(b.getAttribute('aria-expanded') !== 'true') b.click(); });
 await page.locator('[data-owner-nav="prayer-requests"]').click();
 await page.waitForTimeout(150);
-assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*ministry operations\s*\/\s*prayer requests/i);
+assert.match(await page.locator('#ownerBreadcrumb').innerText(), /owner portal\s*\/\s*community\s*\/\s*prayer requests/i);
 
-// Department accent: the heading dot before .portal-label reads a
-// non-default color on a themed section (sage for Prayer Requests).
-const prayerDotColor = await page.evaluate(() => {
-  const label = document.querySelector('[data-owner-section="prayer-requests"] .portal-label');
-  return label ? getComputedStyle(label, '::before').backgroundColor : null;
-});
-assert.ok(prayerDotColor && prayerDotColor !== 'rgba(0, 0, 0, 0)', 'prayer requests heading should carry a department accent dot');
+// Redesign: the per-department pastel accents were retired for the calm
+// palette; each section's identity is now its page title.
+assert.equal((await page.locator('#ownerPageTitle').innerText()).trim(), 'Prayer Requests');
 
 // Settings directory: a plain keyword (not the literal setting title)
 // finds the right entry and navigates to it.
@@ -55,6 +52,7 @@ assert.equal(await page.evaluate(() => document.querySelector('.owner-sidebar-it
 
 // Communication & Email Center: reachable, clearly labeled not-connected,
 // and its tabs (including the existing Owner Alerts functionality) work.
+await page.locator('[data-dept-toggle="settings"]').evaluate(b => { if(b.getAttribute('aria-expanded') !== 'true') b.click(); });
 await page.locator('[data-owner-nav="communication"]').click();
 await page.waitForTimeout(200);
 assert.match(await page.locator('[data-owner-section="communication"] .demo-badge').innerText(), /Not Yet Connected/i);
@@ -69,7 +67,7 @@ await page.waitForTimeout(200);
 assert.ok(await page.evaluate(() => document.getElementById('ownerSidebar').classList.contains('collapsed')));
 await page.reload({ waitUntil: 'domcontentloaded' });
 await page.locator('#navMemberPortal').click();
-await page.waitForSelector('#ownerBreadcrumb', { timeout: 15000 });
+await page.waitForSelector('#ownerPageTitle', { timeout: 15000 });
 assert.ok(await page.evaluate(() => document.getElementById('ownerSidebar').classList.contains('collapsed')), 'collapsed state should survive a reload');
 // Leave it expanded again so this test doesn't affect any test that runs after it.
 await page.locator('#ownerSidebarCollapseBtn').click();
