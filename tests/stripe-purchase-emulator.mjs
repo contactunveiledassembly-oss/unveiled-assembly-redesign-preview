@@ -23,6 +23,8 @@ const PROJECT = process.env.GCLOUD_PROJECT || 'demo-unveiledassembly';
 const BUCKET = PROJECT + '.appspot.com';
 const AUTH = 'http://127.0.0.1:9099';
 const FN = `http://127.0.0.1:5001/${PROJECT}/us-central1`;
+const FS = `http://127.0.0.1:8180/v1/projects/${PROJECT}/databases/(default)/documents`;
+const canRead = async (path, token) => (await fetch(`${FS}/${path}`, { headers: { Authorization: 'Bearer ' + token } })).status;
 const WEBHOOK_SECRET = 'whsec_local_emulator_test_only';
 const RETURN = 'https://unveiledassembly--stripe-sandbox-abc123.web.app/shop/confirmation.html';
 
@@ -230,15 +232,18 @@ await test('7 a full refund made in Stripe closes the download and says why', as
 });
 const disputed = await pendingShopOrder(memberB);
 await webhook('checkout.session.completed', session('shop', disputed));
-await test('7 a chargeback pauses the download; winning it restores access', async () => {
+await test('7 a chargeback pauses (suspends) the download; winning it restores access', async () => {
   const dispute = { id: 'dp_test_1', object: 'dispute', payment_intent: 'pi_test_' + disputed, charge: 'ch_test_d1', amount: 1800, reason: 'fraudulent' };
   assert.equal(await webhook('charge.dispute.created', { ...dispute, status: 'needs_response' }), 200);
   assert.equal(await webhook('charge.dispute.created', { ...dispute, status: 'needs_response' }), 200, 'repeat is harmless');
   let a = (await accessFor(disputed))[0];
-  assert.equal(a.accessStatus, 'revoked'); assert.equal(a.revokedReason, 'chargeback'); assert.equal(a.accessBeforeDispute, 'active');
+  assert.equal(a.accessStatus, 'suspended'); assert.equal(a.suspendedReason, 'chargeback'); assert.equal(a.accessBeforeDispute, 'active');
+  assert.equal(a.downloadCount, 0, 'download history is kept as evidence');
   const o = await get('shopOrders/' + disputed);
   assert.equal(o.disputeStatus, 'open'); assert.ok(o.reviewFlags.includes('chargeback-open'));
-  assert.equal((await callFn('createDigitalDownloadLink', { accessId: a.id }, memberB.token)).error, 'PERMISSION_DENIED');
+  const paused = await callFn('createDigitalDownloadLink', { accessId: a.id }, memberB.token);
+  assert.equal(paused.error, 'PERMISSION_DENIED'); assert.match(paused.message, /paused while a payment dispute/);
+  assert.equal((await get('shopOrders/' + disputed)).paymentStatus, 'paid', 'order and receipt are kept');
   assert.equal(await webhook('charge.dispute.closed', { ...dispute, status: 'won' }), 200);
   a = (await accessFor(disputed))[0];
   assert.equal(a.accessStatus, 'active'); assert.equal(a.disputeStatus, 'won');
@@ -251,8 +256,10 @@ await test('7 a lost chargeback keeps the download off', async () => {
   await webhook('charge.dispute.created', { ...dispute, status: 'needs_response' });
   assert.equal(await webhook('charge.dispute.closed', { ...dispute, status: 'lost' }), 200);
   const a = (await accessFor(id))[0];
-  assert.equal(a.accessStatus, 'revoked'); assert.equal(a.disputeStatus, 'lost');
-  assert.equal((await get('shopOrders/' + id)).paymentNeedsReview, true);
+  assert.equal(a.accessStatus, 'revoked'); assert.equal(a.revokedReason, 'chargeback-lost'); assert.equal(a.disputeStatus, 'lost');
+  const o = await get('shopOrders/' + id);
+  assert.equal(o.paymentNeedsReview, true); assert.ok(o.reviewFlags.includes('chargeback-lost'));
+  assert.ok(o.items && o.items.length === 1, 'order and receipt are kept');
 });
 
 // ---- the same server path for sessions and classes ----
@@ -279,6 +286,29 @@ await test('class: verified payment opens the classroom; a full refund closes it
   assert.equal(await webhook('charge.refunded', { id: 'ch_test_reg1', object: 'charge', payment_intent: 'pi_test_reg-1', refunded: true, amount_refunded: 2500 }), 200);
   assert.equal((await get('teachingRegistrations/reg-1')).status, 'refunded');
   assert.equal(await get('classEnrollments/class-1_' + memberA.uid), null);
+});
+await test('class: a chargeback pauses classroom access, a win restores it, a loss removes it (records kept)', async () => {
+  for(const [n, outcome] of [['2', 'won'], ['3', 'lost']]){
+    const regId = 'reg-' + n, tId = 'class-' + n;
+    await db.doc('teachingRegistrations/' + regId).set({ uid: memberA.uid, teachingId: tId, teachingTitle: 'Class ' + n, firstName: 'Member', lastName: 'A', email: memberA.email, status: 'pending_payment', paymentStatus: 'pending', stripeSessionId: 'cs_test_' + regId });
+    await db.doc('teachingZoomInfo/' + tId).set({ zoomUrl: 'https://zoom.example/test', meetingId: '000', passcode: 'test' });
+    await webhook('checkout.session.completed', session('teaching', regId, { amount_total: 2500 }));
+    assert.equal(await canRead('teachingZoomInfo/' + tId, memberA.token), 200, 'paid member can open the class details');
+    const dispute = { id: 'dp_test_cls' + n, object: 'dispute', payment_intent: 'pi_test_' + regId, amount: 2500, reason: 'product_not_received' };
+    assert.equal(await webhook('charge.dispute.created', { ...dispute, status: 'needs_response' }), 200);
+    let e = await get('classEnrollments/' + tId + '_' + memberA.uid);
+    let r = await get('teachingRegistrations/' + regId);
+    assert.equal(e.status, 'suspended'); assert.equal(r.accessGranted, false); assert.equal(r.accessSuspended, true);
+    assert.equal(r.paymentNeedsReview, true); assert.equal(r.disputeStatus, 'open');
+    assert.equal(await canRead('teachingZoomInfo/' + tId, memberA.token), 403, 'paused: class details locked by the rules');
+    assert.equal(await webhook('charge.dispute.closed', { ...dispute, status: outcome }), 200);
+    e = await get('classEnrollments/' + tId + '_' + memberA.uid);
+    r = await get('teachingRegistrations/' + regId);
+    assert.ok(e, 'enrollment record is kept');
+    assert.equal(await canRead('teachingZoomInfo/' + tId, memberA.token), outcome === 'won' ? 200 : 403);
+    if(outcome === 'won'){ assert.equal(e.status, 'confirmed'); assert.equal(r.accessGranted, true); assert.equal(r.paymentNeedsReview, false); }
+    else { assert.equal(e.status, 'revoked'); assert.equal(r.accessGranted, false); assert.equal(r.accessRevokedReason, 'chargeback-lost'); assert.equal(r.status, 'confirmed', 'registration history kept'); }
+  }
 });
 await test('a forged or unsigned event changes nothing', async () => {
   const id = await pendingShopOrder(memberB);

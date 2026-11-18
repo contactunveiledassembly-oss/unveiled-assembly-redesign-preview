@@ -26,9 +26,10 @@ const ACCESS_LABELS = {
   active: 'Download Available',
   pending_delivery: 'Payment Verified · File Being Prepared',
   revoked: 'Access Unavailable · Turned Off',
+  suspended: 'Access Paused · Payment Dispute',
   refunded: 'Access Unavailable · Refunded'
 };
-const OWNER_ACCESS_LABELS = { active: 'Active', pending_delivery: 'Waiting For Owner', revoked: 'Turned Off', refunded: 'Refunded' };
+const OWNER_ACCESS_LABELS = { active: 'Active', pending_delivery: 'Waiting For Owner', revoked: 'Turned Off', refunded: 'Refunded', suspended: 'Paused · Chargeback Open' };
 const PAYMENT_LABELS = { paid: 'Paid', complimentary: 'Complimentary', refunded: 'Refunded', partially_refunded: 'Partly Refunded' };
 const DEMO_FILES_KEY = 'ua_preview_digital_files_v1';
 // Sandbox (Stripe test mode) purchases share the real database.
@@ -153,7 +154,8 @@ export function initDigitalLibrary(context){
     const statusText = (a.paymentStatus === 'complimentary' && status === 'active' ? 'Access Granted' : (ACCESS_LABELS[status] || 'Pending')) + (a.preview ? ' · Sample' : '');
     const note = status === 'pending_delivery' ? 'Your payment is verified. The ministry is preparing this file — it will be ready here shortly.'
       : status === 'refunded' ? 'This purchase was refunded, so the download is closed.'
-      : status === 'revoked' && a.revokedReason === 'chargeback' ? 'This payment is being disputed with your bank, so the download is paused. Please contact the ministry.'
+      : status === 'suspended' ? 'This payment is being disputed with your bank, so the download is paused while it is reviewed. Your purchase record is kept. Please contact the ministry.'
+      : status === 'revoked' && a.revokedReason === 'chargeback-lost' ? 'This payment was reversed by your bank after a dispute, so the download is no longer available. Your purchase record is kept.'
       : status === 'revoked' ? 'Access to this download is turned off. Please contact the ministry if this is unexpected.'
       : '';
     return `<article class="dl-item" data-dl-access="${esc(a.id)}">
@@ -282,7 +284,7 @@ export function initDigitalLibrary(context){
       ${physical.length ? `<p class="dl-note">${esc(physical.map(i => i.title).join(', '))} will ship to the address you entered at checkout.</p>` : ''}
       <details class="dl-receipt"><summary>View Receipt</summary><dl>
         ${receiptRowsHtml(order, { preview })}
-      </dl><p>${RECEIPT_NOTE}</p></details>
+      </dl>${order.receiptUrl && !preview ? `<p><a class="shop-text-link" href="${esc(order.receiptUrl)}" target="_blank" rel="noopener">View Stripe payment receipt</a></p>` : ''}<p>${RECEIPT_NOTE}</p></details>
       ${confirmActionsHtml()}`;
   }
 

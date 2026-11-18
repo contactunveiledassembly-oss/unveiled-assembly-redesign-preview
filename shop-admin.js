@@ -26,7 +26,7 @@ import {
 
 const RETIRED_TEST_PRODUCT_IDS = ['testing-mvquvmo1', 'testing-2-mvrl7vrr'];
 const PAYMENT_LABELS = { paid: 'Paid', pending: 'Payment Pending', unpaid: 'Not Paid', refunded: 'Refunded', partially_refunded: 'Partly Refunded', complimentary: 'Complimentary' };
-const ACCESS_LABELS = { active: 'Download Allowed', pending_delivery: 'Waiting', revoked: 'Turned Off', refunded: 'Closed · Refunded' };
+const ACCESS_LABELS = { active: 'Download Allowed', pending_delivery: 'Waiting', revoked: 'Turned Off', refunded: 'Closed · Refunded', suspended: 'Paused · Chargeback Open' };
 const PERIODS = [['30', 'Last 30 days'], ['90', 'Last 90 days'], ['365', 'Last 12 months'], ['ytd', 'This year'], ['all', 'All time']];
 
 export function initShopAdmin(context){
@@ -193,7 +193,10 @@ export function initShopAdmin(context){
       products().filter(p => p.status !== 'archived' && !p.isPlaceholder && !RETIRED_TEST_PRODUCT_IDS.includes(p.id)).forEach(p => {
         // An Active product with no PDF already has its own alert above.
         const missing = missingProductInputs(p, p.type === 'digital' ? hasFile(p.id) : undefined).filter(m => !(m === 'PDF' && p.status === 'published'));
-        if(missing.length) alerts.push({ level: 'info', key: 'input-' + p.id, title: '“' + p.title + '” needs your input', detail: 'Missing: ' + missing.join(', ') + '.', action: 'Edit Product', edit: p.id });
+        if(missing.length) alerts.push({ level: 'info', key: 'input-' + p.id, title: '“' + p.title + '” needs your input',
+          detail: (p.id === 'concealed' && p.status !== 'published'
+            ? 'Concealed stays unpublished and can’t be bought until you approve its final price, description, cover image and finished PDF. Still missing: '
+            : 'Missing: ') + missing.join(', ') + '.', action: 'Edit Product', edit: p.id });
       });
       const retired = products().filter(p => RETIRED_TEST_PRODUCT_IDS.includes(p.id) && p.status !== 'archived');
       if(retired.length) alerts.push({ level: 'info', key: 'retired', title: retired.length + ' old sandbox test ' + (retired.length === 1 ? 'product is' : 'products are') + ' not archived',
@@ -267,9 +270,9 @@ export function initShopAdmin(context){
     if(kind === 'duplicate-purchase') return 'Customer already owned ' + productTitle(pid) + ' — possible duplicate';
     if(kind === 'duplicate-payment') return 'Paid twice for this order (second Stripe checkout …' + String(pid || '').slice(-8) + ') — refund the extra payment in Stripe';
     if(kind === 'amount-mismatch') return 'Stripe charged a different total than this order was priced at — check before shipping';
-    if(kind === 'chargeback-open') return 'Chargeback opened by the customer’s bank — download paused; respond in Stripe';
-    if(kind === 'chargeback-won') return 'Chargeback won — download access restored';
-    if(kind === 'chargeback-lost') return 'Chargeback lost — the bank returned the payment; download stays off';
+    if(kind === 'chargeback-open') return 'Chargeback opened by the customer’s bank — download paused (records kept as evidence); respond in Stripe';
+    if(kind === 'chargeback-won') return 'Chargeback won — the paused download was restored automatically';
+    if(kind === 'chargeback-lost') return 'Chargeback lost — the bank reversed the payment; download permanently turned off (order and receipt kept)';
     return flag;
   }
   function auditTrailHtml(o, accessList){

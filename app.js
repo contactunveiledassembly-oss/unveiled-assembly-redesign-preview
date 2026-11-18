@@ -35,8 +35,8 @@ import { initOwnerSimulation } from "./owner-simulation.js?v=2";
 // shop-admin.js imports shop-system.js with this same ?v= — keep them
 // equal so the browser loads one copy of the module.
 import { initShopSystem } from "./shop-system.js?v=6";
-import { initDigitalLibrary } from "./digital-library.js?v=3";
-import { initShopAdmin } from "./shop-admin.js?v=3";
+import { initDigitalLibrary } from "./digital-library.js?v=4";
+import { initShopAdmin } from "./shop-admin.js?v=4";
 import { OWNER_NAV_GROUPS, groupForNav, buildOwnerAlerts, alertCounts, recordTone, toMs } from "./owner-portal-alerts.js?v=2";
 import { initOwnerReports } from "./owner-reports.js?v=2";
 

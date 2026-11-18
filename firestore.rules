@@ -53,7 +53,9 @@ service cloud.firestore {
     function isEnrolledInClass(teachingId) {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/classEnrollments/$(teachingId + '_' + request.auth.uid)) &&
-        get(/databases/$(database)/documents/classEnrollments/$(teachingId + '_' + request.auth.uid)).data.status != 'cancelled';
+        // Paused during a chargeback ('suspended') or removed after one
+        // was lost ('revoked'): no classroom access.
+        !(get(/databases/$(database)/documents/classEnrollments/$(teachingId + '_' + request.auth.uid)).data.status in ['cancelled', 'suspended', 'revoked']);
     }
 
     // Member/admin profiles. A user can only ever create/read their own

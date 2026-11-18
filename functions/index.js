@@ -58,8 +58,32 @@ function originAllowed(origin){
 // use a public test card to unlock real products from the shared
 // database. Live keys: only the public domains; the sandbox is refused.
 const PRODUCTION_ORIGINS = ['https://theunveiledassembly.com', 'https://www.theunveiledassembly.com'];
+// Local emulator only (FUNCTIONS_EMULATOR is set by the Firebase
+// emulator and never in production):
+//  - UA_STRIPE_OFFLINE=1 (functions/.env.demo-unveiledassembly) — the
+//    automated test suite. Uses a dummy key and never contacts Stripe,
+//    even when a real test key is installed in .secret.local.
+//  - otherwise the key in .secret.local is used, and it must be a TEST
+//    key: a live key is refused outright on the emulator.
+//  - UA_EMULATOR_WEBHOOK_SECRET (written for a test-mode run only) is the
+//    signing secret of the local Stripe CLI listener.
+const IN_EMULATOR = process.env.FUNCTIONS_EMULATOR === 'true';
+const OFFLINE_STRIPE = IN_EMULATOR && process.env.UA_STRIPE_OFFLINE === '1';
+const OFFLINE_KEY = 'sk_test_offline_emulator_dummy';
+const OFFLINE_WEBHOOK_SECRET = 'whsec_local_emulator_test_only';
+function stripeKey(){
+  if(OFFLINE_STRIPE) return OFFLINE_KEY;
+  const key = STRIPE_SECRET_KEY.value();
+  if(IN_EMULATOR && !/^(sk|rk)_test_/.test(key)) throw new Error('The local emulator only accepts a Stripe TEST key (sk_test_…). Live keys are refused.');
+  return key;
+}
+function webhookSecret(){
+  if(OFFLINE_STRIPE) return OFFLINE_WEBHOOK_SECRET;
+  if(IN_EMULATOR && process.env.UA_EMULATOR_WEBHOOK_SECRET) return process.env.UA_EMULATOR_WEBHOOK_SECRET;
+  return STRIPE_WEBHOOK_SECRET.value();
+}
 function stripeLiveMode(){
-  return /^(sk|rk)_live_/.test(STRIPE_SECRET_KEY.value());
+  return /^(sk|rk)_live_/.test(stripeKey());
 }
 async function assertCheckoutAllowed(origin, uid){
   if(stripeLiveMode()){
@@ -84,7 +108,12 @@ const CHECKOUT_TTL_SECONDS = 30 * 60;
 
 let stripeClient = null;
 function stripe(){
-  if(!stripeClient) stripeClient = new Stripe(STRIPE_SECRET_KEY.value());
+  // Offline: an address nothing listens on, so any API call fails at
+  // once, locally — the emulator tests prove what happens when Stripe
+  // can't be reached without ever reaching it.
+  if(!stripeClient) stripeClient = OFFLINE_STRIPE
+    ? new Stripe(OFFLINE_KEY, { host: '127.0.0.1', port: 9, protocol: 'http', maxNetworkRetries: 0, timeout: 2000 })
+    : new Stripe(stripeKey());
   return stripeClient;
 }
 
@@ -426,7 +455,9 @@ exports.createCheckoutSession = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALL
     ...(priced.email ? { customer_email: priced.email } : {}),
     client_reference_id: id,
     metadata,
-    payment_intent_data: { metadata, description: MINISTRY_NAME + ' — ' + priced.lines[0].name },
+    // receipt_email: Stripe emails its own payment receipt to this
+    // address (in test mode Stripe decides whether test receipts go out).
+    payment_intent_data: { metadata, description: MINISTRY_NAME + ' — ' + priced.lines[0].name, ...(priced.email ? { receipt_email: priced.email } : {}) },
     ...(hasPhysical ? { shipping_address_collection: { allowed_countries: ['US'] } } : {}),
     expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_TTL_SECONDS,
     success_url: returnLink(returnBase, { checkout: 'success', kind, ref: id, session_id: 'SESSION_ID_PLACEHOLDER' }),
@@ -574,6 +605,19 @@ async function markPaid(session){
     }
   });
   logger.info('payment recorded', kind, id, session.id);
+  await saveStripeReceiptLink(ref, paid.paymentIntentId);
+}
+// Stripe's hosted receipt for the charge, so the member's receipt can
+// link to it. Best effort: the payment is already recorded either way.
+async function saveStripeReceiptLink(ref, paymentIntentId){
+  if(!paymentIntentId) return;
+  try {
+    const intent = await stripe().paymentIntents.retrieve(paymentIntentId, { expand: ['latest_charge'] });
+    const charge = intent && typeof intent.latest_charge === 'object' ? intent.latest_charge : null;
+    if(charge && charge.receipt_url) await ref.update({ receiptUrl: charge.receipt_url, receiptEmail: charge.receipt_email || null });
+  } catch (err) {
+    logger.info('receipt link not available', paymentIntentId, err.type || err.message);
+  }
 }
 
 // Gives a confirmed discount use back to its code when the booking or
@@ -709,42 +753,69 @@ async function markRefunded(charge){
   logger.info('refund recorded', kind, id, full ? 'full' : 'partial');
 }
 
-// Chargebacks (Stripe "disputes"). While a dispute is open, or after it
-// is lost, a paid PDF's download is turned off; if the ministry wins,
-// access the dispute turned off comes back. Bookings, classes and gifts
-// are flagged for the owner, who decides what to do — nothing is
-// cancelled automatically. Safe to receive more than once.
+// Chargebacks (Stripe "disputes"). Nothing is deleted — the order,
+// receipt, access and download records all stay as evidence.
+//  - dispute opened: paid PDF access and paid classroom access are
+//    SUSPENDED (paused);
+//  - dispute won: access the dispute suspended is restored;
+//  - dispute lost (payment permanently reversed): that access is
+//    REVOKED for good.
+// Bookings and gifts have no access to pause; they are flagged for the
+// owner. Every case shows the owner the reason. Safe to receive twice.
 async function markDisputed(dispute, phase){
   const target = await recordForPaymentIntent(paymentIntentIdOf(dispute));
   if(!target) return;
   const { kind, id, collectionName } = target;
   const status = phase === 'created' ? 'open' : dispute.status === 'won' ? 'won' : dispute.status === 'lost' ? 'lost' : String(dispute.status || 'closed');
   const ref = db.doc(collectionName + '/' + id);
-  await ref.update({
+  const stamp = FieldValue.serverTimestamp();
+  const snap = await ref.get();
+  if(!snap.exists) return;
+  const record = snap.data();
+  const common = {
     disputeStatus: status, disputeId: dispute.id || null, disputeReason: dispute.reason || null,
-    disputeAmount: (Number(dispute.amount) || 0) / 100,
-    paymentNeedsReview: status !== 'won',
-    ...(kind === 'shop' ? { reviewFlags: FieldValue.arrayUnion('chargeback-' + status) } : {}),
-    updatedAt: FieldValue.serverTimestamp()
-  });
-  if(kind !== 'shop') return;
-  const access = await db.collection('digitalAccess').where('orderId', '==', id).get();
-  const batch = db.batch();
-  access.forEach(d => {
-    const a = d.data();
-    if(status === 'open' || status === 'lost'){
-      if(a.accessStatus === 'active' || a.accessStatus === 'pending_delivery'){
-        batch.update(d.ref, { accessStatus: 'revoked', revokedReason: 'chargeback', accessBeforeDispute: a.accessStatus, disputeStatus: status, updatedAt: FieldValue.serverTimestamp() });
+    disputeAmount: (Number(dispute.amount) || 0) / 100, disputeUpdatedAt: stamp,
+    paymentNeedsReview: status !== 'won', updatedAt: stamp
+  };
+  if(kind === 'shop'){
+    await ref.update({ ...common, reviewFlags: FieldValue.arrayUnion('chargeback-' + status) });
+    const access = await db.collection('digitalAccess').where('orderId', '==', id).get();
+    const batch = db.batch();
+    access.forEach(d => {
+      const a = d.data();
+      const base = { disputeStatus: status, updatedAt: stamp };
+      if(status === 'open' && (a.accessStatus === 'active' || a.accessStatus === 'pending_delivery')){
+        batch.update(d.ref, { ...base, accessStatus: 'suspended', suspendedReason: 'chargeback', accessBeforeDispute: a.accessStatus, suspendedAt: stamp });
+      } else if(status === 'won' && a.accessStatus === 'suspended' && a.suspendedReason === 'chargeback'){
+        batch.update(d.ref, { ...base, accessStatus: a.accessBeforeDispute || 'active', suspendedReason: null, restoredAt: stamp });
+      } else if(status === 'lost' && ['suspended', 'active', 'pending_delivery'].includes(a.accessStatus)){
+        batch.update(d.ref, { ...base, accessStatus: 'revoked', revokedReason: 'chargeback-lost', suspendedReason: null, revokedAt: stamp });
       } else {
-        batch.update(d.ref, { disputeStatus: status, updatedAt: FieldValue.serverTimestamp() });
+        batch.update(d.ref, base);
       }
-    } else if(status === 'won' && a.revokedReason === 'chargeback' && a.accessStatus === 'revoked'){
-      batch.update(d.ref, { accessStatus: a.accessBeforeDispute || 'active', revokedReason: null, disputeStatus: 'won', updatedAt: FieldValue.serverTimestamp() });
+    });
+    if(!access.empty) await batch.commit();
+  } else if(kind === 'teaching'){
+    const enrollRef = record.uid && record.teachingId ? db.doc('classEnrollments/' + record.teachingId + '_' + record.uid) : null;
+    const enroll = enrollRef ? await enrollRef.get() : null;
+    const e = enroll && enroll.exists ? enroll.data() : null;
+    const batch = db.batch();
+    if(status === 'open'){
+      batch.update(ref, { ...common, ...(record.accessGranted ? { accessGranted: false, accessSuspended: true, accessSuspendedReason: 'chargeback' } : {}) });
+      if(e && e.status === 'confirmed') batch.update(enrollRef, { status: 'suspended', suspendedReason: 'chargeback', statusBeforeDispute: e.status, updatedAt: stamp });
+    } else if(status === 'won'){
+      batch.update(ref, { ...common, ...(record.accessSuspended ? { accessGranted: true, accessSuspended: false, accessSuspendedReason: null } : {}) });
+      if(e && e.status === 'suspended' && e.suspendedReason === 'chargeback') batch.update(enrollRef, { status: e.statusBeforeDispute || 'confirmed', suspendedReason: null, updatedAt: stamp });
+    } else if(status === 'lost'){
+      batch.update(ref, { ...common, accessGranted: false, accessSuspended: false, accessRevokedReason: 'chargeback-lost' });
+      if(e && ['suspended', 'confirmed'].includes(e.status)) batch.update(enrollRef, { status: 'revoked', revokedReason: 'chargeback-lost', updatedAt: stamp });
     } else {
-      batch.update(d.ref, { disputeStatus: status, updatedAt: FieldValue.serverTimestamp() });
+      batch.update(ref, common);
     }
-  });
-  if(!access.empty) await batch.commit();
+    await batch.commit();
+  } else {
+    await ref.update(common);
+  }
   logger.info('dispute recorded', kind, id, status);
 }
 
@@ -752,7 +823,7 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
   if(req.method !== 'POST'){ res.status(405).send('Method Not Allowed'); return; }
   let event;
   try {
-    event = stripe().webhooks.constructEvent(req.rawBody, req.get('stripe-signature'), STRIPE_WEBHOOK_SECRET.value());
+    event = stripe().webhooks.constructEvent(req.rawBody, req.get('stripe-signature'), webhookSecret());
   } catch (err) {
     logger.warn('rejected webhook with bad signature', err.message);
     res.status(400).send('Invalid signature');
@@ -900,6 +971,7 @@ exports.createDigitalDownloadLink = onCall({ cors: ALLOWED_RETURN_ORIGINS }, asy
   // Refunded/turned-off come first so a refunded purchase says so,
   // rather than "not verified as paid".
   if(access.accessStatus === 'refunded' || access.paymentStatus === 'refunded') throw new HttpsError('failed-precondition', 'This purchase was refunded, so the download is no longer available.');
+  if(access.accessStatus === 'suspended') throw new HttpsError('permission-denied', 'This download is paused while a payment dispute is reviewed. Please contact the ministry.');
   if(access.accessStatus === 'revoked') throw new HttpsError('permission-denied', 'Access to this download has been turned off. Please contact the ministry.');
   if(access.paymentStatus !== 'paid' && access.accessSource !== 'owner-grant') throw new HttpsError('failed-precondition', 'This purchase has not been verified as paid.');
   if(access.accessStatus !== 'active') throw new HttpsError('failed-precondition', 'Your download is being prepared by the ministry. It will appear here as soon as it is ready.');
@@ -1116,7 +1188,7 @@ exports.shopStoreStatus = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALLOWED_R
   const uid = request.auth ? request.auth.uid : null;
   if(!(await callerIsOwner(uid))) throw new HttpsError('permission-denied', 'Only the ministry owner can do this.');
   let mode = 'not-configured';
-  try { mode = stripeLiveMode() ? 'live' : (/^(sk|rk)_test_/.test(STRIPE_SECRET_KEY.value()) ? 'test' : 'not-configured'); } catch (err) { mode = 'not-configured'; }
+  try { mode = stripeLiveMode() ? 'live' : (/^(sk|rk)_test_/.test(stripeKey()) ? 'test' : 'not-configured'); } catch (err) { mode = 'not-configured'; }
   const testers = String(process.env.SANDBOX_TESTER_UIDS || '').split(',').map(v => v.trim()).filter(Boolean);
   return { stripeMode: mode, emailConnected: EMAIL_PROVIDER_CONNECTED, sandboxTesterCount: testers.length, today: easternToday() };
 });
