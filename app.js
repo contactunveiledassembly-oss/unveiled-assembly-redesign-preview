@@ -35,9 +35,9 @@ import { initOwnerSimulation } from "./owner-simulation.js?v=2";
 // shop-admin.js imports shop-system.js with this same ?v= — keep them
 // equal so the browser loads one copy of the module.
 import { initShopSystem } from "./shop-system.js?v=6";
-import { initDigitalLibrary } from "./digital-library.js?v=2";
-import { initShopAdmin } from "./shop-admin.js?v=2";
-import { OWNER_NAV_GROUPS, groupForNav, buildOwnerAlerts, alertCounts, recordTone, toMs } from "./owner-portal-alerts.js?v=1";
+import { initDigitalLibrary } from "./digital-library.js?v=3";
+import { initShopAdmin } from "./shop-admin.js?v=3";
+import { OWNER_NAV_GROUPS, groupForNav, buildOwnerAlerts, alertCounts, recordTone, toMs } from "./owner-portal-alerts.js?v=2";
 import { initOwnerReports } from "./owner-reports.js?v=2";
 
 /* ---------------------------------------------------------------
@@ -1677,7 +1677,7 @@ function dialogsHtml(){
           </div>
           <div class="discount-manager">
             <span class="portal-label">Discount Codes</span>
-            <p class="admin-panel-intro">Create codes for One-on-One sessions, Teachings, or both. Codes adjust checkout totals now; the real charge will use the adjusted total once a payment processor is connected.</p>
+            <p class="admin-panel-intro">Create codes for One-on-One sessions, Teachings, or both. Each code lowers the checkout total; the payment server checks the code again (paused, end date, usage limit) before anyone is charged. Resources Shop codes are managed in Resources Shop → Discounts.</p>
             <form id="ownerDiscountCodeForm" class="discount-manager-form">
               <label>Code<input id="ownerDiscountCode" type="text" placeholder="GRACE20" maxlength="30" required /></label>
               <label>Kind<select id="ownerDiscountType"><option value="percent">Percentage</option><option value="fixed">Fixed Amount</option></select></label>
@@ -3574,10 +3574,12 @@ window.startStripeCheckout = startStripeCheckout; // for page-level scripts; app
 // its time or seat until the 30-minute Stripe session expires, so it
 // offers to resume rather than start over.
 const CHECKOUT_RETURN_COPY = {
-  booking: { thing: 'session', success: 'Your payment was received and your session is confirmed. Your confirmation will appear in My Assembly → Sessions within a minute.' },
-  teaching: { thing: 'class seat', success: 'Your payment was received and your seat is confirmed. Classroom access will appear in My Assembly → Classes within a minute.' },
-  shop: { thing: 'order', success: 'Your order is paid. A receipt from Stripe is on its way to your email.' },
-  donation: { thing: 'gift', success: 'Your gift was received. A receipt from Stripe is on its way to your email. Thank you for your generosity.' }
+  // Returning from Stripe alone proves nothing, so these say what
+  // happens next; the verified webhook is what confirms and unlocks.
+  booking: { thing: 'session', success: 'Thank you — we received your checkout. Your session shows as confirmed in My Assembly → Sessions as soon as Stripe verifies the payment, usually within a minute.' },
+  teaching: { thing: 'class seat', success: 'Thank you — we received your checkout. Your seat and classroom access appear in My Assembly → Classes as soon as Stripe verifies the payment, usually within a minute.' },
+  shop: { thing: 'order', success: 'Thank you — we received your checkout. Your order and receipt appear in My Assembly → Purchases & Downloads as soon as Stripe verifies the payment.' },
+  donation: { thing: 'gift', success: 'Thank you for your generosity. Your gift is recorded as soon as Stripe verifies the payment.' }
 };
 function showCheckoutNotice({ title, message, resume }){
   let dialog = document.getElementById('checkoutNoticeDialog');
@@ -10584,7 +10586,7 @@ document.getElementById('ownerSimBar').addEventListener('click', event => {
 // `var` on purpose: showOwnerSection() runs once at start-up, above
 // this point in the file, and must see "not ready yet" rather than a
 // temporal-dead-zone error.
-var OWNER_ALERT_STATE = { ready: false, items: [], shop: [], shopSummary: null, failedReports: [], pendingBookings: null, pendingRegistrations: null, errors: {} };
+var OWNER_ALERT_STATE = { ready: false, items: [], shop: [], shopSummary: null, failedReports: [], pendingBookings: null, pendingRegistrations: null, paymentReviews: { bookings: [], teachingRegistrations: [] }, errors: {} };
 var OWNER_ALERT_UNSUBS = [];
 function ownerUsesSeedData(){ return DEMO_MODE || ownerSim.isActive(); }
 function ownerTodayKey(){ return new Date().toISOString().slice(0, 10); }
@@ -10603,6 +10605,7 @@ function gatherOwnerAlertSources(){
     prayers: PRAYER_REQUESTS, testimonials: TESTIMONIALS, reviews: CLASS_REVIEWS,
     registrations: (!ownerUsesSeedData() && OWNER_ALERT_STATE.pendingRegistrations) || ownerRegistrationsSource(), classes,
     shop: OWNER_ALERT_STATE.shop,
+    paymentReviews: ownerUsesSeedData() ? [] : [...OWNER_ALERT_STATE.paymentReviews.bookings, ...OWNER_ALERT_STATE.paymentReviews.teachingRegistrations],
     failedReports: OWNER_ALERT_STATE.failedReports,
     loadErrors: Object.entries(OWNER_ALERT_STATE.errors).map(([source, label]) => ({ source, label }))
   };
@@ -10740,6 +10743,16 @@ function startOwnerAlertListeners(){
     });
     if(!first) void loadOwnerBookings();
   });
+  // Payments the server flagged for the owner (charged twice, paid after
+  // cancelling, chargebacks) on bookings and class registrations.
+  ['bookings', 'teachingRegistrations'].forEach(colName => {
+    watch('payment-review-' + colName, 'payments to review', query(collection(db, colName), where('paymentNeedsReview', '==', true)), snap => {
+      OWNER_ALERT_STATE.paymentReviews[colName] = snap.docs.map(d => {
+        const r = d.data();
+        return { ...r, id: d.id, collection: colName, sessionLabel: r.sessionType ? sessionTypeName(r.sessionType) : '' };
+      });
+    });
+  });
   // Registration payments are confirmed by the Stripe webhook on the
   // server, so this watch is what turns an amber "waiting on payment"
   // item off without a page reload.
@@ -10777,6 +10790,18 @@ async function runOwnerAlertTarget(item){
     if(shopAdmin && shopAdmin.goTo) shopAdmin.goTo(t.alert);
   } else if(t.kind === 'reports'){ showOwnerSection('reports'); if(ownerReports) void ownerReports.render(); }
   else if(t.kind === 'reload'){ window.location.reload(); }
+  else if(t.kind === 'payment-review'){
+    // The fix itself (a refund, a reply to the bank) happens in Stripe;
+    // this records that the owner has dealt with it.
+    if(ownerUsesSeedData() || !['bookings', 'teachingRegistrations'].includes(t.collection)) return;
+    if(!window.confirm('Mark this payment as reviewed? Do this after you have handled it in Stripe (refund, or a reply to the bank).')) return;
+    try {
+      await updateDoc(doc(db, t.collection, t.id), { paymentNeedsReview: false, paymentReviewedAt: serverTimestamp(), paymentReviewedBy: currentUser ? currentUser.uid : null });
+    } catch (err) {
+      console.error('[owner-alerts] could not mark payment reviewed', err);
+      window.alert('That could not be saved. Please try again.');
+    }
+  }
 }
 function ownerAlertClickHandler(event){
   const btn = event.target.closest('[data-owner-alert-go]');

@@ -113,6 +113,22 @@ export function buildOwnerAlerts(sources = {}, today = new Date().toISOString().
       actionLabel: a.action || 'Open', target: { kind: 'shop', alert: a } });
   });
 
+  // Payments the server flagged on a booking or class registration:
+  // a second charge, a payment after cancelling, or a chargeback. Stays
+  // red until the owner has dealt with it and marks it reviewed.
+  (sources.paymentReviews || []).filter(r => r && r.paymentNeedsReview === true).forEach(r => {
+    const isClass = r.collection === 'teachingRegistrations';
+    const reason = r.disputeStatus === 'open' ? 'Chargeback opened by the customer’s bank — respond in Stripe'
+      : r.disputeStatus === 'lost' ? 'Chargeback lost — the bank returned this payment'
+      : (r.duplicatePaymentSessionIds || []).length ? 'Paid twice — refund the extra payment in Stripe'
+      : 'Payment arrived after it was cancelled — follow up with them';
+    add({ key: 'payment-review:' + r.collection + ':' + r.id, level: 'action', nav: isClass ? 'registrations' : 'bookings',
+      title: 'Payment needs review — ' + personName(r, 'Guest'),
+      detail: isClass ? (r.teachingTitle || 'Class') : [r.sessionLabel, r.date, r.time].filter(Boolean).join(' · '),
+      at: toMs(r.updatedAt) ?? toMs(r.paidAt), status: reason,
+      actionLabel: 'Mark Reviewed', target: { kind: 'payment-review', collection: r.collection, id: r.id } });
+  });
+
   (sources.failedReports || []).forEach(r => add({
     key: 'report:' + r.id, level: 'action', nav: 'reports',
     title: 'Report could not be generated — ' + (r.label || 'Report'), detail: 'Use “Try Again” in Reports & Backups.',

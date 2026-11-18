@@ -129,6 +129,20 @@ test('timestamps from Firestore, strings and numbers all read', () => {
   assert.equal(toMs(''), null);
 });
 
+test('a flagged payment stays red until marked reviewed, with the reason', () => {
+  const base = { id: 'b1', collection: 'bookings', name: 'Jordan Lee', paymentNeedsReview: true, date: '2026-11-20', time: '2:00 PM' };
+  const twice = buildOwnerAlerts({ paymentReviews: [{ ...base, duplicatePaymentSessionIds: ['cs_test_2'] }] }, '2026-11-18');
+  assert.equal(twice.length, 1);
+  assert.equal(twice[0].level, 'action');
+  assert.equal(twice[0].nav, 'bookings');
+  assert.match(twice[0].status, /Paid twice/);
+  const dispute = buildOwnerAlerts({ paymentReviews: [{ ...base, collection: 'teachingRegistrations', teachingTitle: 'Discernment', disputeStatus: 'open' }] }, '2026-11-18');
+  assert.equal(dispute[0].nav, 'registrations');
+  assert.match(dispute[0].status, /Chargeback opened/);
+  assert.match(buildOwnerAlerts({ paymentReviews: [base] }, '2026-11-18')[0].status, /after it was cancelled/);
+  assert.equal(buildOwnerAlerts({ paymentReviews: [{ ...base, paymentNeedsReview: false }] }, '2026-11-18').length, 0);
+});
+
 console.log(results.join('\n'));
 const failed = results.filter(r => r.startsWith('FAIL')).length;
 console.log((results.length - failed) + '/' + results.length + ' passed');

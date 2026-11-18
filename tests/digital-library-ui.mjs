@@ -88,7 +88,24 @@ for(const [label, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mo
     assert.equal(await page.locator('[data-dl-download]').isDisabled(), true, 'preview download stays inactive');
     assert.match(text, /OWNER PREVIEW/i);
   });
+  await test('receipt lists subtotal, discount, tax, total, payment status and reference — and promises no email', async () => {
+    await page.locator('.dl-receipt summary').click();
+    const r = await page.locator('.dl-receipt').innerText();
+    for(const label of [/Subtotal/i, /Discount/i, /Tax/i, /Total Paid/i, /Payment Status/i, /Payment Reference/i, /Date/i]) assert.match(r, label);
+    assert.match(r, /not charged/i);
+    assert.match(r, /not connected yet/i);
+    assert.doesNotMatch(await page.locator('#shopConfirmationRoot').innerText(), /emails a payment receipt/i);
+  });
   if(shots) await page.screenshot({ path: `${shots}/confirmation.png`, fullPage: true });
+  // Stripe's cancel link is ?checkout=cancelled (createCheckoutSession).
+  await page.goto(`${baseUrl}/shop/confirmation.html?checkout=cancelled&kind=shop&ref=TESTORDER1`, { waitUntil: 'load' });
+  await page.waitForTimeout(800);
+  await test('returning from a cancelled checkout says nothing was charged (not “Verifying Payment”)', async () => {
+    const text = await page.locator('#shopConfirmationRoot').innerText();
+    assert.match(text, /Payment Not Completed/i);
+    assert.match(text, /Nothing was charged/i);
+    assert.doesNotMatch(text, /Verifying Payment/i);
+  });
   await page.goto(`${baseUrl}/shop/product.html?id=concealed`, { waitUntil: 'load' });
   await page.waitForTimeout(1200);
   await test('product page tells buyers the PDF goes to their account', async () => {

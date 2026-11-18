@@ -265,6 +265,11 @@ export function initShopAdmin(context){
     const [kind, pid] = flag.split(':');
     if(kind === 'missing-file') return 'Paid before a PDF was attached for ' + productTitle(pid);
     if(kind === 'duplicate-purchase') return 'Customer already owned ' + productTitle(pid) + ' — possible duplicate';
+    if(kind === 'duplicate-payment') return 'Paid twice for this order (second Stripe checkout …' + String(pid || '').slice(-8) + ') — refund the extra payment in Stripe';
+    if(kind === 'amount-mismatch') return 'Stripe charged a different total than this order was priced at — check before shipping';
+    if(kind === 'chargeback-open') return 'Chargeback opened by the customer’s bank — download paused; respond in Stripe';
+    if(kind === 'chargeback-won') return 'Chargeback won — download access restored';
+    if(kind === 'chargeback-lost') return 'Chargeback lost — the bank returned the payment; download stays off';
     return flag;
   }
   function auditTrailHtml(o, accessList){

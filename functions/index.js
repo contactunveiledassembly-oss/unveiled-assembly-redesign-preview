@@ -476,7 +476,24 @@ async function markPaid(session){
     const snap = await tx.get(ref);
     if(!snap.exists){ logger.error('paid session for missing record', kind, id, session.id); return; }
     const record = snap.data();
-    if(record.paymentStatus === 'paid') return;
+    if(record.paymentStatus === 'paid'){
+      // A retried event for the same payment changes nothing. A SECOND,
+      // different paid checkout for the same record (two tabs, an old
+      // payment page) means the customer was charged twice: keep one
+      // order, and flag the extra payment for the owner to refund.
+      const extra = !session.free && session.id && record.stripeSessionId && session.id !== record.stripeSessionId &&
+        !(record.duplicatePaymentSessionIds || []).includes(session.id);
+      if(extra){
+        tx.update(ref, {
+          duplicatePaymentSessionIds: FieldValue.arrayUnion(session.id),
+          paymentNeedsReview: true,
+          ...(kind === 'shop' ? { reviewFlags: FieldValue.arrayUnion('duplicate-payment:' + session.id) } : {}),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+        logger.warn('second payment for an already-paid record', kind, id, session.id);
+      }
+      return;
+    }
     // Stock reads must happen before any write in a transaction.
     const stockRefs = kind === 'shop'
       ? (record.items || []).filter(i => i.type === 'physical' && i.trackInventory).map(i => ({ item: i, ref: db.doc('shopProducts/' + i.productId) }))
@@ -535,7 +552,11 @@ async function markPaid(session){
         shipping: shipping ? { name: shipping.name || null, address: shipping.address || null } : null,
         testMode: session.livemode === false,
         ...(session.free ? { freeWithDiscount: true, paymentMethod: 'discount' } : {}),
-        ...(reviewFlags.length ? { reviewFlags } : {}),
+        ...((() => {
+          // Stripe charged a different total than this order was priced at.
+          if(!session.free && Number.isInteger(record.totalCents) && Number.isInteger(session.amount_total) && session.amount_total !== record.totalCents) reviewFlags.push('amount-mismatch');
+          return reviewFlags.length ? { reviewFlags } : {};
+        })()),
         ...(digitalAccessIds.length ? { digitalAccessIds } : {})
       });
       stockRefs.forEach((s, i) => {
@@ -636,13 +657,32 @@ async function fulfillFreeShopOrder(orderId, uid){
   });
 }
 
+// Which booking / registration / order / gift a Stripe payment belongs
+// to. The verified webhook already saved the payment id on the record
+// when it was paid, so that is checked first; Stripe's own metadata is
+// the fallback (e.g. a refund event that arrives before the paid one).
+async function recordForPaymentIntent(paymentIntentId){
+  if(!paymentIntentId) return null;
+  for(const [kind, collectionName] of Object.entries(COLLECTIONS)){
+    const hit = await db.collection(collectionName).where('paymentIntentId', '==', paymentIntentId).limit(1).get();
+    if(!hit.empty) return { kind, id: hit.docs[0].id, collectionName };
+  }
+  try {
+    const intent = await stripe().paymentIntents.retrieve(paymentIntentId);
+    const { kind, id } = intent.metadata || {};
+    if(COLLECTIONS[kind] && id) return { kind, id, collectionName: COLLECTIONS[kind] };
+  } catch (err) {
+    logger.warn('could not look up payment', paymentIntentId, err.message);
+    throw err;
+  }
+  return null;
+}
+const paymentIntentIdOf = obj => !obj || !obj.payment_intent ? null : typeof obj.payment_intent === 'string' ? obj.payment_intent : obj.payment_intent.id;
+
 async function markRefunded(charge){
-  if(!charge.payment_intent) return;
-  const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent.id;
-  const intent = await stripe().paymentIntents.retrieve(paymentIntentId);
-  const { kind, id } = intent.metadata || {};
-  const collectionName = COLLECTIONS[kind];
-  if(!collectionName || !id) return;
+  const target = await recordForPaymentIntent(paymentIntentIdOf(charge));
+  if(!target) return;
+  const { kind, id, collectionName } = target;
   const ref = db.doc(collectionName + '/' + id);
   const full = charge.refunded === true;
   const refundFields = {
@@ -667,6 +707,45 @@ async function markRefunded(charge){
   });
   if(kind === 'shop') await applyDigitalRefund(id, full);
   logger.info('refund recorded', kind, id, full ? 'full' : 'partial');
+}
+
+// Chargebacks (Stripe "disputes"). While a dispute is open, or after it
+// is lost, a paid PDF's download is turned off; if the ministry wins,
+// access the dispute turned off comes back. Bookings, classes and gifts
+// are flagged for the owner, who decides what to do — nothing is
+// cancelled automatically. Safe to receive more than once.
+async function markDisputed(dispute, phase){
+  const target = await recordForPaymentIntent(paymentIntentIdOf(dispute));
+  if(!target) return;
+  const { kind, id, collectionName } = target;
+  const status = phase === 'created' ? 'open' : dispute.status === 'won' ? 'won' : dispute.status === 'lost' ? 'lost' : String(dispute.status || 'closed');
+  const ref = db.doc(collectionName + '/' + id);
+  await ref.update({
+    disputeStatus: status, disputeId: dispute.id || null, disputeReason: dispute.reason || null,
+    disputeAmount: (Number(dispute.amount) || 0) / 100,
+    paymentNeedsReview: status !== 'won',
+    ...(kind === 'shop' ? { reviewFlags: FieldValue.arrayUnion('chargeback-' + status) } : {}),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+  if(kind !== 'shop') return;
+  const access = await db.collection('digitalAccess').where('orderId', '==', id).get();
+  const batch = db.batch();
+  access.forEach(d => {
+    const a = d.data();
+    if(status === 'open' || status === 'lost'){
+      if(a.accessStatus === 'active' || a.accessStatus === 'pending_delivery'){
+        batch.update(d.ref, { accessStatus: 'revoked', revokedReason: 'chargeback', accessBeforeDispute: a.accessStatus, disputeStatus: status, updatedAt: FieldValue.serverTimestamp() });
+      } else {
+        batch.update(d.ref, { disputeStatus: status, updatedAt: FieldValue.serverTimestamp() });
+      }
+    } else if(status === 'won' && a.revokedReason === 'chargeback' && a.accessStatus === 'revoked'){
+      batch.update(d.ref, { accessStatus: a.accessBeforeDispute || 'active', revokedReason: null, disputeStatus: 'won', updatedAt: FieldValue.serverTimestamp() });
+    } else {
+      batch.update(d.ref, { disputeStatus: status, updatedAt: FieldValue.serverTimestamp() });
+    }
+  });
+  if(!access.empty) await batch.commit();
+  logger.info('dispute recorded', kind, id, status);
 }
 
 exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET] }, async (req, res) => {
@@ -696,6 +775,12 @@ exports.stripeWebhook = onRequest({ secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_
         break;
       case 'charge.refunded':
         await markRefunded(object);
+        break;
+      case 'charge.dispute.created':
+        await markDisputed(object, 'created');
+        break;
+      case 'charge.dispute.closed':
+        await markDisputed(object, 'closed');
         break;
       default:
         break;

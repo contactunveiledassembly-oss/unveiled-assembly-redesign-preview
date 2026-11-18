@@ -50,6 +50,28 @@ export function initDigitalLibrary(context){
   const shortDate = value => { const d = toDate(value); return d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; };
   const orderNumber = id => id ? 'UA-' + String(id).slice(0, 8).toUpperCase() : 'Complimentary';
   const reference = id => id ? '…' + String(id).slice(-8) : '—';
+  // One readable receipt for an order: what was bought, any discount,
+  // tax, the total actually paid, the payment status and the reference.
+  // Tax isn't collected at checkout today, so it says so instead of
+  // leaving it out.
+  function receiptRowsHtml(order, { preview = false } = {}){
+    const items = order.items || [];
+    const subtotal = Number.isInteger(order.subtotalCents) ? order.subtotalCents : items.reduce((t, i) => t + (i.unitPriceCents || 0) * (i.quantity || 1), 0);
+    const discount = Number(order.discountCents) || 0;
+    const paid = order.amountPaid != null ? Math.round(Number(order.amountPaid) * 100) : (Number.isInteger(order.totalCents) ? order.totalCents : subtotal - discount);
+    const status = preview ? 'Sample — no payment' : (PAYMENT_LABELS[order.paymentStatus] || order.paymentStatus || '—') +
+      (order.paymentStatus === 'paid' ? ' · verified by Stripe' : '');
+    return `<div><dt>Order Number</dt><dd>${esc(orderNumber(order.id))}</dd></div>
+      <div><dt>Date</dt><dd>${esc(shortDate(order.paidAt || order.createdAt || new Date()))}</dd></div>
+      ${items.map(i => `<div><dt>${esc(i.title)}${i.quantity > 1 ? ' × ' + i.quantity : ''}</dt><dd>${esc(money((i.unitPriceCents || 0) * (i.quantity || 1)))}</dd></div>`).join('')}
+      <div><dt>Subtotal</dt><dd>${esc(money(subtotal))}</dd></div>
+      <div><dt>Discount${order.discountCode ? ' · ' + esc(order.discountCode) : ''}</dt><dd>${discount ? '−' + esc(money(discount)) : '$0.00'}</dd></div>
+      <div><dt>Tax</dt><dd>$0.00 · not charged</dd></div>
+      <div><dt>Total Paid</dt><dd>${esc(money(paid))} ${esc(String(order.currency || 'usd').toUpperCase())}</dd></div>
+      <div><dt>Payment Status</dt><dd>${esc(status)}</dd></div>
+      <div><dt>Payment Reference</dt><dd>${esc(preview ? '—' : reference(order.paymentIntentId))}</dd></div>`;
+  }
+  const RECEIPT_NOTE = 'This receipt is saved to your account under My Assembly → Purchases &amp; Downloads. Receipt emails from this website are not connected yet.';
   const assetUrl = url => !url ? '' : /^(https?:|data:)/.test(url) ? url : base + url.replace(/^\//, '');
   const coverStyle = url => url ? ` style="background-image:url('${esc(assetUrl(url))}')"` : '';
   const sizeLabel = bytes => !bytes ? '' : bytes > 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
@@ -131,6 +153,7 @@ export function initDigitalLibrary(context){
     const statusText = (a.paymentStatus === 'complimentary' && status === 'active' ? 'Access Granted' : (ACCESS_LABELS[status] || 'Pending')) + (a.preview ? ' · Sample' : '');
     const note = status === 'pending_delivery' ? 'Your payment is verified. The ministry is preparing this file — it will be ready here shortly.'
       : status === 'refunded' ? 'This purchase was refunded, so the download is closed.'
+      : status === 'revoked' && a.revokedReason === 'chargeback' ? 'This payment is being disputed with your bank, so the download is paused. Please contact the ministry.'
       : status === 'revoked' ? 'Access to this download is turned off. Please contact the ministry if this is unexpected.'
       : '';
     return `<article class="dl-item" data-dl-access="${esc(a.id)}">
@@ -149,14 +172,16 @@ export function initDigitalLibrary(context){
         <p class="dl-message" role="status" aria-live="polite"></p>
         <details class="dl-receipt">
           <summary>Receipt Details</summary>
-          <dl>
-            <div><dt>Order Number</dt><dd>${esc(orderNumber(a.orderId))}</dd></div>
+          <dl>${(() => {
+            const order = memberState.orders.find(o => o.id === a.orderId);
+            if(order) return receiptRowsHtml(order, { preview: !!a.preview });
+            return `<div><dt>Order Number</dt><dd>${esc(orderNumber(a.orderId))}</dd></div>
             <div><dt>Date</dt><dd>${esc(shortDate(a.purchasedAt))}</dd></div>
             <div><dt>Amount</dt><dd>${esc(money(a.amountPaidCents))} ${esc(String(a.currency || 'usd').toUpperCase())}</dd></div>
             <div><dt>Payment</dt><dd>${esc(a.preview ? 'Sample — no payment' : (PAYMENT_LABELS[a.paymentStatus] || a.paymentStatus || '—'))}</dd></div>
-            <div><dt>Payment Reference</dt><dd>${esc(a.preview ? '—' : reference(a.paymentIntentId))}</dd></div>
-          </dl>
-          <p>Stripe also emails a payment receipt to the address used at checkout.</p>
+            <div><dt>Payment Reference</dt><dd>${esc(a.preview ? '—' : reference(a.paymentIntentId))}</dd></div>`;
+          })()}</dl>
+          <p>${RECEIPT_NOTE}</p>
         </details>
       </div>
     </article>`;
@@ -247,7 +272,7 @@ export function initDigitalLibrary(context){
     return `${preview ? '<p class="dl-preview-flag">Owner preview — sample order. Buttons are inactive.</p>' : ''}
       <span class="shop-micro">Order Complete</span>
       <h1>Payment Verified.</h1>
-      <p class="dl-confirm-lead">Thank you. Stripe confirmed your payment and your purchase is saved to your account.</p>
+      <p class="dl-confirm-lead">Thank you — your purchase was received. Stripe confirmed your payment, and it is saved to your My Assembly account.</p>
       <dl class="dl-confirm-facts">
         <div><dt>Order Number</dt><dd>${esc(orderNumber(order.id))}</dd></div>
         <div><dt>Amount</dt><dd>${esc(order.amountPaid != null ? '$' + Number(order.amountPaid).toFixed(2) : money(order.totalCents))}</dd></div>
@@ -256,11 +281,8 @@ export function initDigitalLibrary(context){
       ${items ? `<div class="dl-confirm-items">${items}</div>` : ''}
       ${physical.length ? `<p class="dl-note">${esc(physical.map(i => i.title).join(', '))} will ship to the address you entered at checkout.</p>` : ''}
       <details class="dl-receipt"><summary>View Receipt</summary><dl>
-        <div><dt>Order Number</dt><dd>${esc(orderNumber(order.id))}</dd></div>
-        ${(order.items || []).map(i => `<div><dt>${esc(i.title)}${i.quantity > 1 ? ' × ' + i.quantity : ''}</dt><dd>${esc(money((i.unitPriceCents || 0) * (i.quantity || 1)))}</dd></div>`).join('')}
-        <div><dt>Total Paid</dt><dd>${esc(order.amountPaid != null ? '$' + Number(order.amountPaid).toFixed(2) : money(order.totalCents))}</dd></div>
-        <div><dt>Payment Reference</dt><dd>${esc(reference(order.paymentIntentId))}</dd></div>
-      </dl><p>Stripe also emails a payment receipt to the address used at checkout.</p></details>
+        ${receiptRowsHtml(order, { preview })}
+      </dl><p>${RECEIPT_NOTE}</p></details>
       ${confirmActionsHtml()}`;
   }
 
@@ -282,7 +304,7 @@ export function initDigitalLibrary(context){
     }
     const outcome = params.get('checkout');
     const orderId = params.get('ref');
-    if(outcome === 'cancel'){
+    if(outcome === 'cancelled' || outcome === 'cancel'){
       confirmShell(`<span class="shop-micro">Checkout</span><h1>Payment Not Completed.</h1><p class="dl-confirm-lead">Nothing was charged. Your bag is saved if you'd like to try again.</p>${confirmActionsHtml()}`);
       return;
     }
