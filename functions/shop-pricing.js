@@ -22,6 +22,22 @@ function shopDiscountProblem(code, today, liveMode){
   return '';
 }
 
+// One-on-One / class codes. The member reserves ("claims") a use in the
+// browser before the booking exists, then pays later — so the dates are
+// judged on the day of that claim (its server-set createdAt, Eastern),
+// not the day of payment. A claim made after the end date, before the
+// start date, on a paused code or for the wrong kind of purchase is
+// never honored. Returns '' when the discount may be applied.
+function sessionDiscountProblem(code, scope, claimDay){
+  if(!code) return 'not-found';
+  if(code.active === false) return 'paused';
+  if(code.scope !== 'both' && code.scope !== scope) return 'wrong-scope';
+  if(!claimDay) return 'no-claim-date';
+  if(code.startsAt && claimDay < code.startsAt) return 'not-started';
+  if(code.expiresAt && claimDay > code.expiresAt) return 'expired';
+  return '';
+}
+
 // Splits a discount across the eligible lines in proportion to their
 // value, to the cent (largest remainder), never more than a line costs.
 function allocateDiscount(lines, eligible, discountCents){
@@ -57,4 +73,4 @@ function shopSignature(lines, discount){
   return JSON.stringify([lines.map(l => [l.productId, l.option, l.quantity, l.unitCents]).sort(), discount ? [discount.codeId, discount.discountCents] : null]);
 }
 
-module.exports = { easternToday, shopDiscountProblem, allocateDiscount, stripeLinesFor, shopSignature };
+module.exports = { easternToday, shopDiscountProblem, sessionDiscountProblem, allocateDiscount, stripeLinesFor, shopSignature };

@@ -129,8 +129,12 @@ async function verifiedDiscountCents(record, recordId, sourceCollection, scope, 
     .where('sourceCollection', '==', sourceCollection)
     .where('status', '==', 'confirmed')
     .limit(5).get();
-  const owned = redemptions.docs.some(d => d.data().uid === record.uid && d.data().codeId === codeSnap.id);
+  const owned = redemptions.docs.find(d => d.data().uid === record.uid && d.data().codeId === codeSnap.id);
   if(!owned) return { discountCents: 0, code: null };
+  // The claim's own server timestamp decides whether the code was within
+  // its dates (firestore.rules pins createdAt to the request time).
+  const claimedAt = owned.data().createdAt && typeof owned.data().createdAt.toDate === 'function' ? owned.data().createdAt.toDate() : null;
+  if(pricing.sessionDiscountProblem(code, scope, claimedAt ? pricing.easternToday(claimedAt) : '')) return { discountCents: 0, code: null };
   const value = Math.max(0, Number(code.amount) || 0);
   const discountCents = code.type === 'percent'
     ? Math.round(subtotalCents * Math.min(100, value) / 100)

@@ -29,7 +29,7 @@ import {
   getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction, orderBy, limit, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
-import { initSiteManagement } from "./site-management.js?v=6";
+import { initSiteManagement } from "./site-management.js?v=7";
 import { initEventsSystem } from "./events-system.js?v=5";
 import { initOwnerSimulation } from "./owner-simulation.js?v=2";
 // shop-admin.js imports shop-system.js with this same ?v= — keep them
@@ -3979,6 +3979,23 @@ function savePreviewToStorage(){
     return false;
   }
 }
+// Preview only: another open tab may have booked since this page
+// loaded. Re-reading the stored bookings right before the slot check
+// (like the live site's transaction re-reads the slot) stops two tabs
+// double-booking one time, and stops this tab writing an older list
+// back over the other tab's booking. Ids continue after the highest
+// stored one so a reload can't reuse an id.
+function refreshDemoBookingsFromStorage(){
+  if(!DEMO_MODE) return;
+  try {
+    const bk = localStorage.getItem(PREVIEW_STORAGE_KEYS.bookings);
+    if(bk) DEMO_BOOKINGS = JSON.parse(bk);
+  } catch (err) { /* keep the in-memory list */ }
+  DEMO_BOOKINGS.forEach(b => {
+    const n = Number((String(b.id).match(/^demo-(\d+)$/) || [])[1]) || 0;
+    if(n > DEMO_BOOKING_SEQ) DEMO_BOOKING_SEQ = n;
+  });
+}
 function saveBookingsPreviewToStorage(){
   if(!DEMO_MODE) return true;
   try {
@@ -7894,6 +7911,7 @@ async function createBooking({ name, email, phone, reason, sessionType, date, ti
   // while Demo Mode is on would fall through to the real Firestore
   // transaction below and write an actual booking to production.
   if(DEMO_MODE || ownerSim.isActive()){
+    if(DEMO_MODE && !ownerSim.isActive()) refreshDemoBookingsFromStorage();
     if(DEMO_BOOKINGS.some(b => b.slotId === slotId && b.status !== 'declined' && b.status !== 'cancelled')){
       throw new Error('slot-taken');
     }
@@ -7954,14 +7972,22 @@ function markThrottled(storageKey){
 // `prefix` is 'booking' or 'teachingRegister', matching the matching
 // *PriceChangeConfirm/*PriceChangeMessage/*PriceChangeContinueBtn/
 // *PriceChangeBackBtn elements in each dialog.
-function waitForPriceChangeConfirm(prefix, oldTotal, newTotal){
+// `reason` is the failed claim's reason: 'limit' (usage limit reached)
+// or 'unavailable' (deleted, paused or expired since it was applied).
+function discountLostPhrase(reason){
+  return reason === 'unavailable' ? 'is no longer available' : 'just reached its usage limit';
+}
+function discountLostNote(reason){
+  return reason === 'unavailable' ? 'discount code is no longer available' : 'discount code reached its usage limit';
+}
+function waitForPriceChangeConfirm(prefix, oldTotal, newTotal, reason = 'limit'){
   return new Promise(resolve => {
     const block = document.getElementById(prefix + 'PriceChangeConfirm');
     const message = document.getElementById(prefix + 'PriceChangeMessage');
     const continueBtn = document.getElementById(prefix + 'PriceChangeContinueBtn');
     const backBtn = document.getElementById(prefix + 'PriceChangeBackBtn');
     if(!block || !message || !continueBtn || !backBtn){ resolve(true); return; }
-    message.textContent = 'This discount code just reached its usage limit. Your total has changed from ' +
+    message.textContent = 'This discount code ' + discountLostPhrase(reason) + '. Your total has changed from ' +
       previewPriceLabel(oldTotal) + ' to ' + previewPriceLabel(newTotal) + '.';
     continueBtn.textContent = 'Continue at ' + previewPriceLabel(newTotal);
     block.hidden = false;
@@ -8037,7 +8063,9 @@ bookingForm.addEventListener('submit', async event => {
   // they last agreed to.
   let discountClaim = siteManagement ? await siteManagement.claimDiscount('oneonone', currentUser.uid) : null;
   let discountLimitReached = false;
+  let discountLostReason = 'limit';
   if(discountClaim && !discountClaim.ok){
+    discountLostReason = discountClaim.reason === 'unavailable' ? 'unavailable' : 'limit';
     const oldTotal = siteManagement.pricing('oneonone', bookingPrice).total;
     siteManagement.resetCheckout('oneonone');
     renderBookingOrderSummary();
@@ -8045,9 +8073,9 @@ bookingForm.addEventListener('submit', async event => {
     discountLimitReached = true;
     bookingStatus.textContent = '';
     bookingSubmitBtn.disabled = false;
-    const proceed = await waitForPriceChangeConfirm('booking', oldTotal, bookingPrice);
+    const proceed = await waitForPriceChangeConfirm('booking', oldTotal, bookingPrice, discountLostReason);
     if(!proceed){
-      bookingStatus.textContent = 'Booking not submitted — the discount code reached its usage limit.';
+      bookingStatus.textContent = 'Booking not submitted — the ' + discountLostNote(discountLostReason) + '.';
       return;
     }
     bookingSubmitBtn.disabled = true;
@@ -8082,7 +8110,7 @@ bookingForm.addEventListener('submit', async event => {
     document.getElementById('bookingConfirmWhen').textContent = formatLocalDateTime(dateStr, time, clientTimeZone);
     document.getElementById('bookingConfirmEmail').textContent = email;
     document.getElementById('bookingConfirmPayment').textContent = previewPaymentStatusLabel(discount.totalAfterDiscount) +
-      (discountLimitReached ? ' (discount code reached its usage limit — full price applied)' : '');
+      (discountLimitReached ? ' (' + discountLostNote(discountLostReason) + ' — full price applied)' : '');
     document.getElementById('bookingConfirmId').textContent = record.confirmationId;
     bookingForm.dataset.lastBookingId = record.id;
     bookingStatus.textContent = '';
@@ -13208,7 +13236,9 @@ teachingRegisterForm.addEventListener('submit', async event => {
   // fact must be explicitly accepted, never applied automatically.
   let discountClaim = siteManagement ? await siteManagement.claimDiscount('teaching', currentUser.uid) : null;
   let discountLimitReached = false;
+  let discountLostReason = 'limit';
   if(discountClaim && !discountClaim.ok){
+    discountLostReason = discountClaim.reason === 'unavailable' ? 'unavailable' : 'limit';
     const oldTotal = siteManagement.pricing('teaching', teachingPrice).total;
     siteManagement.resetCheckout('teaching');
     renderTeachingRegistrationOrderSummary();
@@ -13216,9 +13246,9 @@ teachingRegisterForm.addEventListener('submit', async event => {
     discountLimitReached = true;
     teachingRegisterStatus.textContent = '';
     teachingRegisterSubmitBtn.disabled = false;
-    const proceed = await waitForPriceChangeConfirm('teachingRegister', oldTotal, teachingPrice);
+    const proceed = await waitForPriceChangeConfirm('teachingRegister', oldTotal, teachingPrice, discountLostReason);
     if(!proceed){
-      teachingRegisterStatus.textContent = 'Registration not submitted — the discount code reached its usage limit.';
+      teachingRegisterStatus.textContent = 'Registration not submitted — the ' + discountLostNote(discountLostReason) + '.';
       return;
     }
     teachingRegisterSubmitBtn.disabled = true;
@@ -13257,7 +13287,7 @@ teachingRegisterForm.addEventListener('submit', async event => {
     document.getElementById('teachingRegisterConfirmWhen').textContent = formatTeachingDate(t.date || '') + ' · ' + formatTeachingTime(t.startTime, t.timeZone);
     document.getElementById('teachingRegisterConfirmFormat').textContent = formatLabel;
     document.getElementById('teachingRegisterConfirmPayment').textContent = previewPaymentStatusLabel(discount.totalAfterDiscount) +
-      (discountLimitReached ? ' (discount code reached its usage limit — full price applied)' : '');
+      (discountLimitReached ? ' (' + discountLostNote(discountLostReason) + ' — full price applied)' : '');
     document.getElementById('teachingRegisterConfirmId').textContent = record.confirmationId;
     teachingRegisterForm.hidden = true;
     document.getElementById('teachingRegisterConfirmStep').hidden = false;

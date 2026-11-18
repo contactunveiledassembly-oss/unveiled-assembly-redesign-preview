@@ -592,6 +592,9 @@ service cloud.firestore {
          (
            // Claim: reserve one use for a brand-new ticket.
            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedCount', 'redeemedSourceIds', 'lastRedeemedSourceId']) &&
+            // A paused code can't be claimed (dates are checked by the
+            // payment server against the ticket's createdAt).
+            resource.data.get('active', true) != false &&
             request.resource.data.usedCount == resource.data.usedCount + 1 &&
             (resource.data.maxUses == null || resource.data.usedCount < resource.data.maxUses) &&
             request.resource.data.redeemedSourceIds.size() == resource.data.redeemedSourceIds.size() + 1 &&
@@ -640,7 +643,11 @@ service cloud.firestore {
         request.resource.data.status == 'claimed' &&
         request.resource.data.sourceCollection == null &&
         request.resource.data.sourceId == null &&
+        // Server time, so the payment server can trust the claim date.
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.keys().hasOnly(['uid', 'codeId', 'status', 'sourceCollection', 'sourceId', 'createdAt']) &&
         get(/databases/$(database)/documents/discountCodes/$(request.resource.data.codeId)).data.code is string &&
+        get(/databases/$(database)/documents/discountCodes/$(request.resource.data.codeId)).data.get('active', true) != false &&
         // Shop codes are reserved by the checkout server only.
         get(/databases/$(database)/documents/discountCodes/$(request.resource.data.codeId)).data.get('scope', '') != 'shop';
       allow update: if isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'claimed' &&

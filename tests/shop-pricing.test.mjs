@@ -3,7 +3,7 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 const require = createRequire(import.meta.url);
-const { easternToday, shopDiscountProblem, allocateDiscount, stripeLinesFor, shopSignature } = require('../functions/shop-pricing.js');
+const { easternToday, shopDiscountProblem, sessionDiscountProblem, allocateDiscount, stripeLinesFor, shopSignature } = require('../functions/shop-pricing.js');
 
 const results = [];
 function test(name, fn){ try { fn(); results.push('PASS ' + name); } catch (err) { results.push('FAIL ' + name + ' — ' + err.message.split('\n')[0]); } }
@@ -59,6 +59,23 @@ test('same bag + same code → same signature; different price → different', (
   const b = shopSignature([{ productId: 'a', option: '', quantity: 1, unitCents: 1800 }], { codeId: 'h', discountCents: 180 });
   const c = shopSignature([{ productId: 'a', option: '', quantity: 1, unitCents: 2000 }], { codeId: 'h', discountCents: 180 });
   assert.equal(a, b); assert.notEqual(a, c);
+});
+
+// One-on-One / class codes: judged on the day the member claimed the use
+// (server time), so a claim made after the end date is never honored.
+const sCode = over => ({ scope: 'both', active: true, type: 'percent', amount: 20, expiresAt: '', ...over });
+test('session code claimed on a valid day is honored', () => assert.equal(sessionDiscountProblem(sCode(), 'oneonone', '2026-11-18'), ''));
+test('session code claimed on its last day is honored; the day after is not', () => {
+  assert.equal(sessionDiscountProblem(sCode({ expiresAt: '2026-11-18' }), 'oneonone', '2026-11-18'), '');
+  assert.equal(sessionDiscountProblem(sCode({ expiresAt: '2026-11-17' }), 'oneonone', '2026-11-18'), 'expired');
+});
+test('session code claimed before its start date is not honored', () => assert.equal(sessionDiscountProblem(sCode({ startsAt: '2026-11-19' }), 'teaching', '2026-11-18'), 'not-started'));
+test('paused, wrong-kind, missing code or missing claim date is not honored', () => {
+  assert.equal(sessionDiscountProblem(sCode({ active: false }), 'oneonone', '2026-11-18'), 'paused');
+  assert.equal(sessionDiscountProblem(sCode({ scope: 'teaching' }), 'oneonone', '2026-11-18'), 'wrong-scope');
+  assert.equal(sessionDiscountProblem(sCode({ scope: 'shop' }), 'teaching', '2026-11-18'), 'wrong-scope');
+  assert.equal(sessionDiscountProblem(null, 'oneonone', '2026-11-18'), 'not-found');
+  assert.equal(sessionDiscountProblem(sCode(), 'oneonone', ''), 'no-claim-date');
 });
 
 console.log(results.join('\n'));

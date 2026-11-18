@@ -1,377 +1,344 @@
-// ---------------------------------------------------------------------
-// UNVERIFIED — has never been run.
+// Discount claim lifecycle in the browser (Preview / DEMO_MODE on
+// localhost — sample data in browser storage, no real database).
+//   python3 -m http.server 8080 &  node tests/discount-claim-lifecycle.mjs
 //
-// This environment has no Node runtime and no browser automation tool,
-// so none of the assertions below have ever actually executed. They
-// are written against the real DOM ids and the real claim/confirm/
-// release behavior in site-management.js and app.js as of this commit,
-// but they have not been checked against a live page. Before trusting
-// this file, run it (and fix whatever it gets wrong) in an environment
-// that has Node + Playwright and a local static server on :8080 (the
-// same assumption tests/owner-editor-discounts.mjs already makes —
-// this file is deliberately kept separate from that one so a mistake
-// here can never put a previously-passing test at risk).
+// History: first written 2026-10-07 and marked "UNVERIFIED — has never
+// been run". When it was finally run it failed on old assumptions
+// (Owner Portal open without signing in, discount box on the page
+// itself, separate browser contexts sharing Preview data, and
+// monkeypatching a function that isn't on window). Rewritten
+// 2026-11-18 to drive the current flow; every original scenario is
+// kept, plus regression checks for the bugs found while doing so.
 //
-//   node tests/discount-claim-lifecycle.mjs
-//
-// It assumes DEMO_MODE (a local server, not the production domain) so
-// discounts live in localStorage rather than real Firestore — which
-// means this exercises the CLIENT-SIDE claim/confirm/release logic in
-// site-management.js, but NOT the firestore.rules security boundary
-// itself (the direct-tamper and replay checks in the manual browser/
-// emulator checklist are what cover that — this file cannot).
-//
-// Two independent Playwright browser CONTEXTS are used wherever two
-// separate customers matter (scenario 3), on the assumption that each
-// context's own localStorage gives DEMO_MODE's demo sign-in its own
-// independent identity, the same way two real signed-in users would
-// have independent Firebase Auth sessions. If DEMO_MODE's demo
-// identity turns out to be global rather than per-context, scenario 3
-// will need to be adjusted once this is actually run.
-// ---------------------------------------------------------------------
+// How "two customers" work here: pages in ONE browser context share the
+// Preview's storage (the Preview's stand-in for the shared database),
+// so each customer is a separate page. The live site's real race
+// safety is the Firestore transaction + rules, which
+// tests/discount-rules-emulator.mjs checks against the emulator.
 import { chromium } from '/Users/yaunahlove/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
+import {
+  BASE_URL, OWNER_EMAIL, MEMBER_EMAIL, signIn, createDiscountCode, openOwnerDiscounts, openBookingDetails,
+  applyBookingCode, submitBooking, waitForBookingConfirmed, asSeparateCustomer, storedCode, confirmedBooking
+} from './helpers/discount-flow.mjs';
 
-const BASE_URL = 'http://localhost:8080';
+const browser = await chromium.launch({ headless: true });
 const results = [];
 
-async function withPage(run){
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+// A fresh Preview (own storage) with the owner signed in on one page.
+async function freshPreview(){
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
+  const newPage = async () => {
+    const p = await context.newPage();
+    p.on('pageerror', e => errors.push(e.message));
+    p.on('dialog', d => d.accept());
+    return p;
+  };
+  const owner = await newPage();
+  await owner.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
+  await owner.evaluate(() => localStorage.clear());
+  await signIn(owner, OWNER_EMAIL);
+  // A member page: signs the shared Preview session in as the member.
+  const customer = async () => {
+    const p = await newPage();
+    await signIn(p, MEMBER_EMAIL);
+    await asSeparateCustomer(p);
+    return p;
+  };
+  // A second customer opened from the first one's window. Separate tabs
+  // can see each other's Preview storage a moment late; a window opened
+  // from another shares its browser process, so storage reads and writes
+  // happen strictly one after another, like the live database's
+  // transactions. (The live race guarantee itself is checked against
+  // the emulator in tests/discount-rules-emulator.mjs.)
+  const secondCustomer = async first => {
+    const [p] = await Promise.all([context.waitForEvent('page'), first.evaluate(u => { window.open(u, '_blank'); }, BASE_URL + '/one-on-one.html')]);
+    p.on('pageerror', e => errors.push(e.message));
+    p.on('dialog', d => d.accept());
+    await p.waitForLoadState('domcontentloaded');
+    return p;
+  };
+  return { context, owner, customer, secondCustomer, errors };
+}
+async function scenario(name, run){
+  let ctx;
   try {
-    await run(page, errors);
+    ctx = await freshPreview();
+    await run(ctx);
+    if(ctx.errors.length) throw new Error('page errors: ' + ctx.errors.join('; '));
+    results.push('PASS ' + name);
+  } catch (err) {
+    results.push('FAIL ' + name + ' — ' + String(err && err.message || err).split('\n')[0]);
   } finally {
-    await browser.close();
+    if(ctx) await ctx.context.close();
   }
-  return errors;
 }
-
-// Creates a discount code via the owner portal already open on `page`,
-// matching the same form fields tests/owner-editor-discounts.mjs uses
-// (#ownerDiscountCode/.../#ownerDiscountCodeForm), plus the new
-// #ownerDiscountMaxUses field.
-async function createDiscountCode(page, { code, amount = '20', type = 'percent', scope = 'both', maxUses = '' }){
-  await page.locator('[data-site-page="One-on-One Page"]').waitFor({ state: 'visible' }).catch(() => {});
-  await page.locator('#ownerDiscountCode').fill(code);
-  await page.locator('#ownerDiscountType').selectOption(type);
-  await page.locator('#ownerDiscountAmount').fill(amount);
-  await page.locator('#ownerDiscountScope').selectOption(scope);
-  if(maxUses !== '') await page.locator('#ownerDiscountMaxUses').fill(String(maxUses));
-  await page.locator('#ownerDiscountCodeForm').evaluate(form => form.requestSubmit());
-  await page.waitForFunction(() => document.querySelector('#ownerDiscountCodeStatus')?.textContent.includes('ready to use'));
-}
-
-async function fillBookingBasics(page){
-  await page.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-  await page.locator('input[name="sessionType"][value="30-minute"]').check();
-  // The booking dialog's Details/Payment step on one-on-one.html is
-  // reached inline (see openOneOnOneInline in app.js) rather than
-  // through the shared booking dialog's own Session/Date steps — this
-  // fills the fields this page's own flow actually exposes. If the
-  // real step ids differ once this runs against a live page, this
-  // helper is the one place to correct.
-  const name = page.locator('#bookingName');
-  if(await name.count()) await name.fill('Test Customer');
-  const email = page.locator('#bookingEmail');
-  if(await email.count()) await email.fill('test+' + Date.now() + '@example.com');
-  const phone = page.locator('#bookingPhoneNumber');
-  if(await phone.count()) await phone.fill('5555550123');
-  const terms = page.locator('#bookingAgreeTerms');
-  if(await terms.count()) await terms.check();
-  const noRefund = page.locator('#bookingAgreeNoRefund');
-  if(await noRefund.count()) await noRefund.check();
-}
+const confirmPayment = p => p.locator('#bookingConfirmPayment').textContent();
+// The confirmation screen shows the payment status, not the amount, so
+// the amount is checked on the saved booking (what checkout charges from).
+const bookedTotal = async p => (await confirmedBooking(p)).totalAfterDiscount;
+const priceChangeShown = p => p.locator('#bookingPriceChangeConfirm').evaluate(el => !el.hidden);
 
 // ---- 1. Successful limited-use claim and confirmation ----------------
-async function scenario1(){
-  return withPage(async page => {
-    await page.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-    await createDiscountCode(page, { code: 'LIFECYCLE1', maxUses: 1 });
-    await fillBookingBasics(page);
-    await page.locator('#bookingDiscountCode').fill('LIFECYCLE1');
-    await page.locator('#bookingDiscountApply').click();
-    await page.waitForFunction(() => document.querySelector('#bookingDiscountStatus')?.textContent.includes('applied'));
-    await page.locator('#bookingForm').evaluate(form => form.requestSubmit());
-    await page.waitForFunction(() => document.querySelector('#bookingConfirmId')?.textContent.length > 0, { timeout: 10000 });
-    assert.match(await page.locator('#bookingConfirmPayment').textContent(), /\$40\.00/);
-    assert.doesNotMatch(await page.locator('#bookingConfirmPayment').textContent(), /usage limit/);
+await scenario('1 successful limited-use claim', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'LIFECYCLE1', maxUses: 1 });
+  const a = await customer();
+  await openBookingDetails(a);
+  assert.match(await applyBookingCode(a, 'LIFECYCLE1'), /applied/);
+  await submitBooking(a);
+  await waitForBookingConfirmed(a);
+  assert.equal(await bookedTotal(a), 40);
+  assert.doesNotMatch(await confirmPayment(a), /usage limit/);
+  assert.equal((await storedCode(a, 'LIFECYCLE1')).usedCount, 1);
+});
+
+// ---- 2. Code reaches its limit between Apply and submit ---------------
+await scenario('2 code already at its limit when submitted', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'LIFECYCLE2', maxUses: 1 });
+  const a = await customer(); const b = await customer();
+  await openBookingDetails(a, { timeIndex: 0 });
+  await openBookingDetails(b, { timeIndex: 1 });
+  assert.match(await applyBookingCode(a, 'LIFECYCLE2'), /applied/);
+  assert.match(await applyBookingCode(b, 'LIFECYCLE2'), /applied/);
+  await submitBooking(a); await waitForBookingConfirmed(a);
+  assert.equal(await bookedTotal(a), 40);
+  await asSeparateCustomer(b);
+  await submitBooking(b);
+  await b.waitForFunction(() => !document.querySelector('#bookingPriceChangeConfirm')?.hidden, null, { timeout: 10000 });
+  const msg = await b.locator('#bookingPriceChangeMessage').textContent();
+  assert.match(msg, /usage limit/);
+  assert.match(msg, /\$40.*\$50|\$50.*\$40/s);
+  // Go Back creates nothing for B.
+  await b.locator('#bookingPriceChangeBackBtn').click();
+  assert.equal(await b.locator('#bookingConfirmId').textContent(), '');
+  assert.match(await b.locator('#bookingStatus').textContent(), /not submitted/);
+  assert.equal((await storedCode(b, 'LIFECYCLE2')).usedCount, 1);
+});
+
+// ---- 3. Two attempts submitted at the same moment --------------------
+await scenario('3 two simultaneous attempts: exactly one discounted', async ({ owner, customer, secondCustomer }) => {
+  await createDiscountCode(owner, { code: 'RACE1', maxUses: 1 });
+  const a = await customer(); const b = await secondCustomer(a);
+  await openBookingDetails(a, { timeIndex: 0 });
+  await openBookingDetails(b, { timeIndex: 1 });
+  await applyBookingCode(a, 'RACE1'); await applyBookingCode(b, 'RACE1');
+  await asSeparateCustomer(a);
+  // Both submits start in the same instant (one script, back to back),
+  // before either booking finishes — the tightest race a browser allows.
+  await b.evaluate(() => {
+    window.opener.document.getElementById('bookingForm').requestSubmit();
+    document.getElementById('bookingForm').requestSubmit();
   });
-}
-
-// ---- 2. Code already at max usage ------------------------------------
-// IMPORTANT: in DEMO_MODE, discount state is a synchronous in-memory
-// object with no real network latency, so a naive "redeem, then apply
-// again" sequence would have the SECOND Apply click itself see the
-// already-exhausted usedCount and reject the code right there — never
-// reaching claimDiscount() at all, and never exercising the new
-// price-change dialog this scenario exists to test. To reliably force
-// "Apply succeeded, the LATER claim did not," this applies the code in
-// TWO separate contexts (so each one's Apply reads usedCount==0) before
-// either one ever submits, then submits them one after the other
-// instead of simultaneously — scenario 3 covers genuinely simultaneous
-// submission; this one deliberately isolates the sequential case.
-async function scenario2(){
-  const browser = await chromium.launch({ headless: true });
-  const errors = [];
-  try {
-    const ownerContext = await browser.newContext();
-    const ownerPage = await ownerContext.newPage();
-    await ownerPage.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-    await createDiscountCode(ownerPage, { code: 'LIFECYCLE2', maxUses: 1 });
-    await ownerContext.close();
-
-    const contextA = await browser.newContext();
-    const contextB = await browser.newContext();
-    const pageA = await contextA.newPage();
-    const pageB = await contextB.newPage();
-    [pageA, pageB].forEach(p => p.on('pageerror', e => errors.push(e.message)));
-
-    for(const p of [pageA, pageB]){
-      await p.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-      await fillBookingBasics(p);
-      await p.locator('#bookingDiscountCode').fill('LIFECYCLE2');
-      await p.locator('#bookingDiscountApply').click();
-      await p.waitForFunction(() => document.querySelector('#bookingDiscountStatus')?.textContent.includes('applied'));
-    }
-
-    // A submits first and wins the claim outright.
-    await pageA.locator('#bookingForm').evaluate(form => form.requestSubmit());
-    await pageA.waitForFunction(() => document.querySelector('#bookingConfirmId')?.textContent.length > 0, { timeout: 10000 });
-    assert.match(await pageA.locator('#bookingConfirmPayment').textContent(), /\$40\.00/);
-
-    // B still thinks its code is "applied" (its Apply ran before A
-    // claimed) but its claim must now fail, surfacing the price-change
-    // confirmation rather than silently booking at full price.
-    await pageB.locator('#bookingForm').evaluate(form => form.requestSubmit());
-    await pageB.waitForFunction(() => !document.querySelector('#bookingPriceChangeConfirm')?.hidden, { timeout: 10000 });
-    assert.match(await pageB.locator('#bookingPriceChangeMessage').textContent(), /usage limit/);
-    assert.match(await pageB.locator('#bookingPriceChangeMessage').textContent(), /\$40.*\$50|\$50.*\$40/s);
-    // Go Back must create nothing for B.
-    await pageB.locator('#bookingPriceChangeBackBtn').click();
-    assert.equal(await pageB.locator('#bookingConfirmId').textContent(), '');
-
-    await contextA.close(); await contextB.close();
-  } finally {
-    await browser.close();
+  async function outcome(p){
+    await p.waitForFunction(() => document.querySelector('#bookingConfirmId')?.textContent.length > 0 ||
+      !document.querySelector('#bookingPriceChangeConfirm')?.hidden, null, { timeout: 10000 });
+    if(await priceChangeShown(p)) return 'lost';
+    return (await bookedTotal(p)) === 40 ? 'discounted' : 'full';
   }
-  return errors;
-}
+  const [oa, ob] = await Promise.all([outcome(a), outcome(b)]);
+  assert.equal([oa, ob].filter(o => o === 'discounted').length, 1, JSON.stringify({ oa, ob }));
+  // The other one is waiting at the price-change prompt, not booked at a higher price.
+  assert.equal(oa === 'discounted' ? ob : oa, 'lost');
+  assert.equal((await storedCode(a, 'RACE1')).usedCount, 1);
+});
 
-// ---- 3. Two competing attempts for a maxUses=1 code -------------------
-async function scenario3(){
-  const browser = await chromium.launch({ headless: true });
-  const errors = [];
-  try {
-    const ownerContext = await browser.newContext();
-    const ownerPage = await ownerContext.newPage();
-    await ownerPage.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-    await createDiscountCode(ownerPage, { code: 'RACE1', maxUses: 1 });
-    await ownerContext.close();
+// ---- 4. A booking that fails after its claim gives the use back -------
+// Forced the realistic way: B is on the same time as A; A books it
+// first, so B's booking fails "slot taken" after B's claim succeeded.
+await scenario('4 failed booking releases its claim', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'RELEASE1', maxUses: 1 });
+  const a = await customer(); const b = await customer();
+  await openBookingDetails(b, { timeIndex: 0 });
+  await openBookingDetails(a, { timeIndex: 0 });
+  await submitBooking(a); await waitForBookingConfirmed(a);       // A books the time, no code
+  assert.match(await applyBookingCode(b, 'RELEASE1'), /applied/);
+  await asSeparateCustomer(b);
+  await submitBooking(b);
+  await b.waitForFunction(() => document.querySelector('#bookingStatus')?.textContent.includes('just taken'), null, { timeout: 10000 });
+  assert.equal((await storedCode(b, 'RELEASE1')).usedCount, 0);
+  assert.deepEqual((await storedCode(b, 'RELEASE1')).redeemedSourceIds, []);
+  // A second attempt still finds the code available.
+  await openBookingDetails(b, { timeIndex: 1 });
+  assert.match(await applyBookingCode(b, 'RELEASE1'), /applied/);
+});
 
-    const contextA = await browser.newContext();
-    const contextB = await browser.newContext();
-    const pageA = await contextA.newPage();
-    const pageB = await contextB.newPage();
-    [pageA, pageB].forEach(p => p.on('pageerror', e => errors.push(e.message)));
+// ---- 5. A confirmed redemption stays counted --------------------------
+// (Direct tampering with a confirmed ticket is a database-rules matter:
+// see tests/discount-rules-emulator.mjs.)
+await scenario('5 confirmed redemption stays counted', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'LOCKED1', maxUses: 5 });
+  const a = await customer();
+  await openBookingDetails(a);
+  await applyBookingCode(a, 'LOCKED1');
+  await submitBooking(a); await waitForBookingConfirmed(a);
+  await a.locator('#bookingConfirmCloseBtn').click();
+  await a.reload({ waitUntil: 'domcontentloaded' });
+  const stored = await storedCode(a, 'LOCKED1');
+  assert.equal(stored.usedCount, 1);
+  assert.equal(stored.redeemedSourceIds.length, 1);
+});
 
-    for(const p of [pageA, pageB]){
-      await p.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-      await fillBookingBasics(p);
-      await p.locator('#bookingDiscountCode').fill('RACE1');
-      await p.locator('#bookingDiscountApply').click();
-      await p.waitForFunction(() => document.querySelector('#bookingDiscountStatus')?.textContent.includes('applied'));
-    }
-
-    // Submit as close to simultaneously as Playwright allows.
-    await Promise.all([
-      pageA.locator('#bookingForm').evaluate(form => form.requestSubmit()),
-      pageB.locator('#bookingForm').evaluate(form => form.requestSubmit())
-    ]);
-
-    async function outcome(p){
-      await Promise.race([
-        p.waitForFunction(() => document.querySelector('#bookingConfirmId')?.textContent.length > 0, { timeout: 10000 }),
-        p.waitForFunction(() => !document.querySelector('#bookingPriceChangeConfirm')?.hidden, { timeout: 10000 })
-      ]);
-      const priceChangeShown = !(await p.locator('#bookingPriceChangeConfirm').isHidden());
-      if(priceChangeShown) return 'lost';
-      const paymentText = await p.locator('#bookingConfirmPayment').textContent();
-      return /\$40\.00/.test(paymentText) ? 'discounted' : 'full';
-    }
-    const [outcomeA, outcomeB] = await Promise.all([outcome(pageA), outcome(pageB)]);
-    const discountedCount = [outcomeA, outcomeB].filter(o => o === 'discounted').length;
-    assert.equal(discountedCount, 1, 'exactly one of the two simultaneous attempts should receive the discount, got: ' + JSON.stringify({ outcomeA, outcomeB }));
-    assert.ok(['lost', 'full'].includes(outcomeA === 'discounted' ? outcomeB : outcomeA));
-
-    // Whichever one "lost" must not have silently booked at the higher
-    // price — it must be sitting at the price-change prompt.
-    const loserPage = outcomeA === 'discounted' ? pageB : pageA;
-    assert.equal(await loserPage.locator('#bookingPriceChangeConfirm').isHidden(), false);
-
-    await contextA.close(); await contextB.close();
-  } finally {
-    await browser.close();
+// ---- 6. Unlimited codes -----------------------------------------------
+await scenario('6 unlimited code works repeatedly', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'UNLIMITED1', maxUses: '' });
+  const a = await customer();
+  for(let i = 0; i < 3; i++){
+    await asSeparateCustomer(a);
+    await openBookingDetails(a, { timeIndex: i });
+    assert.match(await applyBookingCode(a, 'UNLIMITED1'), /applied/);
+    await submitBooking(a); await waitForBookingConfirmed(a);
+    assert.equal(await bookedTotal(a), 40);
+    await a.locator('#bookingConfirmCloseBtn').click();
   }
-  return errors;
-}
+  assert.equal((await storedCode(a, 'UNLIMITED1')).usedCount, 3);
+});
 
-// ---- 4. Failed booking after claim releases the use --------------------
-async function scenario4(){
-  return withPage(async page => {
-    await page.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-    await createDiscountCode(page, { code: 'RELEASE1', maxUses: 1 });
-    // Force the booking write itself to fail AFTER a successful claim,
-    // by making the same exact slot already fully booked the instant
-    // createBooking() checks capacity — simulated here by monkeypatching
-    // createBooking to throw once, since reliably recreating a real
-    // slot-capacity race from outside the page is not practical. This
-    // only proves the release path runs on ANY booking failure, which
-    // is what the discountCodes rule actually guards on — it does not
-    // need the failure to specifically be 'slot-taken'.
-    await page.evaluate(() => {
-      window.__origCreateBooking = window.createBooking;
-      window.createBooking = async () => { throw new Error('slot-taken'); };
-    }).catch(() => { /* createBooking may not be on window if not explicitly exposed — see note below */ });
-    await fillBookingBasics(page);
-    await page.locator('#bookingDiscountCode').fill('RELEASE1');
-    await page.locator('#bookingDiscountApply').click();
-    await page.waitForFunction(() => document.querySelector('#bookingDiscountStatus')?.textContent.includes('applied'));
-    await page.locator('#bookingForm').evaluate(form => form.requestSubmit());
-    await page.waitForFunction(() => document.querySelector('#bookingStatus')?.textContent.includes('just taken'), { timeout: 10000 }).catch(() => {});
-    // The use must have been given back: a second attempt should still
-    // find the code available, not already at its limit.
-    await fillBookingBasics(page);
-    await page.locator('#bookingDiscountCode').fill('RELEASE1');
-    await page.locator('#bookingDiscountApply').click();
-    await page.waitForFunction(() => document.querySelector('#bookingDiscountStatus')?.textContent.length > 0);
-    assert.doesNotMatch(await page.locator('#bookingDiscountStatus').textContent(), /usage limit/);
-  });
-}
-// NOTE on scenario 4: app.js's createBooking() is a module-scope function,
-// not necessarily assigned to `window.createBooking` — if it isn't
-// reachable this way once this actually runs, the monkeypatch above is a
-// no-op and this scenario needs a different forcing mechanism (e.g. a
-// temporary capacity=0 slot document, or two real bookings racing the
-// same slot as in scenario 3's pattern). Flagging this now rather than
-// guessing a fix I can't verify.
+// ---- 7. Price-change confirmation: exact wording and Continue ---------
+await scenario('7 price-change prompt and Continue at full price', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'PRICECHANGE1', amount: '20', maxUses: 1 });
+  const a = await customer(); const b = await customer();
+  await openBookingDetails(a, { timeIndex: 0 });
+  await openBookingDetails(b, { timeIndex: 1 });
+  await applyBookingCode(a, 'PRICECHANGE1'); await applyBookingCode(b, 'PRICECHANGE1');
+  await submitBooking(a); await waitForBookingConfirmed(a);
+  await asSeparateCustomer(b);
+  await submitBooking(b);
+  await b.waitForFunction(() => !document.querySelector('#bookingPriceChangeConfirm')?.hidden, null, { timeout: 10000 });
+  assert.equal(await b.locator('#bookingPriceChangeMessage').textContent(),
+    'This discount code just reached its usage limit. Your total has changed from $40.00 to $50.00.');
+  assert.equal(await b.locator('#bookingPriceChangeContinueBtn').textContent(), 'Continue at $50.00');
+  await b.locator('#bookingPriceChangeContinueBtn').click();
+  await waitForBookingConfirmed(b);
+  assert.equal(await bookedTotal(b), 50);
+  assert.equal((await confirmedBooking(b)).discountCode, null);
+  assert.match(await confirmPayment(b), /usage limit — full price applied/);
+});
 
-// ---- 5. Confirmed redemption cannot be released/reused -----------------
-async function scenario5(){
-  return withPage(async page => {
-    await page.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-    await createDiscountCode(page, { code: 'LOCKED1', maxUses: 5 });
-    await fillBookingBasics(page);
-    await page.locator('#bookingDiscountCode').fill('LOCKED1');
-    await page.locator('#bookingDiscountApply').click();
-    await page.waitForFunction(() => document.querySelector('#bookingDiscountStatus')?.textContent.includes('applied'));
-    await page.locator('#bookingForm').evaluate(form => form.requestSubmit());
-    await page.waitForFunction(() => document.querySelector('#bookingConfirmId')?.textContent.length > 0, { timeout: 10000 });
-    // In DEMO_MODE there is no real Firestore to re-attack, so this
-    // scenario is only meaningful against a real/emulated project —
-    // this is a placeholder documenting the EXPECTED assertion for
-    // whoever runs this against the emulator: attempting to delete or
-    // re-update the now-'confirmed' discountRedemptions/{claimId}
-    // ticket directly (bypassing the UI) must fail with
-    // permission-denied, and the code's usedCount must be unaffected.
-    // See the manual checklist item covering this directly against
-    // firestore.rules, which is the real test for this guarantee.
-  });
-}
+// ---- Regression: code deleted after Apply (used to be kept silently) --
+await scenario('R1 code deleted after Apply is not honored', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'GONE1' });
+  const a = await customer();
+  await openBookingDetails(a);
+  assert.match(await applyBookingCode(a, 'GONE1'), /applied/);
+  await openOwnerDiscounts(owner);
+  await owner.locator('[data-discount-id="demo-gone1"] [data-discount-action="delete"]').click();
+  await submitBooking(a);
+  await a.waitForFunction(() => !document.querySelector('#bookingPriceChangeConfirm')?.hidden, null, { timeout: 10000 });
+  assert.equal(await a.locator('#bookingPriceChangeMessage').textContent(),
+    'This discount code is no longer available. Your total has changed from $40.00 to $50.00.');
+  await a.locator('#bookingPriceChangeContinueBtn').click();
+  await waitForBookingConfirmed(a);
+  assert.equal(await bookedTotal(a), 50);
+  assert.match(await confirmPayment(a), /no longer available — full price applied/);
+});
 
-// ---- 6. Unlimited codes ------------------------------------------------
-async function scenario6(){
-  return withPage(async page => {
-    await page.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-    await createDiscountCode(page, { code: 'UNLIMITED1', maxUses: '' });
-    for(let i = 0; i < 3; i++){
-      await fillBookingBasics(page);
-      await page.locator('#bookingDiscountCode').fill('UNLIMITED1');
-      await page.locator('#bookingDiscountApply').click();
-      await page.waitForFunction(() => document.querySelector('#bookingDiscountStatus')?.textContent.includes('applied'));
-      await page.locator('#bookingForm').evaluate(form => form.requestSubmit());
-      await page.waitForFunction(() => document.querySelector('#bookingConfirmId')?.textContent.length > 0, { timeout: 10000 });
-      assert.doesNotMatch(await page.locator('#bookingConfirmPayment').textContent(), /usage limit/);
-      await page.locator('#bookingConfirmCloseBtn').click();
-    }
-  });
-}
+// ---- Regression: code paused after Apply ------------------------------
+await scenario('R2 code paused after Apply is not honored', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'PAUSED1' });
+  const a = await customer();
+  await openBookingDetails(a);
+  await applyBookingCode(a, 'PAUSED1');
+  await openOwnerDiscounts(owner);
+  await owner.locator('[data-discount-id="demo-paused1"] [data-discount-action="toggle"]').click();
+  await submitBooking(a);
+  await a.waitForFunction(() => !document.querySelector('#bookingPriceChangeConfirm')?.hidden, null, { timeout: 10000 });
+  assert.match(await a.locator('#bookingPriceChangeMessage').textContent(), /no longer available/);
+  await a.locator('#bookingPriceChangeBackBtn').click();
+  assert.equal(await a.locator('#bookingConfirmId').textContent(), '');
+  assert.equal((await storedCode(a, 'PAUSED1')).usedCount, 0);
+});
 
-// ---- 7. Price-change confirmation content/behavior --------------------
-// Same two-context technique as scenario 2 (see its comment) so B's
-// Apply genuinely succeeds before A's claim exhausts the code — this
-// scenario then also drives B's "Continue" button, which scenario 2
-// deliberately does not, to confirm the booking really is created at
-// the new, higher price only after that explicit confirmation.
-async function scenario7(){
-  const browser = await chromium.launch({ headless: true });
-  const errors = [];
-  try {
-    const ownerContext = await browser.newContext();
-    const ownerPage = await ownerContext.newPage();
-    await ownerPage.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-    await createDiscountCode(ownerPage, { code: 'PRICECHANGE1', amount: '20', maxUses: 1 });
-    await ownerContext.close();
+// ---- Regression: owner edit must not lower the usage count ------------
+// The owner's page loaded before the member used the code; saving an
+// edit used to write the old count (0) back, re-opening a used-up code.
+await scenario('R3 owner edit keeps the current usage count', async ({ owner, customer }) => {
+  await createDiscountCode(owner, { code: 'EDITME', maxUses: 1 });
+  const a = await customer();
+  await openBookingDetails(a);
+  await applyBookingCode(a, 'EDITME');
+  await submitBooking(a); await waitForBookingConfirmed(a);
+  // Owner's page is still the one loaded before the claim.
+  await createDiscountCode(owner, { code: 'EDITME', amount: '25', maxUses: 1 });
+  const stored = await storedCode(owner, 'EDITME');
+  assert.equal(stored.amount, 25);
+  assert.equal(stored.usedCount, 1);
+  assert.equal(stored.redeemedSourceIds.length, 1);
+  assert.match(await owner.locator('[data-discount-id="demo-editme"]').textContent(), /1 \/ 1 used/);
+  const b = await customer();
+  await openBookingDetails(b, { timeIndex: 1 });
+  assert.match(await applyBookingCode(b, 'EDITME'), /usage limit/);
+});
 
-    const contextA = await browser.newContext();
-    const contextB = await browser.newContext();
-    const pageA = await contextA.newPage();
-    const pageB = await contextB.newPage();
-    [pageA, pageB].forEach(p => p.on('pageerror', e => errors.push(e.message)));
+// ---- Owner controls: create, edit, pause/activate, expiry, delete -----
+await scenario('O1 owner discount controls', async ({ owner, customer }) => {
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+  await createDiscountCode(owner, { code: 'OLDCODE', expiresAt: yesterday });
+  await createDiscountCode(owner, { code: 'FIVEOFF', type: 'fixed', amount: '5', scope: 'oneonone', maxUses: 2 });
+  const list = owner.locator('#ownerDiscountCodesList');
+  assert.match(await list.textContent(), /FIVEOFF.*\$5\.00 off · One-on-Ones · 0 \/ 2 used/s);
+  assert.match(await list.textContent(), new RegExp('OLDCODE.*Ends ' + yesterday, 's'));
+  // invalid input is refused with a clear message
+  await owner.locator('#ownerDiscountCode').fill('x');
+  await owner.locator('#ownerDiscountAmount').fill('10');
+  await owner.locator('#ownerDiscountCodeForm').evaluate(f => f.requestSubmit());
+  assert.match(await owner.locator('#ownerDiscountCodeStatus').textContent(), /3–30 letters/);
+  await owner.locator('#ownerDiscountCode').fill('BIGPCT');
+  await owner.locator('#ownerDiscountType').selectOption('percent');
+  await owner.locator('#ownerDiscountAmount').fill('150');
+  await owner.locator('#ownerDiscountCodeForm').evaluate(f => f.requestSubmit());
+  assert.match(await owner.locator('#ownerDiscountCodeStatus').textContent(), /1 to 100/);
 
-    for(const p of [pageA, pageB]){
-      await p.goto(BASE_URL + '/one-on-one.html', { waitUntil: 'domcontentloaded' });
-      await fillBookingBasics(p);
-      await p.locator('#bookingDiscountCode').fill('PRICECHANGE1');
-      await p.locator('#bookingDiscountApply').click();
-      await p.waitForFunction(() => document.querySelector('#bookingDiscountStatus')?.textContent.includes('applied'));
-    }
+  const a = await customer();
+  await openBookingDetails(a);
+  assert.match(await applyBookingCode(a, 'OLDCODE'), /expired/);
+  assert.match(await applyBookingCode(a, 'NOSUCHCODE'), /not found/);
+  assert.match(await applyBookingCode(a, 'FIVEOFF'), /save \$5\.00/);
+  assert.match(await a.locator('#bookingOrderSummary').textContent(), /\$45\.00/);
+  // a One-on-One-only code is refused for a class
+  await a.locator('#bookingDialog').evaluate(d => d.close());
+  await a.evaluate(() => window.openTeachingRegister('demo-discernment'));
+  await a.locator('#teachingRegisterDiscountCode').fill('FIVEOFF');
+  await a.locator('#teachingRegisterDiscountApply').click();
+  await a.waitForFunction(() => /not available/.test(document.querySelector('#teachingRegisterDiscountStatus')?.textContent || ''));
 
-    await pageA.locator('#bookingForm').evaluate(form => form.requestSubmit());
-    await pageA.waitForFunction(() => document.querySelector('#bookingConfirmId')?.textContent.length > 0, { timeout: 10000 });
+  // pause → refused; activate → works again
+  // (The owner page is not reloaded: the Preview's one shared sign-in is
+  // the member's now. Pause/Delete re-read the stored codes anyway.)
+  await openOwnerDiscounts(owner);
+  const row = owner.locator('[data-discount-id="demo-fiveoff"]');
+  await row.locator('[data-discount-action="toggle"]').click();
+  await owner.waitForFunction(() => /Activate/.test(document.querySelector('[data-discount-id="demo-fiveoff"]')?.textContent || ''));
+  await openBookingDetails(a);
+  assert.match(await applyBookingCode(a, 'FIVEOFF'), /not active/);
+  await owner.locator('[data-discount-id="demo-fiveoff"] [data-discount-action="toggle"]').click();
+  await openBookingDetails(a);
+  assert.match(await applyBookingCode(a, 'FIVEOFF'), /applied/);
+  // delete → gone from the list and from checkout
+  await owner.locator('[data-discount-id="demo-fiveoff"] [data-discount-action="delete"]').click();
+  assert.doesNotMatch(await list.textContent(), /FIVEOFF/);
+  await openBookingDetails(a);
+  assert.match(await applyBookingCode(a, 'FIVEOFF'), /not found/);
+});
 
-    await pageB.locator('#bookingForm').evaluate(form => form.requestSubmit());
-    await pageB.waitForFunction(() => !document.querySelector('#bookingPriceChangeConfirm')?.hidden, { timeout: 10000 });
-    assert.equal(await pageB.locator('#bookingPriceChangeMessage').textContent(),
-      'This discount code just reached its usage limit. Your total has changed from $40.00 to $50.00.');
-    assert.equal(await pageB.locator('#bookingPriceChangeContinueBtn').textContent(), 'Continue at $50.00');
-    // Continue must actually create the booking at full price.
-    await pageB.locator('#bookingPriceChangeContinueBtn').click();
-    await pageB.waitForFunction(() => document.querySelector('#bookingConfirmId')?.textContent.length > 0, { timeout: 10000 });
-    assert.match(await pageB.locator('#bookingConfirmPayment').textContent(), /\$50\.00/);
-    assert.match(await pageB.locator('#bookingConfirmPayment').textContent(), /usage limit/);
+// ---- Regression: two tabs can't book the same time in the Preview ----
+await scenario('R4 two tabs cannot double-book one time', async ({ customer }) => {
+  const a = await customer(); const b = await customer();
+  const ta = await openBookingDetails(a, { timeIndex: 0 });
+  const tb = await openBookingDetails(b, { timeIndex: 0 });
+  assert.equal(ta, tb);
+  await submitBooking(a); await waitForBookingConfirmed(a);
+  await asSeparateCustomer(b);
+  await submitBooking(b);
+  await b.waitForFunction(() => document.querySelector('#bookingStatus')?.textContent.includes('just taken'), null, { timeout: 10000 });
+  const stored = await b.evaluate(() => JSON.parse(localStorage.getItem('ua_preview_bookings_v1') || '[]'));
+  const ids = stored.map(x => x.id);
+  assert.equal(new Set(ids).size, ids.length, 'booking ids are unique');
+  assert.equal(stored.filter(x => x.time === ta && x.uid === 'demo-member' && x.name === 'Test Customer').length, 1);
+});
 
-    await contextA.close(); await contextB.close();
-  } finally {
-    await browser.close();
-  }
-  return errors;
-}
-
-const scenarios = [
-  ['1_successful_limited_claim', scenario1],
-  ['2_code_already_at_limit', scenario2],
-  ['3_two_competing_attempts', scenario3],
-  ['4_failed_booking_releases_claim', scenario4],
-  ['5_confirmed_redemption_locked', scenario5],
-  ['6_unlimited_codes', scenario6],
-  ['7_price_change_confirmation', scenario7]
-];
-
-for(const [name, run] of scenarios){
-  try {
-    const errors = await run();
-    if(errors.length) throw new Error('page errors: ' + errors.join('; '));
-    console.log(name + '=ok');
-  } catch (err) {
-    console.log(name + '=FAILED: ' + (err && err.message || err));
-    results.push(name);
-  }
-}
-if(results.length){
-  console.log('FAILED SCENARIOS: ' + results.join(', '));
-  process.exitCode = 1;
-} else {
-  console.log('all discount-claim-lifecycle scenarios passed (as far as this unverified file can tell)');
-}
+await browser.close();
+console.log(results.join('\n'));
+const failed = results.filter(r => r.startsWith('FAIL')).length;
+console.log(`${results.length - failed}/${results.length} passed`);
+if(failed) process.exitCode = 1;
