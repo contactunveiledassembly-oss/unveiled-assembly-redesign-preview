@@ -234,6 +234,10 @@ function productPurchasable(p){
   if(!p || p.status !== 'published' || p.isPlaceholder || !Number.isInteger(p.priceCents) || p.priceCents <= 0) return false;
   if(p.testOnly === true && stripeLiveMode()) return false;
   if(p.type === 'physical' && p.trackInventory && !(Number.isInteger(p.stock) && p.stock > 0)) return false;
+  // Audio delivery isn't built yet; "customer chooses" needs its existing
+  // Stripe price for the loaded key.
+  if(p.type === 'digital' && pricing.formatIncludesAudio(p) && !pricing.AUDIO_DELIVERY_READY) return false;
+  if(p.pricing === 'choose' && !pricing.stripePriceIdFor(p, stripeLiveMode())) return false;
   return true;
 }
 
@@ -342,8 +346,27 @@ async function priceShop(items, uid, email, rawDiscountCode){
       await assertDigitalPurchasable(productId, p.title, uid);
     }
     if(p.type === 'physical' && p.trackInventory && quantity > p.stock) throw new HttpsError('failed-precondition', 'Only ' + p.stock + ' of ' + p.title + ' left.');
-    lines.push({ productId, name: p.title, description: option || p.subtitle || '', option, type: p.type, trackInventory: !!p.trackInventory, unitCents: p.priceCents, quantity });
+    const choose = p.pricing === 'choose';
+    lines.push({ productId, name: p.title, description: option || p.subtitle || '', option, type: p.type, trackInventory: !!p.trackInventory, unitCents: p.priceCents, quantity,
+      ...(choose ? { pricing: 'choose', stripePriceId: pricing.stripePriceIdFor(p, stripeLiveMode()), product: p } : {}) });
   }
+  // Stripe takes a customer-chooses price on its own, at quantity 1, and
+  // a discount code can't lower an amount the customer sets themselves.
+  if(lines.some(l => l.pricing === 'choose')){
+    if(lines.length > 1) throw new HttpsError('failed-precondition', 'A “choose your amount” resource is checked out on its own. Please buy it separately.');
+    if(rawDiscountCode) throw new HttpsError('failed-precondition', 'Discount codes can’t be used on a “choose your amount” resource.');
+    lines[0].quantity = 1;
+    // Confirm the existing Stripe price really is what the product says
+    // before any order is created.
+    let price = null;
+    try { price = await stripe().prices.retrieve(lines[0].stripePriceId); } catch (err) { logger.warn('could not load Stripe price', lines[0].stripePriceId, err.type || err.message); }
+    const problem = pricing.customPriceProblem(price, lines[0].product, stripeLiveMode());
+    if(problem){
+      logger.error('Stripe price does not match the product', lines[0].productId, problem);
+      throw new HttpsError('failed-precondition', lines[0].name + ' is not available to buy right now. Please try again later.');
+    }
+  }
+  lines.forEach(l => { delete l.product; });
   const discount = rawDiscountCode ? await shopDiscountFor(rawDiscountCode, lines) : null;
   lines.forEach((l, i) => { l.discountCents = discount ? discount.perLine[i] : 0; });
   const subtotalCents = lines.reduce((sum, l) => sum + l.unitCents * l.quantity, 0);
@@ -362,8 +385,12 @@ async function priceShop(items, uid, email, rawDiscountCode){
     items: lines.map(l => ({
       productId: l.productId, title: l.name, option: l.option, type: l.type, trackInventory: l.trackInventory,
       unitPriceCents: l.unitCents, quantity: l.quantity, discountCents: l.discountCents,
-      paidCents: l.unitCents * l.quantity - l.discountCents
+      paidCents: l.unitCents * l.quantity - l.discountCents,
+      // For "customer chooses", unitPriceCents is the minimum; the
+      // amount actually paid is recorded when Stripe confirms payment.
+      ...(l.pricing === 'choose' ? { pricing: 'choose', minimumCents: l.unitCents, stripePriceId: l.stripePriceId } : {})
     })),
+    ...(lines.some(l => l.pricing === 'choose') ? { customerChoosesAmount: true } : {}),
     subtotalCents, discountCents, totalCents: subtotalCents - discountCents,
     ...(discount ? { discountCode: discount.code, discountCodeId: discount.codeId, discountType: discount.type, discountValue: discount.amount } : {}),
     hasPhysical: lines.some(l => l.type === 'physical'),
@@ -430,7 +457,7 @@ exports.createCheckoutSession = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALL
   if(existingId){
     try {
       const existing = await stripe().checkout.sessions.retrieve(existingId);
-      if(existing.status === 'open' && existing.amount_total === totalCents) return { url: existing.url };
+      if(existing.status === 'open' && (existing.amount_total === totalCents || priced.lines.some(l => l.stripePriceId))) return { url: existing.url };
       if(existing.status === 'complete') throw new HttpsError('failed-precondition', 'This is already paid.');
     } catch (err) {
       if(err instanceof HttpsError) throw err;
@@ -448,10 +475,13 @@ exports.createCheckoutSession = onCall({ secrets: [STRIPE_SECRET_KEY], cors: ALL
     integration_identifier: STRIPE_INTEGRATION_IDENTIFIER,
     mode: 'payment',
     submit_type: kind === 'donation' ? 'donate' : kind === 'shop' ? 'pay' : 'book',
-    line_items: priced.lines.map(l => ({
-      quantity: l.quantity,
-      price_data: { currency: 'usd', unit_amount: l.unitCents, product_data: { name: l.name, ...(l.description ? { description: l.description } : {}) } }
-    })),
+    line_items: priced.lines.map(l => l.stripePriceId
+      // The EXISTING Stripe price (customer chooses the amount on Stripe's page).
+      ? { quantity: 1, price: l.stripePriceId }
+      : {
+        quantity: l.quantity,
+        price_data: { currency: 'usd', unit_amount: l.unitCents, product_data: { name: l.name, ...(l.description ? { description: l.description } : {}) } }
+      }),
     ...(priced.email ? { customer_email: priced.email } : {}),
     client_reference_id: id,
     metadata,
@@ -567,6 +597,11 @@ async function markPaid(session){
       const shipping = session.shipping_details || (session.collected_information && session.collected_information.shipping_details) || null;
       const email = (session.customer_details && session.customer_details.email) || record.email || null;
       const reviewFlags = [];
+      // "Customer chooses": the order was priced at the minimum; record what
+      // Stripe actually charged on that (single) line.
+      if(record.customerChoosesAmount === true && digitalItems.length === 1 && Number.isInteger(session.amount_total)){
+        digitalItems[0] = { ...digitalItems[0], paidCents: session.amount_total };
+      }
       const digitalAccessIds = digitalItems.map((item, i) => {
         const accessId = id + '_' + item.productId;
         const file = digitalFileSnaps[i].exists ? digitalFileSnaps[i].data() : null;
@@ -585,7 +620,8 @@ async function markPaid(session){
         ...(session.free ? { freeWithDiscount: true, paymentMethod: 'discount' } : {}),
         ...((() => {
           // Stripe charged a different total than this order was priced at.
-          if(!session.free && Number.isInteger(record.totalCents) && Number.isInteger(session.amount_total) && session.amount_total !== record.totalCents) reviewFlags.push('amount-mismatch');
+          if(!session.free && Number.isInteger(record.totalCents) && Number.isInteger(session.amount_total) &&
+            (record.customerChoosesAmount === true ? session.amount_total < record.totalCents : session.amount_total !== record.totalCents)) reviewFlags.push('amount-mismatch');
           return reviewFlags.length ? { reviewFlags } : {};
         })()),
         ...(digitalAccessIds.length ? { digitalAccessIds } : {})

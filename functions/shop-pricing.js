@@ -22,6 +22,34 @@ function shopDiscountProblem(code, today, liveMode){
   return '';
 }
 
+// Catalog formats. Only PDF delivery exists; an audio product can't be
+// sold until private audio delivery is built (mirrors shop-system.js).
+const AUDIO_DELIVERY_READY = false;
+function formatIncludesAudio(p){ return !!p && (p.format === 'audio' || p.format === 'audio_pdf'); }
+// The existing Stripe price for a "customer chooses" product, for the
+// key that is loaded — a test id is never used live, or the reverse.
+function stripePriceIdFor(p, liveMode){
+  const id = p && (liveMode ? p.stripeLivePriceId : p.stripeTestPriceId);
+  return typeof id === 'string' && /^price_[A-Za-z0-9]+$/.test(id) ? id : '';
+}
+// Checks the Stripe Price fetched at checkout matches what the product
+// promises: active, USD, the right mode, "customer chooses" with the
+// same minimum, and (when linked) the same Stripe product.
+function customPriceProblem(price, product, liveMode){
+  if(!price) return 'not-found';
+  if(price.active !== true) return 'inactive';
+  if(price.livemode !== liveMode) return 'wrong-mode';
+  if(String(price.currency || '').toLowerCase() !== 'usd') return 'wrong-currency';
+  const custom = price.custom_unit_amount;
+  if(!custom) return 'not-customer-chooses';
+  const minimum = Number.isInteger(custom.minimum) ? custom.minimum : null;
+  if(minimum === null || minimum !== product.priceCents) return 'minimum-mismatch';
+  const linked = liveMode ? product.stripeLiveProductId : product.stripeTestProductId;
+  const priceProduct = typeof price.product === 'string' ? price.product : price.product && price.product.id;
+  if(linked && priceProduct !== linked) return 'product-mismatch';
+  return '';
+}
+
 // One-on-One / class codes. The member reserves ("claims") a use in the
 // browser before the booking exists, then pays later — so the dates are
 // judged on the day of that claim (its server-set createdAt, Eastern),
@@ -73,4 +101,4 @@ function shopSignature(lines, discount){
   return JSON.stringify([lines.map(l => [l.productId, l.option, l.quantity, l.unitCents]).sort(), discount ? [discount.codeId, discount.discountCents] : null]);
 }
 
-module.exports = { easternToday, shopDiscountProblem, sessionDiscountProblem, allocateDiscount, stripeLinesFor, shopSignature };
+module.exports = { AUDIO_DELIVERY_READY, formatIncludesAudio, stripePriceIdFor, customPriceProblem, easternToday, shopDiscountProblem, sessionDiscountProblem, allocateDiscount, stripeLinesFor, shopSignature };

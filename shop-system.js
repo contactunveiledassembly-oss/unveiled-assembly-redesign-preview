@@ -22,7 +22,19 @@ const PUBLIC_STATUSES = new Set(['published', 'coming_soon']);
 // they still show in Owner Portal → Store. Remove an id once archived.
 const RETIRED_TEST_PRODUCT_IDS = new Set(['testing-mvquvmo1', 'testing-2-mvrl7vrr']);
 const PRODUCT_TYPES = new Set(['digital', 'physical']);
-const PRODUCT_CATEGORIES = new Set(['digital', 'books', 'apparel']);
+const PRODUCT_CATEGORIES = new Set(['digital', 'audio', 'study', 'books', 'apparel']);
+// What a digital product delivers. Only PDF delivery exists today; audio
+// products can be catalogued and drafted, but stay unbuyable until
+// private audio delivery is built (the server enforces the same rule).
+export const PRODUCT_FORMATS = Object.freeze({ pdf: 'PDF', audio: 'Audio', audio_pdf: 'Audio + PDF' });
+export const AUDIO_DELIVERY_READY = false;
+// 'fixed' = priceCents is the price. 'choose' = the customer chooses what
+// to pay at Stripe Checkout and priceCents is the minimum; it needs an
+// existing Stripe "customer chooses price" Price for that mode.
+const PRICING_MODES = new Set(['fixed', 'choose']);
+function stripeId(value, prefix){ const v = text(value); return v.startsWith(prefix) && /^[A-Za-z0-9_]+$/.test(v) && v.length <= 255 ? v : ''; }
+export function formatIncludesAudio(product){ const f = product && product.format; return f === 'audio' || f === 'audio_pdf'; }
+export function formatIncludesPdf(product){ const f = product && product.format; return !f || f === 'pdf' || f === 'audio_pdf'; }
 
 const DEFAULT_SETTINGS = Object.freeze({
   eyebrow: 'THE UNVEILED COLLECTION',
@@ -41,6 +53,24 @@ export const CONCEALED_DRAFT = Object.freeze({
   priceCents: null, availability: 'Not Published', collection: '', image: '', images: [], description: '',
   included: [], delivery: '', options: [], tags: ['needs owner input'], trackInventory: false, stock: null, isPlaceholder: false, testOnly: false
 });
+
+// The owner's planned catalog (2026-11-18). All drafts: nothing here is
+// for sale until the owner supplies final prices, descriptions, covers
+// and files. John 1:18 already exists in the Stripe TEST sandbox as a
+// "customer chooses" price with an $18 minimum; that existing product
+// and price are linked (never re-created). Its test ids are only filled
+// in for the local preview — on the real database the owner enters them
+// in the editor while testing, and live ids only after live approval.
+export const JOHN_1_18_STRIPE_TEST = Object.freeze({ productId: 'prod_VeYJxFAp7n57uL', priceId: 'price_1UdFCa0qZ7sPvfPOV5kmUefP' });
+export const CATALOG_DRAFTS = Object.freeze([
+  { id: 'john-1-18-the-son-has-declared-him', title: 'John 1:18: The Son Has Declared Him', category: 'audio', format: 'audio_pdf', pricing: 'choose', priceCents: 1800,
+    tags: ['needs owner input', 'audio and PDF files not ready'] },
+  { id: 'saved-and-secure', title: 'Saved and Secure', category: 'digital', tags: ['idea', 'needs owner input'] },
+  { id: 'renewed-in-the-mind', title: 'Renewed in the Mind', category: 'digital', tags: ['idea', 'needs owner input'] },
+  { id: 'prayer-when-you-feel-stuck', title: 'Prayer When You Feel Stuck', category: 'digital', tags: ['idea', 'needs owner input'] },
+  { id: 'ecclesiastes-study', title: 'Ecclesiastes Study', subtitle: 'Working title', category: 'study', tags: ['idea', 'needs owner input'] }
+].map(d => Object.freeze({ type: 'digital', status: 'draft', featured: false, priceCents: null, availability: 'Not Published', collection: '', image: '', images: [],
+  description: '', included: [], delivery: '', options: [], trackInventory: false, stock: null, isPlaceholder: false, testOnly: false, format: 'pdf', pricing: 'fixed', ...d })));
 
 const DEMO_PRODUCTS = [
   {
@@ -136,7 +166,15 @@ export function normalizeProduct(raw = {}){
     stock,
     isPlaceholder: Boolean(raw.isPlaceholder),
     // Only visible/buyable in the private Stripe sandbox (test mode).
-    testOnly: Boolean(raw.testOnly)
+    testOnly: Boolean(raw.testOnly),
+    format: type === 'digital' && PRODUCT_FORMATS[raw.format] ? raw.format : (type === 'digital' ? 'pdf' : ''),
+    pricing: PRICING_MODES.has(raw.pricing) ? raw.pricing : 'fixed',
+    // Existing Stripe objects, kept per mode so a test id is never used
+    // for a live payment (and the other way round).
+    stripeTestProductId: stripeId(raw.stripeTestProductId, 'prod_'),
+    stripeTestPriceId: stripeId(raw.stripeTestPriceId, 'price_'),
+    stripeLiveProductId: stripeId(raw.stripeLiveProductId, 'prod_'),
+    stripeLivePriceId: stripeId(raw.stripeLivePriceId, 'price_')
   };
 }
 
@@ -145,10 +183,12 @@ export function normalizeProduct(raw = {}){
 export function missingProductInputs(product, hasFile){
   const p = normalizeProduct(product);
   const missing = [];
-  if(p.priceCents === null) missing.push('price');
+  if(p.priceCents === null) missing.push(p.pricing === 'choose' ? 'minimum price' : 'price');
   if(!p.description) missing.push('description');
   if(!p.image) missing.push('cover');
-  if(p.type === 'digital' && hasFile === false) missing.push('PDF');
+  if(p.type === 'digital' && formatIncludesPdf(p) && hasFile === false) missing.push('PDF');
+  if(p.type === 'digital' && formatIncludesAudio(p)) missing.push(AUDIO_DELIVERY_READY ? 'audio file' : 'audio file (audio delivery not built yet)');
+  if(p.pricing === 'choose' && !p.stripeTestPriceId && !p.stripeLivePriceId) missing.push('Stripe price');
   return missing;
 }
 
@@ -191,6 +231,8 @@ export function productIsPurchasable(product){
   const p = normalizeProduct(product);
   if(p.status !== 'published' || p.priceCents === null || p.isPlaceholder) return false;
   if(p.type === 'physical' && p.trackInventory && (p.stock === null || p.stock < 1)) return false;
+  if(p.type === 'digital' && formatIncludesAudio(p) && !AUDIO_DELIVERY_READY) return false;
+  if(p.pricing === 'choose' && !p.stripeTestPriceId && !p.stripeLivePriceId) return false;
   return true;
 }
 
@@ -204,7 +246,7 @@ function normalizedCart(cart){
   return cart.map(line => ({
     key: text(line.key), productId: text(line.productId), title: text(line.title),
     type: line.type === 'physical' ? 'physical' : 'digital', option: text(line.option),
-    image: text(line.image), priceCents: safeInteger(line.priceCents) ?? 0,
+    image: text(line.image), priceCents: safeInteger(line.priceCents) ?? 0, pricing: line.pricing === 'choose' ? 'choose' : 'fixed',
     quantity: Math.max(1, safeInteger(line.quantity) || 1),
     trackInventory: Boolean(line.trackInventory), stock: safeInteger(line.stock)
   })).filter(line => line.key && line.productId && line.title);
@@ -219,6 +261,11 @@ export function addCartProduct(cart, product, option = ''){
     return { cart: next, added: false, reason: 'option-required' };
   }
   const key = cartLineKey(p, chosenOption);
+  // Stripe takes a choose-your-amount item on its own, so it can't share
+  // a checkout with other items.
+  if(next.length && !next.some(line => line.key === key) && (p.pricing === 'choose' || next.some(line => line.pricing === 'choose'))){
+    return { cart: next, added: false, reason: 'choose-alone' };
+  }
   const existing = next.find(line => line.key === key);
   if(existing){
     if(p.type === 'digital') return { cart: next, added: false, reason: 'digital-duplicate' };
@@ -229,7 +276,7 @@ export function addCartProduct(cart, product, option = ''){
   }
   next.push({
     key, productId: p.id, title: p.title, type: p.type, option: chosenOption,
-    image: p.image, priceCents: p.priceCents, quantity: 1,
+    image: p.image, priceCents: p.priceCents, quantity: 1, pricing: p.pricing,
     trackInventory: p.trackInventory, stock: p.stock
   });
   return { cart: next, added: true, reason: 'added' };
@@ -251,11 +298,24 @@ export function cartSubtotalCents(cart){
 }
 
 function categoryLabel(value){
-  return ({ digital: 'Digital Study Resources', books: 'Physical Study Books', apparel: 'Apparel & Accessories' })[value] || 'Collection';
+  return ({ digital: 'Digital Study Resources', audio: 'Audio Teachings', study: 'Bible Studies', books: 'Physical Study Books', apparel: 'Apparel & Accessories' })[value] || 'Collection';
 }
 function typeLabel(value){ return value === 'digital' ? 'Digital Resource' : 'Physical Product'; }
-function formatLabel(value){ return value === 'digital' ? 'Digital PDF' : 'Physical Product'; }
-function accessLineLabel(value){ return value === 'digital' ? 'Digital PDF · Access After Purchase' : 'Physical Product · Ships After Purchase'; }
+// Accepts a product (preferred) or a bare type string (older callers).
+function formatLabel(value){
+  const p = typeof value === 'string' ? { type: value } : (value || {});
+  if(p.type !== 'digital') return 'Physical Product';
+  return p.format === 'audio' ? 'Digital Audio' : p.format === 'audio_pdf' ? 'Digital Audio + PDF' : 'Digital PDF';
+}
+function accessLineLabel(value){
+  const p = typeof value === 'string' ? { type: value } : (value || {});
+  return p.type === 'digital' ? formatLabel(p) + ' · Access After Purchase' : 'Physical Product · Ships After Purchase';
+}
+// Price wording: a choose-your-amount product shows its minimum.
+function priceLabel(p){
+  if(p && p.pricing === 'choose') return p.priceCents === null || p.priceCents === undefined ? 'Price to be announced' : 'From ' + money(p.priceCents) + ' · you choose the amount';
+  return money(p ? p.priceCents : null);
+}
 function statusLabel(value){
   if(value === 'published') return 'Active';
   return ({ draft: 'Draft', coming_soon: 'Coming Soon', published: 'Published', archived: 'Archived' })[value] || value;
@@ -392,7 +452,7 @@ export function initShopSystem(context){
     const quantity = line.type === 'digital'
       ? '<span class="shop-digital-qty">Digital · 1 copy</span>'
       : `<div class="shop-qty"><button type="button" data-cart-decrement aria-label="Decrease quantity">−</button><span data-cart-quantity>${line.quantity}</span><button type="button" data-cart-increment aria-label="Increase quantity">+</button></div>`;
-    return `<article class="shop-cart-line" data-cart-product-id="${esc(line.productId)}" data-cart-key="${esc(line.key)}">${image}<div class="shop-cart-line-copy"><span>${esc(typeLabel(line.type))}</span><h3>${esc(line.title)}</h3>${line.option ? `<p>${esc(line.option)}</p>` : ''}<div class="shop-cart-line-bottom">${quantity}<strong>${money(line.priceCents * line.quantity)}</strong></div><button type="button" class="shop-remove" data-cart-remove>Remove</button></div></article>`;
+    return `<article class="shop-cart-line" data-cart-product-id="${esc(line.productId)}" data-cart-key="${esc(line.key)}">${image}<div class="shop-cart-line-copy"><span>${esc(typeLabel(line.type))}</span><h3>${esc(line.title)}</h3>${line.option ? `<p>${esc(line.option)}</p>` : ''}<div class="shop-cart-line-bottom">${quantity}<strong>${line.pricing === 'choose' ? 'From ' + money(line.priceCents) : money(line.priceCents * line.quantity)}</strong></div>${line.pricing === 'choose' ? '<p class="shop-choose-note">You choose the amount at checkout (minimum ' + esc(money(line.priceCents)) + ').</p>' : ''}<button type="button" class="shop-remove" data-cart-remove>Remove</button></div></article>`;
   }
 
   function renderCart(){
@@ -486,6 +546,9 @@ export function initShopSystem(context){
       const quickDialog = document.getElementById('shopQuickViewDialog');
       if(quickDialog?.open) quickDialog.close();
       setCartOpen(true);
+    } else if(result.reason === 'choose-alone'){
+      if(announceNode) announceNode.textContent = 'A “choose your amount” resource is checked out on its own. Finish or empty your cart first.';
+      setCartOpen(true);
     } else if(result.reason === 'option-required'){
       openQuickView(id, 'Choose an option before adding this item.');
     } else if(announceNode){
@@ -572,7 +635,8 @@ export function initShopSystem(context){
       return `${optionSelect}${preview}<button class="shop-primary-action" type="button" disabled>Purchases Paused</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${esc(pausedMessage())}</div>`;
     }
     const digitalNote = p.type === 'digital' && purchasable
-      ? '<p class="shop-digital-note">Private PDF · Delivered to My Assembly → Purchases &amp; Downloads after payment. Account sign-in required.</p>' : '';
+      ? '<p class="shop-digital-note">Private ' + esc(formatLabel(p).replace('Digital ', '')) + ' · Delivered to My Assembly → Purchases &amp; Downloads after payment. Account sign-in required.' +
+        (p.pricing === 'choose' ? ' You choose what to pay at checkout (minimum ' + esc(money(p.priceCents)) + ').' : '') + '</p>' : '';
     return `${optionSelect}${preview}${digitalNote}<button class="shop-primary-action" type="button" data-add-to-cart="${esc(p.id)}"${purchasable ? '' : ' disabled'}>${purchasable ? 'Add To Cart' : p.status === 'coming_soon' ? 'Coming Soon' : 'Unavailable'}</button><div class="shop-action-status" data-shop-action-status aria-live="polite">${location === 'detail' && !purchasable ? 'Purchasing is not active for this item.' : ''}</div>`;
   }
 
@@ -582,7 +646,7 @@ export function initShopSystem(context){
     const wrap = document.getElementById('shopQuickViewContent');
     if(!p || !dialog || !wrap) return;
     wrap.dataset.productId = p.id;
-    wrap.innerHTML = `<div class="shop-quick-grid"><div class="shop-quick-image"${imageStyle(p.image)}>${p.image ? '' : coverCardHtml(p)}</div><div class="shop-quick-copy"><span class="shop-micro">${esc(categoryLabel(p.category))}</span><h2 id="shopQuickViewTitle">${esc(p.title)}</h2><p class="shop-quick-price">${esc(money(p.priceCents))} <span>·</span> ${esc(formatLabel(p.type))}</p><p>${esc(p.description || 'Product details will be added by the ministry owner.')}</p>${productControlHtml(p, 'quick')}<a class="shop-text-link" href="${base}shop/product.html?id=${encodeURIComponent(p.id)}">View Full Details ↗</a></div></div>`;
+    wrap.innerHTML = `<div class="shop-quick-grid"><div class="shop-quick-image"${imageStyle(p.image)}>${p.image ? '' : coverCardHtml(p)}</div><div class="shop-quick-copy"><span class="shop-micro">${esc(categoryLabel(p.category))}</span><h2 id="shopQuickViewTitle">${esc(p.title)}</h2><p class="shop-quick-price">${esc(priceLabel(p))} <span>·</span> ${esc(formatLabel(p))}</p><p>${esc(p.description || 'Product details will be added by the ministry owner.')}</p>${productControlHtml(p, 'quick')}<a class="shop-text-link" href="${base}shop/product.html?id=${encodeURIComponent(p.id)}">View Full Details ↗</a></div></div>`;
     if(message) wrap.querySelector('[data-shop-action-status]').textContent = message;
     if(!dialog.open) dialog.showModal();
   }
@@ -618,11 +682,11 @@ export function initShopSystem(context){
         accordionItemHtml('Shipping & Returns', `<p>${esc(deliveryText)}</p>`);
     wrap.innerHTML = `<div class="shop-detail-breadcrumb"><a href="${base}shop/">Shop</a><span>/</span>${p.collection ? `<a href="${base}shop/?collection=${encodeURIComponent(p.collection)}">${esc(p.collection)}</a>` : `<span>${esc(categoryLabel(p.category))}</span>`}</div>
       <h1>${esc(p.title)}</h1>
-      <p class="shop-detail-priceline">${esc(money(p.priceCents))} <span>·</span> ${esc(formatLabel(p.type))}</p>
+      <p class="shop-detail-priceline">${esc(priceLabel(p))} <span>·</span> ${esc(formatLabel(p))}</p>
       <div class="shop-detail-rule"></div>
       <div class="shop-detail-image"${imageStyle(p.image)}>${p.image ? '' : coverCardHtml(p)}</div>
       <p class="shop-detail-description">${esc(description)}</p>
-      <p class="shop-detail-access-line">${esc(accessLineLabel(p.type))}</p>
+      <p class="shop-detail-access-line">${esc(accessLineLabel(p))}</p>
       ${productControlHtml(p, 'detail')}
       <div class="shop-detail-rule"></div>
       <div class="shop-accordion">${accordion}</div>`;
@@ -752,13 +816,13 @@ export function initShopSystem(context){
     wrap.innerHTML = ordered.length ? ordered.map(p => {
       const hasFile = fileState ? !!(fileState[p.id] && (fileState[p.id].storagePath || fileState[p.id].previewFileName)) : undefined;
       const missing = p.isPlaceholder ? [] : missingProductInputs(p, hasFile);
-      return `<article class="store-product-row" data-store-product-id="${esc(p.id)}" data-product-status="${esc(p.status)}"><div class="store-product-thumb"${imageStyle(p.image)}></div><div><span>${esc(typeLabel(p.type))} · ${esc(categoryLabel(p.category))}${p.collection ? ' · ' + esc(p.collection) : ''}</span><strong>${esc(p.title)}${p.testOnly ? ' <span class="admin-status-pill pending">Test only</span>' : ''}</strong><p>${esc(money(p.priceCents))}</p>${missing.length ? `<p class="rs-needs-input" data-needs-input>Needs your input: ${esc(missing.join(' · '))}${p.id === 'concealed' && p.status !== 'published' ? ' — stays unpublished until the final price, description, cover image and finished PDF are approved.' : ''}</p>` : ''}</div><span class="admin-status-pill ${p.status === 'published' ? 'published' : p.status === 'archived' ? 'cancelled' : 'draft'}">${esc(statusLabel(p.status))}</span><button class="admin-btn-ghost" type="button" data-store-edit="${esc(p.id)}">Edit</button></article>`;
+      return `<article class="store-product-row" data-store-product-id="${esc(p.id)}" data-product-status="${esc(p.status)}"><div class="store-product-thumb"${imageStyle(p.image)}></div><div><span>${esc(typeLabel(p.type))} · ${esc(categoryLabel(p.category))}${p.collection ? ' · ' + esc(p.collection) : ''}</span><strong>${esc(p.title)}${p.testOnly ? ' <span class="admin-status-pill pending">Test only</span>' : ''}</strong><p>${esc(priceLabel(p))}${p.type === 'digital' ? ' · ' + esc(formatLabel(p)) : ''}${p.stripeTestPriceId ? ' · Stripe test price linked' : ''}</p>${missing.length ? `<p class="rs-needs-input" data-needs-input>Needs your input: ${esc(missing.join(' · '))}${p.id === 'concealed' && p.status !== 'published' ? ' — stays unpublished until the final price, description, cover image and finished PDF are approved.' : ''}</p>` : ''}</div><span class="admin-status-pill ${p.status === 'published' ? 'published' : p.status === 'archived' ? 'cancelled' : 'draft'}">${esc(statusLabel(p.status))}</span><button class="admin-btn-ghost" type="button" data-store-edit="${esc(p.id)}">Edit</button></article>`;
     }).join('') : '<p class="admin-hint">No products have been created yet.</p>';
   }
 
   function storeProductPreviewHtml(p){
     return `<div class="store-preview-image"${imageStyle(p.image)}>${p.image ? '' : coverCardHtml(p)}</div>
-      <div class="store-preview-copy"><span>${esc(typeLabel(p.type))} · ${esc(categoryLabel(p.category))}</span><strong>${esc(p.title || 'Untitled Product')}</strong><p>${esc(money(p.priceCents))}</p></div>`;
+      <div class="store-preview-copy"><span>${esc(typeLabel(p.type))} · ${esc(categoryLabel(p.category))}</span><strong>${esc(p.title || 'Untitled Product')}</strong><p>${esc(priceLabel(p))}</p></div>`;
   }
 
   function productEditorHtml(product){
@@ -779,8 +843,10 @@ export function initShopSystem(context){
         <span class="store-editor-step-label">Step 2 — The essentials.</span>
         <div class="booking-grid">
           <div class="booking-field full"><label>Product Title</label><input id="storeProductTitle" value="${esc(isNew ? '' : p.title)}" required /></div>
-          <div class="booking-field"><label>Category</label><select id="storeProductCategory"><option value="digital"${p.category === 'digital' ? ' selected' : ''}>Digital Study Resources</option><option value="books"${p.category === 'books' ? ' selected' : ''}>Physical Study Books</option><option value="apparel"${p.category === 'apparel' ? ' selected' : ''}>Apparel &amp; Accessories</option></select></div>
+          <div class="booking-field"><label>Category</label><select id="storeProductCategory"><option value="digital"${p.category === 'digital' ? ' selected' : ''}>Digital Study Resources</option><option value="audio"${p.category === 'audio' ? ' selected' : ''}>Audio Teachings</option><option value="study"${p.category === 'study' ? ' selected' : ''}>Bible Studies</option><option value="books"${p.category === 'books' ? ' selected' : ''}>Physical Study Books</option><option value="apparel"${p.category === 'apparel' ? ' selected' : ''}>Apparel &amp; Accessories</option></select></div>
           <div class="booking-field"><label for="storeProductCollection">Collection</label><input id="storeProductCollection" list="storeCollectionOptions" value="${esc(p.collection)}" placeholder="Choose or type a collection" /><datalist id="storeCollectionOptions">${(store.collections || []).map(c => `<option value="${esc(c.name)}"></option>`).join('')}</datalist></div>
+          <div class="booking-field"><label for="storeProductFormat">Format (digital)</label><select id="storeProductFormat">${Object.entries(PRODUCT_FORMATS).map(([v, l]) => `<option value="${v}"${p.format === v ? ' selected' : ''}>${l}</option>`).join('')}</select><small class="admin-hint">Audio products can be prepared now; they can’t be sold until audio delivery is connected.</small></div>
+          <div class="booking-field"><label for="storeProductPricing">Pricing</label><select id="storeProductPricing"><option value="fixed"${p.pricing !== 'choose' ? ' selected' : ''}>Fixed price</option><option value="choose"${p.pricing === 'choose' ? ' selected' : ''}>Customer chooses (with a minimum)</option></select><small class="admin-hint">“Customer chooses” uses an existing Stripe price set to “customer chooses”; the price below is its minimum.</small></div>
           <div class="booking-field"><label>Price (USD)</label><input id="storeProductPrice" type="number" min="0" step="0.01" value="${p.priceCents === null ? '' : (p.priceCents/100).toFixed(2)}" placeholder="Needs your input — leave blank until approved" /><small class="admin-hint">Changing the price only affects future purchases. Past orders keep what the customer paid.</small></div>
           <div class="booking-field full"><label>Short Description</label><textarea id="storeProductDescription" rows="4" placeholder="Needs your input">${esc(p.description)}</textarea></div>
         </div>
@@ -807,6 +873,10 @@ export function initShopSystem(context){
           <div class="booking-field"><label>Stock (physical only)</label><input id="storeProductStock" type="number" min="0" step="1" value="${p.stock === null ? '' : p.stock}" /></div>
           <label class="admin-checkbox-field"><input id="storeProductTrackInventory" type="checkbox"${p.trackInventory ? ' checked' : ''} /> Track physical inventory</label>
           <label class="admin-checkbox-field"><input id="storeProductFeatured" type="checkbox"${p.featured ? ' checked' : ''} /> Feature this product</label>
+          <div class="booking-field"><label for="storeProductStripeTestProduct">Stripe test product ID</label><input id="storeProductStripeTestProduct" value="${esc(p.stripeTestProductId)}" placeholder="prod_…" /></div>
+          <div class="booking-field"><label for="storeProductStripeTestPrice">Stripe test price ID</label><input id="storeProductStripeTestPrice" value="${esc(p.stripeTestPriceId)}" placeholder="price_…" /></div>
+          <div class="booking-field"><label for="storeProductStripeLiveProduct">Stripe live product ID</label><input id="storeProductStripeLiveProduct" value="${esc(p.stripeLiveProductId)}" placeholder="Only after live payments are approved" /></div>
+          <div class="booking-field"><label for="storeProductStripeLivePrice">Stripe live price ID</label><input id="storeProductStripeLivePrice" value="${esc(p.stripeLivePriceId)}" placeholder="Only after live payments are approved" /></div>
           <label class="admin-checkbox-field"><input id="storeProductTestOnly" type="checkbox"${p.testOnly ? ' checked' : ''} /> Test product — only visible and buyable in the private test sandbox, never on the public site</label>
           <div class="booking-field full"><label>Additional Gallery Image URLs (one per line)</label><textarea id="storeProductImages" rows="3">${esc(p.images.join('\n'))}</textarea></div>
         </div>
@@ -870,7 +940,13 @@ export function initShopSystem(context){
       trackInventory: document.getElementById('storeProductTrackInventory').checked,
       stock: document.getElementById('storeProductStock').value,
       isPlaceholder: current?.isPlaceholder || false,
-      testOnly: document.getElementById('storeProductTestOnly').checked
+      testOnly: document.getElementById('storeProductTestOnly').checked,
+      format: document.getElementById('storeProductFormat').value,
+      pricing: document.getElementById('storeProductPricing').value,
+      stripeTestProductId: document.getElementById('storeProductStripeTestProduct').value,
+      stripeTestPriceId: document.getElementById('storeProductStripeTestPrice').value,
+      stripeLiveProductId: document.getElementById('storeProductStripeLiveProduct').value,
+      stripeLivePriceId: document.getElementById('storeProductStripeLivePrice').value
     });
   }
 
@@ -880,6 +956,12 @@ export function initShopSystem(context){
     if(!title){ statusNode.textContent = 'Add a product title first.'; return; }
     const product = editorProduct(status);
     if(status === 'published' && product.priceCents === null){ statusNode.textContent = 'Add an approved price before setting this Active. Use Coming Soon if pricing is not final.'; return; }
+    for(const [id, prefix, label] of [['storeProductStripeTestProduct', 'prod_', 'Stripe test product ID'], ['storeProductStripeTestPrice', 'price_', 'Stripe test price ID'], ['storeProductStripeLiveProduct', 'prod_', 'Stripe live product ID'], ['storeProductStripeLivePrice', 'price_', 'Stripe live price ID']]){
+      const raw = document.getElementById(id).value.trim();
+      if(raw && !raw.startsWith(prefix)){ statusNode.textContent = label + ' should start with “' + prefix + '”.'; return; }
+    }
+    if(status === 'published' && product.type === 'digital' && formatIncludesAudio(product) && !AUDIO_DELIVERY_READY){ statusNode.textContent = 'Audio delivery isn’t connected yet, so an audio product can’t be set Active. Save it as a Draft or Coming Soon.'; return; }
+    if(status === 'published' && product.pricing === 'choose' && !product.stripeTestPriceId && !product.stripeLivePriceId){ statusNode.textContent = 'A “customer chooses” product needs its Stripe price ID before it can be set Active.'; return; }
     if(status === 'archived' && !window.confirm('Archive “' + product.title + '”? It leaves the Shop and can’t be bought. Customers who already bought it keep their downloads.')) return;
     statusNode.textContent = 'Saving…';
     try {
@@ -977,10 +1059,31 @@ export function initShopSystem(context){
     await setDoc(doc(db, 'shopProducts', draft.id), { ...productRecord(draft, null), updatedAt: serverTimestamp() });
     products.push(draft);
   }
+  // Adds each planned catalog draft once, only if neither its id nor its
+  // title exists yet. Never overwrites, never publishes.
+  async function ensureCatalogDrafts(){
+    for(const raw of CATALOG_DRAFTS){
+      const titleTaken = products.some(p => p.id === raw.id || p.title.trim().toLowerCase() === raw.title.toLowerCase());
+      if(titleTaken) continue;
+      const seed = { ...raw };
+      if(DEMO_MODE && raw.id === 'john-1-18-the-son-has-declared-him'){
+        seed.stripeTestProductId = JOHN_1_18_STRIPE_TEST.productId;
+        seed.stripeTestPriceId = JOHN_1_18_STRIPE_TEST.priceId;
+      }
+      const draft = normalizeProduct(seed);
+      if(DEMO_MODE){ products.push(draft); saveDemoProducts(); continue; }
+      const { doc, getDoc, setDoc, serverTimestamp } = firestore;
+      const existing = await getDoc(doc(db, 'shopProducts', draft.id));
+      if(existing.exists()) continue;
+      await setDoc(doc(db, 'shopProducts', draft.id), { ...productRecord(draft, null), updatedAt: serverTimestamp() });
+      products.push(draft);
+    }
+  }
   async function loadAdmin(){
     if(DEMO_MODE){
       store = { ...DEFAULT_STORE, ...(storageGet(DEMO_STORE_KEY, {}) || {}) };
       await ensureConcealedDraft();
+      await ensureCatalogDrafts();
       adminLoaded = true; renderAdmin(); return;
     }
     const { collection, getDocs, doc, getDoc } = firestore;
@@ -993,6 +1096,7 @@ export function initShopSystem(context){
     if(settingsSnap.exists()) settings = { ...DEFAULT_SETTINGS, ...settingsSnap.data() };
     if(storeSnap && storeSnap.exists()) store = { ...DEFAULT_STORE, ...storeSnap.data() };
     try { await ensureConcealedDraft(); } catch (err) { console.error('[shop] could not create the Concealed draft', err); }
+    try { await ensureCatalogDrafts(); } catch (err) { console.error('[shop] could not create the catalog drafts', err); }
     adminLoaded = true; renderAdmin();
   }
   // Saves Resources Shop store settings (pause + collections).

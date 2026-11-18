@@ -18,14 +18,24 @@ service cloud.firestore {
           'id','title','subtitle','type','category','status','featured',
           'priceCents','availability','collection','image','images',
           'description','included','delivery','options','tags',
-          'trackInventory','stock','isPlaceholder','updatedAt','testOnly'
+          'trackInventory','stock','isPlaceholder','updatedAt','testOnly',
+          'format','pricing','stripeTestProductId','stripeTestPriceId','stripeLiveProductId','stripeLivePriceId'
         ]) &&
+        // Optional catalog fields (2026-11-18): what a digital product
+        // delivers, fixed vs customer-chooses pricing, and links to
+        // EXISTING Stripe objects per mode (ids only, never secrets).
+        (!('format' in d) || d.format in ['', 'pdf', 'audio', 'audio_pdf']) &&
+        (!('pricing' in d) || d.pricing in ['fixed', 'choose']) &&
+        (!('stripeTestProductId' in d) || d.stripeTestProductId == '' || d.stripeTestProductId.matches('^prod_[A-Za-z0-9]{1,250}$')) &&
+        (!('stripeLiveProductId' in d) || d.stripeLiveProductId == '' || d.stripeLiveProductId.matches('^prod_[A-Za-z0-9]{1,250}$')) &&
+        (!('stripeTestPriceId' in d) || d.stripeTestPriceId == '' || d.stripeTestPriceId.matches('^price_[A-Za-z0-9]{1,250}$')) &&
+        (!('stripeLivePriceId' in d) || d.stripeLivePriceId == '' || d.stripeLivePriceId.matches('^price_[A-Za-z0-9]{1,250}$')) &&
         d.id == productId &&
         (!('testOnly' in d) || d.testOnly is bool) &&
         d.title is string && d.title.size() > 0 && d.title.size() <= 180 &&
         d.subtitle is string && d.subtitle.size() <= 300 &&
         d.type in ['digital', 'physical'] &&
-        d.category in ['digital', 'books', 'apparel'] &&
+        d.category in ['digital', 'audio', 'study', 'books', 'apparel'] &&
         d.status in ['draft', 'coming_soon', 'published', 'archived'] &&
         d.featured is bool &&
         (d.priceCents == null || (d.priceCents is int && d.priceCents >= 0 && d.priceCents <= 100000000)) &&

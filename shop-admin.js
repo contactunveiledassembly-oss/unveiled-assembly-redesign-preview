@@ -22,7 +22,7 @@
 import {
   normalizeProduct, missingProductInputs, shopDiscountProblem, easternToday,
   normalizeDiscountCode, hashDiscountCode, DEMO_SHOP_DISCOUNTS_KEY
-} from './shop-system.js?v=6';
+} from './shop-system.js?v=7';
 
 const RETIRED_TEST_PRODUCT_IDS = ['testing-mvquvmo1', 'testing-2-mvrl7vrr'];
 const PAYMENT_LABELS = { paid: 'Paid', pending: 'Payment Pending', unpaid: 'Not Paid', refunded: 'Refunded', partially_refunded: 'Partly Refunded', complimentary: 'Complimentary' };
