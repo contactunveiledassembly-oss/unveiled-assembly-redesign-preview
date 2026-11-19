@@ -34,6 +34,20 @@ await page.locator('[data-owner-nav="store"]').evaluate(b => b.click());
 await page.waitForSelector('#ownerStoreOverview .rs-alerts, #ownerStoreOverview .rs-empty', { timeout: 8000 });
 await page.locator('[data-store-tab="products"]').click();
 
+await test('nothing is added until the owner clicks “Add Planned Products”', async () => {
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('ua_preview_store_products_v1') || '[]').map(p => p.id));
+  for(const id of [JOHN, 'saved-and-secure', 'renewed-in-the-mind', 'prayer-when-you-feel-stuck', 'ecclesiastes-study']) assert.ok(!before.includes(id), id + ' was added automatically');
+  assert.equal(await page.locator(`[data-store-product-id="${JOHN}"]`).count(), 0);
+  const btn = page.locator('#ownerStoreAddPlanned');
+  await btn.waitFor({ state: 'visible' });
+  assert.match(await btn.innerText(), /Add Planned Products \(5\)/, 'Concealed is already a preview sample, so 5 remain');
+  let confirmText = '';
+  page.once('dialog', d => { confirmText = d.message(); });
+  await btn.click();
+  await page.waitForFunction(() => /Added as drafts/.test(document.getElementById('ownerStorePlannedStatus')?.textContent || ''));
+  assert.match(confirmText, /John 1:18: The Son Has Declared Him/); assert.match(confirmText, /hidden drafts/);
+  assert.equal(await btn.isHidden(), true, 'button disappears once everything is added');
+});
 await test('owner sees John 1:18 and the four ideas as drafts with what is still needed', async () => {
   const row = page.locator(`[data-store-product-id="${JOHN}"]`);
   await row.waitFor({ state: 'visible' });
@@ -47,7 +61,7 @@ await test('owner sees John 1:18 and the four ideas as drafts with what is still
     assert.match(r, /Draft/i, id + ': ' + JSON.stringify(r.slice(0, 160))); assert.match(r, /Price to be announced/i);
   }
 });
-await test('drafts are created once: reloading does not duplicate them', async () => {
+await test('adding is once only: after a reload nothing is offered again and nothing is duplicated', async () => {
   await page.reload({ waitUntil: 'domcontentloaded' });
   // After a reload the account window is closed; reopen it like the owner would.
   await page.waitForSelector('#navMemberPortal', { state: 'attached', timeout: 15000 });
@@ -59,6 +73,7 @@ await test('drafts are created once: reloading does not duplicate them', async (
   assert.equal(products.filter(p => p.id === JOHN).length, 1);
   assert.equal(products.filter(p => p.title === 'Ecclesiastes Study').length, 1);
   await page.locator('[data-store-tab="products"]').click();
+  assert.equal(await page.locator('#ownerStoreAddPlanned').isHidden(), true);
   await page.locator(`[data-store-edit="${JOHN}"]`).waitFor({ state: 'visible' });
 });
 await test('editor shows format, pricing and the linked Stripe test ids; audio can’t be set Active', async () => {

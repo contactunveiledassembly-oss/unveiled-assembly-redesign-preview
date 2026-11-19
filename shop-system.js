@@ -107,7 +107,7 @@ const DEMO_PRODUCTS = [
     options: [], tags: ['development placeholder'], isPlaceholder: true
   },
   // The owner's first real resource, waiting on her content. Mirrors
-  // the draft the Owner Portal creates on the live site (ensureConcealedDraft).
+  // the draft the owner adds with Owner Portal → Resources Shop → Products → Add Planned Products.
   CONCEALED_DRAFT,
   // Local-preview-only test item so the real Add to Cart / cart-drawer
   // flow can actually be clicked through during design review. DEMO_MODE
@@ -797,7 +797,7 @@ export function initShopSystem(context){
         ${OWNER_TABS.map(([id,label], index) => `<button type="button" class="admin-tab${index === 0 ? ' active' : ''}" data-store-tab="${id}">${label}</button>`).join('')}
       </div>
       <div data-store-panel="overview"><div id="ownerStoreOverview"></div></div>
-      <div data-store-panel="products" hidden><div class="store-products-head"><div><h4>Products &amp; Study Guides</h4><p>Create and edit resources. Draft and Archived products can’t be bought; customers who already bought them keep their access.</p></div><button class="admin-btn-solid" type="button" id="ownerStoreNewProduct">Create Product</button></div><div id="ownerStoreProductsList"></div><div id="ownerStoreProductEditor"></div><div id="ownerStoreInventory" class="rs-subsection"></div></div>
+      <div data-store-panel="products" hidden><div class="store-products-head"><div><h4>Products &amp; Study Guides</h4><p>Create and edit resources. Draft and Archived products can’t be bought; customers who already bought them keep their access.</p></div><div class="store-products-actions"><button class="admin-btn-ghost" type="button" id="ownerStoreAddPlanned" hidden>Add Planned Products</button><button class="admin-btn-solid" type="button" id="ownerStoreNewProduct">Create Product</button></div></div><p class="form-status" id="ownerStorePlannedStatus" role="status" aria-live="polite"></p><div id="ownerStoreProductsList"></div><div id="ownerStoreProductEditor"></div><div id="ownerStoreInventory" class="rs-subsection"></div></div>
       <div data-store-panel="orders" hidden><div id="ownerShopOrders"></div><div class="rs-subsection"><div id="ownerDigitalOrders"></div></div></div>
       <div data-store-panel="files" hidden><div id="ownerDigitalFiles"></div></div>
       <div data-store-panel="collections" hidden><div id="ownerShopCollections"></div></div>
@@ -900,7 +900,7 @@ export function initShopSystem(context){
   function renderAdmin(){
     const root = document.getElementById('ownerStoreRoot'); if(!root) return;
     if(!root.dataset.ready){ root.innerHTML = ownerShellHtml(); root.dataset.ready = 'true'; wireAdmin(); }
-    renderOwnerProducts(); renderOwnerInventory(); renderOwnerAppearance();
+    renderOwnerProducts(); renderPlannedButton(); renderOwnerInventory(); renderOwnerAppearance();
     if(context.onOwnerRender) context.onOwnerRender();
     renderOwnerOverview();
   }
@@ -1040,50 +1040,68 @@ export function initShopSystem(context){
   function wireAdmin(){
     document.getElementById('ownerStoreTabs').addEventListener('click', event => { const button = event.target.closest('[data-store-tab]'); if(button) showStoreTab(button.dataset.storeTab); });
     document.getElementById('ownerStoreNewProduct').addEventListener('click', () => openEditor());
+    document.getElementById('ownerStoreAddPlanned').addEventListener('click', () => addPlannedDrafts());
     document.getElementById('ownerStoreProductsList').addEventListener('click', event => { const button = event.target.closest('[data-store-edit]'); if(button) openEditor(button.dataset.storeEdit); });
     document.getElementById('ownerStoreAppearance').addEventListener('submit', event => { if(event.target.id === 'ownerStoreAppearanceForm') saveAppearance(event); });
   }
 
-  // The owner asked for "Concealed" to exist as a draft. Created once,
-  // only if no product with that title exists yet; nothing about it is
-  // invented — price, description, cover and PDF stay empty and are
-  // flagged "Needs your input".
-  async function ensureConcealedDraft(){
-    if(products.some(p => /^concealed$/i.test(p.title.trim()))) return;
-    const draft = normalizeProduct(CONCEALED_DRAFT);
-    if(DEMO_MODE){ products.push(draft); saveDemoProducts(); return; }
-    const { doc, getDoc, setDoc, serverTimestamp } = firestore;
-    // Don't overwrite a record that exists but is unreadable as a product.
-    const existing = await getDoc(doc(db, 'shopProducts', draft.id));
-    if(existing.exists()) return;
-    await setDoc(doc(db, 'shopProducts', draft.id), { ...productRecord(draft, null), updatedAt: serverTimestamp() });
-    products.push(draft);
-  }
-  // Adds each planned catalog draft once, only if neither its id nor its
-  // title exists yet. Never overwrites, never publishes.
-  async function ensureCatalogDrafts(){
-    for(const raw of CATALOG_DRAFTS){
-      const titleTaken = products.some(p => p.id === raw.id || p.title.trim().toLowerCase() === raw.title.toLowerCase());
-      if(titleTaken) continue;
+  // The owner's planned products (Concealed + the 2026-11-18 catalog).
+  // Nothing is created automatically: the owner adds them with the
+  // "Add Planned Products" button. Each is added only if neither its id
+  // nor its title exists yet — never overwritten, never published, and
+  // nothing about them is invented (price, description, cover and files
+  // stay empty and are flagged "Needs your input").
+  function plannedDrafts(){
+    return [CONCEALED_DRAFT, ...CATALOG_DRAFTS].map(raw => {
       const seed = { ...raw };
+      // Stripe TEST ids only in the local preview, never on the live database.
       if(DEMO_MODE && raw.id === 'john-1-18-the-son-has-declared-him'){
         seed.stripeTestProductId = JOHN_1_18_STRIPE_TEST.productId;
         seed.stripeTestPriceId = JOHN_1_18_STRIPE_TEST.priceId;
       }
-      const draft = normalizeProduct(seed);
-      if(DEMO_MODE){ products.push(draft); saveDemoProducts(); continue; }
-      const { doc, getDoc, setDoc, serverTimestamp } = firestore;
-      const existing = await getDoc(doc(db, 'shopProducts', draft.id));
-      if(existing.exists()) continue;
-      await setDoc(doc(db, 'shopProducts', draft.id), { ...productRecord(draft, null), updatedAt: serverTimestamp() });
-      products.push(draft);
+      return normalizeProduct(seed);
+    });
+  }
+  function missingPlannedDrafts(){
+    return plannedDrafts().filter(d => !products.some(p => p.id === d.id || p.title.trim().toLowerCase() === d.title.toLowerCase()));
+  }
+  function renderPlannedButton(){
+    const button = document.getElementById('ownerStoreAddPlanned');
+    if(!button) return;
+    const missing = missingPlannedDrafts();
+    button.hidden = missing.length === 0;
+    button.textContent = 'Add Planned Products (' + missing.length + ')';
+  }
+  async function addPlannedDrafts(){
+    const status = document.getElementById('ownerStorePlannedStatus');
+    const missing = missingPlannedDrafts();
+    if(!missing.length){ if(status) status.textContent = 'All planned products are already in your list.'; renderPlannedButton(); return; }
+    if(!window.confirm('Add these ' + missing.length + ' planned products as hidden drafts?\n\n' + missing.map(d => '• ' + d.title).join('\n') +
+      '\n\nThey stay hidden and can’t be bought until you finish and publish them.')) return;
+    if(status) status.textContent = 'Adding…';
+    const added = [];
+    try {
+      for(const draft of missing){
+        if(DEMO_MODE){ products.push(draft); added.push(draft.title); continue; }
+        const { doc, getDoc, setDoc, serverTimestamp } = firestore;
+        // Don't overwrite a record that exists but isn't loaded here.
+        const existing = await getDoc(doc(db, 'shopProducts', draft.id));
+        if(existing.exists()) continue;
+        await setDoc(doc(db, 'shopProducts', draft.id), { ...productRecord(draft, null), updatedAt: serverTimestamp() });
+        products.push(draft); added.push(draft.title);
+      }
+      if(DEMO_MODE) saveDemoProducts();
+      if(status) status.textContent = added.length ? 'Added as drafts: ' + added.join(', ') + '.' : 'Nothing new to add.';
+    } catch (err) {
+      console.error('[shop] could not add planned products', err);
+      if(status) status.textContent = 'Some planned products could not be added' + (added.length ? ' (added: ' + added.join(', ') + ')' : '') + '. Please try again.';
     }
+    renderOwnerOverview(); renderOwnerProducts(); renderPlannedButton();
+    if(context.onProductsChanged) context.onProductsChanged();
   }
   async function loadAdmin(){
     if(DEMO_MODE){
       store = { ...DEFAULT_STORE, ...(storageGet(DEMO_STORE_KEY, {}) || {}) };
-      await ensureConcealedDraft();
-      await ensureCatalogDrafts();
       adminLoaded = true; renderAdmin(); return;
     }
     const { collection, getDocs, doc, getDoc } = firestore;
@@ -1095,8 +1113,6 @@ export function initShopSystem(context){
     products = []; productSnap.forEach(snapshot => products.push(normalizeProduct({ id: snapshot.id, ...snapshot.data() })));
     if(settingsSnap.exists()) settings = { ...DEFAULT_SETTINGS, ...settingsSnap.data() };
     if(storeSnap && storeSnap.exists()) store = { ...DEFAULT_STORE, ...storeSnap.data() };
-    try { await ensureConcealedDraft(); } catch (err) { console.error('[shop] could not create the Concealed draft', err); }
-    try { await ensureCatalogDrafts(); } catch (err) { console.error('[shop] could not create the catalog drafts', err); }
     adminLoaded = true; renderAdmin();
   }
   // Saves Resources Shop store settings (pause + collections).
