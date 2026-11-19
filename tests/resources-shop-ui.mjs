@@ -62,8 +62,16 @@ const text = (page, sel) => page.locator(sel).innerText();
     const tabs = await page.locator('#ownerStoreTabs [data-store-tab]').allInnerTexts();
     assert.deepEqual(tabs, ['Overview', 'Products', 'Orders', 'Digital Files', 'Collections', 'Customers', 'Discounts', 'Reports', 'Store Settings']);
   });
-  await test('Concealed is created as a Draft with every owner input flagged', async () => {
+  await test('planned products (incl. Concealed) are added only when the owner clicks Add Planned Products', async () => {
     await page.locator('[data-store-tab="products"]').click();
+    assert.equal(await page.locator('[data-store-product-id="concealed"]').count(), 0, 'nothing is created automatically');
+    const btn = page.locator('#ownerStoreAddPlanned');
+    assert.match(await btn.innerText(), /Add Planned Products \(6\)/);
+    await btn.click();
+    await page.waitForFunction(() => /Added as drafts/.test(document.getElementById('ownerStorePlannedStatus')?.textContent || ''));
+    assert.equal(await btn.isHidden(), true);
+  });
+  await test('Concealed is added as a Draft with every owner input flagged', async () => {
     const row = page.locator('[data-store-product-id="concealed"]');
     assert.equal(await row.count(), 1);
     const t = await row.innerText();
