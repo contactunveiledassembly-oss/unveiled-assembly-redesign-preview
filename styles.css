@@ -3857,3 +3857,685 @@ body[data-page="teachings"] :is(a,button):focus-visible{outline:2px solid var(--
   .rb-log-row{grid-template-columns:1fr 1fr}
   .rb-generate button{flex:1 1 100%}
 }
+
+
+/* =================================================================
+   Owner Portal — Calendly-inspired light theme (2026-11-17, branch
+   owner-portal-redesign). Soft off-white page, pale blue-gray sidebar,
+   navy text, one blue accent, and a strict four-color status rule:
+     red    = action required      amber = in progress
+     green  = completed            gray  = informational / scheduled
+   Placed last so it wins over the older dark-theme overrides above
+   (same or higher specificity, later in the file). Nothing here
+   changes markup behaviour — only how the existing portal looks.
+   ================================================================= */
+.portal-view[data-portal-view="owner"],
+.portal-view[data-portal-view="owner"] [data-owner-section="store"],
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,
+    #mediaUseDialog,#policyViewDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog){
+  /* Calendly-inspired palette (approved 2026-11-17, "Calendly" option of
+     owner-portal-color-selector.html). Soft off-white page, pale blue-gray
+     sidebar/supporting surfaces, navy text, one blue for action/selection.
+     Contrast: navy 11.5:1, muted 5.4:1, blue link text 5.7:1, white on
+     blue 4.6:1, status text ≥5.4:1 on its tint, field/switch outlines 3.2:1.
+     The legacy --owner-gold-* names now carry the blue accent so older
+     rules that used "gold" for links/active states follow automatically. */
+  --owner-bg:#F1F5F8; --owner-surface:#FBFCFD; --owner-surface-sunken:#EDF3F7; --owner-field:#F8FAFC;
+  --owner-glass:#FBFCFD; --owner-glass-2:#F4F8FB;
+  --owner-sidebar:#E7EEF4; --owner-sidebar-2:#E7EEF4; --owner-sidebar-active:#FBFCFD;
+  --owner-sidebar-text:#0B3558; --owner-sidebar-muted:#476788;
+  --owner-border:#C9D6DF; --owner-border-strong:#7890A6; --owner-hairline:#DCE5EC; --owner-control-border:#B6C6D3;
+  --owner-text:#0B3558; --owner-text-muted:#476788; --owner-text-faint:#3F5F80; --owner-text-on-bg:#3F5F80;
+  --owner-accent:#006BFF; --owner-accent-hover:#0060E6; --owner-accent-text:#FFFFFF;
+  --owner-blue:#006BFF; --owner-blue-text:#0057D9; --owner-blue-soft:#E6F0FF; --owner-blue-line:#99C2FF;
+  --owner-gold:#006BFF; --owner-gold-text:#0057D9; --owner-gold-strong:#0049B8; --owner-gold-soft:#E6F0FF;
+  --owner-red:#C94D5A; --owner-red-text:#A8323F; --owner-red-soft:#FBEAEC; --owner-badge:#B8404D; --owner-badge-text:#FFFFFF;
+  --owner-amber:#D4962A; --owner-amber-text:#8A5300; --owner-amber-soft:#FDF3E1;
+  --owner-green:#2E9E62; --owner-green-text:#1D6B43; --owner-green-soft:#E6F4EC;
+  --owner-gray:#7890A6; --owner-gray-text:#476788; --owner-gray-soft:#EDF3F7;
+  --owner-radius-lg:18px; --owner-radius:14px; --owner-radius-sm:10px; --owner-radius-pill:999px;
+  --owner-shadow:0 1px 2px rgba(11,53,88,.04),0 6px 20px rgba(11,53,88,.05); --owner-shadow-pop:0 14px 36px rgba(11,53,88,.14);
+  --owner-ease:cubic-bezier(.2,.6,.2,1);
+  --dept-scheduling:currentColor; --dept-prayer:currentColor; --dept-testimony:currentColor;
+  --dept-members:currentColor; --dept-classes:currentColor; --dept-finance:currentColor; --dept-system:currentColor;
+}
+.portal-dialog:has(.portal-view[data-portal-view="owner"]:not([hidden])){background:#F1F5F8}
+.portal-view[data-portal-view="owner"]{background:var(--owner-bg);color:var(--owner-text)}
+
+/* ---------- Header (A) ---------- */
+.portal-view[data-portal-view="owner"]>.portal-head.owner-topbar{
+  display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+  padding:16px 32px;background:var(--owner-surface);border-bottom:1px solid var(--owner-border)
+}
+.owner-topbar-brand{min-width:0}
+.owner-topbar-kicker{display:block;font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--owner-gold-text)}
+.portal-view[data-portal-view="owner"]>.portal-head.owner-topbar h3{font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:0;color:var(--owner-text);margin:2px 0 0}
+.portal-view[data-portal-view="owner"]>.portal-head.owner-topbar p{color:var(--owner-text-muted);font-size:13px;margin:3px 0 0}
+.owner-topbar-date::before{content:"·";margin:0 7px;color:var(--owner-gold)}
+.owner-bell{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;
+  border:1px solid var(--owner-border);background:var(--owner-field);color:var(--owner-text);cursor:pointer
+}
+.owner-bell svg{width:19px;height:19px;stroke:currentColor;fill:none}
+.owner-bell:hover{border-color:var(--owner-gold)}
+.owner-bell.has-alerts{border-color:var(--owner-red)}
+.owner-bell-count{
+  position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;
+  background:var(--owner-badge);color:var(--owner-badge-text);font:700 11px/20px var(--sans);text-align:center
+}
+.owner-bell-count[hidden]{display:none}
+.owner-account{position:relative}
+.owner-account-btn{
+  display:inline-flex;align-items:center;gap:9px;min-height:42px;padding:4px 14px 4px 5px;border-radius:999px;
+  border:1px solid var(--owner-border);background:var(--owner-field);color:var(--owner-text);font:600 13px var(--sans);cursor:pointer
+}
+.owner-account-btn:hover{border-color:var(--owner-gold)}
+.owner-account-avatar{
+  width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--owner-gold-soft);color:var(--owner-gold-text);font:600 14px var(--serif);background-size:cover;background-position:center
+}
+.owner-account-name{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.owner-account-btn .owner-sidebar-dept-chevron{margin-left:2px}
+.owner-account-btn[aria-expanded="true"] .owner-sidebar-dept-chevron{transform:rotate(-135deg)}
+.owner-account-menu{
+  position:absolute;right:0;top:calc(100% + 8px);z-index:80;min-width:210px;padding:6px;
+  background:var(--owner-surface);border:1px solid var(--owner-border);border-radius:var(--owner-radius);
+  box-shadow:var(--owner-shadow-pop);display:flex;flex-direction:column
+}
+.owner-account-menu[hidden]{display:none}
+.portal-view[data-portal-view="owner"] .owner-account-menu button{
+  text-align:left;min-height:40px;padding:0 12px;border:0;border-radius:var(--owner-radius-sm);background:none;
+  color:var(--owner-text);font:500 13px var(--sans);cursor:pointer
+}
+.portal-view[data-portal-view="owner"] .owner-account-menu button:hover{background:var(--owner-surface-sunken)}
+.portal-view[data-portal-view="owner"] .owner-account-menu .owner-header-signout{border-top:1px solid var(--owner-border);border-radius:0 0 var(--owner-radius-sm) var(--owner-radius-sm);margin-top:4px;color:var(--owner-red-text)}
+
+/* Demo-mode bar + search */
+.portal-view[data-portal-view="owner"]>.owner-global-search{margin:18px 32px 14px}
+.portal-view[data-portal-view="owner"]>.owner-global-search input{background:var(--owner-field);color:var(--owner-text);border:1px solid var(--owner-border);border-radius:10px}
+.portal-view[data-portal-view="owner"] .owner-content input::placeholder,
+.portal-view[data-portal-view="owner"] .owner-global-search input::placeholder{color:#5E7A96}
+.portal-view[data-portal-view="owner"] #ownerGlobalSearchResults{background:var(--owner-surface);border-color:var(--owner-border);color:var(--owner-text)}
+
+/* ---------- Shell + sidebar (2) ---------- */
+.portal-view[data-portal-view="owner"]>.owner-shell{margin:0 32px 32px;border:1px solid var(--owner-border);background:var(--owner-bg);box-shadow:none;border-radius:var(--owner-radius-lg)}
+.portal-view[data-portal-view="owner"] .owner-sidebar{background:var(--owner-sidebar);border-right:1px solid var(--owner-border-strong);flex-basis:236px}
+.portal-view[data-portal-view="owner"] .owner-sidebar.collapsed{flex-basis:68px}
+.portal-view[data-portal-view="owner"] .owner-sidebar-collapse-btn{color:var(--owner-text-muted)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-collapse-btn:hover{background:rgba(41,45,50,.07);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-item,
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-toggle{
+  position:relative;color:var(--owner-text);border-radius:var(--owner-radius-sm);font-weight:500;padding:10px 12px
+}
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-toggle{font-weight:600}
+.portal-view[data-portal-view="owner"] .owner-sidebar-item svg,
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-toggle svg{stroke:currentColor;opacity:.72}
+.portal-view[data-portal-view="owner"] .owner-sidebar-item:hover,
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-toggle:hover{background:rgba(0,107,255,.06);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-item.active{
+  background:var(--owner-surface);color:var(--owner-text);font-weight:600;box-shadow:inset 3px 0 0 var(--owner-gold)
+}
+.portal-view[data-portal-view="owner"] .owner-sidebar-item.active svg{opacity:1}
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-items{padding-left:12px;margin:2px 0 6px;border-left:1px solid var(--owner-border-strong);margin-left:20px}
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-items .owner-sidebar-item{font-size:12.5px;padding:8px 10px}
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-items .owner-sidebar-item svg{display:none}
+.owner-nav-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.owner-alert-count{
+  flex:0 0 auto;min-width:20px;height:20px;padding:0 6px;border-radius:var(--owner-radius-pill);background:var(--owner-badge);color:var(--owner-badge-text);
+  font:700 11px/20px var(--sans);text-align:center
+}
+.owner-alert-count[hidden]{display:none}
+.owner-sidebar-dept-toggle span.owner-alert-count{flex:0 0 auto}
+.owner-sidebar.collapsed .owner-alert-count:not([hidden]){
+  position:absolute;top:6px;right:8px;min-width:0;width:9px;height:9px;padding:0;font-size:0
+}
+.portal-view[data-portal-view="owner"] .owner-sidebar-profile{border-top-color:var(--owner-border-strong)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-avatar{background-color:var(--owner-gold-soft);color:var(--owner-gold-text)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-profile-text strong{color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-profile-text span{color:var(--owner-text-muted)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-shortcut{font-size:12.5px}
+
+/* ---------- Content + consistent page head (5) ---------- */
+.portal-view[data-portal-view="owner"] .owner-content{background:var(--owner-bg);color:var(--owner-text);padding:26px 30px 34px}
+.owner-page-head{margin:0 0 18px}
+.owner-breadcrumb:empty{display:none}
+.portal-view[data-portal-view="owner"] .owner-breadcrumb{font:600 10.5px var(--mono);letter-spacing:.08em;color:var(--owner-text-muted);margin-bottom:6px}
+.portal-view[data-portal-view="owner"] .owner-breadcrumb-current{color:var(--owner-gold-text)}
+.owner-page-head h2{font-family:var(--serif);font-size:28px;font-weight:600;line-height:1.15;color:var(--owner-text);margin:0}
+.owner-page-desc{margin:6px 0 0;color:var(--owner-text-muted);font-size:14px;max-width:70ch}
+.owner-page-desc:empty{display:none}
+.owner-section-alerts{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.owner-section-alerts[hidden]{display:none}
+.owner-section-alerts-more{align-self:flex-start}
+.portal-view[data-portal-view="owner"] .owner-content .portal-panel{
+  background:var(--owner-surface);border:1px solid var(--owner-border);box-shadow:none;color:var(--owner-text);border-radius:var(--owner-radius)
+}
+.portal-view[data-portal-view="owner"] .owner-content [data-owner-section].portal-panel{background:var(--owner-surface);border-color:var(--owner-border);box-shadow:none}
+/* The page head now carries each section's title, so the panel's own
+   small top label would repeat it. Only the FIRST label is hidden;
+   sub-section labels deeper in a panel stay. */
+.portal-view[data-portal-view="owner"] .owner-content [data-owner-section]>.portal-label:first-child,
+.portal-view[data-portal-view="owner"] .owner-content [data-owner-section]>.admin-panel-head:first-child .portal-label:first-child{display:none}
+.portal-view[data-portal-view="owner"] .owner-content .portal-panel h3,
+.portal-view[data-portal-view="owner"] .admin-subsection-label,
+.portal-view[data-portal-view="owner"] .admin-stat-tile strong,
+.portal-view[data-portal-view="owner"] .admin-website-page-row{color:var(--owner-text)!important}
+.portal-view[data-portal-view="owner"] .admin-panel-intro,
+.portal-view[data-portal-view="owner"] .admin-hint{color:var(--owner-text-muted)}
+.portal-view[data-portal-view="owner"] .admin-stat-tile,
+.portal-view[data-portal-view="owner"] .admin-btn-ghost,
+.portal-view[data-portal-view="owner"] .admin-tab,
+.portal-view[data-portal-view="owner"] .admin-website-pages,
+.portal-view[data-portal-view="owner"] .admin-website-page-row{background:var(--owner-field);border-color:var(--owner-border);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .admin-website-page-row{background:transparent}
+.portal-view[data-portal-view="owner"] .admin-btn-ghost:hover,
+.portal-view[data-portal-view="owner"] .admin-tab:not(.active):hover{border-color:var(--owner-gold);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .admin-btn-solid,
+.portal-view[data-portal-view="owner"] [data-owner-section="store"] .admin-btn-solid{background:var(--owner-accent);border-color:var(--owner-accent);color:var(--owner-accent-text)}
+.portal-view[data-portal-view="owner"] .admin-btn-solid:hover,
+.portal-view[data-portal-view="owner"] [data-owner-section="store"] .admin-btn-solid:hover{background:var(--owner-accent-hover);border-color:var(--owner-accent-hover)}
+.portal-view[data-portal-view="owner"] .portal-primary{background:var(--owner-accent);border-color:var(--owner-accent);color:var(--owner-accent-text)}
+.portal-view[data-portal-view="owner"] .portal-primary:hover{background:var(--owner-accent-hover)}
+.portal-view[data-portal-view="owner"] .portal-secondary{border-color:var(--owner-border-strong);color:var(--owner-text);background:transparent}
+.portal-view[data-portal-view="owner"] .portal-secondary:hover{border-color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .link-btn,
+.portal-view[data-portal-view="owner"] .demo-badge{color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .admin-tab.active,
+.portal-view[data-portal-view="owner"] [data-owner-section="store"] .admin-tab.active{background:var(--owner-accent);color:var(--owner-accent-text);border-color:var(--owner-accent)}
+.portal-view[data-portal-view="owner"] .owner-content input,
+.portal-view[data-portal-view="owner"] .owner-content select,
+.portal-view[data-portal-view="owner"] .owner-content textarea{background:var(--owner-field)!important;color:var(--owner-text)!important;border-color:var(--owner-border-strong)!important}
+.portal-view[data-portal-view="owner"] .portal-row{border-top-color:var(--owner-border)}
+.portal-view[data-portal-view="owner"] .portal-row small{color:var(--owner-text-muted)}
+/* Older owner screens set light-on-dark text colours inline; on the
+   new light surfaces those would be unreadable, so they are mapped to
+   the muted charcoal here instead of editing ~90 call sites. */
+.portal-view[data-portal-view="owner"] [style*="color:#bfbfbf"],
+.portal-view[data-portal-view="owner"] [style*="color:#d7d7d7"],
+.portal-view[data-portal-view="owner"] [style*="color:#c7c7cc"],
+.portal-view[data-portal-view="owner"] [style*="color:#a6a6ae"],
+.portal-view[data-portal-view="owner"] [style*="color:#9a9aa2"],
+.portal-view[data-portal-view="owner"] [style*="color:#8a8a8a"],
+.portal-view[data-portal-view="owner"] [style*="color:#656565"]{color:var(--owner-text-muted)!important}
+.portal-view[data-portal-view="owner"] .owner-content [style*="color:#fff"]{color:var(--owner-text)!important}
+.portal-view[data-portal-view="owner"] .admin-media-thumb,
+.portal-view[data-portal-view="owner"] .sched-type-card-thumb{background-color:var(--owner-surface-sunken)}
+.portal-view[data-portal-view="owner"] .owner-sim-banner,
+.portal-view[data-portal-view="owner"] .admin-save-bar.is-dirty{background:var(--owner-amber-soft);border-color:var(--owner-amber);color:var(--owner-amber-text)}
+
+/* Reports & Backups: its failure banner was written for the dark theme. */
+.portal-view[data-portal-view="owner"] .rb-alert{border-color:var(--owner-red);border-left-width:4px;color:var(--owner-text);background:var(--owner-red-soft);border-radius:var(--owner-radius-sm)}
+.portal-view[data-portal-view="owner"] .rb-alert strong{color:var(--owner-red-text)}
+.portal-view[data-portal-view="owner"] .rb-error{color:var(--owner-red-text)}
+
+/* ---------- Status rule (4) ---------- */
+.portal-view[data-portal-view="owner"] .admin-status-pill{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid transparent}
+.portal-view[data-portal-view="owner"] .admin-status-pill.published,
+.portal-view[data-portal-view="owner"] .admin-status-pill.registration-open,
+.portal-view[data-portal-view="owner"] .admin-status-pill.confirmed,
+.portal-view[data-portal-view="owner"] .admin-status-pill.attended,
+.portal-view[data-portal-view="owner"] .admin-status-pill.paid,
+.portal-view[data-portal-view="owner"] .admin-status-pill.completed{color:var(--owner-green-text);background:var(--owner-green-soft)}
+.portal-view[data-portal-view="owner"] .admin-status-pill.action{color:var(--owner-red-text);background:var(--owner-red-soft)}
+.portal-view[data-portal-view="owner"] .admin-status-pill.pending,
+.portal-view[data-portal-view="owner"] .admin-status-pill.sold-out{color:var(--owner-amber-text);background:var(--owner-amber-soft)}
+.portal-view[data-portal-view="owner"] .admin-status-pill.draft,
+.portal-view[data-portal-view="owner"] .admin-status-pill.cancelled,
+.portal-view[data-portal-view="owner"] .admin-status-pill.refunded,
+.portal-view[data-portal-view="owner"] .admin-status-pill.no-show,
+.portal-view[data-portal-view="owner"] .admin-status-pill.not-marked,
+.portal-view[data-portal-view="owner"] .admin-status-pill.unpaid{color:var(--owner-gray-text);background:var(--owner-gray-soft)}
+.portal-view[data-portal-view="owner"] .rs-alert-urgent{border-left-color:var(--owner-red)}
+.portal-view[data-portal-view="owner"] .rs-alert-warning{border-left-color:var(--owner-amber)}
+.portal-view[data-portal-view="owner"] .rs-alert-info{border-left-color:var(--owner-border-strong)}
+.owner-tone{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font:600 11px var(--sans);white-space:nowrap}
+.owner-tone::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.owner-tone-action{color:var(--owner-red-text);background:var(--owner-red-soft)}
+.owner-tone-progress{color:var(--owner-amber-text);background:var(--owner-amber-soft)}
+.owner-tone-progress::before{background:var(--owner-amber)}
+.owner-tone-done{color:var(--owner-green-text);background:var(--owner-green-soft)}
+.owner-tone-done::before{background:var(--owner-green)}
+.owner-tone-info{color:var(--owner-gray-text);background:var(--owner-gray-soft)}
+.owner-tone-info::before{background:var(--owner-gray)}
+
+/* ---------- Overview (3) ---------- */
+.portal-view[data-portal-view="owner"] .owner-content .owner-overview.portal-panel{background:transparent;border:0;padding:0}
+.owner-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.owner-summary-card{
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;width:100%;
+  padding:18px 18px 16px;border:1px solid var(--owner-border);border-radius:var(--owner-radius);
+  background:var(--owner-surface);color:var(--owner-text);font-family:var(--sans);cursor:pointer;
+  border-top:3px solid var(--owner-gold)
+}
+.owner-summary-card:hover{border-color:var(--owner-gold)}
+.owner-summary-card.is-action{border-top-color:var(--owner-red)}
+.owner-summary-card.is-done{border-top-color:var(--owner-green)}
+.owner-summary-label{font-size:12.5px;font-weight:600;color:var(--owner-text-muted)}
+.owner-summary-value{font-family:var(--serif);font-size:34px;font-weight:600;line-height:1.1;color:var(--owner-text)}
+.owner-summary-card[data-owner-summary="attention"].is-action .owner-summary-value{color:var(--owner-red-text)}
+.owner-summary-sub{font-size:12.5px;color:var(--owner-text-muted)}
+.owner-summary-sub strong{color:var(--owner-red-text);font-weight:600}
+.owner-overview-grid{
+  display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;
+  grid-template-areas:"attention schedule" "attention actions" "recent recent"
+}
+.owner-card{background:var(--owner-surface);border:1px solid var(--owner-border);border-radius:var(--owner-radius);padding:18px 20px;min-width:0}
+.owner-card-attention{grid-area:attention}
+.owner-card-schedule{grid-area:schedule}
+.owner-card-actions{grid-area:actions}
+.owner-card-recent{grid-area:recent}
+.owner-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--owner-border)}
+.owner-card-head h4{margin:0;font-family:var(--sans);font-size:15px;font-weight:600;color:var(--owner-text)}
+.owner-card-count{font-size:12px;font-weight:600;color:var(--owner-text-muted)}
+.owner-card-count.has-alerts{color:var(--owner-red-text)}
+.owner-link-btn{border:0;background:none;padding:4px 0;color:var(--owner-gold-text);font:600 12.5px var(--sans);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.owner-alert-list{display:flex;flex-direction:column;gap:8px}
+.owner-alert-item{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;
+  padding:12px 14px;border:1px solid var(--owner-border);border-left:4px solid var(--owner-border-strong);border-radius:var(--owner-radius-sm);background:var(--owner-field)
+}
+.owner-alert-item.is-action{border-left-color:var(--owner-red)}
+.owner-alert-item.is-progress{border-left-color:var(--owner-amber)}
+.owner-alert-item.is-info{border-left-color:var(--owner-gray)}
+.owner-alert-item strong{display:block;font-size:13.5px;font-weight:600;color:var(--owner-text);line-height:1.35}
+.owner-alert-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:5px;font-size:12px;color:var(--owner-text-muted)}
+.owner-alert-detail{margin:4px 0 0;font-size:12.5px;color:var(--owner-text-muted);line-height:1.45}
+.owner-alert-item .admin-btn-ghost{white-space:nowrap}
+.owner-alert-more{margin-top:6px}
+.owner-alert-more>summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--owner-text-muted);padding:6px 0}
+.owner-alert-more .owner-alert-list{margin-top:6px}
+.owner-empty{display:flex;align-items:center;gap:10px;padding:14px;border-radius:var(--owner-radius-sm);background:var(--owner-green-soft);color:var(--owner-green-text);font-size:13.5px;font-weight:600}
+.owner-empty.is-neutral{background:var(--owner-surface-sunken);color:var(--owner-text-muted);font-weight:500}
+.owner-schedule-list,.owner-recent-list{display:flex;flex-direction:column}
+.owner-schedule-row,.owner-recent-row{
+  display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;border:0;border-top:1px solid var(--owner-border);
+  background:none;text-align:left;color:var(--owner-text);font-family:var(--sans);cursor:pointer
+}
+.owner-schedule-row:first-child,.owner-recent-row:first-child{border-top:0}
+.owner-schedule-date{
+  flex:0 0 50px;display:flex;flex-direction:column;align-items:center;padding:6px 0;border-radius:var(--owner-radius-sm);
+  background:var(--owner-surface-sunken);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--owner-text-muted)
+}
+.owner-schedule-date b{font-family:var(--serif);font-size:19px;color:var(--owner-text);letter-spacing:0}
+.owner-schedule-main,.owner-recent-main{flex:1;min-width:0}
+.owner-schedule-main strong,.owner-recent-main strong{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.owner-schedule-main span,.owner-recent-main span{display:block;font-size:12px;color:var(--owner-text-muted);margin-top:2px}
+.owner-quick-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.portal-view[data-portal-view="owner"] .owner-quick-grid button{
+  display:flex;align-items:center;gap:10px;min-height:44px;padding:0 14px;text-align:left;
+  border:1px solid var(--owner-border);border-radius:var(--owner-radius-sm);background:var(--owner-field);color:var(--owner-text);font:600 13px var(--sans);cursor:pointer
+}
+.portal-view[data-portal-view="owner"] .owner-quick-grid button::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--owner-gold)}
+.portal-view[data-portal-view="owner"] .owner-quick-grid button:hover{border-color:var(--owner-gold)}
+.owner-visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Accessibility (1) ---------- */
+.portal-view[data-portal-view="owner"] :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{
+  outline:2px solid var(--owner-gold-text)!important;outline-offset:2px
+}
+
+/* ---------- Responsive ---------- */
+@media(max-width:1100px){
+  .owner-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:960px){
+  .owner-overview-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"attention" "schedule" "actions" "recent"}
+}
+@media(max-width:820px){
+  .portal-view[data-portal-view="owner"]>.portal-head.owner-topbar{padding:14px 16px;gap:12px}
+  .portal-view[data-portal-view="owner"]>.owner-global-search{margin:14px 16px 10px}
+  .portal-view[data-portal-view="owner"]>.owner-shell{margin:0 16px 20px;border:0;background:transparent}
+  .portal-view[data-portal-view="owner"] .owner-content{padding:16px 0 24px}
+  .portal-view[data-portal-view="owner"] .owner-sidebar{background:var(--owner-sidebar)}
+  .portal-view[data-portal-view="owner"] .owner-sidebar-toggle{background:var(--owner-surface);color:var(--owner-text);border:1px solid var(--owner-border)}
+  .portal-view[data-portal-view="owner"] .owner-sidebar-backdrop.open{background:rgba(11,53,88,.28)}
+  .owner-page-head h2{font-size:24px}
+}
+@media(max-width:560px){
+  .portal-view[data-portal-view="owner"]>.portal-head.owner-topbar{flex-direction:row;flex-wrap:nowrap;align-items:flex-start}
+  .owner-topbar-brand{flex:1}
+  .owner-header-controls{flex:0 0 auto;flex-wrap:nowrap}
+  .portal-view[data-portal-view="owner"]>.portal-head.owner-topbar h3{font-size:20px}
+  .owner-account-name{display:none}
+  .owner-account-btn{padding-right:10px}
+  .owner-summary-grid{gap:10px}
+  .owner-summary-card{padding:14px}
+  .owner-summary-value{font-size:28px}
+  .owner-card{padding:16px 14px}
+  .owner-alert-item{grid-template-columns:minmax(0,1fr)}
+  .owner-alert-item .admin-btn-ghost{justify-self:start}
+  .owner-topbar-date{display:block}
+  .owner-topbar-date::before{display:none}
+}
+
+/* =================================================================
+   Owner Portal — Calendly-inspired layer (2026-11-17)
+   Visual only (plus the Availability workspace's own classes, avl-*).
+   Calm light surfaces, rounded panels, pill tabs/chips/time slots,
+   one blue for action and selection, soft status tints, very light
+   shadows. Applies to the owner view and the owner-only dialogs named
+   in the token block; public and member pages are untouched.
+   ================================================================= */
+.portal-view[data-portal-view="owner"]{color-scheme:light;background:var(--owner-bg);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] :is(input[type=checkbox],input[type=radio],input[type=range]){accent-color:var(--owner-accent)}
+
+/* Masthead */
+.portal-view[data-portal-view="owner"]>.portal-head.owner-topbar{background:transparent;border-bottom:1px solid var(--owner-border);padding:22px 36px 18px}
+.owner-topbar-kicker{font:400 11px var(--mono);letter-spacing:.16em;color:var(--owner-text-muted)}
+.portal-view[data-portal-view="owner"]>.portal-head.owner-topbar h3{font-family:var(--sans);font-weight:600;font-size:26px;letter-spacing:-.02em;color:var(--owner-text);margin-top:4px}
+.portal-view[data-portal-view="owner"]>.portal-head.owner-topbar p{color:var(--owner-text-muted);font-size:13.5px}
+.owner-topbar-date::before{color:var(--owner-border-strong)}
+.owner-bell,.owner-account-btn{background:var(--owner-surface);border:1px solid var(--owner-border);color:var(--owner-text)}
+.owner-bell{border-radius:50%}
+.owner-account-btn{border-radius:var(--owner-radius-pill)}
+.owner-bell:hover,.owner-account-btn:hover{border-color:var(--owner-blue);background:var(--owner-surface)}
+.owner-bell.has-alerts{border-color:var(--owner-red)}
+.owner-bell-count{border-radius:var(--owner-radius-pill)}
+.owner-account-avatar{border-radius:50%;background:var(--owner-blue-soft);color:var(--owner-blue-text);font-family:var(--sans);font-weight:600}
+.owner-account-menu{background:var(--owner-surface);border:1px solid var(--owner-border);border-radius:var(--owner-radius);box-shadow:var(--owner-shadow-pop);padding:6px}
+.portal-view[data-portal-view="owner"] .owner-account-menu button{border-radius:var(--owner-radius-sm)}
+.portal-view[data-portal-view="owner"] .owner-account-menu button:hover{background:var(--owner-surface-sunken)}
+.portal-view[data-portal-view="owner"] .owner-account-menu .owner-header-signout{border-top-color:var(--owner-hairline)}
+
+/* Demo Mode bar + global search */
+.portal-view[data-portal-view="owner"] .owner-sim-controls,
+.portal-view[data-portal-view="owner"] .owner-sim-toggle-row{background:var(--owner-surface);border:1px solid var(--owner-border);border-radius:var(--owner-radius);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"]>.owner-global-search{margin:18px 36px 16px}
+.portal-view[data-portal-view="owner"]>.owner-global-search input{background:var(--owner-surface)!important;border:1px solid var(--owner-control-border)!important;border-radius:var(--owner-radius-sm)!important}
+.portal-view[data-portal-view="owner"] #ownerGlobalSearchResults{background:var(--owner-surface);border:1px solid var(--owner-border);border-radius:var(--owner-radius);box-shadow:var(--owner-shadow-pop)}
+
+/* Shell + pale blue-gray sidebar. The sidebar sticks to the top while a
+   long page (e.g. Availability) scrolls, so the seven sections stay
+   reachable. overflow must be visible on the shell for sticky to work. */
+.portal-view[data-portal-view="owner"]>.owner-shell{
+  margin:0 36px 36px;border:1px solid var(--owner-border);border-radius:var(--owner-radius-lg);overflow:visible;
+  box-shadow:var(--owner-shadow);align-items:stretch;
+  background:linear-gradient(to right,var(--owner-sidebar) 0 236px,var(--owner-bg) 236px)
+}
+.portal-view[data-portal-view="owner"]>.owner-shell:has(.owner-sidebar.collapsed){background:linear-gradient(to right,var(--owner-sidebar) 0 68px,var(--owner-bg) 68px)}
+.portal-view[data-portal-view="owner"] .owner-sidebar{
+  background:var(--owner-sidebar);border-right:1px solid var(--owner-border);color:var(--owner-sidebar-text);
+  position:sticky;top:0;align-self:flex-start;max-height:100dvh;overflow-y:auto;border-radius:var(--owner-radius-lg) 0 0 var(--owner-radius-lg)
+}
+.portal-view[data-portal-view="owner"] .owner-content{border-radius:0 var(--owner-radius-lg) var(--owner-radius-lg) 0}
+.portal-view[data-portal-view="owner"] .owner-sidebar-collapse-btn{color:var(--owner-sidebar-muted);border-radius:var(--owner-radius-sm)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-collapse-btn:hover{background:rgba(0,107,255,.06);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-item,
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-toggle{
+  color:var(--owner-sidebar-text);border-radius:var(--owner-radius-sm);font-weight:500;
+  transition:background-color .16s var(--owner-ease),color .16s var(--owner-ease)
+}
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-toggle{font-weight:600}
+.portal-view[data-portal-view="owner"] .owner-sidebar-item:hover,
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-toggle:hover{background:rgba(0,107,255,.07);color:var(--owner-sidebar-text)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-item.active{
+  background:var(--owner-sidebar-active);color:var(--owner-blue-text);font-weight:600;
+  box-shadow:inset 3px 0 0 var(--owner-blue),0 1px 2px rgba(11,53,88,.06)
+}
+.portal-view[data-portal-view="owner"] .owner-sidebar-dept-items{border-left-color:var(--owner-border)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-profile{border-top-color:var(--owner-border)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-avatar{background-color:var(--owner-blue-soft);color:var(--owner-blue-text);border-radius:50%}
+.portal-view[data-portal-view="owner"] .owner-sidebar-profile-text strong{color:var(--owner-sidebar-text)}
+.portal-view[data-portal-view="owner"] .owner-sidebar-profile-text span{color:var(--owner-sidebar-muted)}
+
+/* Content + page head */
+.portal-view[data-portal-view="owner"] .owner-content{background:var(--owner-bg);padding:30px 36px 44px}
+.portal-view[data-portal-view="owner"] .owner-breadcrumb{font:400 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--owner-text-muted)}
+.portal-view[data-portal-view="owner"] .owner-breadcrumb-current{color:var(--owner-blue-text)}
+.owner-page-head{margin-bottom:22px}
+.owner-page-head h2{font-family:var(--sans);font-weight:600;font-size:30px;letter-spacing:-.025em;line-height:1.15;color:var(--owner-text)}
+.owner-page-desc{color:var(--owner-text-muted);font-size:14px;margin-top:8px}
+
+/* Panels: rounded, light border, faint shadow */
+.portal-view[data-portal-view="owner"] .owner-content .portal-panel,
+.portal-view[data-portal-view="owner"] .owner-content [data-owner-section].portal-panel,
+.portal-view[data-portal-view="owner"] .owner-content [data-owner-section="store"].portal-panel,
+.owner-card{background:var(--owner-surface);border:1px solid var(--owner-border);border-radius:var(--owner-radius-lg);box-shadow:var(--owner-shadow)}
+.portal-view[data-portal-view="owner"] .owner-content .owner-overview.portal-panel{background:transparent;border:0;box-shadow:none}
+.portal-view[data-portal-view="owner"] .owner-content .portal-panel{padding:24px 26px}
+.owner-card{padding:20px 22px}
+.owner-card-head{border-bottom:1px solid var(--owner-hairline);padding-bottom:12px;margin-bottom:12px}
+.owner-card-head h4{font-weight:600;font-size:16px;letter-spacing:-.01em}
+.owner-card-count{font-size:12.5px;font-weight:600}
+.owner-link-btn{color:var(--owner-blue-text);text-decoration:none;font-weight:600}
+.owner-link-btn:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* Summary cards */
+.owner-summary-grid{gap:14px}
+.owner-summary-card{border:1px solid var(--owner-border);border-radius:var(--owner-radius);background:var(--owner-surface);box-shadow:var(--owner-shadow);border-top:1px solid var(--owner-border);padding:18px 20px;transition:border-color .16s var(--owner-ease),box-shadow .16s var(--owner-ease)}
+.owner-summary-card:hover{border-color:var(--owner-blue-line);box-shadow:0 6px 20px rgba(0,107,255,.08)}
+.owner-summary-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--owner-text-muted)}
+.owner-summary-label::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--owner-blue)}
+.owner-summary-card.is-action .owner-summary-label::before{background:var(--owner-red)}
+.owner-summary-card.is-done .owner-summary-label::before{background:var(--owner-green)}
+.owner-summary-value{font-family:var(--sans);font-weight:600;font-size:32px;letter-spacing:-.02em;color:var(--owner-text)}
+
+/* Overview layout: attention + schedule, then Quick Actions, then Recent */
+.owner-overview-grid{gap:18px;grid-template-areas:"attention schedule" "actions actions" "recent recent";align-items:start}
+.owner-quick-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.portal-view[data-portal-view="owner"] .owner-quick-grid button{
+  flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;min-height:78px;padding:14px 16px;
+  border:1px solid var(--owner-border);border-radius:var(--owner-radius);background:var(--owner-surface);color:var(--owner-text);font-weight:600;font-size:13.5px;
+  transition:border-color .16s var(--owner-ease),background-color .16s var(--owner-ease)
+}
+.portal-view[data-portal-view="owner"] .owner-quick-grid button::before{width:26px;height:26px;border-radius:8px;background:var(--owner-blue-soft) radial-gradient(circle,var(--owner-blue) 0 3px,transparent 3.5px)}
+.portal-view[data-portal-view="owner"] .owner-quick-grid button:hover{border-color:var(--owner-blue-line);background:#F5F9FF}
+
+/* Needs Your Attention rows */
+.owner-alert-list{gap:10px}
+.owner-alert-item{background:var(--owner-surface);border:1px solid var(--owner-border);border-left:4px solid var(--owner-gray);border-radius:var(--owner-radius-sm);padding:13px 16px}
+.owner-alert-item.is-action{border-left-color:var(--owner-red)}
+.owner-alert-item.is-progress{border-left-color:var(--owner-amber)}
+.owner-alert-more>summary{color:var(--owner-text-muted)}
+
+/* Schedule + recent */
+.owner-schedule-row,.owner-recent-row{border-top-color:var(--owner-hairline);padding:11px 6px;border-radius:var(--owner-radius-sm);transition:background-color .16s var(--owner-ease)}
+.owner-schedule-row:hover,.owner-recent-row:hover{background:var(--owner-surface-sunken)}
+.owner-schedule-date{background:var(--owner-blue-soft);color:var(--owner-blue-text);border-radius:var(--owner-radius-sm)}
+.owner-schedule-date b{color:var(--owner-text)}
+.owner-empty{border-radius:var(--owner-radius-sm)}
+.owner-empty.is-neutral{background:var(--owner-surface-sunken);color:var(--owner-text-muted)}
+
+/* Status chips */
+.portal-view[data-portal-view="owner"] .admin-status-pill,.owner-tone{border-radius:var(--owner-radius-pill);border:0}
+.owner-tone::before{border-radius:50%}
+
+/* Buttons: one blue primary, quiet secondary — both pill-shaped */
+.portal-view[data-portal-view="owner"] :is(.admin-btn-solid,.admin-btn-ghost,.portal-primary,.portal-secondary,.owner-sim-notif-toggle,.admin-image-upload-btn,.admin-image-remove-btn,.btn){
+  border-radius:var(--owner-radius-pill);font-family:var(--sans);font-weight:600;letter-spacing:.01em;text-transform:none;
+  transition:background-color .16s var(--owner-ease),border-color .16s var(--owner-ease),color .16s var(--owner-ease)
+}
+.portal-view[data-portal-view="owner"] :is(.admin-btn-solid,.portal-primary),
+.portal-view[data-portal-view="owner"] [data-owner-section="store"] .admin-btn-solid{background:var(--owner-accent);border-color:var(--owner-accent);color:var(--owner-accent-text)}
+.portal-view[data-portal-view="owner"] :is(.admin-btn-solid,.portal-primary):hover,
+.portal-view[data-portal-view="owner"] [data-owner-section="store"] .admin-btn-solid:hover{background:var(--owner-accent-hover);border-color:var(--owner-accent-hover);color:var(--owner-accent-text)}
+.portal-view[data-portal-view="owner"] :is(.admin-btn-ghost,.portal-secondary,.admin-image-upload-btn,.admin-image-remove-btn){background:var(--owner-surface);border:1px solid var(--owner-control-border);color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] :is(.admin-btn-ghost,.portal-secondary,.admin-image-upload-btn,.admin-image-remove-btn):hover{border-color:var(--owner-blue);color:var(--owner-blue-text);background:var(--owner-surface)}
+
+/* Rounded tabs */
+.portal-view[data-portal-view="owner"] .admin-tabs{gap:8px}
+.portal-view[data-portal-view="owner"] .admin-tab{border-radius:var(--owner-radius-pill);background:var(--owner-surface);border:1px solid var(--owner-border);color:var(--owner-text-muted);font-weight:600}
+.portal-view[data-portal-view="owner"] .admin-tab:not(.active):hover{border-color:var(--owner-blue-line);color:var(--owner-blue-text);background:var(--owner-surface)}
+.portal-view[data-portal-view="owner"] .admin-tab.active,
+.portal-view[data-portal-view="owner"] [data-owner-section="store"] .admin-tab.active{background:var(--owner-blue-soft);border-color:var(--owner-blue);color:var(--owner-blue-text)}
+
+/* Tiles, rows, fields */
+.portal-view[data-portal-view="owner"] .admin-stat-tile{background:var(--owner-surface);border:1px solid var(--owner-border);border-radius:var(--owner-radius)}
+.portal-view[data-portal-view="owner"] .admin-subsection-label{color:var(--owner-text)!important;border-top-color:var(--owner-hairline)}
+.portal-view[data-portal-view="owner"] .owner-content :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),select,textarea){
+  border:1px solid var(--owner-border-strong)!important;border-radius:var(--owner-radius-sm);min-height:40px
+}
+.portal-view[data-portal-view="owner"] .owner-content textarea{min-height:88px}
+.portal-view[data-portal-view="owner"] .owner-content :is(input,select,textarea):focus{border-color:var(--owner-blue)!important;box-shadow:0 0 0 3px rgba(0,107,255,.16);outline:none}
+.portal-view[data-portal-view="owner"] .owner-content .form-field{gap:6px}
+.portal-view[data-portal-view="owner"] .owner-content .form-field>label{font-size:12.5px;font-weight:600;letter-spacing:.01em;text-transform:none;color:var(--owner-text-muted)}
+
+/* Older screens hard-code light-theme greys and 9px micro-type */
+.portal-view[data-portal-view="owner"] .owner-content :is(label:not(.owner-sim-toggle-row *):not(.admin-btn-solid):not(.admin-image-upload-btn):not(.portal-primary):not(.sched-session-type-option),small:not(:is(.admin-btn-solid,.portal-primary,.admin-tab.active) *),.portal-label,.portal-access,.verify-badge:not(.is-verified),.dl-preview-flag,.admin-microlabel,.detail-section-title,.detail-field-label),
+.portal-view[data-portal-view="owner"]>.portal-mockup-note{color:var(--owner-text-muted)}
+.portal-view[data-portal-view="owner"] .owner-content :is(.portal-label,.portal-access,.verify-badge,.admin-microlabel,.detail-section-title,.detail-field-label){font-size:11px}
+.portal-view[data-portal-view="owner"] .verify-badge.is-verified{background:var(--owner-green-soft);border-color:transparent;color:var(--owner-green-text)}
+.portal-view[data-portal-view="owner"]>.portal-mockup-note{margin:0 36px 24px}
+.portal-view[data-portal-view="owner"] .owner-content [style*="color:#8a8a8a"]{color:var(--owner-text-muted)!important}
+.portal-view[data-portal-view="owner"] .page-visibility-track{background:var(--owner-border-strong)}
+.portal-view[data-portal-view="owner"] .page-visibility-thumb{background:#FDFEFF}
+.portal-view[data-portal-view="owner"] .admin-teaching-thumb{background-color:var(--owner-surface-sunken);color:var(--owner-text-muted)}
+.portal-view[data-portal-view="owner"] .portal-row{border-top-color:var(--owner-hairline)}
+
+/* Tables */
+.portal-view[data-portal-view="owner"] :is(table,.rs-table){border-collapse:separate;border-spacing:0;border:1px solid var(--owner-border);border-radius:var(--owner-radius-sm);overflow:hidden;color:var(--owner-text)}
+.portal-view[data-portal-view="owner"] :is(th,td){border-color:var(--owner-hairline)}
+.portal-view[data-portal-view="owner"] thead th{background:var(--owner-surface-sunken);font:600 12px var(--sans);letter-spacing:.02em;text-transform:none;color:var(--owner-text-muted)}
+
+/* ---------- Owner dialogs, drawers, dropdowns ---------- */
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,
+    #mediaUseDialog,#policyViewDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog){
+  color-scheme:light;background:var(--owner-surface);color:var(--owner-text);
+  border:1px solid var(--owner-border);border-radius:var(--owner-radius-lg);box-shadow:var(--owner-shadow-pop)
+}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,
+    #mediaUseDialog,#policyViewDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog)::backdrop{
+  background:rgba(11,53,88,.28);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)
+}
+dialog.detail-drawer:is(#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog){border-radius:0;border-width:0 0 0 1px;background:var(--owner-bg)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog) .booking-head,
+:is(#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .dialog-head{background:var(--owner-surface);color:var(--owner-text);border-bottom:1px solid var(--owner-border)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog) .booking-head h3,
+:is(#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .dialog-head h3,
+#rsRefundDialog h3{font-family:var(--sans);font-weight:600;letter-spacing:-.02em;color:var(--owner-text)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(.kicker,.portal-label,.admin-microlabel){font-family:var(--mono);letter-spacing:.14em;color:var(--owner-text-muted)!important}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog) .booking-close,
+:is(#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .dialog-close{
+  background:var(--owner-surface);color:var(--owner-text);border:1px solid var(--owner-control-border);border-radius:50%;transform:none
+}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog) .booking-close:hover,
+:is(#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .dialog-close:hover{border-color:var(--owner-blue);color:var(--owner-blue-text);background:var(--owner-surface);transform:none}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog) .booking-body,
+:is(#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .dialog-body{background:transparent;color:var(--owner-text)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(p,li,small,.admin-hint,.admin-panel-intro,.form-status,.detail-section-note){color:var(--owner-text-muted)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(h3,h4,strong,.form-section-label,.admin-subsection-label,.detail-field-value){color:var(--owner-text)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) :is(label,.form-field label,.booking-field,.detail-field-label,.detail-section-title){color:var(--owner-text-muted)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(.detail-section,.form-actions,.form-section-label,hr){border-color:var(--owner-hairline)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),select,textarea){
+  background:var(--owner-field)!important;color:var(--owner-text)!important;border:1px solid var(--owner-border-strong)!important;border-radius:var(--owner-radius-sm)!important;box-shadow:none
+}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(input,select,textarea):is([readonly],:disabled){background:var(--owner-surface-sunken)!important;color:var(--owner-text-muted)!important}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(input,select,textarea):focus{border-color:var(--owner-blue)!important;box-shadow:0 0 0 3px rgba(0,107,255,.16)!important;outline:none}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) ::placeholder{color:#5E7A96}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(input[type=checkbox],input[type=radio]){accent-color:var(--owner-accent)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(.admin-btn-solid,.portal-primary,.admin-btn-ghost,.portal-secondary,.admin-tab,.btn){border-radius:var(--owner-radius-pill);font-weight:600;letter-spacing:.01em;text-transform:none}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(.admin-btn-solid,.portal-primary){background:var(--owner-accent);border-color:var(--owner-accent);color:var(--owner-accent-text)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(.admin-btn-solid,.portal-primary):hover{background:var(--owner-accent-hover);border-color:var(--owner-accent-hover);color:var(--owner-accent-text)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(.admin-btn-ghost,.portal-secondary,.admin-tab:not(.active)){background:var(--owner-surface);border:1px solid var(--owner-control-border);color:var(--owner-text)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(.admin-btn-ghost,.portal-secondary,.admin-tab:not(.active)):hover{border-color:var(--owner-blue);color:var(--owner-blue-text);background:var(--owner-surface)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) .admin-tab.active{background:var(--owner-blue-soft);border-color:var(--owner-blue);color:var(--owner-blue-text)}
+#teachingEditDialog .btn.on-light{background:var(--owner-surface);border:1px solid var(--owner-control-border);color:var(--owner-text)}
+#teachingEditDialog .btn.on-light:hover{border-color:var(--owner-blue);color:var(--owner-blue-text)}
+#teachingEditDialog #teachingEditSubmitBtn.btn.on-light{background:var(--owner-accent);border-color:var(--owner-accent);color:var(--owner-accent-text)}
+#teachingEditDialog #teachingEditSubmitBtn.btn.on-light:hover{background:var(--owner-accent-hover);border-color:var(--owner-accent-hover)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .admin-status-pill{font-family:var(--sans);font-size:11px;font-weight:600;border:0;border-radius:var(--owner-radius-pill);color:var(--owner-gray-text);background:var(--owner-gray-soft)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .admin-status-pill:is(.published,.registration-open,.confirmed,.attended,.paid,.completed){color:var(--owner-green-text);background:var(--owner-green-soft)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .admin-status-pill.action{color:var(--owner-red-text);background:var(--owner-red-soft)}
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) .admin-status-pill:is(.pending,.sold-out){color:var(--owner-amber-text);background:var(--owner-amber-soft)}
+/* teaching editor step rail + count chips */
+#teachingEditDialog :is(.admin-editor-step,[data-editor-step]).active{background:var(--owner-blue-soft);color:var(--owner-blue-text)}
+
+/* Keyboard focus — one clear blue ring everywhere in the owner area */
+.portal-view[data-portal-view="owner"] :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible,
+:is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,#mediaUseDialog,#policyViewDialog,
+    #prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{
+  outline:2px solid var(--owner-blue-text)!important;outline-offset:2px
+}
+
+
+/* ---------- Comfort: honour reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce){
+  .portal-view[data-portal-view="owner"] *,
+  :is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,
+      #mediaUseDialog,#policyViewDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog),
+  :is(#teachingEditDialog,#teachingRegistrantsDialog,#classRegDetailDialog,#bookingDetailDialog,#personProfileDialog,
+      #mediaUseDialog,#policyViewDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog,#rsRefundDialog) *{
+    animation:none!important;transition:none!important;scroll-behavior:auto!important
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media(max-width:1180px){
+  .avl-workspace{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:1100px){
+  .owner-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:960px){
+  .owner-overview-grid{grid-template-areas:"attention" "schedule" "actions" "recent"}
+}
+@media(max-width:820px){
+  .portal-view[data-portal-view="owner"]>.portal-head.owner-topbar{padding:16px 16px 14px}
+  .portal-view[data-portal-view="owner"]>.owner-global-search{margin:14px 16px 10px}
+  .portal-view[data-portal-view="owner"]>.owner-shell{margin:0 16px 20px;border:0;box-shadow:none;background:transparent}
+  .portal-view[data-portal-view="owner"] .owner-sidebar{position:fixed;top:0;max-height:none;align-self:auto;border-radius:0;overflow-y:auto}
+  .portal-view[data-portal-view="owner"] .owner-content{background:transparent;padding:16px 0 24px;border-radius:0}
+  .portal-view[data-portal-view="owner"] .owner-sidebar-toggle{background:var(--owner-surface);color:var(--owner-text);border:1px solid var(--owner-border);border-radius:var(--owner-radius-pill)}
+  .portal-view[data-portal-view="owner"] .owner-content .portal-panel{padding:18px 16px}
+  .portal-view[data-portal-view="owner"] .admin-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .portal-view[data-portal-view="owner"] .admin-tab{flex:0 0 auto}
+  .owner-page-head h2{font-size:25px}
+  .avl-day{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name add" "win win"}
+  .avl-day-name{grid-area:name}
+  .avl-windows{grid-area:win}
+  .avl-day>.avl-add{grid-area:add}
+  .avl-panel-head,.avl-panel-body{padding-left:16px;padding-right:16px}
+  .avl-month,.avl-slots{padding-left:16px;padding-right:16px}
+  .avl-selected{margin-left:16px;margin-right:16px}
+  .avl-legend{padding-left:16px;padding-right:16px}
+}
+@media(max-width:560px){
+  .portal-view[data-portal-view="owner"]>.portal-head.owner-topbar h3{font-size:22px}
+  .owner-summary-value{font-size:28px}
+  .owner-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .portal-view[data-portal-view="owner"] .owner-content .avl-schedule select{min-width:0;width:100%}
+  .avl-schedule{min-width:0;width:100%}
+  .avl-save-wrap{width:100%;justify-content:space-between}
+  .avl-window-edit small{max-width:160px}
+}
+
+.portal-view[data-portal-view="owner"] .admin-featured-badge{color:var(--owner-blue-text);background:var(--owner-blue-soft);border-color:var(--owner-blue-line);font-family:var(--sans);font-weight:600;font-size:11px}
+:is(.portal-view[data-portal-view="owner"],#teachingEditDialog,#mediaUseDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) input[type=file]{
+  background:var(--owner-field)!important;color:var(--owner-text)!important;border:1px dashed var(--owner-border-strong)!important;border-radius:var(--owner-radius-sm)!important;padding:8px!important;font:13px var(--sans)
+}
+:is(.portal-view[data-portal-view="owner"],#teachingEditDialog,#mediaUseDialog,#prayerDetailDialog,#testimonyDetailDialog,#reviewDetailDialog) input[type=file]::file-selector-button{
+  margin-right:10px;border:1px solid var(--owner-control-border);border-radius:999px;background:var(--owner-surface);color:var(--owner-text);font:600 12.5px var(--sans);padding:6px 14px;cursor:pointer
+}
+.owner-summary-card.is-action,.owner-summary-card.is-done{border-top-color:var(--owner-border)}
+/* Quick Actions adapt to the space they actually have (no squeezed labels) */
+.owner-quick-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))!important}
+
+
+/* Style-only release (2026-11-18): the live Owner Portal header still uses
+   the original .portal-head markup, so give it the same light treatment
+   the redesigned header gets — off-white surface, navy title, quiet pill
+   buttons. Owner Portal only; the member portal header is untouched. */
+.portal-view[data-portal-view="owner"]>.portal-head{background:var(--owner-surface)!important;color:var(--owner-text)!important;border-bottom:1px solid var(--owner-border)!important;box-shadow:none!important}
+.portal-view[data-portal-view="owner"]>.portal-head h3{color:var(--owner-text)!important}
+.portal-view[data-portal-view="owner"]>.portal-head p,
+.portal-view[data-portal-view="owner"]>.portal-head .kicker,
+.portal-view[data-portal-view="owner"]>.portal-head .portal-account{color:var(--owner-text-muted)!important}
+.portal-view[data-portal-view="owner"]>.portal-head .owner-header-btn{background:var(--owner-surface)!important;color:var(--owner-text)!important;border:1px solid var(--owner-control-border)!important;border-radius:var(--owner-radius-pill)!important}
+.portal-view[data-portal-view="owner"]>.portal-head .owner-header-btn:hover{border-color:var(--owner-blue)!important;color:var(--owner-blue-text)!important}
+.portal-view[data-portal-view="owner"]>.portal-head .owner-header-btn:focus-visible{outline:2px solid var(--owner-blue)!important;outline-offset:2px}
